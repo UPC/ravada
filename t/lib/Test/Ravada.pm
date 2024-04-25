@@ -23,6 +23,7 @@ use feature qw(signatures);
 
 use Ravada;
 use Ravada::Auth::SQL;
+use Ravada::Auth::Group;
 use Ravada::Domain::Void;
 
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK);
@@ -41,6 +42,7 @@ create_domain
     flush_rules_node
     flush_rules
     vm_names
+    user
 
     remote_config
     remote_config_nodes
@@ -84,6 +86,7 @@ create_domain
     mojo_request_url
     mojo_request_url_post
 
+    create_group
     remove_old_user
     remove_old_users
     remove_old_users_ldap
@@ -123,6 +126,7 @@ our $CONT = 0;
 our $CONT_POOL= 0;
 our $CONT_VOL= 0;
 our $USER_ADMIN;
+our $USER;
 our @USERS_LDAP;
 our $CHAIN = 'RAVADA';
 
@@ -190,6 +194,30 @@ sub config_host_devices($type, $die=1) {
     die "Error: no host devices config in $FILE_CONFIG_HOST_DEVICES for $type"
     if ( !exists $config->{$type} || !$config->{$type} ) && $die;
     return $config->{$type};
+}
+
+sub user {
+
+    return $USER if $USER;
+
+    my $login;
+    my $name = new_domain_name()."-$$";
+    my $pass = "$$ $$";
+    eval {
+        $login = Ravada::Auth::SQL->new(name => $name, password => $pass );
+    };
+    if ($@ && $@ =~ /Login failed/ ) {
+        $login = Ravada::Auth::SQL->new(name => $name);
+        $login->remove() if $login->id;
+        $login = undef;
+    } elsif ($@) {
+        die $@;
+    }
+    $USER = $login if $login && $login->id;
+    $USER = create_user($name, $pass, 0)
+        if !$USER;
+
+    return $USER;
 }
 
 sub user_admin {
@@ -1201,6 +1229,14 @@ sub create_user($name=new_domain_name(), $pass=$$, $is_admin=0) {
     };
     die $@ if !$user;
     return $user;
+}
+
+sub create_group($name = new_domain_name()) {
+    my $group = Ravada::Auth::Group->new(name => $name);
+    return $group if $group && $group->id;
+
+    $group = Ravada::Auth::Group::add_group(name => $name);
+    return $group;
 }
 
 sub create_ldap_user($name, $password, $keep=0) {

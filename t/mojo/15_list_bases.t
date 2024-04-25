@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 
-use Carp qw(confess);
+use Carp qw( croak confess);
 use Data::Dumper;
 use HTML::Lint;
 use Test::More;
@@ -55,8 +55,106 @@ sub _create_base($vm_name) {
     return $base;
 }
 
-sub test_list_machines_user($vm_name) {
+sub test_list_fail($base) {
+    $t->get_ok("/list_machines_user.json")->status_is(200);
+    my $body = $t->tx->res->body;
+    my $bases0;
+    eval { $bases0 = decode_json($body) };
+    is($@, '') or return;
+
+    my ($base_f) = grep { $_->{id} == $base->id } @$bases0;
+    ok(!$base_f) or croak "Expecting no ".$base->name." in listing";
+
+    $t->get_ok("/machine/clone/".$base->id.".html")
+        ->status_is(403);
+
+}
+
+sub _list_machines_user($base) {
+    $t->get_ok("/list_machines_user.json")->status_is(200);
+    my $body = $t->tx->res->body;
+    my $bases0;
+    eval { $bases0 = decode_json($body) };
+    is($@, '') or return;
+
+    my ($base_f) = grep { $_->{id} == $base->id } @$bases0;
+    ok($base_f) or croak "Expecting ".$base->name." in listing";
+
+    return $base_f;
+}
+
+
+sub test_list_match($base, $do_clone=1) {
+
+    my $base_f = _list_machines_user($base);
+    return if !$do_clone;
+
+    $t->get_ok("/machine/clone/".$base->id.".html")
+        ->status_is(200);
+
+    wait_request();
+
+    $base_f = _list_machines_user($base);
+
+    my $id_clone = $base_f->{list_clones}->[0]->{id};
+    ok($id_clone) or return;
+
+    $t->get_ok("/machine/view/".$id_clone.".html")
+        ->status_is(200);
+
+    return $id_clone;
+}
+
+sub test_list_machines_group($vm_name) {
     mojo_check_login($t, $USERNAME, $PASSWORD);
+    my $base = _create_base($vm_name);
+    $base->is_public(1);
+
+    $t->ua->get($URL_LOGOUT);
+    my $user = create_user();
+    my $group = create_group();
+    $base->grant_access( group => $group->name, type => 'group.local');
+
+    mojo_login($t, $user->name,$$);
+
+    test_list_fail($base);
+
+    $user->add_to_group($group->name);
+
+    my $id_clone = test_list_match($base);
+
+    $user->remove_from_group($group->name);
+    $base->_data('show_clones' => 0);
+
+    test_list_fail($base);
+
+    $t->get_ok("/machine/clone/".$base->id.".html")
+        ->status_is(403);
+
+    $t->get_ok("/machine/view/".$id_clone.".html")
+        ->status_is(403);
+
+    diag("Check list machines match with show clones=1");
+
+    $base->_data('show_clones' => 1);
+    is ($user->allowed_access($base->id),0) or exit;
+    is ($user->allowed_access_group($base->id),0) or exit;
+
+    test_list_fail($base);
+
+    # access previous clone
+    $t->get_ok("/machine/view/".$id_clone.".html")
+        ->status_is(403);
+
+    # but will not be able to clone
+    $t->get_ok("/machine/clone/".$base->id.".html")
+        ->status_is(403);
+
+
+}
+
+sub test_list_machines_user($vm_name) {
+    mojo_login($t, $USERNAME, $PASSWORD);
     my $base = _create_base($vm_name);
     $base->is_public(1);
 
@@ -150,6 +248,7 @@ for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
 
     diag("Testing new machine in $vm_name");
 
+    test_list_machines_group($vm_name);
     test_list_machines_user($vm_name);
 }
 remove_old_domains_req(0); # 0=do not wait for them

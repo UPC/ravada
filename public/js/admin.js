@@ -697,7 +697,7 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.list_groups= function() {
             $scope.loading_groups = true;
             $scope.error = '';
-            $http.get('/list_ldap_groups')
+            $http.get('/group/ldap/list')
                 .then(function(response) {
                     $scope.loading_groups = false;
                     $scope.groups = response.data;
@@ -1462,18 +1462,47 @@ ravadaApp.directive("solShowMachine", swMach)
     };
 
     function admin_groups_ctrl($scope, $http) {
-        var group;
         $scope.group_filter = '';
-        $scope.username_filter = 'a';
+        $scope.username_filter = '';
+        var type;
+        var group_name;
+        var group_id;
+        $scope.init = function(type0, group_name0, group_id0) {
+            type = type0;
+            group_name = group_name0;
+            group_id = group_id0;
+            $scope.list_group_members();
+        };
         $scope.list_ldap_groups = function() {
-            $http.get('/list_ldap_groups/'+$scope.group_filter)
+            $http.get('/group/ldap/list/'+$scope.group_filter)
                 .then(function(response) {
                     $scope.ldap_groups=response.data;
                 });
         };
-        $scope.list_group_members = function(group_name) {
+        list_local_groups=function() {
+            $http.get('/group/local/list_data')
+                .then(function(response) {
+                    $scope.local_groups=response.data;
+                    $scope.local_groups_all=response.data;
+                });
+        }
+        $scope.filter_local_groups=function() {
+            $scope.local_groups = [];
+            var re = new RegExp($scope.group_filter);
+            for (var i=0; i<$scope.local_groups_all.length; i++) {
+                if (re.test($scope.local_groups_all[i])) {
+                    $scope.local_groups.push($scope.local_groups_all[i]);
+                }
+            }
+        };
+        $scope.list_groups=function() {
+            $scope.list_ldap_groups();
+            list_local_groups();
+        };
+
+        $scope.list_group_members = function() {
             group = group_name;
-            $http.get('/list_ldap_group_members/'+group_name)
+            $http.get('/group/'+type+'/list_members/'+group_name)
                 .then(function(response) {
                     $scope.group_members=response.data;
                 });
@@ -1481,29 +1510,32 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.list_users = function() {
             $scope.loading_users = true;
             $scope.error = '';
-            $http.get('/list_ldap_users/'+$scope.username_filter)
+            $http.get('/user/'+type+'/list/'+$scope.username_filter)
                 .then(function(response) {
                     $scope.loading_users = false;
                     $scope.error = response.data.error;
                     $scope.users = response.data.entries;
                 });
         };
-        $scope.add_member = function(cn) {
-            $http.post("/ldap/group/add_member/"
+        $scope.add_member = function(user_id, user_name) {
+            $http.post("/group/"+type+"/add_member/"
               ,JSON.stringify(
-                  { 'group': group
-                    ,'cn': cn
+                  { 'group': group_name
+                    ,'id_user': user_id
+                    ,'id_group': group_id
+                    ,'name': user_name
                   })
               ).then(function(response) {
-                  $scope.list_group_members(group);
+                  $scope.list_group_members();
                   $scope.error = response.data.error;
             });
         };
-        $scope.remove_member = function(dn) {
-            $http.post("/ldap/group/remove_member/"
+        $scope.remove_member = function(user) {
+            $http.post("/group/"+type+"/remove_member/"
               ,JSON.stringify(
                   { 'group': group
-                    ,'dn': dn
+                    ,'id_user': user.id
+                      ,'name': user.name
                   })
               ).then(function(response) {
                   $scope.list_group_members(group);
@@ -1512,13 +1544,13 @@ ravadaApp.directive("solShowMachine", swMach)
         };
         $scope.remove_group = function() {
             $scope.confirm_remove=false;
-            $http.get("/ldap/group/remove/"+group).then(function(response) {
+            $http.get("/group/"+type+"/remove/"+group).then(function(response) {
                 $scope.error=response.data.error;
                 $scope.removed = true;
             });
         };
 
-    };
+    }
 
     function settings_global_ctrl($scope, $http) {
         $scope.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;

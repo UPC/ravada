@@ -24,7 +24,7 @@ navbar-dark bg-dark fixed-top navbar-expand-lg navbar-inverse">
                         <a class="nav-link" href="/"><i class="fa fa-fw fa-desktop"></i><%=l 'Available Machines' %></a>
                     </li>
 % }
-% if ($bookings && defined $_user && $FEATURE->{ldap} ) {
+% if ($bookings && defined $_user) {
     <li class="nav-item dropdown">
         <a class="nav-link" href="/booking/">
             <i class="fa fa-wrench"></i>&nbsp;<%=l 'Schedule' %></a>

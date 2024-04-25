@@ -1557,8 +1557,9 @@ sub _add_indexes_generic($self) {
             "unique (id_domain)"
         ]
         ,group_access => [
-            "unique (id_domain,name)"
+            "unique (id_domain,name,id_group)"
             ,"index(id_domain)"
+            ,"index(id_group)"
         ]
         ,iso_images => [
             "unique (name)"
@@ -1609,6 +1610,11 @@ sub _add_indexes_generic($self) {
             "index(id_booking_entry,ldap_group)"
             ,"index(id_booking_entry)"
         ]
+        ,booking_entry_local_groups => [
+            "unique(id_booking_entry,id_group)"
+            ,"index(id_booking_entry)"
+        ]
+
         ,booking_entry_users => [
             "index(id_booking_entry,id_user)"
             ,"index(id_booking_entry)"
@@ -1618,6 +1624,12 @@ sub _add_indexes_generic($self) {
             "index(id_booking_entry,id_base)"
             ,"index(id_base)"
             ,"index(id_booking_entry)"
+        ]
+        ,groups_local => [
+            'UNIQUE (name)'
+        ]
+        ,users_group => [
+            'UNIQUE(id_user, id_group)'
         ]
 
         ,volumes => [
@@ -2202,11 +2214,21 @@ sub _sql_create_tables($self) {
             ,xml => 'TEXT'
             }
         ]
+        ,
+        [   groups_local => {
+                id => 'integer PRIMARY KEY AUTO_INCREMENT',
+                ,name => 'char(255) NOT NULL'
+                ,is_external => 'int NOT NULL default(0)'
+                ,external_auth => 'varchar(64) default NULL'
+            }
+        ]
         ,[
             group_access => {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
-            ,name => 'char(80)'
+            ,id_group => 'integer references `groups_local` (`id`) ON DELETE CASCADE'
+            ,name => 'char(80) DEFAULT NULL'
+            ,type => 'char(40)'
             }
         ]
         ,
@@ -2339,6 +2361,17 @@ sub _sql_create_tables($self) {
         ]
         ,
         [
+        booking_entry_local_groups => {
+            id => 'INTEGER PRIMARY KEY AUTO_INCREMENT'
+            ,id_booking_entry
+                => 'int not null references `booking_entries` (`id`) ON DELETE CASCADE'
+            ,id_group => 'int not null'
+            ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+        }
+        ]
+        ,
+
+        [
         booking_entry_users => {
             id => 'INTEGER PRIMARY KEY AUTO_INCREMENT'
             ,id_booking_entry
@@ -2367,6 +2400,12 @@ sub _sql_create_tables($self) {
             }
         ]
         ,
+        [   users_group => {
+                id => 'integer PRIMARY KEY AUTO_INCREMENT',
+                ,id_user => 'integer NOT NULL'
+                ,id_group =>'integer NOT NULL'
+            }
+        ],
         [
             volumes => {
                 id => 'integer PRIMARY KEY AUTO_INCREMENT',
@@ -2660,7 +2699,7 @@ sub _sql_insert_defaults($self){
             ,{
                 id_parent => $id_backend
                 ,name => 'bookings'
-                ,value => 0
+                ,value => 1
             }
             ,{
                 id_parent => $id_backend

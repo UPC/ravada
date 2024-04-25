@@ -197,6 +197,72 @@ sub test_upload_no_admin($t) {
 
 }
 
+sub _upload_group_members($group_name, $users, $mojo, $strict=0) {
+    if ($mojo==1) {
+        $t->post_ok("/group/upload_members.json" =>
+            form => {
+                users => { content => $users, filename => 'users.txt'
+                            ,'Content-Type' => 'text/csv'
+                }
+                ,group => $group_name
+                ,strict=> $strict
+                },
+            )->status_is(200);
+        die $t->tx->res->body if $t->tx->res->code != 200;
+    } elsif($mojo==2) {
+        $t->post_ok("/admin/group/local/".$group_name =>
+            form => {
+                members => { content => $users, filename => 'users.txt'
+                            ,'Content-Type' => 'text/csv'
+                }
+                ,group => $group_name
+                ,strict=> $strict
+                },
+            )->status_is(200);
+        die $t->tx->res->body if $t->tx->res->code != 200;
+
+    } else {
+        rvd_front->upload_group_members($group_name, $users, $strict);
+    }
+}
+
+
+sub test_upload_group($mojo=0) {
+    my ($user1) = ( new_domain_name(), $$.1);
+    my ($user2) = ( new_domain_name(), $$.2);
+    _clean($user1, $user2);
+
+    my $users = $user1."\n".$user2."\n" ;
+
+    my $group_name = new_domain_name();
+
+    for ( 1 .. 2 ) {
+        _upload_group_members($group_name, $users, $mojo);
+        my $group = Ravada::Auth::Group->new( name => $group_name );
+
+        my %members = map { $_ => 1 } $group->members;
+        is(scalar(keys %members),2);
+        ok($members{$user1});
+        ok($members{$user2});
+    }
+
+    _upload_group_members($group_name, $user1, $mojo);
+
+    my $group = Ravada::Auth::Group->new( name => $group_name );
+    my %members = map { $_ => 1 } $group->members;
+    is(scalar(keys %members),2);
+    ok($members{$user1});
+    ok($members{$user2});
+
+    _upload_group_members($group_name, $user2, $mojo, 1);
+    %members = map { $_ => 1 } $group->members;
+    is(scalar(keys %members),1,"strict update mojo=$mojo failed");
+    ok(!$members{$user1});
+    ok($members{$user2});
+
+}
+
+
 ################################################################################
 
 $ENV{MOJO_MODE} = 'development';
@@ -211,6 +277,11 @@ $t->ua->connect_timeout(60);
 test_upload_no_admin($t);
 
 _login($t);
+
+test_upload_group();
+test_upload_group(1); # mojo
+test_upload_group(2); # mojo post
+
 
 for my $type ('ldap','sso') {
     test_upload_users_nopassword( $type );

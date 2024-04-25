@@ -20,6 +20,7 @@
             .service("listMess", gtListMess)
             .controller("SupportForm", suppFormCtrl)
 	        .controller("AddUserForm",addUserFormCrtl)
+	        .controller("AddGroupForm",addGroupFormCrtl)
 	        .controller("ChangePasswordForm",changePasswordFormCrtl)
 //            .controller("machines", machinesCrtl)
 //            .controller("messages", messagesCrtl)
@@ -67,6 +68,31 @@
 
     };
 
+
+    function addGroupFormCrtl($scope, $http, request){
+        $scope.type = 'local';
+        $scope.group_name = '';
+        $scope.object_class = {
+            'posixGroup': true
+            ,'nsMemberOf': false
+            ,'groupOfUniqueNames': false
+        };
+        $scope.list_object_class=Object.keys($scope.object_class);
+
+        $scope.add_group = function() {
+            $scope.new_group_done = false;
+            $http.post('/group/new'
+                      , JSON.stringify({ 'type': $scope.type
+                          ,'group_name': $scope.group_name
+                          ,'object_class': $scope.object_class
+                      }
+                )
+              ).then(function(response) {
+                  $scope.error = response.data.error;
+                  $scope.new_group_done = $scope.error.length == 0;
+              });
+        };
+    };
 
     function addUserFormCrtl($scope, $http, request){
 
@@ -323,6 +349,7 @@
             $scope.shared_user_found=false;
             $scope.storage_pools=['default'];
             $scope.shared_user_count = -1
+            $scope.access_groups=[];
 
             $scope.getUnixTimeFromDate = function(date) {
                 date = (date instanceof Date) ? date : date ? new Date(date) : new Date();
@@ -610,13 +637,14 @@
                                 $scope.list_ldap_attributes();
                                 list_users();
                                 list_host_devices();
-                                list_access_groups();
+                                list_access_groups('ldap');
+                                list_access_groups('local');
                             }
                             $scope.copy_ram = $scope.showmachine.max_mem / 1024 / 1024;
                 });
                 if (is_admin ) {
                     $scope.list_ldap_attributes();
-                    list_ldap_groups();
+                    list_groups();
                 }
                 $scope.list_cpu_models();
           };
@@ -775,7 +803,6 @@
                           ,'storage': $scope.sp_move.storage_pool
                       })
               ).then(function(response) {
-                  console.log(response.data);
               });
 
           }
@@ -875,6 +902,7 @@
                       $scope.searching_ldap_attributes = false;
                       $scope.user_name = response.data.name;
                       $scope.check_access();
+                      list_access_groups('ldap');
                   });
               }
           };
@@ -1076,10 +1104,14 @@
                         }
                     });
             }
-            var list_ldap_groups = function() {
-                $http.get('/list_ldap_groups')
+            var list_groups = function() {
+                $http.get('/group/ldap/list')
                     .then(function(response) {
                         $scope.ldap_groups=response.data;
+                    });
+                $http.get('/group/local/list')
+                    .then(function(response) {
+                        $scope.local_groups=response.data;
                     });
             };
 
@@ -1171,22 +1203,24 @@
                 });
             };
 
-            var list_access_groups = function() {
-                $http.get("/machine/list_access_groups/"+$scope.showmachine.id).then(function(response) {
-                    $scope.access_groups=response.data;
+            var list_access_groups = function(type) {
+                $http.get("/machine/list_access_groups/"+type+"/"+$scope.showmachine.id).then(function(response) {
+                    $scope.access_groups[type]=response.data;
                 });
             };
-            $scope.add_group_access = function(group) {
-                $http.get("/machine/add_access_group/"+$scope.showmachine.id+"/"+group)
-                    .then(function(response) {
-                        list_access_groups();
+            $scope.add_group_access = function(type,group) {
+                $http.post("/machine/add_access_group/"+type+"/"+$scope.showmachine.id
+                    ,JSON.stringify( { 'group': group })
+                ).then(function(response) {
+                        list_access_groups(type);
                 });
             };
 
-            $scope.remove_group_access = function(group) {
-                $http.get("/machine/remove_access_group/"+$scope.showmachine.id+"/"+group)
-                    .then(function(response) {
-                        list_access_groups();
+            $scope.remove_group_access = function(type,group) {
+                $http.post( "/machine/remove_access_group/"+type+"/"+$scope.showmachine.id
+                    ,JSON.stringify( { 'group':group })
+                ).then(function(response) {
+                        list_access_groups(type);
                 });
             };
 
@@ -1560,39 +1594,6 @@
             $scope.maintenance_end = new Date(end);
         };
     };
-
-/*
-  function requestsCrtlSingle($scope, $interval, $http, request){
-    $scope.getReqs= function() {
-      $http.get('/requests.json').then(function(response) {
-          $scope.requests=response.data;
-      });
-                ).then function(response) {
-                    $scope.conflicts = response.data
-            })
-        };
-
-        $http.get('/list_ldap_groups/')
-                    .then(function(response) {
-                        $scope.ldap_groups=response.data;
-        });
-        $http.get('/list_bases.json')
-                    .then(function(response) {
-                         $scope.bases=response.data;
-        });
-
-    };
-/*
-  function requestsCrtlSingle($scope, $interval, $http, request){
-    $scope.getReqs= function() {
-      $http.get('/requests.json').then(function(response) {
-          $scope.requests=response.data;
-      });
-    };
-//    $interval($scope.getReqs,5000);
-    $scope.getReqs();
-  };
-*/
 
 	function nameAvail($timeout, $q) {
     return {
