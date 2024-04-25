@@ -102,6 +102,7 @@ create_domain
     search_latest_machine
 
     ping_backend
+    wait_ip
 
     config_host_devices
 
@@ -159,6 +160,7 @@ my $NBD_LOADED;
 my $FH_FW;
 my $FH_NODE;
 my %LOCKED_FH;
+my $FILE_DB;
 
 my ($MOJO_USER, $MOJO_PASSWORD);
 
@@ -657,7 +659,7 @@ sub _leftovers {
 }
 
 sub _discover() {
-    my $sth = connector()->dbh->prepare("SELECT id,vm_type,hostname,name FROM vms");
+    my $sth = connector()->dbh->prepare("SELECT id,vm_type,hostname,name,is_active,enabled FROM vms");
     $sth->execute();
 
     my $sth_instances = connector()->dbh->prepare("INSERT INTO domain_instances "
@@ -666,7 +668,9 @@ sub _discover() {
 
     my $name = base_domain_name();
 
-    while ( my ($id_vm, $vm_type, $hostname, $vm_name) = $sth->fetchrow ) {
+    while ( my ($id_vm, $vm_type, $hostname, $vm_name, $is_active, $enabled) = $sth->fetchrow ) {
+        next if !$is_active || !$enabled;
+
         my $req=Ravada::Request->discover(
             uid => user_admin->id
             ,id_vm => $id_vm
@@ -2495,7 +2499,7 @@ sub _dir_db {
         };
         die $@ if $@ && $@ !~ /Permission denied/;
         if ($@) {
-                warn "$! on mkdir $dir_db";
+                warn "$! on mkdir $dir_db [ $>,$< ]";
                 $dir_db = "t/.db";
                 make_path $dir_db or die "$! $dir_db";
         }
@@ -2516,6 +2520,7 @@ sub _file_db {
     if ( -e $file_db ) {
         unlink $file_db or die("$! $file_db");
     }
+    $FILE_DB = $file_db;
     return $file_db;
 }
 
@@ -2695,8 +2700,10 @@ sub end($ldap=undef) {
     clean($ldap);
     remove_old_users()      if $CONNECTOR;
     _unlock_all();
-    _file_db();
-    rmdir _dir_db();
+    if ($FILE_DB) {
+        _file_db();
+        rmdir _dir_db();
+    }
 }
 
 sub init_ldap_config($file_config='t/etc/ravada_ldap.conf'
@@ -3164,5 +3171,51 @@ sub create_ram_fs($dir=undef,$size=1024*1024) {
 
     return ($dir,$size, $dev);
 }
+
+sub wait_ip($id_domain0, $seconds=60) {
+
+    my $domain;
+    for my $count ( 0 .. $seconds ) {
+        my $id_domain = $id_domain0;
+        if (ref($id_domain0)) {
+            if (ref($id_domain0) =~ /Ravada/) {
+                $id_domain = $id_domain0->id;
+            } else {
+                $id_domain = $id_domain0->{id};
+            }
+        }
+
+        if ($id_domain0 !~ /^\d+$/) {
+            $id_domain = _search_domain_by_name($id_domain);
+            next if !$id_domain;
+        }
+
+        Ravada::Request->refresh_machine(
+            id_domain => $id_domain
+            ,uid => user_admin->id
+        );
+
+        my $info;
+        eval {
+        $domain = Ravada::Front::Domain->open($id_domain);
+        $info = $domain->info(user_admin);
+        };
+        warn $@ if $@ && $@ !~ /Unknown domain/;
+        return if $@ || ($count && !$domain->is_active);
+        return $info->{ip} if exists $info->{ip} && $info->{ip};
+        diag("Waiting for ".$domain->name. " ip") if !(time % 10);
+        sleep 1;
+    }
+}
+
+sub _search_domain_by_name($name) {
+    my $sth = connector->dbh->prepare("SELECT id FROM domains "
+        ." WHERE name=?"
+    );
+    $sth->execute($name);
+    my ($id) = $sth->fetchrow;
+    return $id;
+}
+
 
 1;

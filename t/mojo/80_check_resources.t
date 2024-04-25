@@ -81,7 +81,6 @@ sub test_ram($vm_name,$enable_check) {
     _remove_clones(time+300+$limit*2);
     my $req = 0;
     for my $n ( 0 .. $limit*3 ) {
-        diag($n." ".int(_free_memory()/1024/1024));
         my $free = int(_free_memory()/1024/1024);
         my $name = new_domain_name();
         $req=Ravada::Request->clone(
@@ -108,6 +107,7 @@ sub test_ram($vm_name,$enable_check) {
             diag($req->error);
             last;
         }
+        wait_ip($new);
         my $free2 = int(_free_memory()/1024/1024);
         redo if $vm_name eq 'KVM' && ($free2>=$free);
 
@@ -137,7 +137,7 @@ remove_old_domains_req();
 
 $USERNAME = user_admin->name;
 $PASSWORD = "$$ $$";
-for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
+for my $vm_name (@{rvd_front->list_vm_types} ) {
     diag("Testing RAM limit in $vm_name");
 
     _import_base($vm_name);
