@@ -1778,6 +1778,8 @@ sub test_display_conflict_next($vm) {
     }
     $domain1->remove(user_admin);
     $domain0->remove(user_admin);
+
+    rvd_back->setting("/backend/expose_port_min" => 60000 );
 }
 
 sub test_display_conflict_non_builtin($vm) {
