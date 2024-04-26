@@ -499,7 +499,7 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.set_autostart= function(machineId, value) {
       $http.get("/machine/autostart/"+machineId+"/"+value);
     };
-    $scope.set_public = function(machineId, value) {
+    $scope.set_public = function(machineId, value, show_clones) {
       if (value) value=1;
       else value = 0;
       $http.get("/machine/public/"+machineId+"/"+value)
@@ -509,6 +509,9 @@ ravadaApp.directive("solShowMachine", swMach)
             }
         });
 
+       if ( value == 0 ) {
+        $http.get("/machine/set/"+machineId+"/show_clones/"+show_clones);
+       }
     };
 
     $scope.can_remove_base = function(machine) {

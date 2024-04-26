@@ -228,7 +228,7 @@ hook before_routes => sub {
         || $url =~ m{^/fallback/font}
        ;
 
-    return if $url =~ m{^/(anonymous_logout|login|logout|requirements|robots.txt|favicon.ico)};
+    return if $url =~ m{^/(anonymous_logout|login|logout|requirements|robots.txt|favicon.ico|status\.)};
 
     my $bases_anonymous = $RAVADA->list_bases_anonymous(_remote_ip($c));
     return access_denied($c) if $url =~ m{^/anonymous} && !@$bases_anonymous;
@@ -3078,6 +3078,85 @@ get '/host_devices/templates/list/(#id_vm)' => sub($c) {
     my $templates = Ravada::HostDevice::Templates::list_templates($id_vm);
     return $c->render( json => $templates);
 
+};
+
+sub _request_recent() {
+    my @now = localtime(time);
+    $now[4]++;
+    for ( 1 .. 4 ){
+        $now[$_] = "0".$now[$_] if length ($now[$_])<2
+    }
+    my $now = "".($now[5]+1900)."-$now[4]-$now[3] $now[2]:$now[1]";
+    $now[1]--;
+    my $now2 = "".($now[5]+1900)."-$now[4]-$now[3] $now[2]:$now[1]";
+    my $sth = $RAVADA->_dbh->prepare(
+        "SELECT date_changed,status,command FROM requests ORDER BY date_changed DESC LIMIT 10"
+    );
+    $sth->execute();
+    my $n = 100;
+    while (my ($date_changed, $status, $command) = $sth->fetchrow ) {
+        next if $status !~ /working|done/;
+        return 1 if $date_changed =~ /^($now|$now2)/;
+        last if $n--<0;
+    }
+    return 0;
+}
+
+sub _ping_backend() {
+    return 1 if _request_recent();
+
+    my $req = Ravada::Request->ping_backend();
+    $RAVADA->wait_request($req, 10);
+    if ($req->status eq 'done' && !$req->error) {
+        return 1;
+    }
+    return 0;
+}
+
+get '/status.(#type)'=> sub($c) {
+    my $remote_ip = _remote_ip($c);
+
+    my %allowed = ('127.0.0.1' => 1);
+    if (exists $CONFIG_FRONT->{status} && $CONFIG_FRONT->{status}->{allowed}) {
+        if (ref($CONFIG_FRONT->{status}->{allowed}) eq 'ARRAY') {
+            for my $ip ( @{$CONFIG_FRONT->{status}->{allowed}} ) {
+                warn $ip;
+                $allowed{$ip}++;
+            }
+        } else {
+            $allowed{$CONFIG_FRONT->{status}->{allowed}}++;
+        }
+    }
+    return access_denied($c) unless $allowed{$remote_ip};
+    my $backend = _ping_backend();
+    if ($backend) {
+        $backend='true';
+    } else {
+        $backend='false';
+    }
+    my $status = { backend => $backend, frontend => 'true' };
+    my $sth = $RAVADA->_dbh->prepare("SELECT name,is_active "
+        ." FROM vms "
+        ." ORDER BY 'name'"
+    );
+    $sth->execute;
+
+    my $sth_active = $RAVADA->_dbh->prepare("SELECT count(*) "
+        ." FROM domains "
+        ." WHERE status='active' AND id_vm=? "
+    );
+    while ( my $row = $sth->fetchrow_hashref) {
+        $sth_active->execute($row->{id});
+        $row->{vms}=$sth_active->fetchrow;
+        if ($row->{is_active}) {
+            $row->{status} = 'active';
+        } else {
+            $row->{status} = 'disabled';
+        }
+        delete $row->{is_active};
+        push@{$status->{nodes}},($row);
+    }
+    return $c->render(json => $status);
 };
 
 ###################################################
