@@ -110,7 +110,6 @@ sub list_devices_nodes($self) {
             next;
         }
         my $node = Ravada::VM->open($ndata->[0]);
-        warn $node->name." ".$node->is_active;
         my @current_devs;
         eval {
             @current_devs = $self->list_devices($node->id)
@@ -247,7 +246,6 @@ sub _data($self, $field, $value=undef) {
             $value =~ m{["'`$()\[\];]}
             || $value !~ /^(ls|find)/);
 
-        warn Dumper($value) if $field eq 'devices_node';
         $value = encode_json($value) if ref($value);
 
         my $old_value = $self->_data($field);

@@ -260,14 +260,14 @@ sub _list_devices_node($rvd, $row) {
     $row->{_n_devices}=0;
 
     my %ret;
-    if (@$devices) {
-        $row->{_nodes} = [sort keys %{$devices}}];
+    if (%$devices) {
+        $row->{_nodes} = [sort keys %{$devices}];
         for (@{$row->{_nodes}}) {
-            $row->{_n_devices} += scalar(@{$row->{devices_node}->{$_}});
+            $row->{_n_devices} += scalar(@{$devices->{$_}});
         }
         $row->{_loading} = 0;
         for my $node ( keys %$devices ) {
-            $ret{$node} = map { {name => $_ } } @{$devices->{$node}};
+            $ret{$node} = [ map { {name => $_ } } @{$devices->{$node}} ];
         }
     } else {
         $row->{_nodes} = [];

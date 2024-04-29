@@ -59,7 +59,7 @@
                 <span>{{node}}</span>
                 <ul>
                     <li ng-show="hdev.devices_node[node].length==0">
-                        <%=l 'No devices found'%></li>
+                        <span class="error"><%=l 'No devices found'%></li></span>
                     <li ng-repeat="dev in hdev.devices_node[node]">
                     {{dev.name}}
                     <a class="badge badge-primary"
