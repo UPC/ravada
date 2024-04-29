@@ -358,9 +358,9 @@ sub list_routes {
 
 sub list_virtual_networks($self) {
 
-    my $dir_net = $self->dir_img."/networks/";
+    my $dir_net = $self->dir_img."/networks";
     if (!$self->file_exists($dir_net)) {
-        my ($out, $err) = $self->run_command("mkdir", $dir_net);
+        my ($out, $err) = $self->run_command("mkdir","-p", $dir_net);
         die $err if $err;
     }
     my @files = $self->list_files($dir_net,qr/.yml$/);
@@ -471,7 +471,8 @@ sub create_network($self, $data, $id_owner=undef, $request=undef) {
 
 sub remove_network($self, $name) {
     my $file_out = $self->dir_img."/networks/$name.yml";
-    unlink $file_out or die "$! $file_out" if $self->file_exists($file_out);
+    return if !$self->file_exists($file_out);
+    $self->remove_file($file_out);
 }
 
 

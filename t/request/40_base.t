@@ -650,6 +650,39 @@ sub test_domain_name_iso($vm) {
     $domain->remove(user_admin) if $domain;
 }
 
+sub test_schedule_compact($vm, $base_name) {
+    my $base = rvd_back->search_domain($base_name);
+    $base->_data('auto_compact' => 1);
+    rvd_back->setting("/backend/auto_compact",1);
+    my $name = new_domain_name();
+    Ravada::Request->clone(
+        id_domain => $base->id
+        ,name => $name
+        ,start => 1
+        ,uid => user_admin->id
+    );
+    wait_request();
+    my ($clone) = $vm->search_domain($name);
+    Ravada::Request->shutdown_domain(
+        id_domain => $clone->id
+        ,timeout => 1
+        ,uid => user_admin->id
+    );
+    wait_request( debug => 0, fast_forward => 0);
+    is($clone->is_active,0);
+
+    Ravada::Request->prepare_base(
+        id_domain => $clone->id
+        ,uid => user_admin->id
+    );
+    wait_request( debug => 0, fast_forward => 0);
+
+    is($clone->is_base(),1);
+
+    rvd_back->setting("/backend/auto_compact",0);
+    $clone->remove(user_admin);
+}
+
 ################################################
 
 {
@@ -701,6 +734,8 @@ for my $vm_name ( vm_names ) {
         test_req_prepare_base($vm_name, $base_name);
         test_req_create_from_base_novm($vm_name, $base_name);
         my $clone_name = test_req_create_from_base($vm_name, $base_name);
+
+        test_schedule_compact($vm_connected, $base_name);
 
         test_req_deny($vm_connected, $base_name);
 

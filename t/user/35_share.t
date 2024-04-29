@@ -100,14 +100,29 @@ sub test_requests_shared($user, $clone) {
     wait_request();
     is($req3->status,'done');
     is($req3->error,'');
-
-    my $req4 = Ravada::Request->list_cpu_models(
+    my @args = (
         uid => $user->id
         ,id_domain => $clone->id
     );
+    my $req4 = Ravada::Request->list_cpu_models(@args);
     wait_request();
     is($req4->status,'done');
     is($req4->error,'');
+
+    my $req5 = Ravada::Request->open_exposed_ports(@args);
+    wait_request();
+    is($req5->status,'done');
+    is($req5->error,'');
+
+    $req5 = Ravada::Request->refresh_machine_ports(@args);
+    wait_request();
+    is($req5->status,'done');
+    is($req5->error,'');
+
+    $req5 = Ravada::Request->close_exposed_ports(@args);
+    wait_request();
+    is($req5->status,'done');
+    is($req5->error,'');
 
 }
 

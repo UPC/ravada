@@ -597,7 +597,6 @@ sub _mangle_dom_hd_void($domain) {
     $config->{hardware}->{host_devices}->[0]->{vendor_id} = $new_id;
     $domain->_store(hardware => $config->{hardware});
 
-    warn $device_name;
     $sth = connector->dbh->prepare("UPDATE host_devices_domain set name=?"
         ." WHERE id=?");
     $sth->execute($device_name, $id_hd);
@@ -628,14 +627,102 @@ sub _mangle_dom_hd_kvm($domain) {
     $domain->reload_config($xml);
 }
 
-sub test_templates_change_devices($vm) {
-    return if $vm->type ne 'Void';
+sub _create_host_devices($vm, $n) {
+    if ($vm->type eq 'Void') {
+        return _create_host_devices_void($vm,$n);
+    } elsif ($vm->type eq 'KVM') {
+        return _create_host_devices_kvm($vm,$n);
+    } else {
+        die "Error: I don't know how to create host devices for ".$vm->type;
+    }
+}
+
+sub _create_host_devices_void($vm, $n) {
+    my $path  = "/var/tmp/$</ravada/dev";
+    my @hds;
+    for my $count ( 1 .. $n ) {
+        my $hd = _mock_hd($vm , $path);
+        push @hds,($hd);
+    }
+    return @hds;
+}
+
+sub _create_host_devices_kvm($vm,$n) {
+    my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
+    ok(@$templates);
+
+    my ($template) = grep { $_->{list_command} =~ /lspci/ } @$templates;
+
+    my @hds;
+    for ( 1 .. $n ) {
+        my $id_hd = $vm->add_host_device(template => $template->{name});
+        my $hd = Ravada::HostDevice->search_by_id($id_hd);
+
+        my $config = config_host_devices('pci');
+        $hd->_data('list_filter' => $config);
+        push @hds,($hd);
+    }
+
+    return @hds;
+
+}
+
+sub test_frontend_list($vm) {
+
+    my ($hd1, $hd2) = _create_host_devices($vm, 2);
+
+    if (scalar($hd1->list_devices) != scalar($hd2->list_devices)) {
+        die "Error: expecting the same count of devices in both mock hds";
+    }
+
+    my $domain = _create_domain_hd($vm, $hd1);
+    $domain->start(user_admin);
+
+    my $ws_args = {
+            channel => '/'.$vm->id
+            ,login => user_admin->name
+    };
+    my $front_devices = Ravada::WebSocket::_list_host_devices(rvd_front(), $ws_args);
+    is(scalar(@$front_devices),2) or exit;
+
+    my ($dev_attached) = ($domain->list_host_devices_attached);
+
+    my $found=0;
+    for my $fd ( @$front_devices ) {
+        for my $dev ( @{$fd->{devices}} ) {
+            if ($dev->{name} eq $dev_attached->{name}) {
+                ok($dev->{domain} , "Expecting domains listed in ".$dev->{name}) or next;
+                is($dev->{domain}->{id}, $domain->id,"Expecting ".$domain->name." attached in ".$dev->{name});
+                $found++ if $dev->{domain}->{id} == $domain->id;
+            }
+        }
+    }
+    is($found,2) or die Dumper($front_devices);
+
+    remove_domain($domain);
+
+    _remove_host_devices($vm);
+}
+
+sub _mock_hd($vm, $path) {
+
+    my ($template, $name) = _mock_devices($vm , $path);
+
+    my $id_hd = $vm->add_host_device(template => $template->{name});
+    my $hd = Ravada::HostDevice->search_by_id($id_hd);
+
+    $hd->_data(list_command => "ls $path");
+    $hd->_data(list_filter => $name);
+
+    return $hd;
+}
+
+sub _mock_devices($vm, $path) {
     my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
     ok(@$templates);
 
     my ($template) = grep { $_->{list_command} eq 'lsusb' } @$templates;
 
-    my $path  = "/var/tmp/$</ravada/dev";
     make_path($path) if !-e $path;
 
     my $name = base_domain_name()." Mock_device ID";
@@ -654,6 +741,15 @@ sub test_templates_change_devices($vm) {
         print $out "fff6f017-3417-4ad3-b05e-17ae3e1a461".int(rand(10));
         close $out;
     }
+
+    return ($template, $name);
+}
+
+sub test_templates_change_devices($vm) {
+    return if $vm->type ne 'Void';
+
+    my $path  = "/var/tmp/$</ravada/dev";
+    my ($template, $name) = _mock_devices($vm, $path);
 
     $vm->add_host_device(template => $template->{name});
     my ($hostdev) = $vm->list_host_devices();
@@ -711,7 +807,11 @@ sub test_templates_change_filter($vm) {
 
         $domain->remove(user_admin);
     }
+    _remove_host_devices($vm);
 
+}
+
+sub _remove_host_devices($vm) {
     for my $hd ( $vm->list_host_devices ) {
         my $req = Ravada::Request->remove_host_device(
             uid => user_admin->id
@@ -721,7 +821,6 @@ sub test_templates_change_filter($vm) {
         is($req->status,'done');
         is($req->error, '') or exit;
     }
-
 }
 
 sub test_templates($vm) {
@@ -889,12 +988,16 @@ for my $vm_name (reverse vm_names()) {
 
         diag("Testing host devices in $vm_name");
 
+        test_frontend_list($vm);
+
         test_templates_gone_usb_2($vm);
+
         test_templates_gone_usb($vm);
         test_templates_changed_usb($vm);
 
         test_templates_start_nohd($vm);
         test_templates_change_filter($vm);
+
         test_templates($vm);
         test_templates_change_devices($vm);
 

@@ -94,20 +94,28 @@ sub search_by_id($self, $id) {
 sub list_devices_nodes($self) {
     my $vm = Ravada::VM->open($self->id_vm);
     my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT id FROM vms WHERE id <> ? AND vm_type=?");
+        "SELECT id,name,is_active,enabled FROM vms WHERE id <> ? AND vm_type=?");
     $sth->execute($vm->id, $vm->type);
 
-    my @nodes = ($vm);
+    my @nodes = ([$vm->id,$vm->name,1,1]);
 
-    while ( my ($id) = $sth->fetchrow) {
-        my $node = Ravada::VM->open($id);
-        push @nodes,($node) if $node->is_active;
+    while ( my ($id,$name, $is_active,$enabled) = $sth->fetchrow) {
+        push @nodes,([$id, $name, $is_active, $enabled]);
     }
 
     my %devices;
-    for my $node (@nodes) {
+    for my $ndata (@nodes) {
+        if (!$ndata->[2] || !$ndata->[3]) {
+            $devices{$ndata->[1]}=[];
+            next;
+        }
+        my $node = Ravada::VM->open($ndata->[0]);
+        warn $node->name." ".$node->is_active;
         my @current_devs;
-        eval { @current_devs = $self->list_devices($node->id) };
+        eval {
+            @current_devs = $self->list_devices($node->id)
+                if $node->is_active;
+        };
         warn $@ if $@;
         #        push @devices, @current_devs;
         $devices{$node->name}=\@current_devs;
@@ -119,6 +127,7 @@ sub list_devices_nodes($self) {
 
 sub list_devices($self, $id_vm=$self->id_vm) {
     my $vm = Ravada::VM->open($id_vm);
+    return [] unless $vm->is_active;
     die "Error: No list_command in host_device ".$self->id
     if !$self->list_command;
 
@@ -238,6 +247,7 @@ sub _data($self, $field, $value=undef) {
             $value =~ m{["'`$()\[\];]}
             || $value !~ /^(ls|find)/);
 
+        warn Dumper($value) if $field eq 'devices_node';
         $value = encode_json($value) if ref($value);
 
         my $old_value = $self->_data($field);

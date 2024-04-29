@@ -23,6 +23,7 @@ use feature qw(signatures);
 
 use Ravada;
 use Ravada::Auth::SQL;
+use Ravada::Auth::Group;
 use Ravada::Domain::Void;
 
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK);
@@ -41,6 +42,7 @@ create_domain
     flush_rules_node
     flush_rules
     vm_names
+    user
 
     remote_config
     remote_config_nodes
@@ -84,6 +86,7 @@ create_domain
     mojo_request_url
     mojo_request_url_post
 
+    create_group
     remove_old_user
     remove_old_users
     remove_old_users_ldap
@@ -123,6 +126,7 @@ our $CONT = 0;
 our $CONT_POOL= 0;
 our $CONT_VOL= 0;
 our $USER_ADMIN;
+our $USER;
 our @USERS_LDAP;
 our $CHAIN = 'RAVADA';
 
@@ -190,6 +194,30 @@ sub config_host_devices($type, $die=1) {
     die "Error: no host devices config in $FILE_CONFIG_HOST_DEVICES for $type"
     if ( !exists $config->{$type} || !$config->{$type} ) && $die;
     return $config->{$type};
+}
+
+sub user {
+
+    return $USER if $USER;
+
+    my $login;
+    my $name = new_domain_name()."-$$";
+    my $pass = "$$ $$";
+    eval {
+        $login = Ravada::Auth::SQL->new(name => $name, password => $pass );
+    };
+    if ($@ && $@ =~ /Login failed/ ) {
+        $login = Ravada::Auth::SQL->new(name => $name);
+        $login->remove() if $login->id;
+        $login = undef;
+    } elsif ($@) {
+        die $@;
+    }
+    $USER = $login if $login && $login->id;
+    $USER = create_user($name, $pass, 0)
+        if !$USER;
+
+    return $USER;
 }
 
 sub user_admin {
@@ -671,7 +699,10 @@ sub _discover() {
             uid => user_admin->id
             ,id_vm => $id_vm
         );
-        wait_request();
+        for ( 1 .. 10 ) {
+            wait_request();
+            last if $req->status('done');
+        }
         my $out = $req->output;
         warn $req->error if $req->error;
         next if !$out;
@@ -1200,6 +1231,14 @@ sub create_user($name=new_domain_name(), $pass=$$, $is_admin=0) {
     return $user;
 }
 
+sub create_group($name = new_domain_name()) {
+    my $group = Ravada::Auth::Group->new(name => $name);
+    return $group if $group && $group->id;
+
+    $group = Ravada::Auth::Group::add_group(name => $name);
+    return $group;
+}
+
 sub create_ldap_user($name, $password, $keep=0) {
 
     my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
@@ -1320,12 +1359,14 @@ sub wait_request {
 
     my $check_error = delete $args{check_error};
     $check_error = 1 if !defined $check_error;
+    my $fast_forward = delete $args{fast_forward};
+    $fast_forward = 1 if !defined $fast_forward;
 
     die "Error: uknown args ".Dumper(\%args) if keys %args;
     my $t0 = time;
     my %done;
     for ( ;; ) {
-        fast_forward_requests();
+        fast_forward_requests() if $fast_forward;
         _clean_removed_domains();
         my $done_all = 1;
         my $prev = join(".",_list_requests);
@@ -1347,6 +1388,7 @@ sub wait_request {
                 if ($req->status eq 'requested') {
                     $run_at = ($req->at_time or 0);
                     $run_at = $run_at-time if $run_at;
+                    next if $run_at && $run_at > 10;
                     $run_at = 'now' if !$run_at;
                     $run_at = " $run_at";
                 }
@@ -1376,7 +1418,7 @@ sub wait_request {
                         my $error = ($req->error or '');
                         next if $error =~ /waiting for processes/i;
                         if ($req->command =~ m{rsync_back|set_base_vm|start}) {
-                            like($error,qr{^($|.*port \d+ already used|rsync done)}) or confess $req->command;
+                            like($error,qr{^($|.*port \d+ already used|.*rsync)}) or confess $req->command;
                         } elsif($req->command eq 'refresh_machine_ports') {
                             like($error,qr{^($|.*is not up|.*has ports down|nc: |Connection)});
                             $req->status('done');
@@ -1386,7 +1428,7 @@ sub wait_request {
                             like($error,qr{^($|.*compacted)});
                         } elsif($req->command eq 'refresh_machine') {
                             like($error,qr{^($|.*port.*already used|.*Domain not found)});
-                        } elsif($req->command eq 'force_shutdown') {
+                        } elsif($req->command =~ /shutdown/) {
                             like($error,qr{^($|.*Unknown domain)});
                         } elsif($req->command eq 'connect_node') {
                             like($error,qr{^($|Connection OK)});
@@ -1539,18 +1581,21 @@ sub remove_void_networks($vm=undef) {
 }
 
 sub remove_networks_req() {
-    my $sth = connector()->dbh->prepare("SELECT id,id_vm,name FROM virtual_networks "
-        ." WHERE name like ? "
+    my $sth = connector()->dbh->prepare(
+        "SELECT vn.id,id_vm,vn.name,v.name "
+        ." FROM virtual_networks vn, vms v"
+        ." WHERE vn.name like ? "
+        ."   AND vn.id_vm=v.id"
     );
     $sth->execute(base_domain_name."%");
-    while (my ($id, $id_vm, $name) = $sth->fetchrow) {
+    while (my ($id, $id_vm, $name, $node) = $sth->fetchrow) {
         my $req = Ravada::Request->remove_network(
             uid => user_admin()->id
             ,id => $id
             ,id_vm => $id_vm
         );
     }
-    wait_request();
+    wait_request(debug => 1);
 }
 
 sub remove_qemu_networks($vm=undef) {

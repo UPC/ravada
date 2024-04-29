@@ -89,14 +89,25 @@
                 </label>
             </div>
         </div>
-        <div class="form-group" ng-class="{ 'is-invalid' : form_booking.groups.$error }">
-            <label for="date_until"><%=l 'Groups with permissions' %><sup>*</sup></label>
+        <div class="form-group" ng-class="{ 'is-invalid' : form_booking.groups.$error }"
+            ng-show="<%= $FEATURE->{ldap} or 0 %>"
+        >
+            <label for="groups"><%=l 'LDAP groups allowed' %><sup>*</sup></label>
             <ldap-groups name="groups" ng-model="$ctrl.entry.ldap_groups" editable="$ctrl.entry.editable"
-                         required></ldap-groups>
+                         ></ldap-groups>
             <div ng-messages="form_booking.groups.$error" role="alert">
                 <div ng-messages-include="error-messages"></div>
             </div>
         </div>
+        <div class="form-group" ng-class="{ 'is-invalid' : form_booking.groups.$error }">
+            <label for="groups_local"><%=l 'Groups allowed' %><sup>*</sup></label>
+            <local-groups name="groups_local" ng-model="$ctrl.entry.local_groups" editable="$ctrl.entry.editable"
+                         ></local-groups>
+            <div ng-messages="form_booking.groups.$error" role="alert">
+                <div ng-messages-include="error-messages"></div>
+            </div>
+        </div>
+
         <div class="d-flex" ng-show="$ctrl.entry.editable">
             <div class="mr-auto">
                 <button type="button" class="btn btn-danger"
@@ -110,7 +121,8 @@
             ><%=l 'Cancel' %>
             </button>
             <button type="button" class="btn btn-primary ml-2"
-                    ng-disabled="form_booking.$invalid || form_booking.$pristine || $ctrl.hasConflicts()"
+                    ng-disabled="form_booking.$invalid || form_booking.$pristine || $ctrl.hasConflicts()
+                    || ($ctrl.entry.ldap_groups==0 && $ctrl.entry.local_groups==0)"
                     ng-click="$ctrl.save()"
             ><%=l 'Save changes' %>
             </button>
@@ -126,5 +138,4 @@
             </div>
         </div>
     </fieldset>
-    {{ form_booking.ldap_groups }}
 </form>

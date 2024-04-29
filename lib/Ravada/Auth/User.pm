@@ -16,6 +16,9 @@ use Encode;
 use Mojo::JSON qw(decode_json);
 use Moose::Role;
 
+use Ravada::Auth::LDAP;
+use Ravada::Auth::Group;
+
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
@@ -340,6 +343,37 @@ sub allowed_access($self,$id_domain) {
     return 0;
 }
 
+=head2 allowed_access_group
+
+Return true if the user belongs to a group that can access the base
+Also it returns true when there are no group restrictions for that VM.
+
+=cut
+
+sub allowed_access_group($self,$id_domain) {
+    return 1 if $self->is_admin;
+
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id_group,name from group_access "
+        ." WHERE id_domain=?"
+        ."   AND type=?"
+    );
+    $sth->execute($id_domain, 'local');
+    my @groups;
+    while ( my ($id_group,$name) = $sth->fetchrow ) {
+        if (!$id_group && $name) {
+            $id_group= $name;
+        }
+        push @groups,($id_group) if defined $id_group;
+    }
+    return 1 if !@groups;
+
+    for my $id_group ( @groups ) {
+        return 1 if $self->is_member($id_group);
+    }
+    return 0;
+}
+
 sub _list_domains_access($self) {
 
     _init_connector();
@@ -416,24 +450,44 @@ sub _load_allowed {
 
 sub _load_allowed_groups($self) {
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id_domain,name from group_access");
-    my ($id_domain, $name);
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,id_domain,name,id_group,type from group_access");
+    my ($id, $id_domain, $name, $id_group, $type);
     $sth->execute();
-    $sth->bind_columns(\($id_domain, $name));
-    while ( $sth->fetch ) {
+    $sth->bind_columns(\($id, $id_domain, $name, $id_group, $type));
+    while ( my $row = $sth->fetchrow_hashref ) {
+        $type = 'ldap' if !defined $type;
         next if $self->{_allowed}->{$id_domain};
 
         $self->{_allowed}->{$id_domain} = 0;
 
-        next unless $self->is_external && $self->external_auth eq 'ldap';
-
-        if (!Ravada::Auth::LDAP::search_group(name => $name)) {
-            next;
+        if ($type eq 'ldap') {
+            next unless $self->is_external && $self->external_auth eq 'ldap';
+            if (!Ravada::Auth::LDAP::search_group(name => $name)) {
+                next;
+            }
+            $self->{_allowed}->{$id_domain} = 1
+                if $self->ldap_entry
+                && Ravada::Auth::LDAP::is_member($self->ldap_entry, $name);
+        } elsif ($type eq 'local') {
+            my $group;
+            if ($id_group) {
+                $group = Ravada::Auth::Group->open($id_group)
+            } elsif($name) {
+                $group = Ravada::Auth::Group->new(name => $name);
+            } else {
+                warn "Error: group access withouth id_group or group name id=$id";
+                next;
+            }
+            if (!$group || !$group->id) {
+                warn "Error: unknown group '$name' for group access ".Dumper($row);
+            } else {
+                $self->{_allowed}->{$id_domain} = 1
+                if $self->is_member($group);
+            }
+        } else {
+            warn "Error: unknown type '$type' for group access '$name'";
         }
 
-        $self->{_allowed}->{$id_domain} = 1
-            if $self->ldap_entry
-            && Ravada::Auth::LDAP::is_member($self->ldap_entry, $name);
     }
 }
 
@@ -468,6 +522,27 @@ sub list_requests($self, $date_req=Ravada::Utils::date_now(3600)) {
         push @req, ( $req );
     }
     return @req;
+}
+
+=head2 is_member
+
+Returns wether an user is member of a group
+
+Arguments: group name or object
+
+=cut
+
+sub is_member($self, $group) {
+    confess "Error: undefined group" if !defined $group;
+    if (!ref($group)) {
+        if ($group =~ /^\d+$/) {
+            $group = Ravada::Auth::Group->open($group);
+        } else {
+            $group = Ravada::Auth::Group->new(name => $group);
+        }
+    }
+    my $is_member = grep { $_ eq $group->name} $self->groups_local;
+    return ($is_member or 0);
 }
 
 1;

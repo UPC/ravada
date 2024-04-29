@@ -37,6 +37,8 @@ my $FILE_CONFIG;
 
 my $ADD_USER_LDAP;
 my $ADD_USER_FILE;
+my $UPLOAD_GROUP_MEMBERS;
+my $GROUP;
 my $ADD_GROUP_LDAP;
 my $RM_GROUP_LDAP;
 my $ADD_USER_GROUP;
@@ -97,6 +99,7 @@ my $USAGE = "$0 "
         ." --add-user-ldap : adds a new LDAP user\n"
         ." --add-user-file: adds new users from a file\n"
         ." --remove-user : removes a db user\n"
+        ." --upload-group-members: adds new members to a group\n"
         ." --add-group-ldap : creates a new LDAP group\n"
         ." --remove-group-ldap : removes a LDAP group\n"
         ." --add-user-group : adds user to a LDAP group\n"
@@ -135,6 +138,7 @@ my $USAGE = "$0 "
         ."Create users modifiers\n"
         ." --type : plain, ldap or sso. Defaults to plain\n"
         ." --create : only valid for LDAP users, creates the entries.\n"
+        ." --group: add user as member of this group.\n"
         ."\n"
     ;
 
@@ -167,6 +171,8 @@ GetOptions (       help => \$help
      ,'add-group-ldap=s'=> \$ADD_GROUP_LDAP
   ,'remove-group-ldap=s'=> \$RM_GROUP_LDAP
      ,'add-user-group=s'=> \$ADD_USER_GROUP
+  ,'upload-group-members=s'=> \$UPLOAD_GROUP_MEMBERS
+                ,'group=s' => \$GROUP
 
       ,'import-domain=s' => \$IMPORT_DOMAIN
       ,'import-vbox=s' => \$IMPORT_VBOX
@@ -352,9 +358,10 @@ sub add_user {
     $is_admin = 1 if $is_admin_q =~ /y/i;
 
 
-    Ravada::Auth::SQL::add_user(      name => $login
+    my $user = Ravada::Auth::SQL::add_user(      name => $login
                                 , password => $password
                                 , is_admin => $is_admin);
+    $user->add_to_group($GROUP) if $GROUP;
 }
 
 sub add_user_file($ADD_USER_FILE) {
@@ -1160,6 +1167,36 @@ sub show_volume($rvd_back) {
     }
 }
 
+sub upload_group_members($file) {
+    if (!$GROUP) {
+        ($GROUP) = $file =~ m{.*/(.*)\.};
+    }
+    my $ravada = Ravada::Front->new();
+
+    if (my ($user,$path)= $file =~ /^~(.*)\/(.*)/) {
+        $user = 'root' if !$user;
+        my @data = getpwnam($user);
+        $file = $data[7]."/".$path;
+    }
+    die "Error: File $file does not exist\n"
+    if !-e $file;
+
+    open my $in,"<",$file or die "$! $file\n";
+    my $users = join("",<$in>);
+    close $in;
+
+    my ($found, $count, $error)=$ravada->upload_group_members($GROUP,$users);
+
+    print "Group $GROUP: $found found, $count added.\n";
+    if (scalar (@$error)) {
+        print "Errors:\n";
+        for (sort @$error) {
+            print "  - $_\n";
+        }
+    }
+
+}
+
 sub DESTROY {
 }
 
@@ -1178,6 +1215,7 @@ if $HIBERNATE_DOMAIN || $SHUTDOWN_DOMAIN;
 add_user($ADD_USER)                 if $ADD_USER;
 add_user_ldap($ADD_USER_LDAP)       if $ADD_USER_LDAP;
 add_user_file($ADD_USER_FILE)       if $ADD_USER_FILE;
+upload_group_members($UPLOAD_GROUP_MEMBERS) if $UPLOAD_GROUP_MEMBERS;
 add_group_ldap($ADD_GROUP_LDAP)     if $ADD_GROUP_LDAP;
 remove_group_ldap($RM_GROUP_LDAP)   if $RM_GROUP_LDAP;
 add_user_group($rvd_back, $ADD_USER_GROUP)     if $ADD_USER_GROUP;
