@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2023-10-08 23:02+0000\n"
+"PO-Revision-Date: 2023-10-08 23:0+0000\n"
 "Last-Translator: Claire Charles <charlesclaire101@gmail.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/ravada/"
 "translation/it/>\n"
@@ -38,7 +38,7 @@ msgid "Stop"
 msgstr "Ferma"
 
 msgid "View"
-msgstr "vista"
+msgstr "Vista"
 
 msgid "Prepare base"
 msgstr "Preparare la base"
@@ -89,34 +89,34 @@ msgid "Language:"
 msgstr "Lingua:"
 
 msgid "English"
-msgstr "inglese"
+msgstr "Inglese"
 
 msgid "Spanish"
-msgstr "spagnolo"
+msgstr "Spagnolo"
 
 msgid "Catalan"
-msgstr "catalano"
+msgstr "Catalano"
 
 msgid "Galician"
-msgstr "galiziano"
+msgstr "Galiziano"
 
 msgid "French"
-msgstr "francese"
+msgstr "Francese"
 
 msgid "Hindi"
-msgstr "hindi"
+msgstr "Hindi"
 
 msgid "Indonesian"
-msgstr "indonesiano"
+msgstr "Indonesiano"
 
 msgid "Persian"
-msgstr "persiano"
+msgstr "Persiano"
 
 msgid "Japanese"
-msgstr "giapponese"
+msgstr "Giapponese"
 
 msgid "German"
-msgstr "tedesco"
+msgstr "Tedesco"
 
 msgid "New Password:"
 msgstr "Nuova password:"
@@ -260,7 +260,7 @@ msgid "in your computer."
 msgstr "nel tuo computer."
 
 msgid "Search in your distro, e.g. in Debian/Ubuntu with"
-msgstr "Cerca nella tua distro, ad es. in Debian / Ubuntu con"
+msgstr "Cerca nella tua distro, ad es. in Debian/Ubuntu con"
 
 msgid "You will need to install"
 msgstr "Devi installare"
@@ -310,10 +310,10 @@ msgid "Start session"
 msgstr "Inizia sessione"
 
 msgid "bits) in your computer."
-msgstr "bit) nel tuo computer."
+msgstr "bits) nel tuo computer."
 
 msgid "Permissions"
-msgstr "permessi"
+msgstr "Permessi"
 
 msgid "can change the settings of owned virtual machines."
 msgstr "può cambiare le impostazioni delle macchine virtuali di proprietà."
@@ -504,7 +504,7 @@ msgid "It may take a couple of minutes."
 msgstr "Potrebbero volerci un paio di minuti."
 
 msgid "Hibernating ..."
-msgstr "Ibernazione ..."
+msgstr "Ibernazione …"
 
 msgid "Description"
 msgstr "Descrizione"
@@ -681,7 +681,7 @@ msgid "Enter Password"
 msgstr "Inserire la password"
 
 msgid "Confirm Password"
-msgstr "conferma password"
+msgstr "Conferma password"
 
 msgid "Username is required"
 msgstr "È richiesto un nome utente"
@@ -840,10 +840,10 @@ msgid "Session timeout"
 msgstr "Timeout della sessione"
 
 msgid "Vietnamese"
-msgstr "vietnamita"
+msgstr "Vietnamita"
 
 msgid "Italian"
-msgstr "italiano"
+msgstr "Italiano"
 
 msgid "Type a typical LDAP user name to fetch the attribute list"
 msgstr ""
@@ -961,10 +961,10 @@ msgid "NAT"
 msgstr "NAT"
 
 msgid "Bridge"
-msgstr "Bridge"
+msgstr "Ponte"
 
 msgid "No bridges found"
-msgstr "Nessun bridge  trovato"
+msgstr "Nessun bridge trovato"
 
 msgid "disk"
 msgstr "disco"
@@ -1042,7 +1042,9 @@ msgid "Virtual machines pre-started"
 msgstr "Macchina virtuale pre-avviata"
 
 msgid "Warning: this virtual machine will be prepared as a base. This may take long."
-msgstr "Attenzione: questa macchina virtuale  verrà preparata come base. Questa operazione può essere lunga."
+msgstr ""
+"Attenzione: questa macchina virtuale verrà preparata come base. Questa "
+"operazione può essere lunga."
 
 msgid "Assign this virtual machine to the pre-started pool"
 msgstr "Assegna questa virtual machine a un pool pre-avviato"
@@ -1105,10 +1107,10 @@ msgid "Autostart"
 msgstr "Avvio automatico"
 
 msgid "Display URL :"
-msgstr "URL di visualizzazione:"
+msgstr "URL di visualizzazione :"
 
 msgid "vram"
-msgstr "vram"
+msgstr "Vram"
 
 msgid "Action"
 msgstr "Azione"
@@ -1163,7 +1165,7 @@ msgid "Enables display password when available"
 msgstr "Abilita la password di visualizzazione quando è disponibile"
 
 msgid "bus"
-msgstr "autobus"
+msgstr "canale"
 
 msgid "Minimum port number to expose virtual machine services."
 msgstr "Numero di porta minimo per esporre i servizi della macchina virtuale."
@@ -1193,7 +1195,7 @@ msgid "The machine will turn off after this time"
 msgstr "La macchina si spegne dopo questo tempo"
 
 msgid "Debug"
-msgstr "debug"
+msgstr "Debug"
 
 msgid "off"
 msgstr "spento"
@@ -1237,13 +1239,13 @@ msgstr ""
 "esecuzione contemporaneamente"
 
 msgid "Check"
-msgstr "controllare"
+msgstr "Controllo"
 
 msgid "Manage machine"
 msgstr "Gestire la macchina"
 
 msgid "heads"
-msgstr "teste"
+msgstr "heads"
 
 msgid "Remove Base"
 msgstr "Rimuovi la base"
@@ -1300,7 +1302,7 @@ msgid "No message to show!"
 msgstr "Nessun messaggio da mostrare!"
 
 msgid "fallback"
-msgstr "ripiego"
+msgstr "ricaderci"
 
 msgid "Danger: This will destroy all the disk data permantently."
 msgstr ""
@@ -1345,7 +1347,7 @@ msgid "This machine is base and can't be modified."
 msgstr "Questa macchina è di base e non può essere modificata."
 
 msgid "Hide clones"
-msgstr "nascondere i cloni"
+msgstr "Nascondere i cloni"
 
 msgid "Debug Ports"
 msgstr "Porte di debug"
@@ -1360,7 +1362,7 @@ msgid "New feature"
 msgstr "Nuova funzione"
 
 msgid "check"
-msgstr "controllare"
+msgstr "controllo"
 
 msgid "mode"
 msgstr "modalità"
@@ -1470,8 +1472,8 @@ msgid ""
 "This server has reservations for today. Machines from users out of\n"
 "    the booking list will be shutdown."
 msgstr ""
-"Questo server ha prenotazioni per oggi. Macchine da utenti fuori\n"
-"    la lista delle prenotazioni sarà chiusa."
+"Questo server ha prenotazioni per oggi. Macchine da utenti fuori la lista "
+"delle prenotazioni sarà chiusa."
 
 msgid "filter"
 msgstr "filtro"
@@ -1944,3 +1946,325 @@ msgstr "Programma di oggi"
 
 msgid "Shutdown disconnected"
 msgstr "Spegnimento scollegato"
+
+msgid "Are you sure you want to migrate"
+msgstr "Sei sicuro di voler eseguire la migrazione"
+
+msgid "Add new disk"
+msgstr "Aggiungi nuovo disco"
+
+msgid "device"
+msgstr "dispositivo"
+
+msgid "sys"
+msgstr "sys"
+
+msgid "swap"
+msgstr "swap"
+
+msgid "size"
+msgstr "misurare"
+
+msgid "allocation"
+msgstr "allocazione"
+
+msgid "Add new Display"
+msgstr "Aggiungi nuovo display"
+
+msgid "PrepareBase"
+msgstr "PreparaBase"
+
+msgid "Add to group"
+msgstr "Aggiungi al gruppo"
+
+msgid "No LDAP groups created."
+msgstr "Nessun gruppo LDAP creato."
+
+msgid "Add groups"
+msgstr "Aggiungi gruppi"
+
+msgid "User is not member of any group."
+msgstr "L'utente non è membro di alcun gruppo."
+
+msgid "New password"
+msgstr "Nuova password"
+
+msgid "Oops!"
+msgstr "Ops!"
+
+msgid "New Password must be at least 6 characters"
+msgstr "La nuova password deve contenere almeno 6 caratteri"
+
+msgid "Set New Password"
+msgstr "Imposta nuova password"
+
+msgid "This user has never logged in the Ravada server."
+msgstr "Questo utente non ha mai effettuato l'accesso al server Ravada."
+
+msgid "Import"
+msgstr "Importare"
+
+msgid "New network"
+msgstr "Nuova rete"
+
+msgid "name"
+msgstr "nome"
+
+msgid "address"
+msgstr "indirizzo"
+
+msgid "Network address is required."
+msgstr "L'indirizzo di rete è obbligatorio."
+
+msgid "Invalid IP network address. Expecting a.b.c.d/e"
+msgstr "Indirizzo di rete IP non valido. Mi aspetto a.b.c.d/e"
+
+msgid "This address is duplicated"
+msgstr "Questo indirizzo è duplicato"
+
+msgid "password"
+msgstr "parola d'ordine"
+
+msgid "Requires viewer password when implemented"
+msgstr "Richiede la password del visualizzatore quando implementato"
+
+msgid "Set either"
+msgstr "Imposta uno dei due"
+
+msgid "all machines"
+msgstr "tutte le macchine"
+
+msgid "or"
+msgstr "o"
+
+msgid "no machines"
+msgstr "niente macchine"
+
+msgid "for users in this network"
+msgstr "per gli utenti di questa rete"
+
+msgid "Network"
+msgstr "Rete"
+
+msgid "yes"
+msgstr "sì"
+
+msgid "Check connection to"
+msgstr "Controlla la connessione a"
+
+msgid "Save"
+msgstr "Salva"
+
+msgid "Testing connection to"
+msgstr "Testare la connessione a"
+
+msgid "No bases found"
+msgstr "Nessuna base trovata"
+
+msgid "This base has"
+msgstr "Questa base ha"
+
+msgid "backup directory"
+msgstr "directory di backup"
+
+msgid "This is a main node and can't be removed."
+msgstr "Questo è un nodo principale e non può essere rimosso."
+
+msgid "Are you sure you want to remove the node"
+msgstr "Sei sicuro di voler rimuovere il nodo"
+
+msgid "This node has"
+msgstr "Questo nodo ha"
+
+msgid "bases."
+msgstr "basi."
+
+msgid "Remove bases in node"
+msgstr "Rimuovi le basi nel nodo"
+
+msgid "Request"
+msgstr "Richiesta"
+
+msgid "Removing Virtual Machine"
+msgstr "Rimozione della macchina virtuale"
+
+msgid "This can't be undone"
+msgstr "L'operazione non può essere annullata"
+
+msgid "and will remove all the disk and information of this virtual machine."
+msgstr ""
+"e rimuoverà tutto il disco e le informazioni di questa macchina virtuale."
+
+msgid "Please insert"
+msgstr "Per favore inserire"
+
+msgid "not"
+msgstr "non"
+
+msgid "to apply."
+msgstr "applicare."
+
+msgid "Display"
+msgstr "Schermo"
+
+msgid "saved."
+msgstr "salvato."
+
+msgid "Internal IP"
+msgstr "IP interno"
+
+msgid "Max Memory"
+msgstr "Memoria massima"
+
+msgid "CPUs"
+msgstr "CPU"
+
+msgid "reopen"
+msgstr "riaprire"
+
+msgid "down"
+msgstr "giù"
+
+msgid "I don't know settings tabs for:"
+msgstr "Non conosco le schede delle impostazioni per:"
+
+msgid "Hardware"
+msgstr "Hardware"
+
+msgid "Base"
+msgstr "Base"
+
+msgid "Ports"
+msgstr "Porti"
+
+msgid "Access"
+msgstr "Accesso"
+
+msgid "Recent requests"
+msgstr "Richieste recenti"
+
+msgid "Force ShutDown"
+msgstr "Spegnimento forzato"
+
+msgid "Reboot"
+msgstr "Riavviare"
+
+msgid "Force Reboot"
+msgstr "Riavvio forzato"
+
+msgid "This virtual machine has already been compacted"
+msgstr "Questa macchina virtuale è già stata compattata"
+
+msgid "Purge"
+msgstr "Epurazione"
+
+msgid "Purge disk volumes"
+msgstr "Eliminare i volumi del disco"
+
+msgid "This machine is locked by process"
+msgstr "Questa macchina è bloccata dal processo"
+
+msgid "process"
+msgstr "processi"
+
+msgid "This base can't be removed because the domain has clones."
+msgstr "Questa base non può essere rimossa perché il dominio contiene cloni."
+
+msgid "Loading machine"
+msgstr "Macchina di caricamento"
+
+msgid "waiting for requests"
+msgstr "in attesa di richieste"
+
+msgid "Loading nodes"
+msgstr "Caricamento dei nodi"
+
+msgid "Node down"
+msgstr "Nodo in basso"
+
+msgid "Node disabled"
+msgstr "Nodo disabilitato"
+
+msgid "This base has clones"
+msgstr "Questa base ha dei cloni"
+
+msgid "today"
+msgstr "oggi"
+
+msgid "New Booking"
+msgstr "Nuova prenotazione"
+
+msgid "This name is invalid. It can only contain alphabetic, numbers, undercores and dashes and must start by a letter."
+msgstr ""
+"Questo nome non è valido. Può contenere solo caratteri alfabetici, numeri, "
+"trattini bassi e trattini e deve iniziare con una lettera."
+
+msgid "I can't find"
+msgstr "Non riesco a trovare"
+
+msgid "driver"
+msgstr "driver"
+
+msgid "-- choose hardware --"
+msgstr "-- scegli l'hardware --"
+
+msgid "Type the name of the volume disk to confirm:"
+msgstr "Digitare il nome del disco del volume per confermare:"
+
+msgid "This machine is base and it can't be modified."
+msgstr "Questa macchina è base e non può essere modificata."
+
+msgid "Force change password on first access"
+msgstr "Forza il cambio password al primo accesso"
+
+msgid "Are you sure you want to remove the"
+msgstr "Sei sicuro di voler rimuovere il file"
+
+msgid "Choose the virtualization type of the Node."
+msgstr "Scegli il tipo di virtualizzazione del Node."
+
+msgid "Error: the LDAP entry for this user has been removed."
+msgstr "Errore: la voce LDAP per questo utente è stata rimossa."
+
+msgid "No machines found"
+msgstr "Nessuna macchina trovata"
+
+msgid "A node with that address already exists."
+msgstr "Esiste già un nodo con quell'indirizzo."
+
+msgid "Warning: anonymous machines won't show up unless you set them public."
+msgstr ""
+"Attenzione: le macchine anonime non verranno visualizzate a meno che non le "
+"imposti pubbliche."
+
+msgid "Machine Information"
+msgstr "Informazioni sulla macchina"
+
+msgid "Waiting for requests to complete"
+msgstr "In attesa del completamento delle richieste"
+
+msgid "Compact"
+msgstr "Compatto"
+
+msgid "waiting for network to come up"
+msgstr "in attesa che arrivi la rete"
+
+msgid "Compact disk volumes"
+msgstr "Volumi del disco compatto"
+
+msgid "Exec. time"
+msgstr "Esecutivo tempo"
+
+msgid "Exec clones sequentially"
+msgstr "Exec clona in sequenza"
+
+msgid "RAM (Gb)"
+msgstr "RAM (Gb)"
+
+msgid "Start after migration"
+msgstr "Inizia dopo la migrazione"
+
+msgid "This virtual machine is running. It must be shut down before migrate."
+msgstr ""
+"Questa macchina virtuale è in esecuzione. Deve essere spento prima della "
+"migrazione."
