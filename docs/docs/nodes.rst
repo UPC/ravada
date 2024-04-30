@@ -61,6 +61,12 @@ system with these packages. Some distributions have different package names.
 - qemu-kvm
 - rsync
 
+This is from an Ubuntu server:
+
+::
+
+    sudo apt install openssh-server libvirt-clients libvirt-daemon libvirt-daemon-system qemu-kvm rsync
+
 It is possible to have nodes with heterogeneous operative systems: different Ubuntus,
 Debians, even RedHats or Fedoras can be added, though it should be easier if all of
 them are similar or identical if possible.
