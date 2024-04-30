@@ -5,8 +5,8 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2024-02-06 16:45+0000\n"
-"Last-Translator: Dani Sanchez <dani@fib.upc.edu>\n"
+"PO-Revision-Date: 2020-11-01 12:55+0000\n"
+"Last-Translator: Kimia Mirehbar <kimia@etsetb.upc.edu>\n"
 "Language-Team: Persian <https://hosted.weblate.org/projects/ravada/"
 "translation/fa/>\n"
 "Language: fa\n"
@@ -322,7 +322,6 @@ msgstr "می تواند تنظیمات ماشین های مجازی متعلق �
 msgid "can change the settings of any virtual machine."
 msgstr "می تواند تنظیمات هر ماشین مجازی را تغییر دهد."
 
-#, fuzzy
 msgid "can change the settings of any virtual machine "
 msgstr "می تواند تنظیمات هر ماشین مجازی را تغییر دهد"
 
