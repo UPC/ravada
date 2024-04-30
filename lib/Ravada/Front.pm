@@ -171,6 +171,7 @@ sub list_machines_user($self, $user, $access_data={}) {
             , name_clone => undef
             , is_base => $is_base
             , can_prepare_base => 0
+            , is_in_bundle => $self->_is_in_bundle($id)
         };
 
 
@@ -191,6 +192,17 @@ sub list_machines_user($self, $user, $access_data={}) {
     }
     $sth->finish;
     return \@list;
+}
+
+sub _is_in_bundle($self,$id_base) {
+    my $sth = $self->_dbh->prepare("SELECT id FROM bundles "
+        ." WHERE id IN (SELECT id_bundle FROM domains_bundle "
+        ."              WHERE id_domain=?)"
+    );
+    $sth->execute($id_base);
+    my ($id_bundle) = $sth->fetchrow;
+    return 1 if $id_bundle;
+    return 0;
 }
 
 sub _copy_clone_info($user, $base, $clones) {

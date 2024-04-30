@@ -6671,7 +6671,6 @@ sub _enforce_limits_active($self, $request) {
 
     my %domains;
     for my $domain ($self->list_domains( active => 1 )) {
-        next if $domain->is_in_bundle();
         push @{$domains{$domain->id_owner}},$domain;
         $domain->client_status();
     }
@@ -6692,6 +6691,7 @@ sub _enforce_limits_active($self, $request) {
 #        my @list = map { $_->name => $_->start_time } @domains_user;
         my $active = scalar(@domains_user);
         DOMAIN: for my $domain (@domains_user) {
+            next if $domain->is_in_bundle();
             last if $active <= $start_limit;
             for my $request ($domain->list_requests) {
                 next DOMAIN if $request->command =~ /shutdown/;
