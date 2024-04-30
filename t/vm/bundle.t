@@ -36,10 +36,49 @@ sub _req_create($user, @base) {
 }
 
 
-sub test_bundle_2($vm, $n, $do_clone=0, $volatile=0) {
-    my $name = new_domain_name();
-    my $id_bundle = rvd_front->create_bundle($name);
-    rvd_front->bundle_private_network($id_bundle,1);
+sub _search_clones($user, $base) {
+    my @clones = grep { $_->{id_owner} == $user->id }
+            $base->clones();
+    return @clones;
+}
+
+sub _check_net_equal($user, @bases) {
+    my $net;
+    for my $base ( @bases ) {
+
+        my @clone1 = _search_clones($user, $base);
+        is(scalar(@clone1),1) or exit;
+
+        if($net) {
+            $net = _check_net_private($clone1[0], $net);
+        } else {
+            $net = _check_net_private($clone1[0]);
+        }
+    }
+}
+
+sub _start_clones($user, @bases) {
+
+    for my $base ( @bases ) {
+        my ($clone) = _search_clones($user, $base);
+        Ravada::Request->start_domain(
+            uid => $clone->{id_owner}
+            ,id_domain => $clone->{id}
+        );
+    }
+    wait_request();
+}
+
+sub _check_clones_active($user, @bases) {
+    for my $base (@bases) {
+        my ($clone0) = grep { $_->{id_owner} == $user->id }
+            $base->clones();
+        my $clone = Ravada::Domain->open($clone0->{id});
+        is($clone->is_active,1);
+    }
+}
+
+sub _create_n_bases($vm, $id_bundle, $n, $volatile) {
 
     my @bases;
     for my $count ( 1 .. $n ) {
@@ -52,31 +91,56 @@ sub test_bundle_2($vm, $n, $do_clone=0, $volatile=0) {
 
         push @bases,($base1);
     }
+    return @bases;
+}
+
+sub _test_not_bundled_limit($vm, $user, @bases) {
+    my $base1 = create_domain_v2(vm => $vm);
+    $base1->prepare_base(user_admin);
+    $base1->is_public(1);
+
+    _req_clone($user, $base1);
+
+    _start_clones($user, @bases, $base1);
+
+    Ravada::Request->enforce_limits();
+    wait_request(debug => 1);
+
+    _check_clones_active($user, @bases);
+    my ($clone_down0) = _search_clones($user, $base1);
+
+    my $clone = Ravada::Domain->open($clone_down0->{id});
+    is($clone->is_active,0);
+
+    remove_domain($base1);
+}
+
+sub test_bundle_2($vm, $n, $do_clone=0, $volatile=0) {
+    my $name = new_domain_name();
+    my $id_bundle = rvd_front->create_bundle($name);
+    rvd_front->bundle_private_network($id_bundle,1);
+
+    my @bases = _create_n_bases($vm, $id_bundle, $n, $volatile);
 
     my $user = create_user();
+    die "Error: user ".$user->name." should not be admin"
+    if $user->is_admin;
+
     if ($do_clone) {
         _req_clone($user, @bases);
     } else {
         _req_create($user, @bases);
     }
+    _check_net_equal($user, @bases);
+    _start_clones($user, @bases);
 
-    my $net;
-    for my $base ( @bases ) {
+    Ravada::Request->enforce_limits();
+    wait_request(debug => 1);
+    _check_clones_active($user, @bases);
 
-        my @clone1 = grep { $_->{id_owner} == $user->id }
-            $base->clones();
+    _test_not_bundled_limit($vm, $user, @bases);
 
-        is(scalar(@clone1),1) or exit;
-
-        if($net) {
-            $net = _check_net_private($clone1[0], $net);
-        } else {
-            $net = _check_net_private($clone1[0]);
-        }
-
-        Ravada::Request->enforce_limits();
-        wait_request();
-    }
+    remove_domain(@bases);
 }
 
 sub test_bundle($vm, $do_clone=0, $volatile=0) {
