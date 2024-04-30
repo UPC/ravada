@@ -14,7 +14,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
-"X-Generator: Weblate 5.4-dev\n"
+"X-Generator: Weblate 4.11-dev\n"
 
 msgid "Ravada broker"
 msgstr "Ravada 连接器"
@@ -1055,7 +1055,6 @@ msgstr "请根据您的 PC 配置确保您拥有正确的路径和版本。"
 msgid "can change the settings of any virtual machine."
 msgstr "可以更改任何虚拟机的设置。"
 
-#, fuzzy
 msgid "can change the settings of any virtual machine "
 msgstr "可以更改任何虚拟机的设置 "
 
