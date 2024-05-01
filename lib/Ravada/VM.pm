@@ -344,6 +344,10 @@ sub _connect {
 }
 
 sub _around_connect($orig, $self) {
+
+    if ($self->_data('cached_down') && time-$self->_data('cached_down')<120) {
+            return;
+    }
     my $result = $self->$orig();
     if ($result) {
         $self->is_active(1);

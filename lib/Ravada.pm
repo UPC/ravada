@@ -2880,6 +2880,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms', 'clone_storage','varchar(64) DEFAULT NULL');
     $self->_upgrade_table('vms','dir_backup','varchar(128) DEFAULT NULL');
     $self->_upgrade_table('vms','version','varchar(64) DEFAULT NULL');
+    $self->_upgrade_table('vms','cached_down','int DEFAULT 0');
 
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','pid','int(11) DEFAULT NULL');
@@ -6044,10 +6045,10 @@ sub _refresh_active_domains($self, $request=undef) {
 
 sub _refresh_down_nodes($self, $request = undef ) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id FROM vms "
+        "SELECT id,name FROM vms "
     );
     $sth->execute();
-    while ( my ($id) = $sth->fetchrow()) {
+    while ( my ($id,$name) = $sth->fetchrow()) {
         my $vm;
         eval { $vm = Ravada::VM->open($id) };
         warn $@ if $@;
