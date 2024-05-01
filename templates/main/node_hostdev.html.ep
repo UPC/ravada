@@ -59,7 +59,10 @@
                     <li ng-show="hdev.devices_node[node].length==0">
                         <span class="error"><%=l 'No devices found'%></li></span>
                     <li ng-repeat="dev in hdev.devices_node[node]">
-                    <a class="badge badge-primary"
+                    <a ng-class='{
+                        "badge badge-success border": dev.domain.is_locked
+                        ,"badge badge-light border": !dev.domain.is_locked
+                        } '
                         href="/machine/manage/{{dev.domain.id}}.html#!#v-pills-hostdev"
                         ng-show="dev.domain">{{dev.domain.name}}</a>
                     {{dev.name}}
