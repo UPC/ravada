@@ -1726,8 +1726,7 @@ sub remove_old_storage_pools() {
     remove_old_storage_pools_void();
 }
 
-sub clean($ldap=undef) {
-    my $file_remote_config = shift;
+sub clean($ldap=undef, $file_remote_config=undef) {
     remove_old_domains();
     remove_old_disks();
     remove_old_pools();

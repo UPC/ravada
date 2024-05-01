@@ -260,6 +260,7 @@ sub _list_devices_node($rvd, $row) {
     $row->{_n_devices}=0;
 
     my %ret;
+    my %attached = _list_devices_attached($rvd);
     if (%$devices) {
         $row->{_nodes} = [sort keys %{$devices}];
         for (@{$row->{_nodes}}) {
@@ -267,14 +268,41 @@ sub _list_devices_node($rvd, $row) {
         }
         $row->{_loading} = 0;
         for my $node ( keys %$devices ) {
-            $ret{$node} = [ map { {name => $_ } } @{$devices->{$node}} ];
+            my @devs;
+            for my $name ( @{$devices->{$node}} ) {
+                my $dev = { name => $name };
+                $dev->{domain} = $attached{$name} if exists $attached{$name};
+                push @devs,($dev);
+            }
+            $ret{$node} = \@devs;
         }
     } else {
         $row->{_nodes} = [];
     }
 
-
     $row->{devices_node} = \%ret;
+}
+
+sub _list_devices_attached($rvd) {
+    my $sth=$rvd->_dbh->prepare("SELECT d.id,d.name,d.is_base, d.status, l.id, l.name "
+        ." FROM host_devices_domain hdd, domains d"
+        ." LEFT JOIN host_devices_domain_locked l"
+        ."    ON d.id=l.id_domain "
+        ." WHERE  d.id= hdd.id_domain "
+        ."  ORDER BY d.name"
+    );
+    $sth->execute();
+    my %devices;
+    while ( my ($id,$name,$is_base, $status, $is_locked, $device) = $sth->fetchrow ) {
+        next if !$device;
+        $is_locked = 0 if !$is_locked || $status ne 'active';
+        my $domain = {     id => $id       ,name => $name, is_locked => $is_locked
+                      ,is_base => $is_base ,device => $device
+        };
+        $devices{$device} = $domain;
+    }
+    return %devices;
+
 }
 
 sub _list_domains_with_device($rvd,$row) {

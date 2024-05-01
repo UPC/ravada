@@ -11,11 +11,9 @@
 
 </div>
 
-{{host_devices}}
 <hr>
 
 <div ng-repeat="hdev in host_devices">
-    {{hdev}}
     <a ng-click="toggle_show_hdev(hdev.id)">
         <span ng-show="show_hdev[hdev.id]"><i class="fa fa-caret-down"></i></span>
         <span ng-show="!show_hdev[hdev.id]"><i class="fa fa-caret-right"></i></span>
@@ -61,10 +59,10 @@
                     <li ng-show="hdev.devices_node[node].length==0">
                         <span class="error"><%=l 'No devices found'%></li></span>
                     <li ng-repeat="dev in hdev.devices_node[node]">
-                    {{dev.name}}
                     <a class="badge badge-primary"
                         href="/machine/manage/{{dev.domain.id}}.html#!#v-pills-hostdev"
                         ng-show="dev.domain">{{dev.domain.name}}</a>
+                    {{dev.name}}
                     </li>
                 </ul>
             </li>

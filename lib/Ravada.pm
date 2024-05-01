@@ -4556,11 +4556,9 @@ sub _cmd_create{
 sub _cmd_list_host_devices($self, $request) {
     my $id_host_device = $request->args('id_host_device');
 
-    warn 1;
     my $hd = Ravada::HostDevice->search_by_id(
         $id_host_device
     );
-    warn 2;
 
     my %list= $hd->list_devices_nodes;
 
