@@ -252,11 +252,11 @@ sub _list_host_devices($rvd, $args) {
 }
 
 sub _list_devices_node($rvd, $row) {
-    my $devices = [];
+    my $devices = {};
     eval {
     $devices = decode_json($row->{devices_node}) if $row->{devices_node};
     };
-    warn $@ if $@;
+    warn "Warning: $@ $row->{devices_node}" if $@;
     $row->{_n_devices}=0;
 
     my %ret;

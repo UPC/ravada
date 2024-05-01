@@ -110,6 +110,7 @@ sub list_devices_nodes($self) {
             next;
         }
         my $node = Ravada::VM->open($ndata->[0]);
+        next if !$node || !$node->vm;
         my @current_devs;
         eval {
             @current_devs = $self->list_devices($node->id)
