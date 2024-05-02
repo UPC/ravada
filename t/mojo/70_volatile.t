@@ -225,11 +225,11 @@ sub _new_network($vm_name,$id_vm) {
 
 sub _create_network_nodes($vm_name, $net) {
     my $sth = connector->dbh->prepare(
-        "SELECT id FROM vms WHERE vm_type=?"
+        "SELECT id,name FROM vms WHERE vm_type=?"
         ."  AND is_active=1 AND enabled=1"
     );
     $sth->execute($vm_name);
-    while ( my ($id_vm) = $sth->fetchrow ) {
+    while ( my ($id_vm, $name) = $sth->fetchrow ) {
         $net->{id_vm} = $id_vm;
         Ravada::Request->create_network(
             uid => user_admin->id

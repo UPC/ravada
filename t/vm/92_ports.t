@@ -1054,8 +1054,15 @@ sub test_port_prerouting_already_open_clones_no_restricted($vm) {
     my @port1 = (grep /-A FORWARD -d $ip1.32 -p tcp -m tcp --dport $internal_port -j ACCEPT/, @out);
     is(scalar(@port1),1,"Expecting -d $ip1 --dport $internal_port -j ACCEPT ".$clone2->name) or die Dumper(\@port1);
 
-    my @port2 = (grep /-A FORWARD -d $ip2.32 -p tcp -m tcp --dport $internal_port -j ACCEPT/, @out);
-    is(scalar(@port2),1,"Expecting -d $ip2 ... --dport $internal_port") or die Dumper(\@port2);
+    my @port2;
+    for my $n ( 1 .. 60 ) {
+        @out = split /\n/, `iptables-save`;
+        @port2 = (grep /-A FORWARD -d $ip2.32 -p tcp -m tcp --dport $internal_port -j ACCEPT/, @out);
+        last if scalar(@port2);
+        diag($n." waiting for $ip2/32 ... -dport $internal_port");
+        wait_request();
+    };
+    is(scalar(@port2),1,"Expecting -d $ip2 ... --dport $internal_port") or die Dumper([$clone2->name,\@port2,\@out]);
 
     my @port_drop = (grep /--dport $internal_port -j DROP/, @out);
     is(scalar(@port_drop),0) or die Dumper(\@port_drop);
@@ -1368,6 +1375,11 @@ sub test_clone_exports_add_ports($vm) {
     _wait_ip2($vm, $clone);
     wait_request( debug => 0);
     wait_request( debug => 0, request => \@req );
+    for ( 1 .. 60 ) {
+        my @reqs_pending = grep { $_->status ne 'done' } @req;
+        last if !@reqs_pending;
+        wait_request( debug => 0, request => \@reqs_pending );
+    }
     for (@req) {
         next if $_->command eq 'set_time';
         is($_->status,'done')   or exit;
@@ -1445,7 +1457,7 @@ sub test_host_down {
     is(scalar $domain->list_ports,1);
 
     my ($n_rule);
-    for ( 1 .. 3 ) {
+    for ( 1 .. 20 ) {
         my $exposed_port = $domain->exposed_port($internal_port);
         $public_port = $exposed_port->{public_port};
         $n_rule = search_iptable_remote(local_ip => "$local_ip/32"
@@ -1459,7 +1471,12 @@ sub test_host_down {
         wait_request();
     }
 
-    ok($n_rule,"Expecting rule for -> $local_ip:$public_port") or confess;
+    ok($n_rule,"Expecting rule for -> $local_ip .. --dport $public_port") or do {
+
+        my ($out, $err) = $vm->run_command("iptables-save");
+        warn $out;
+        confess;
+    };
 
     local $@ = undef;
     eval { $domain->shutdown_now(user_admin) };
@@ -1846,6 +1863,8 @@ for my $vm_name ( reverse vm_names() ) {
     flush_rules() if !$<;
     rvd_back->setting("/backend/wait_retry",1);
     import_base($vm);
+
+    test_host_down($vm_name);
 
     test_req_expose($vm_name);
     test_expose_nested_base($vm);
