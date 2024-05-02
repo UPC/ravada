@@ -345,6 +345,12 @@ sub _connect {
     return $result;
 }
 
+=head2 timeout_down_cache
+
+  Returns time in seconds for nodes to be kept cached down.
+
+=cut
+
 sub timeout_down_cache($self) {
     return $TIMEOUT_DOWN_CACHE;
 }
