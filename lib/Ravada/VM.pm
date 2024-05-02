@@ -46,6 +46,8 @@ our $MIN_DISK_MB = 1024 * 1024;
 our $CACHE_TIMEOUT = 60;
 our $FIELD_TIMEOUT = '_data_timeout';
 
+our $TIMEOUT_DOWN_CACHE = 120;
+
 our %VM; # cache Virtual Manager Connection
 our %SSH;
 
@@ -343,9 +345,13 @@ sub _connect {
     return $result;
 }
 
+sub timeout_down_cache($self) {
+    return $TIMEOUT_DOWN_CACHE;
+}
+
 sub _around_connect($orig, $self) {
 
-    if ($self->_data('cached_down') && time-$self->_data('cached_down')<120) {
+    if ($self->_data('cached_down') && time-$self->_data('cached_down')< $self->timeout_down_cache()) {
             return;
     }
     my $result = $self->$orig();

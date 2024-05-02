@@ -109,7 +109,7 @@ sub _connect {
     } else {
         confess "Error: You can't connect to remote VMs in readonly mode"
             if $self->readonly;
-        if ($self->_data('cached_down') && time-$self->_data('cached_down')<120) {
+        if ($self->_data('cached_down') && time-$self->_data('cached_down')<$self->timeout_down_cache()) {
             return;
         }
         my $transport = 'ssh';
