@@ -6045,10 +6045,10 @@ sub _refresh_active_domains($self, $request=undef) {
 
 sub _refresh_down_nodes($self, $request = undef ) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id,name FROM vms "
+        "SELECT id FROM vms "
     );
     $sth->execute();
-    while ( my ($id,$name) = $sth->fetchrow()) {
+    while ( my ($id) = $sth->fetchrow()) {
         my $vm;
         eval { $vm = Ravada::VM->open($id) };
         warn $@ if $@;
