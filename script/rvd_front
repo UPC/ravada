@@ -438,6 +438,19 @@ get '/admin/storage' => sub($c) {
 
 };
 
+get '/admin/host_devices' => sub($c) {
+
+    _add_admin_libs($c);
+    _select_vm($c);
+
+    $c->stash(tab => ($c->param('tab') or ''));
+    $c->stash('id' => $c->stash('id_vm'));
+
+    return $c->render( template => '/main/admin_hostdev' );
+
+};
+
+
 get '/admin/networks/*id_vm' => { id_vm => undef} => sub($c) {
 
     return access_denied($c) unless $USER->is_admin

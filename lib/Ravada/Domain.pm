@@ -1050,6 +1050,7 @@ sub _check_free_vm_memory {
     my $self = shift;
 
     return if !Ravada::Front::setting(undef,"/backend/limits/startup_ram");
+    return if !$self->is_known();
 
     my $vm_free_mem = $self->_vm->free_memory;
 
