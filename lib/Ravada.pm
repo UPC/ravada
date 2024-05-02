@@ -2882,6 +2882,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms', 'clone_storage','varchar(64) DEFAULT NULL');
     $self->_upgrade_table('vms','dir_backup','varchar(128) DEFAULT NULL');
     $self->_upgrade_table('vms','version','varchar(64) DEFAULT NULL');
+    $self->_upgrade_table('vms','cached_down','int DEFAULT 0');
 
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','pid','int(11) DEFAULT NULL');
@@ -3041,7 +3042,7 @@ sub _connect_dbh($self=undef) {
 
         return $con if $con && !$err;
         sleep 1;
-        warn "Try $try $@\n";
+        warn "Try $try $data_source $@\n";
     }
     die ($@ or "Can't connect to $driver $db at $host");
 }
