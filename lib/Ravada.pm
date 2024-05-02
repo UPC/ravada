@@ -3021,7 +3021,7 @@ sub _connect_dbh($self=undef) {
 
     my $data_source = "DBI:$driver:$db";
     $data_source = "DBI:$driver:database=$db;host=$host"
-        if $host && $host ne 'localhost';
+        if $host && $host ne 'localhost' && $host ne '127.0.0.1';
 
     my $con;
     for my $try ( 1 .. 10 ) {
@@ -3040,7 +3040,7 @@ sub _connect_dbh($self=undef) {
 
         return $con if $con && !$err;
         sleep 1;
-        warn "Try $try $@\n";
+        warn "Try $try $data_source $@\n";
     }
     die ($@ or "Can't connect to $driver $db at $host");
 }
