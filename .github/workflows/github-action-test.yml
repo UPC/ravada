@@ -34,10 +34,6 @@ jobs:
         run: cat /etc/ravada.conf
       - name: Install mysql perl
         run: sudo apt install libdbd-mysql-perl libhtml-lint-perl
-      - name: create mysql user
-        run: sudo mysql -u root --password=root --protocol=tcp -h localhost -e "create user 'rvd_user'@'%' IDENTIFIED WITH mysql_native_password BY 'Pword12345*'"
-      - name: allow mysql user
-        run: sudo mysql -u root --password=root --protocol=tcp -h localhost -e "grant all on ravada.* to 'rvd_user'@'%'"
       - name: Test mojo grants
         run: prove -l t/mojo/30_grants.t
       - name: Test critic
