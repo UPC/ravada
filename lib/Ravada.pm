@@ -3021,7 +3021,7 @@ sub _connect_dbh($self=undef) {
 
     my $data_source = "DBI:$driver:$db";
     $data_source = "DBI:$driver:database=$db;host=$host"
-        if $host && $host ne 'localhost' && $host ne '127.0.0.1';
+        if $host && $host ne 'localhost';
 
     my $con;
     for my $try ( 1 .. 10 ) {
