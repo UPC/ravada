@@ -1201,7 +1201,51 @@ ravadaApp.directive("solShowMachine", swMach)
     };
 
    function manage_host_devices($scope, $http, $timeout) {
-   };
+        $scope.init=function(id,url) {
+            subscribe_list_host_devices(id, url);
+        };
+
+        subscribe_list_host_devices= function(id, url) {
+            $scope.show_requests = false;
+            $scope.host_devices = [];
+            var ws = new WebSocket(url);
+            ws.onopen    = function (event) { ws.send('list_host_devices/'+id) };
+            ws.onclose = function() {
+                ws = new WebSocket(url);
+            };
+
+            ws.onmessage = function (event) {
+                var data = JSON.parse(event.data);
+                $scope.$apply(function () {
+                    if (Object.keys($scope.host_devices).length != data.length) {
+                        $scope.host_devices.length = data.length;
+                    }
+                    for (var i=0, iLength = data.length; i<iLength; i++){
+                        var hd = data[i];
+                        if (typeof($scope.host_devices[i]) == 'undefined') {
+                            $scope.host_devices[i] = hd;
+                        } else if ( $scope.host_devices[i].id != hd.id
+                            || $scope.host_devices[i].date_changed != hd.date_changed
+                            || $scope.host_devices[i]['loading']
+                        ) {
+                            var keys = Object.keys(hd);
+                            for ( var n_key=0 ; n_key<keys.length ; n_key++) {
+                               var field=keys[n_key];
+                                if (field != 'filter' && $scope.host_devices[i][field] != hd[field]) {
+                                    $scope.host_devices[i][field] = hd[field];
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        };
+        $scope.toggle_show_hdev = function(id) {
+            $scope.show_hdev[id] = ! $scope.show_hdev[id];
+        };
+        $scope.show_hdev = { 1: true};
+
+    };
 
    function settings_route($scope, $http, $timeout) {
         var url_ws;

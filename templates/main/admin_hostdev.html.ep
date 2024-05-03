@@ -6,7 +6,7 @@
     %= include 'bootstrap/navigation'
     <div id="page-wrapper"
                 ng-controller="manage_host_devices"
-                ng-init="init('<%= url_for('ws_subscribe')->to_abs %>')"
+                ng-init="init('<%= $id_vm %>','<%= url_for("ws_subscribe")->to_abs %>')"
     >
 
         <div class="page-header">
@@ -17,11 +17,11 @@
             </div>
         </div>
 
-<div class="card-body">
+        <div class="card-body">
 
-<select ng-model="new_template"
-    ng-options="template.name for template in templates | orderBy:'name'">
-</select>
+            <select ng-model="new_template"
+                ng-options="template.name for template in templates | orderBy:'name'">
+            </select>
 
 <button ng-disabled="!new_template" class="btn btn-primary"
     ng-click="add_host_device()"
