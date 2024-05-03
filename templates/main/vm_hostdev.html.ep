@@ -16,7 +16,7 @@
                 {{node}}
                 <ul>
                     <li ng-show="hdev.devices_node[node].length==0">
-                        <%=l 'No devices found'%></li>
+                        <%=l 'No devices found'%>
                     </li>
                     <li ng-repeat="device in hdev.devices_node[node]">
                         {{device.name}}

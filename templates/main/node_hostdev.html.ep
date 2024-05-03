@@ -57,7 +57,8 @@
                 <span>{{node}}</span>
                 <ul>
                     <li ng-show="hdev.devices_node[node].length==0">
-                        <span class="error"><%=l 'No devices found'%></li></span>
+                        <span class="error"><%=l 'No devices found'%></span>
+                    </li>
                     <li ng-repeat="dev in hdev.devices_node[node]">
                     <a ng-class='{
                         "badge badge-success border": dev.domain.is_locked

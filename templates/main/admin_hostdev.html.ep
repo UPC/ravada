@@ -1,5 +1,19 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+<div id="wrapper">
+    %= include 'bootstrap/navigation'
+    <div id="page-wrapper" ng-controller="manage_host_devices">
 
-<div>
+
+
+<div class="admin-content">
+
+        <div class="row">
+            <div class="col-md-8"><h2><%=l 'Host Devices' %></h2></div>
+        </div>
+
 
 <select ng-model="new_template"
     ng-options="template.name for template in templates | orderBy:'name'">
@@ -13,10 +27,13 @@
 
 <hr>
 
-<div ng-repeat="hdev in host_devices">
+<div ng-repeat="hdev in host_devices" ng-cloak>
     <a ng-click="toggle_show_hdev(hdev.id)">
-        <span ng-show="show_hdev[hdev.id]"><i class="fa fa-caret-down"></i></span>
-        <span ng-show="!show_hdev[hdev.id]"><i class="fa fa-caret-right"></i></span>
+        <span ng-show="show_hdev[hdev.id]">
+            <i class="fa fa-caret-down"></i>
+        </span>
+        <span ng-show="!show_hdev[hdev.id]"><i class="fa fa-caret-right"></i>
+        </span>
     </a>
     <span ng-show="!hdev._edit">
     <b>{{hdev.name}}</b>
@@ -57,7 +74,8 @@
                 <span>{{node}}</span>
                 <ul>
                     <li ng-show="hdev.devices_node[node].length==0">
-                        <span class="error"><%=l 'No devices found'%></li></span>
+                        <span class="error"><%=l 'No devices found'%></span>
+                    </li>
                     <li ng-repeat="dev in hdev.devices_node[node]">
                     <a ng-class='{
                         "badge badge-success border": dev.domain.is_locked
@@ -130,3 +148,10 @@
 
     </div>
 </div>
+</div>
+</div>
+
+%= include $footer
+%= include 'bootstrap/scripts'
+</body>
+</html>
