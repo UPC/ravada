@@ -682,8 +682,6 @@ sub test_iptables($domain) {
             last if scalar(@iptables_rdp)==1;
             my @prerouting = grep { /PREROUTING/} @iptables;
             warn $domain->_vm->name.' waiting for /-A PREROUTING.*--dport '.$port_rdp.' -j DNAT .*3389/';
-            warn Dumper([$domain->_vm->name,\@iptables_rdp,\@prerouting]);
-
             sleep 1;
             wait_request();
 
