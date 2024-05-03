@@ -9,4 +9,6 @@
 
 **Bugfixes**
 
+- Node Option Not Available [\#2032]
+
 **Refactors**

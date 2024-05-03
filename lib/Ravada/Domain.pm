@@ -1023,6 +1023,8 @@ sub _check_has_clones {
 sub _check_free_vm_memory {
     my $self = shift;
 
+    return if !Ravada::Front::setting(undef,"/backend/limits/startup_ram");
+
     my $vm_free_mem = $self->_vm->free_memory;
 
     my $domain_memory = $self->info(Ravada::Utils::user_daemon)->{memory};
@@ -2073,6 +2075,7 @@ sub info($self, $user) {
         ,is_public => $self->is_public
         ,show_clones => $self->show_clones
         ,id_base => $self->id_base
+        ,is_public => $self->is_public
         ,is_active => $is_active
         ,is_hibernated => $self->is_hibernated
         ,spice_password => $self->spice_password
@@ -2967,6 +2970,7 @@ sub _copy_clone($self, %args) {
     $id_owner = $user->id if (! $id_owner);
     my $alias = delete $args{alias};
     my $options = delete $args{options};
+    my $start = delete $args{start};
 
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)
         if keys %args;
@@ -2978,6 +2982,7 @@ sub _copy_clone($self, %args) {
     push @copy_arg, ( memory => $memory ) if $memory;
     push @copy_arg, ( volatile => $volatile ) if $volatile;
     push @copy_arg, ( options => $options ) if $options;
+    push @copy_arg, ( start => $start ) if $start;
 
     $request->status("working","Copying domain ".$self->name
         ." to $name")   if $request;
@@ -4959,10 +4964,9 @@ sub type {
     if (!exists $self->{_data} || !exists $self->{_data}->{vm}) {
         my ($type) = ref($self) =~ /.*::([a-zA-Z][a-zA-Z0-9]*)/;
         confess "Unknown type from ".ref($self) if !$type;
-        return $type;
+        return $type if $type ne 'Domain';
     }
-    confess "Unknown vm ".Dumper($self->{_data})
-        if !$self->_data('vm');
+    return 'Unknown' if !exists $self->{_data}->{vm};
     return $self->_data('vm');
 }
 
@@ -6281,7 +6285,7 @@ Arguments is a named list
 sub grant_access($self, %args) {
     my $type      = delete $args{type}      or confess "Error: Missing type";
 
-    return $self->_allow_group_access(%args)    if $type eq 'group';
+    return $self->_allow_group_access(%args, type=> $type)    if $type =~ /^group/;
 
     my $attribute = delete $args{attribute} or confess "Error: Missing attribute";
     my $value     = delete $args{value}     or confess "Error: Missing value";
@@ -6319,14 +6323,22 @@ sub grant_access($self, %args) {
 }
 
 sub _allow_group_access($self, %args) {
-    my $group = delete $args{group} or confess "Error: group required";
+    my $group = delete $args{group};
+    my $id_group = delete $args{id_group};
+    confess "Error: group name or id_group required" unless $group || $id_group;
+    confess "Error: wrong group name '$group'" if $group && $group =~ /^\d+$/;
+
+    my $type = delete $args{type};
+    $type =~ s/.*\.(.*)/$1/;
+    $type = 'ldap' if !$type || $type eq 'group';
+
     confess "Error: unknown args ".Dumper(\%args) if keys %args;
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO group_access "
-        ."( id_domain,name)"
-        ." VALUES(?,? )"
+        ."( id_domain, id_group, name, type)"
+        ." VALUES(?,?,?,? )"
     );
-    $sth->execute($self->id, $group);
+    $sth->execute($self->id,$id_group, $group, $type);
 }
 
 =head2 list_access_groups
@@ -6335,14 +6347,20 @@ Returns the list of groups who can access this virtual machine
 
 =cut
 
-sub list_access_groups($self) {
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT name from group_access "
+sub list_access_groups($self, $type) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,id_group,name from group_access "
         ." WHERE id_domain=?"
+        ."   AND type=?"
     );
-    $sth->execute($self->id);
+    $sth->execute($self->id, $type);
     my @groups;
-    while ( my ($name) = $sth->fetchrow ) {
-        push @groups,($name);
+    my $sth_gname = $$CONNECTOR->dbh->prepare("SELECT name FROM groups_local WHERE id=?");
+    while ( my $row = $sth->fetchrow_hashref ) {
+        if (!$row->{name} && $row->{id_group}) {
+            $sth_gname->execute($row->{id_group});
+            ($row->{name}) = $sth_gname->fetchrow;
+        }
+        push @groups,($row->{name});
     }
     return @groups;
 }

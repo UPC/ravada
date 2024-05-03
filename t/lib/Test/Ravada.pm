@@ -23,6 +23,7 @@ use feature qw(signatures);
 
 use Ravada;
 use Ravada::Auth::SQL;
+use Ravada::Auth::Group;
 use Ravada::Domain::Void;
 
 use vars qw($VERSION @ISA @EXPORT @EXPORT_OK);
@@ -41,6 +42,7 @@ create_domain
     flush_rules_node
     flush_rules
     vm_names
+    user
 
     remote_config
     remote_config_nodes
@@ -84,6 +86,7 @@ create_domain
     mojo_request_url
     mojo_request_url_post
 
+    create_group
     remove_old_user
     remove_old_users
     remove_old_users_ldap
@@ -102,6 +105,7 @@ create_domain
     search_latest_machine
 
     ping_backend
+    wait_ip
 
     config_host_devices
 
@@ -123,6 +127,7 @@ our $CONT = 0;
 our $CONT_POOL= 0;
 our $CONT_VOL= 0;
 our $USER_ADMIN;
+our $USER;
 our @USERS_LDAP;
 our $CHAIN = 'RAVADA';
 
@@ -159,6 +164,7 @@ my $NBD_LOADED;
 my $FH_FW;
 my $FH_NODE;
 my %LOCKED_FH;
+my $FILE_DB;
 
 my ($MOJO_USER, $MOJO_PASSWORD);
 
@@ -190,6 +196,30 @@ sub config_host_devices($type, $die=1) {
     die "Error: no host devices config in $FILE_CONFIG_HOST_DEVICES for $type"
     if ( !exists $config->{$type} || !$config->{$type} ) && $die;
     return $config->{$type};
+}
+
+sub user {
+
+    return $USER if $USER;
+
+    my $login;
+    my $name = new_domain_name()."-$$";
+    my $pass = "$$ $$";
+    eval {
+        $login = Ravada::Auth::SQL->new(name => $name, password => $pass );
+    };
+    if ($@ && $@ =~ /Login failed/ ) {
+        $login = Ravada::Auth::SQL->new(name => $name);
+        $login->remove() if $login->id;
+        $login = undef;
+    } elsif ($@) {
+        die $@;
+    }
+    $USER = $login if $login && $login->id;
+    $USER = create_user($name, $pass, 0)
+        if !$USER;
+
+    return $USER;
 }
 
 sub user_admin {
@@ -657,7 +687,7 @@ sub _leftovers {
 }
 
 sub _discover() {
-    my $sth = connector()->dbh->prepare("SELECT id,vm_type,hostname,name FROM vms");
+    my $sth = connector()->dbh->prepare("SELECT id,vm_type,hostname,name,is_active,enabled FROM vms");
     $sth->execute();
 
     my $sth_instances = connector()->dbh->prepare("INSERT INTO domain_instances "
@@ -666,12 +696,17 @@ sub _discover() {
 
     my $name = base_domain_name();
 
-    while ( my ($id_vm, $vm_type, $hostname, $vm_name) = $sth->fetchrow ) {
+    while ( my ($id_vm, $vm_type, $hostname, $vm_name, $is_active, $enabled) = $sth->fetchrow ) {
+        next if !$is_active || !$enabled;
+
         my $req=Ravada::Request->discover(
             uid => user_admin->id
             ,id_vm => $id_vm
         );
-        wait_request();
+        for ( 1 .. 10 ) {
+            wait_request();
+            last if $req->status('done');
+        }
         my $out = $req->output;
         warn $req->error if $req->error;
         next if !$out;
@@ -1200,6 +1235,14 @@ sub create_user($name=new_domain_name(), $pass=$$, $is_admin=0) {
     return $user;
 }
 
+sub create_group($name = new_domain_name()) {
+    my $group = Ravada::Auth::Group->new(name => $name);
+    return $group if $group && $group->id;
+
+    $group = Ravada::Auth::Group::add_group(name => $name);
+    return $group;
+}
+
 sub create_ldap_user($name, $password, $keep=0) {
 
     my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
@@ -1379,7 +1422,7 @@ sub wait_request {
                         my $error = ($req->error or '');
                         next if $error =~ /waiting for processes/i;
                         if ($req->command =~ m{rsync_back|set_base_vm|start}) {
-                            like($error,qr{^($|.*port \d+ already used|rsync done)}) or confess $req->command;
+                            like($error,qr{^($|.*port \d+ already used|.*rsync)}) or confess $req->command;
                         } elsif($req->command eq 'refresh_machine_ports') {
                             like($error,qr{^($|.*is not up|.*has ports down|nc: |Connection)});
                             $req->status('done');
@@ -1389,7 +1432,7 @@ sub wait_request {
                             like($error,qr{^($|.*compacted)});
                         } elsif($req->command eq 'refresh_machine') {
                             like($error,qr{^($|.*port.*already used|.*Domain not found)});
-                        } elsif($req->command eq 'force_shutdown') {
+                        } elsif($req->command =~ /shutdown/) {
                             like($error,qr{^($|.*Unknown domain)});
                         } elsif($req->command eq 'connect_node') {
                             like($error,qr{^($|Connection OK)});
@@ -1687,8 +1730,7 @@ sub remove_old_storage_pools() {
     remove_old_storage_pools_void();
 }
 
-sub clean($ldap=undef) {
-    my $file_remote_config = shift;
+sub clean($ldap=undef, $file_remote_config=undef) {
     remove_old_domains();
     remove_old_disks();
     remove_old_pools();
@@ -2492,7 +2534,7 @@ sub _dir_db {
         };
         die $@ if $@ && $@ !~ /Permission denied/;
         if ($@) {
-                warn "$! on mkdir $dir_db";
+                warn "$! on mkdir $dir_db [ $>,$< ]";
                 $dir_db = "t/.db";
                 make_path $dir_db or die "$! $dir_db";
         }
@@ -2513,6 +2555,7 @@ sub _file_db {
     if ( -e $file_db ) {
         unlink $file_db or die("$! $file_db");
     }
+    $FILE_DB = $file_db;
     return $file_db;
 }
 
@@ -2692,8 +2735,10 @@ sub end($ldap=undef) {
     clean($ldap);
     remove_old_users()      if $CONNECTOR;
     _unlock_all();
-    _file_db();
-    rmdir _dir_db();
+    if ($FILE_DB) {
+        _file_db();
+        rmdir _dir_db();
+    }
 }
 
 sub init_ldap_config($file_config='t/etc/ravada_ldap.conf'
@@ -3161,5 +3206,51 @@ sub create_ram_fs($dir=undef,$size=1024*1024) {
 
     return ($dir,$size, $dev);
 }
+
+sub wait_ip($id_domain0, $seconds=60) {
+
+    my $domain;
+    for my $count ( 0 .. $seconds ) {
+        my $id_domain = $id_domain0;
+        if (ref($id_domain0)) {
+            if (ref($id_domain0) =~ /Ravada/) {
+                $id_domain = $id_domain0->id;
+            } else {
+                $id_domain = $id_domain0->{id};
+            }
+        }
+
+        if ($id_domain0 !~ /^\d+$/) {
+            $id_domain = _search_domain_by_name($id_domain);
+            next if !$id_domain;
+        }
+
+        Ravada::Request->refresh_machine(
+            id_domain => $id_domain
+            ,uid => user_admin->id
+        );
+
+        my $info;
+        eval {
+        $domain = Ravada::Front::Domain->open($id_domain);
+        $info = $domain->info(user_admin);
+        };
+        warn $@ if $@ && $@ !~ /Unknown domain/;
+        return if $@ || ($count && !$domain->is_active);
+        return $info->{ip} if exists $info->{ip} && $info->{ip};
+        diag("Waiting for ".$domain->name. " ip") if !(time % 10);
+        sleep 1;
+    }
+}
+
+sub _search_domain_by_name($name) {
+    my $sth = connector->dbh->prepare("SELECT id FROM domains "
+        ." WHERE name=?"
+    );
+    $sth->execute($name);
+    my ($id) = $sth->fetchrow;
+    return $id;
+}
+
 
 1;

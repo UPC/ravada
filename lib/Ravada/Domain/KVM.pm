@@ -3680,7 +3680,7 @@ sub reload_config($self, $doc) {
         $new_domain = $self->_vm->vm->define_domain($doc->toString);
     };
 
-    die $@."\n" if$@;
+    die ''.$@."\n" if$@;
 
     $self->domain($new_domain);
 

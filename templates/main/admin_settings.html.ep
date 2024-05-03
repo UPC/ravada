@@ -225,7 +225,7 @@
                 >
             </div>
             <div class="col-md-6">
-                <%=l 'Bookings require LDAP authentication.' %> <a href="https://ravada.readthedocs.io/en/latest/docs/auth_ldap.html"><i class="fa fa-info"></i></a>
+                <%=l 'Enables schedule server bookings for exclusive use' %>
             </div>
         </div>
 

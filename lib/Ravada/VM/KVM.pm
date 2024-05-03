@@ -109,6 +109,9 @@ sub _connect {
     } else {
         confess "Error: You can't connect to remote VMs in readonly mode"
             if $self->readonly;
+        if ($self->_data('cached_down') && time-$self->_data('cached_down')<$self->timeout_down_cache()) {
+            return;
+        }
         my $transport = 'ssh';
         my $address = $con_type."+".$transport
                                             ."://".'root@'.$self->host
@@ -123,7 +126,16 @@ sub _connect {
                               ]
                           );
          };
-         confess $@ if $@;
+        my $error = $@;
+        my $is_alive;
+        eval { $is_alive = $vm->is_alive if $vm };
+        warn $@ if $@;
+        if ( !$vm || !$is_alive ) {
+            $self->_data('cached_down' => time);
+            confess $error if $error;
+            return;
+        }
+        $self->_data('cached_down' => 0);
     }
     return $vm;
 }

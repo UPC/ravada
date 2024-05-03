@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '2.2.0';
+our $VERSION = '2.2.1';
 
 use utf8;
 
@@ -463,19 +463,7 @@ sub _update_isos {
             ,arch => 'x86_64'
         }
 
-        ,serena64 => {
-            name => 'Mint 18.1 Mate 64 bits'
-    ,description => 'Mint Serena 18.1 with Mate Desktop based on Ubuntu Xenial 64 bits'
-           ,arch => 'x86_64'
-            ,xml => 'xenial64-amd64.xml'
-     ,xml_volume => 'xenial64-volume.xml'
-            ,url => 'https://mirrors.edge.kernel.org/linuxmint/stable/18.3'
-        ,file_re => 'linuxmint-18.3-mate-64bit.iso'
-        ,md5_url => ''
-            ,md5 => 'c5cf5c5d568e2dfeaf705cfa82996d93'
-            ,min_disk_size => '10'
-
-        }
+        
         ,mint20_64 => {
             name => 'Mint 20 Mate 64 bits'
     ,description => 'Mint Ulyana 20 with Mate Desktop 64 bits'
@@ -1477,6 +1465,8 @@ sub _remove_old_isos {
 
         ,"DELETE FROM iso_images "
             ." WHERE name like 'Alpine%3.8%'"
+	,"DELETE FROM iso_images "
+	    ." WHERE name like 'Mint 18.1 Mate 64 bits'"
     ) {
         my $sth = $CONNECTOR->dbh->prepare($sql);
         $sth->execute();
@@ -1567,8 +1557,9 @@ sub _add_indexes_generic($self) {
             "unique (id_domain)"
         ]
         ,group_access => [
-            "unique (id_domain,name)"
+            "unique (id_domain,name,id_group)"
             ,"index(id_domain)"
+            ,"index(id_group)"
         ]
         ,iso_images => [
             "unique (name)"
@@ -1619,6 +1610,11 @@ sub _add_indexes_generic($self) {
             "index(id_booking_entry,ldap_group)"
             ,"index(id_booking_entry)"
         ]
+        ,booking_entry_local_groups => [
+            "unique(id_booking_entry,id_group)"
+            ,"index(id_booking_entry)"
+        ]
+
         ,booking_entry_users => [
             "index(id_booking_entry,id_user)"
             ,"index(id_booking_entry)"
@@ -1628,6 +1624,12 @@ sub _add_indexes_generic($self) {
             "index(id_booking_entry,id_base)"
             ,"index(id_base)"
             ,"index(id_booking_entry)"
+        ]
+        ,groups_local => [
+            'UNIQUE (name)'
+        ]
+        ,users_group => [
+            'UNIQUE(id_user, id_group)'
         ]
 
         ,volumes => [
@@ -2212,11 +2214,21 @@ sub _sql_create_tables($self) {
             ,xml => 'TEXT'
             }
         ]
+        ,
+        [   groups_local => {
+                id => 'integer PRIMARY KEY AUTO_INCREMENT',
+                ,name => 'char(255) NOT NULL'
+                ,is_external => 'int NOT NULL default(0)'
+                ,external_auth => 'varchar(64) default NULL'
+            }
+        ]
         ,[
             group_access => {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
-            ,name => 'char(80)'
+            ,id_group => 'integer references `groups_local` (`id`) ON DELETE CASCADE'
+            ,name => 'char(80) DEFAULT NULL'
+            ,type => 'char(40)'
             }
         ]
         ,
@@ -2349,6 +2361,17 @@ sub _sql_create_tables($self) {
         ]
         ,
         [
+        booking_entry_local_groups => {
+            id => 'INTEGER PRIMARY KEY AUTO_INCREMENT'
+            ,id_booking_entry
+                => 'int not null references `booking_entries` (`id`) ON DELETE CASCADE'
+            ,id_group => 'int not null'
+            ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+        }
+        ]
+        ,
+
+        [
         booking_entry_users => {
             id => 'INTEGER PRIMARY KEY AUTO_INCREMENT'
             ,id_booking_entry
@@ -2377,6 +2400,12 @@ sub _sql_create_tables($self) {
             }
         ]
         ,
+        [   users_group => {
+                id => 'integer PRIMARY KEY AUTO_INCREMENT',
+                ,id_user => 'integer NOT NULL'
+                ,id_group =>'integer NOT NULL'
+            }
+        ],
         [
             volumes => {
                 id => 'integer PRIMARY KEY AUTO_INCREMENT',
@@ -2670,7 +2699,7 @@ sub _sql_insert_defaults($self){
             ,{
                 id_parent => $id_backend
                 ,name => 'bookings'
-                ,value => 0
+                ,value => 1
             }
             ,{
                 id_parent => $id_backend
@@ -2713,6 +2742,17 @@ sub _sql_insert_defaults($self){
                 ,name => 'time'
                 ,value => '21:00'
             }
+            ,{
+                id_parent => '/backend'
+                ,name => 'limits'
+                ,value => undef
+            }
+            ,{
+                id_parent => '/backend/limits'
+                ,name => 'startup_ram'
+                ,value => 1
+            }
+
 
         ]
     );
@@ -2840,6 +2880,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms', 'clone_storage','varchar(64) DEFAULT NULL');
     $self->_upgrade_table('vms','dir_backup','varchar(128) DEFAULT NULL');
     $self->_upgrade_table('vms','version','varchar(64) DEFAULT NULL');
+    $self->_upgrade_table('vms','cached_down','int DEFAULT 0');
 
     $self->_upgrade_table('requests','at_time','int(11) DEFAULT NULL');
     $self->_upgrade_table('requests','pid','int(11) DEFAULT NULL');
@@ -2999,7 +3040,7 @@ sub _connect_dbh($self=undef) {
 
         return $con if $con && !$err;
         sleep 1;
-        warn "Try $try $@\n";
+        warn "Try $try $data_source $@\n";
     }
     die ($@ or "Can't connect to $driver $db at $host");
 }
@@ -4389,6 +4430,8 @@ sub _cmd_manage_pools($self, $request) {
 sub _cmd_discover($self, $request) {
     my $id_vm = $request->args('id_vm');
     my $vm = Ravada::VM->open($id_vm);
+    return if !$vm;
+    eval { return if !$vm->vm };
     my @list = $vm->discover();
     $request->output(encode_json(\@list));
 }
@@ -5570,7 +5613,7 @@ sub _check_mounted($path, $fstab, $mtab) {
 sub _cmd_check_storage($self, $request) {
     my $contents = "a" x 160;
     for my $vm ( $self->list_vms ) {
-        next if !$vm->is_local;
+        next if !$vm || !$vm->is_local;
         my %fstab = _list_mnt($vm,"s");
         my %mtab = _list_mnt($vm,"m");
 
@@ -5684,8 +5727,11 @@ sub _cmd_shutdown_node($self, $request) {
 
 sub _cmd_start_node($self, $request) {
     my $id_node = $request->args('id_node');
-    my $node = Ravada::VM->open($id_node);
-    $node->start();
+    my $node;
+    eval{ $node = Ravada::VM->open($id_node);
+        $node->start() if$node;
+    };
+    Ravada::VM::_wake_on_lan($id_node) if !$node;
 }
 
 sub _cmd_connect_node($self, $request) {
@@ -5946,6 +5992,7 @@ sub _refresh_active_vms ($self) {
 
     my %active_vm;
     for my $vm ($self->list_vms) {
+        next if !$vm;
         if ( !$vm->enabled() || !$vm->is_active ) {
             $vm->shutdown_domains();
             $active_vm{$vm->id} = 0;
@@ -6505,7 +6552,10 @@ sub search_vm {
     );
     $sth->execute($type, $host);
     my ($id) = $sth->fetchrow();
-    return Ravada::VM->open($id)    if $id;
+    my $vm;
+    $vm = Ravada::VM->open($id)    if $id;
+    return if $host eq 'localhost' && $vm && !$vm->vm;
+
     return if $host ne 'localhost';
 
     my $vms = $self->_create_vm($type);
@@ -6537,7 +6587,9 @@ sub vm($self) {
             warn $@;
             next;
         }
-        push @vms, ( $vm );
+        eval {
+            push @vms, ( $vm ) if $vm && $vm->vm;
+        };
     };
     return [@vms] if @vms;
     return $self->_create_vm();

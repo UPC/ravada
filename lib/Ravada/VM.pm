@@ -46,6 +46,8 @@ our $MIN_DISK_MB = 1024 * 1024;
 our $CACHE_TIMEOUT = 60;
 our $FIELD_TIMEOUT = '_data_timeout';
 
+our $TIMEOUT_DOWN_CACHE = 120;
+
 our %VM; # cache Virtual Manager Connection
 our %SSH;
 
@@ -234,8 +236,13 @@ sub open {
     $args{security} = decode_json($row->{security}) if $row->{security};
 
     my $vm = $self->new(%args);
-    return if !$vm || !$vm->vm;
-    $VM{$args{id}} = $vm unless $args{readonly};
+
+    my $internal_vm;
+    eval {
+        $internal_vm = $vm->vm;
+    };
+    $VM{$args{id}} = $vm unless $args{readonly} || !$internal_vm;
+    return if $self->is_local && !$internal_vm;
     return $vm;
 
 }
@@ -338,7 +345,21 @@ sub _connect {
     return $result;
 }
 
+=head2 timeout_down_cache
+
+  Returns time in seconds for nodes to be kept cached down.
+
+=cut
+
+sub timeout_down_cache($self) {
+    return $TIMEOUT_DOWN_CACHE;
+}
+
 sub _around_connect($orig, $self) {
+
+    if ($self->_data('cached_down') && time-$self->_data('cached_down')< $self->timeout_down_cache()) {
+            return;
+    }
     my $result = $self->$orig();
     if ($result) {
         $self->is_active(1);
@@ -1283,9 +1304,10 @@ Returns wether this virtual manager is in the local host
 =cut
 
 sub is_local($self) {
-    return 1 if $self->host eq 'localhost'
+    return 1 if !$self->host
+        || $self->host eq 'localhost'
         || $self->host eq '127.0.0,1'
-        || !$self->host;
+        ;
     return 0;
 }
 
@@ -1527,7 +1549,8 @@ sub _around_create_network($orig, $self,$data, $id_owner, $request=undef) {
         my ($found) = grep { $_->{$field} eq $data->{$field} }
         $self->list_virtual_networks();
 
-        die "Error: network $field=$data->{$field} already exists\n"
+        die "Error: network $field=$data->{$field} already exists in "
+            .$self->name."\n"
         if $found;
     }
 
@@ -1655,7 +1678,9 @@ sub is_active($self, $force=0) {
 sub _do_is_active($self, $force=undef) {
     my $ret = 0;
     if ( $self->is_local ) {
+        eval {
         $ret = 1 if $self->vm;
+        };
     } else {
         my @ping_args = ();
         @ping_args = (undef,0) if $force; # no cache
@@ -2398,17 +2423,26 @@ sub _store_mac_address($self, $force=0 ) {
     }
 }
 
-sub _wake_on_lan( $self ) {
-    return if $self->is_local;
+sub _wake_on_lan( $self=undef ) {
+    return if $self && ref($self) && $self->is_local;
 
-    die "Error: I don't know the MAC address for node ".$self->name
-        if !$self->_data('mac');
+    my ($mac_addr, $id_node);
+    if (ref($self)) {
+        $mac_addr = $self->_data('mac');
+        $id_node = $self->id;
+    } else {
+        $id_node = $self;
+        my $sth = $$CONNECTOR->dbh->prepare("SELECT mac FROM vms WHERE id=?");
+        $sth->execute($id_node);
+        $mac_addr = $sth->fetchrow();
+    }
+    die "Error: I don't know the MAC address for node $id_node"
+        if !$mac_addr;
 
     my $sock = new IO::Socket::INET(Proto=>'udp', Timeout => 60)
         or die "Error: I can't create an UDP socket";
     my $host = '255.255.255.255';
     my $port = 9;
-    my $mac_addr = $self->_data('mac');
 
     my $ip_addr = inet_aton($host);
     my $sock_addr = sockaddr_in($port, $ip_addr);

@@ -4,6 +4,7 @@ use strict;
 use Carp qw(confess);
 use Data::Dumper;
 use DateTime;
+use Hash::Util qw(lock_hash);
 use Test::More;
 use YAML qw(DumpFile);
 
@@ -16,7 +17,8 @@ use feature qw(signatures);
 use lib 't/lib';
 use Test::Ravada;
 
-my $GROUP = 'test_bookings';
+my $GROUP = 'test_bookings_ldap';
+my $GROUP_LOCAL;
 my ($USER_YES_NAME_1, $USER_YES_NAME_2, $USER_NO_NAME) = ( 'mcnulty','bunk','stringer');
 my ($USER_2_NAME,$USER_3_NAME)=('bubbles','walon');
 
@@ -26,6 +28,18 @@ use_ok('Ravada::Booking');
 
 ###################################################################
 my ($USER_YES_1, $USER_YES_2, $USER_NO, $USER_2, $USER_3);
+my ($USER_LOCAL_YES_1, $USER_LOCAL_YES_2, $USER_LOCAL_NO, $USER_LOCAL_2, $USER_LOCAL_3);
+
+sub  _init_local() {
+    $GROUP_LOCAL = create_group() if !$GROUP_LOCAL;
+
+    for my $ref ( \($USER_LOCAL_YES_1, $USER_LOCAL_YES_2, $USER_LOCAL_NO, $USER_LOCAL_2, $USER_LOCAL_3)) {
+        my $user = create_user();
+        $$ref=$user;
+    }
+    $USER_LOCAL_YES_1->add_to_group($GROUP_LOCAL);
+    $USER_LOCAL_YES_2->add_to_group($GROUP_LOCAL);
+}
 
 sub _init_ldap(){
 
@@ -134,39 +148,46 @@ sub _wait_end_of_hour($seconds=0) {
         my $now = DateTime->from_epoch( epoch => time() , time_zone => $TZ );
         last if $now->minute <59
         && ( $now->minute>0 || $now->second>$seconds);
-        diag("Waiting for end of hour to run booking tests "
+        diag("Waiting for hour:01 to run booking tests "
             .$now->hour.":".$now->minute.".".$now->second);
         sleep 1;
     }
 
 }
 
-sub test_booking_oneday_dow($vm) {
-    return test_booking_oneday($vm,1);
+sub test_booking_oneday_dow($vm, $mode) {
+    return test_booking_oneday($vm, $mode, 1);
 }
 
-sub test_booking_oneday_date_end($vm) {
-    return test_booking_oneday($vm,0,1);
+sub test_booking_oneday_date_end($vm, $mode) {
+    return test_booking_oneday($vm, $mode, 0,1);
 }
 
-sub test_booking_oneday_date_end_dow($vm) {
-    return test_booking_oneday($vm,1,1);
+sub test_booking_oneday_date_end_dow($vm, $mode) {
+    return test_booking_oneday($vm,$mode, 1,1);
 }
 
 
-sub test_booking_oneday($vm, $dow=0, $date_end=0) {
+sub test_booking_oneday($vm, $mode, $dow=0, $date_end=0) {
     my $base = create_domain($vm);
     $base->prepare_base(user_admin);
     $base->is_public(1);
+    confess if !ref($mode) || ref($mode) ne 'HASH';
+
+    for my $key (keys %$mode) {
+        next if $key =~ /^(local|ldap)$/;
+        die "Mode incorrect. It should be ldap,local or both ".Dumper($mode);
+    }
 
     my $today = DateTime->from_epoch( epoch => time(), time_zone => $TZ);
     my @args;
     push @args, ( day_of_week => $today->day_of_week)   if $dow;
     push @args, ( date_end => $today->ymd)              if $date_end;
+    push @args , ( ldap_groups => $GROUP )              if $mode->{'ldap'};
+    push @args , ( local_groups => $GROUP_LOCAL->id )       if $mode->{'local'};
 
     my $booking = Ravada::Booking->new(
         bases => $base->id
-        , ldap_groups => $GROUP
         , users => [$USER_2_NAME , $USER_3->id]
         , date_start => $today->ymd
         , time_start => "08:00"
@@ -260,10 +281,15 @@ sub test_booking($vm, $clone0_no1, $clone0_no2, $clone0_as, $base0) {
 
     $USER_2->remove();
 
+    my @users_yes;
+    @users_yes = ($USER_2_NAME , $USER_3->id);
+    push @users_yes,( $USER_LOCAL_2->name, $USER_LOCAL_3->name);
+
     my $booking = Ravada::Booking->new(
         bases => $base->id
         , ldap_groups => $GROUP
-        , users => [$USER_2_NAME , $USER_3->id]
+        , local_groups => $GROUP_LOCAL->id
+        , users => \@users_yes
         , date_start => $date_start
         , date_end => $date_end
         , time_start => $time_start
@@ -287,17 +313,11 @@ sub test_booking($vm, $clone0_no1, $clone0_no2, $clone0_as, $base0) {
         my @groups = $entry->ldap_groups;
         is($groups[0], $GROUP);
         my @users = $entry->users();
-        is(scalar(@users),2,Dumper(\@users));
+        is(scalar(@users),scalar(@users_yes),Dumper(\@users));
     };
-    is(Ravada::Booking::user_allowed($USER_YES_1, $base->id),1);
-    is(Ravada::Booking::user_allowed($USER_YES_1->id, $base->id),1);
-    is(Ravada::Booking::user_allowed($USER_YES_1->name, $base->id),1);
-    is(Ravada::Booking::user_allowed($USER_2_NAME, $base->id),1, $USER_2_NAME) or exit;
-    is(Ravada::Booking::user_allowed($USER_3, $base->id),1);
-    is(Ravada::Booking::user_allowed($USER_NO->name, $base->id ),0);
-    is(Ravada::Booking::user_allowed($USER_NO->id, $base->id ),0);
-    is(Ravada::Booking::user_allowed($USER_NO, $base->id ),0)
-        or die Dumper(''.localtime(time),\@entries);
+
+    _test_user_allowed_ldap($base);
+    _test_user_allowed_local($base);
 
     eval { $clone_no->start(user => $USER_NO) };
     like($@,qr/Resource .*booked/i );
@@ -321,6 +341,27 @@ sub test_booking($vm, $clone0_no1, $clone0_no2, $clone0_as, $base0) {
 
 }
 
+sub _test_user_allowed_ldap($base) {
+    is(Ravada::Booking::user_allowed($USER_YES_1, $base->id),1);
+    is(Ravada::Booking::user_allowed($USER_YES_1->id, $base->id),1);
+    is(Ravada::Booking::user_allowed($USER_YES_1->name, $base->id),1);
+    is(Ravada::Booking::user_allowed($USER_2_NAME, $base->id),1, $USER_2_NAME) or exit;
+    is(Ravada::Booking::user_allowed($USER_3, $base->id),1);
+    is(Ravada::Booking::user_allowed($USER_NO->name, $base->id ),0);
+    is(Ravada::Booking::user_allowed($USER_NO->id, $base->id ),0);
+    is(Ravada::Booking::user_allowed($USER_NO, $base->id ),0)
+}
+
+sub _test_user_allowed_local($base) {
+    is(Ravada::Booking::user_allowed($USER_LOCAL_YES_1, $base->id),1);
+    is(Ravada::Booking::user_allowed($USER_LOCAL_YES_1->id, $base->id),1);
+    is(Ravada::Booking::user_allowed($USER_LOCAL_YES_1->name, $base->id),1);
+    is(Ravada::Booking::user_allowed($USER_LOCAL_2->name, $base->id),1, $USER_LOCAL_2->name) or exit;
+    is(Ravada::Booking::user_allowed($USER_LOCAL_3, $base->id),1);
+    is(Ravada::Booking::user_allowed($USER_LOCAL_NO->name, $base->id ),0);
+    is(Ravada::Booking::user_allowed($USER_LOCAL_NO->id, $base->id ),0);
+    is(Ravada::Booking::user_allowed($USER_LOCAL_NO, $base->id ),0)
+}
 sub test_bookings_week_2days($vm) {
     my $base = create_domain($vm);
 
@@ -623,6 +664,7 @@ sub test_change_entry($vm, $booking) {
     is($new_entry->_data('time_start'), $new_time);
 
     test_change_groups($entry);
+    test_change_local_groups($entry);
     test_change_users($entry);
     test_change_bases($vm,$entry);
 }
@@ -641,6 +683,26 @@ sub test_change_groups($entry) {
     @new_groups = sort $entry->ldap_groups;
     is_deeply( \@new_groups ,\@groups2) or die Dumper(\@new_groups,\@groups2);
 }
+
+sub test_change_local_groups($entry) {
+    my @groups = $entry->local_groups();
+    my $new_group_1 = create_group();
+    my @groups2 = sort (@groups, $new_group_1->name);
+
+    $entry->change( local_groups => \@groups2 );
+    my @new_groups = sort $entry->local_groups;
+    is_deeply( \@new_groups ,\@groups2) or die Dumper(\@new_groups,\@groups2);
+
+    #clear groups
+    my $new_group_2 = create_group();
+    @groups2 = $new_group_2->id;
+    $entry->change( local_groups => \@groups2 );
+    @new_groups = sort $entry->local_groups;
+
+    my @groups3 = ($new_group_2->name);
+    is_deeply( \@new_groups ,\@groups3) or die Dumper(\@new_groups,\@groups3);
+}
+
 
 sub test_change_users($entry) {
     test_change_users_with_name($entry);
@@ -1234,7 +1296,7 @@ sub test_config {
     };
     like($@, qr/LDAP required/i);
 
-    is(rvd_back->setting('/backend/bookings'),0);
+    is(rvd_back->setting('/backend/bookings'),1);
 }
 
 ###################################################################
@@ -1247,6 +1309,7 @@ $TZ = DateTime::TimeZone->new(name => rvd_front->setting('/backend/time_zone'));
 
 delete $Ravada::CONFIG->{ldap}->{ravada_posix_group};
 _init_ldap();
+_init_local();
 
 rvd_back->setting('/backend/bookings', 1);
 
@@ -1269,10 +1332,18 @@ for my $vm_name ( vm_names()) {
         test_conflict($vm);
         test_booking_datetime($vm);
 
-        test_booking_oneday($vm);
-        test_booking_oneday_dow($vm);
-        test_booking_oneday_date_end($vm);
-        test_booking_oneday_date_end_dow($vm);
+        for my $ldap (0, 1) {
+            for my $local ( 0, 1) {
+                my $mode = {};
+                $mode->{'ldap'} = $ldap;
+                $mode->{'local'} = $ldap;
+                lock_hash(%$mode);
+                test_booking_oneday($vm , $mode);
+                test_booking_oneday_dow($vm, $mode);
+                test_booking_oneday_date_end($vm, $mode);
+                test_booking_oneday_date_end_dow($vm, $mode);
+            }
+        }
 
         _check_no_bookings();
 
