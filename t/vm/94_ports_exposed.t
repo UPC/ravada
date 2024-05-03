@@ -63,9 +63,8 @@ sub test_expose_port($vm) {
         ,id_domain => $domain->id
         ,remote_ip => $remote_ip1
     );
-    wait_request();
-
     my $internal_ip = _wait_ip2($vm->type, $domain) or die "Error: no ip for ".$domain->name;
+    wait_request( request => $req);
 
     my ($port) = $domain->list_ports();
 
@@ -82,6 +81,7 @@ sub test_expose_port($vm) {
     my @out= split /\n/, `iptables-save`;
     my @forward = (grep /-s $remote_ip2\/32 -d $internal_ip.* --dport 22.*-j ACCEPT/, @out);
     is(scalar(@forward),1,"-s $remote_ip2\/32 -d $internal_ip.* --dport 22.*-j ACCEPT") or die Dumper([grep /FORWARD/,@out]);
+    remove_domain($domain0);
 }
 
 sub _wait_ip2($vm_name, $domain) {

@@ -278,6 +278,7 @@ sub _cache_volume_info($self) {
         );
         };
         return if $@ && $@ =~ /foreign key constraint fails/i;
+        return if $@ && $@ =~ /Duplicate entry/i;
         confess "$name / $n_order \n".$@ if $@;
         return;
     }

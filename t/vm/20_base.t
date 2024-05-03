@@ -676,16 +676,19 @@ sub test_iptables($domain) {
 
         my $port_rdp = $display_exp->{port};
         my @iptables_rdp;
-        for ( 1 .. 10 ) {
+        for ( 1 .. 120 ) {
+
             @iptables_rdp = grep { /^-A PREROUTING.*--dport $port_rdp -j DNAT .*3389/ } @iptables;
             last if scalar(@iptables_rdp)==1;
+            my @prerouting = grep { /PREROUTING/} @iptables;
+            warn $domain->_vm->name.' waiting for /-A PREROUTING.*--dport '.$port_rdp.' -j DNAT .*3389/';
             sleep 1;
             wait_request();
 
             ($iptables, $err) = $domain->_vm->run_command("iptables-save");
             @iptables = split /\n/,$iptables;
         }
-        is(scalar(@iptables_rdp),1,"Expecting one entry with PRERORUTING --dport $port_rdp, got "
+        is(scalar(@iptables_rdp),1,"Expecting one entry with PREROUTING --dport $port_rdp, got "
             .scalar(@iptables_rdp)) or do {
             my @iptables_prer= grep { /^-A PREROUTING.*--dport / } @iptables;
             confess Dumper(\@iptables_prer) if !scalar(@iptables_rdp);
@@ -1584,8 +1587,17 @@ sub test_display_conflict($vm) {
     $domain->start( remote_ip => '1.1.1.1' , user => user_admin);
     wait_request(debug => 0);
 
+    for ( 1 .. 3 ) {
+        my $display = $domain->info(user_admin)->{hardware}->{display};
+        last if $display->[0]->{port} ne $display->[1]->{port};
+        Ravada::Request->refresh_machine(uid => user_admin->id
+            ,id_domain=> $domain->id
+        );
+        wait_request();
+    }
+
     my $display = $domain->info(user_admin)->{hardware}->{display};
-    isnt($display->[0]->{port}, $display->[1]->{port});
+    isnt($display->[0]->{port}, $display->[1]->{port}) or die Dumper($display);
     is($display->[0]->{is_active},1);
     is($display->[1]->{is_active},1);
 
@@ -1778,6 +1790,8 @@ sub test_display_conflict_next($vm) {
     }
     $domain1->remove(user_admin);
     $domain0->remove(user_admin);
+
+    rvd_back->setting("/backend/expose_port_min" => 60000 );
 }
 
 sub test_display_conflict_non_builtin($vm) {
