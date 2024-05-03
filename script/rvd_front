@@ -438,8 +438,11 @@ get '/admin/storage' => sub($c) {
 
 };
 
-get '/admin/host_devices' => sub($c) {
+get '/admin/hostdev/(#vm)' => sub($c) {
+    _admin_host_devices($c);
+};
 
+sub _admin_host_devices($c) {
     _add_admin_libs($c);
     _select_vm($c);
 
@@ -3473,7 +3476,7 @@ sub admin {
         $c->stash( csp => $csp , csp_advanced => $csp_advanced);
         $c->stash(url_login => "/login");
     }
-    if ($page eq 'storage') {
+    if ($page eq 'storage' || $page eq 'hostdev') {
         _select_vm($c);
     }
     $c->render( template => 'main/admin_'.$page);
