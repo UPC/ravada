@@ -9,11 +9,11 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("manage_nodes",manage_nodes)
         .controller("manage_routes",manage_routes)
         .controller("manage_networks",manage_networks)
+        .controller("manage_host_devices",manage_host_devices)
         .controller("settings_network",settings_network)
         .controller("settings_node",settings_node)
         .controller("settings_storage",settings_storage)
         .controller("settings_route",settings_route)
-        .controller("settings_host_devices",settings_host_devices)
         .controller("new_node", newNodeCtrl)
         .controller("new_storage", new_storage)
         .controller("settings_global", settings_global_ctrl)
@@ -1200,7 +1200,7 @@ ravadaApp.directive("solShowMachine", swMach)
 
     };
 
-   function settings_host_devices($scope, $http, $timeout) {
+   function manage_host_devices($scope, $http, $timeout) {
    };
 
    function settings_route($scope, $http, $timeout) {

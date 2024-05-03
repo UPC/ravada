@@ -4,16 +4,20 @@
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
 <div id="wrapper">
     %= include 'bootstrap/navigation'
-    <div id="page-wrapper" ng-controller="manage_host_devices">
+    <div id="page-wrapper"
+                ng-controller="manage_host_devices"
+                ng-init="init('<%= url_for('ws_subscribe')->to_abs %>')"
+    >
 
-
-
-<div class="admin-content">
-
-        <div class="row">
-            <div class="col-md-8"><h2><%=l 'Host Devices' %></h2></div>
+        <div class="page-header">
+            <div class="card">
+                <div class="card-header">
+                    <h2><%=l 'Host Devices' %></h2>
+                </div>
+            </div>
         </div>
 
+<div class="card-body">
 
 <select ng-model="new_template"
     ng-options="template.name for template in templates | orderBy:'name'">
