@@ -56,7 +56,7 @@ sub _import_base($vm_name) {
 
 }
 
-sub _remove_clones($time) {
+sub _remove_clones($time=0) {
     Ravada::Request->remove_clones(
             uid => user_admin->id
             ,id_domain => $BASE->id
@@ -74,48 +74,100 @@ sub _free_memory() {
     die;
 }
 
-sub test_ram($vm_name,$enable_check, $expected=undef) {
+sub _req_clone($base, $name=new_domain_name(), $memory=2) {
+    Ravada::Request->clone(
+    uid => user_admin->id
+    ,id_domain => $base->id
+    ,name => $name
+    ,memory => $memory * 1024 * 1024
+    );
+    return $name;
+}
+
+sub _wait_clone($name) {
+
+    my $new;
+    for ( 1 .. 90 ) {
+        $new = rvd_front->search_domain($name);
+        last if $new;
+        wait_request(debug => 1);
+    }
+    return if !$new;
+
+    my $req = Ravada::Request->start_domain( uid => user_admin->id
+            ,id_domain => $new->id
+    );
+    for ( 1 .. 10 ) {
+        wait_request();
+        last if $req->status eq 'done';
+    }
+
+    wait_ip($new);
+    return $req;
+}
+
+sub test_ram($vm_name,$enable_check) {
 
     my $free_mem = _free_memory();
     my $limit = int($free_mem/1024/1024)+1 ;
     _remove_clones(time+300+$limit*2);
-    my $count = 0;
-    for my $n ( 0 .. $limit*3 ) {
+
+    _set_min_free($vm_name, $limit*1024*1024);
+    _wait_clone(_req_clone($BASE,new_domain_name(),$limit-2));
+
+    my $name;
+    for my $n ( 0 .. $limit ) {
         my $free = int(_free_memory()/1024/1024);
-        my $name = new_domain_name();
-        my $req=Ravada::Request->clone(
-                    uid => user_admin->id
-                    ,id_domain => $BASE->id
-                    ,name => $name
-                    ,memory => 3 * 1024 * 1024
-                );
-        my $new;
-        for ( 1 .. 90 ) {
-            $new = rvd_front->search_domain($name);
-            last if $new;
-            wait_request();
+        $name = new_domain_name();
+        _req_clone($BASE, $name);
+        my $req = _wait_clone($name);
+        return $name if !$req;
+        if ($req->error) {
+            diag($req->error);
+            last;
         }
-        last if !$new;
-        $req = Ravada::Request->start_domain( uid => user_admin->id
-            ,id_domain => $new->id
+        my $free2 = int(_free_memory()/1024/1024);
+        redo if $vm_name eq 'KVM' && ($free2>=$free);
+
+    }
+    wait_request();
+    return $name;
+}
+
+sub test_start_another() {
+    my $found;
+    for my $clone ( $BASE->clones ) {
+        $found = $clone if $clone->{status} ne 'active';
+    }
+    if (!$found) {
+        _wait_clone(_req_clone($BASE));
+    } else {
+        my $req = Ravada::Request->start_domain( uid => user_admin->id
+            ,id_domain => $found->{id}
         );
         for ( 1 .. 10 ) {
             wait_request();
             last if $req->status eq 'done';
         }
-        if ($req->error) {
-            diag($req->error);
-            last;
-        }
-        $count++;
-        last if defined $expected && $count > $expected;
-        my $free2 = int(_free_memory()/1024/1024);
-        redo if $vm_name eq 'KVM' && ($free2>=$free);
-
+        is($req->error,'');
     }
-    _remove_clones(0);
-    wait_request();
-    return $count;
+}
+
+sub _set_min_free($vm_name,$min_free) {
+    my $sth = connector->dbh->prepare(
+        "select min_free_memory"
+        ." FROM vms "
+        ." WHERE vm_type=? AND hostname='localhost'"
+    );
+    $sth->execute($vm_name);
+    my ($old) = $sth->fetchrow;
+
+    $sth = connector->dbh->prepare("UPDATE vms set min_free_memory=?"
+        ." WHERE vm_type=?"
+    );
+    $sth->execute($min_free, $vm_name);
+
+    return $old;
 }
 
 #########################################################
@@ -139,16 +191,21 @@ remove_old_domains_req();
 
 $USERNAME = user_admin->name;
 $PASSWORD = "$$ $$";
-for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
+for my $vm_name (@{rvd_front->list_vm_types} ) {
     diag("Testing RAM limit in $vm_name");
 
     _import_base($vm_name);
 
     rvd_back->setting("/backend/limits/startup_ram" => 1);
-    my $started_limit =test_ram($vm_name,1);
+    my $min_free=_set_min_free($vm_name,5*1024*1024);
+    my $domain_name = test_ram($vm_name,1);
     rvd_back->setting("/backend/limits/startup_ram" => 0);
-    my $started_no_limit =test_ram($vm_name,0, $started_limit);
-    ok($started_no_limit > $started_limit);
+
+    test_start_another();
+
+    _set_min_free($vm_name, $min_free);
+
+    _remove_clones();
 }
 
 remove_old_domains_req(0); # 0=do not wait for them
