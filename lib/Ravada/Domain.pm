@@ -7255,7 +7255,8 @@ sub _add_host_devices($self, @args) {
             if (!$device) {
                 $self->_data(status => 'down');
                 $self->_unlock_host_devices();
-                die "Error: No available devices in ".$host_device->name."\n";
+                die "Error: [".$self->_vm->id.",".$self->_vm->name."]"
+                            ." No available devices in ".$host_device->name."\n";
             }
         }
 

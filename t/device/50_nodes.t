@@ -167,14 +167,7 @@ sub test_assign_v2($hd, $node, $number) {
     for my $n (1 .. $n_expected) {
         diag("$n of $n_expected");
         my $name = new_domain_name;
-        my $req = Ravada::Request->clone(
-            uid => user_admin->id
-            ,id_domain => $base->id
-            ,name => $name
-            ,start => 1
-        );
-        wait_request( check_error => 0);
-        my $domain = rvd_back->search_domain($name);
+        my $domain = _req_clone($base, $name);
         $domain->_data('status','active');
         is($domain->is_active,1) if $vm->type eq 'Void';
         check_hd_from_node($domain,\%devices_nodes);
@@ -183,10 +176,72 @@ sub test_assign_v2($hd, $node, $number) {
         is(scalar(@{$dupe{$hd}}),1) or die Dumper(\%dupe);
         $found{$domain->_data('id_vm')}++;
     }
-    test_clone_nohd($base, $hd);
-    die Dumper(\%found);
+    test_clone_nohd($hd, $base);
+    test_start_in_another_node($hd, $base);
 
     remove_domain($base);
+}
+
+sub test_start_in_another_node($hd, $base) {
+    my ($clone1, $clone2);
+    for my $clone ($base->clones) {
+        next if $clone->{status} ne 'active';
+        if (!defined $clone1) {
+            $clone1 = $clone;
+            next;
+        }
+        if ($clone->{id_vm} != $clone1->{id_vm}) {
+            $clone2 = $clone;
+            last;
+        }
+    }
+    die "Error. I couldn't find a clone in each node" unless $clone1 && $clone2;
+
+    _req_shutdown($clone1->{id});
+    _req_clone($base);
+    _req_shutdown($clone2->{id});
+
+    _req_start($clone1->{id});
+
+    my $clone1b = Ravada::Domain->open($clone1->{id});
+    is($clone1b->_data('id_vm'), $clone2->{id_vm});
+
+    my %devices_nodes = $hd->list_devices_nodes();
+    check_hd_from_node($clone1b,\%devices_nodes);
+
+}
+
+sub _req_shutdown($id) {
+    Ravada::Request->force_shutdown_domain(
+        uid => user_admin->id
+        ,id_domain => $id
+    );
+    wait_request();
+}
+
+sub _req_start($id) {
+    Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $id
+    );
+    wait_request();
+}
+
+
+sub _req_clone($base, $name=undef) {
+    $name = new_domain_name() if !defined $name;
+    my $req = Ravada::Request->clone(
+            uid => user_admin->id
+            ,id_domain => $base->id
+            ,name => $name
+            ,start => 1
+    );
+    wait_request();
+
+    my $domain = rvd_back->search_domain($name);
+
+    die "Error: $name not created" if !$domain;
+    return $domain;
 }
 
 sub test_assign($vm, $node, $hd, $n_expected_in_vm, $n_expected_in_node) {
@@ -237,7 +292,7 @@ sub test_assign($vm, $node, $hd, $n_expected_in_vm, $n_expected_in_node) {
     is($found_in_node, $n_expected_in_node);
     is($found_in_vm, $n_expected_in_vm);
 
-    test_clone_nohd($base, $hd);
+    test_clone_nohd($hd, $base);
 
     remove_domain($base2, $base);
 }
@@ -249,7 +304,7 @@ sub check_hd_from_node($domain, $devices_node) {
     my @devices = $domain->list_host_devices_attached();
     my ($locked) = grep { $_->{is_locked} } @devices;
 
-    diag("locked=".($locked->{is_locked} or 0)." id_vm=$id_vm ".$locked->{name});
+    diag($domain->name." locked=".($locked->{is_locked} or 0)." id_vm=$id_vm ".$locked->{name});
     ok($locked) or return;
 
     my $vm = Ravada::VM->open($id_vm);
@@ -259,7 +314,7 @@ sub check_hd_from_node($domain, $devices_node) {
     ok($match,"Expecting $match in ".Dumper($devices));
 }
 
-sub test_clone_nohd($base, $hd) {
+sub test_clone_nohd($hd, $base) {
 
     my ($clone_hd) = $base->clones;
 
@@ -295,16 +350,18 @@ sub test_clone_nohd($base, $hd) {
     my $domain2 = rvd_back->search_domain($name);
     is($domain2->is_active,1);
 
-    Ravada::Request->shutdown_domain( uid => user_admin->id, id_domain => $domain2->id);
-    Ravada::Request->shutdown_domain( uid => user_admin->id, id_domain => $clone_hd->{id});
+    Ravada::Request->force_shutdown_domain( uid => user_admin->id, id_domain => $domain2->id);
+    Ravada::Request->force_shutdown_domain( uid => user_admin->id, id_domain => $clone_hd->{id});
     wait_request();
 
-    $req2->status('requested');
-    wait_request();
-    check_host_device($domain2);
+    _req_start($domain0->id);
+
+    my $domain2b = rvd_back->search_domain($name);
+    is($domain2b->is_active,1);
+    check_host_device($domain2b);
 
     my %devices_nodes = $hd->list_devices_nodes();
-    check_hd_from_node($domain2,\%devices_nodes);
+    check_hd_from_node($domain2b,\%devices_nodes);
 }
 
 sub check_host_device($domain) {
@@ -312,7 +369,7 @@ sub check_host_device($domain) {
         ." WHERE id_domain=?");
     $sth->execute($domain->id);
     my $found = $sth->fetchrow_hashref;
-    ok($found);
+    ok($found) or confess "Domain ".$domain->name." has no hds locked";
     if ($domain->type eq 'Void') {
         return check_host_device_void($domain);
     } else {
@@ -401,6 +458,8 @@ for my $vm_name (reverse vm_names() ) {
         clean_remote_node($node);
 
         my ($node1, $node2) = remote_node_2($vm_name);
+        test_devices_v2([$vm,$node1,$node2],[1,1,1]);
+        test_devices_v2([$vm,$node1,$node2],[2,2,2]);
         test_devices_v2([$vm,$node1,$node2],[6,6,6]);
         exit;
 
