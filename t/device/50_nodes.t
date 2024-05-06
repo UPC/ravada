@@ -82,6 +82,30 @@ sub _create_mock_devices($vm, $n_devices, $type, $value="fff:fff") {
     }
 }
 
+sub test_devices_v2($node, $number) {
+    _clean_devices(@$node);
+    my $vm = $node->[0];
+    my ($list_command,$list_filter) = _create_mock_devices($node->[0], $number->[0], "USB" );
+    for my $i (1..scalar(@$node)-1) {
+        die "Error, missing number[$i] ".Dumper($number) unless defined $number->[$i];
+        _create_mock_devices($node->[$i], $number->[$i], "USB" );
+    }
+    my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
+    my ($first) = $templates->[0];
+
+    $vm->add_host_device(template => $first->{name});
+    my @list_hostdev = $vm->list_host_devices();
+    my ($hd) = $list_hostdev[-1];
+    $hd->_data('list_command',$list_command);
+    $hd->_data('list_filter',$list_filter);
+
+    my %devices_nodes = $hd->list_devices_nodes();
+
+    test_assign_v2($hd,$node,$number);
+
+    _clean_devices($vm, $node);
+}
+
 sub test_devices($vm, $node, $n_local=3, $n_node=3) {
 
     _clean_devices($vm, $node);
@@ -119,6 +143,52 @@ sub test_devices($vm, $node, $n_local=3, $n_node=3) {
     _clean_devices($vm, $node);
 }
 
+sub test_assign_v2($hd, $node, $number) {
+    my $vm = $node->[0];
+    my $base = create_domain($vm);
+    $base->add_host_device($hd);
+    Ravada::Request->add_hardware(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,name => 'usb controller'
+    );
+    $base->prepare_base(user_admin);
+    for my $curr_node (@$node) {
+        $base->set_base_vm(id_vm => $curr_node->id, user => user_admin);
+    }
+
+    wait_request();
+    my %found;
+    my %dupe;
+    my $n_expected = 0;
+    map { $n_expected+= $_ } @$number;
+
+    my %devices_nodes = $hd->list_devices_nodes();
+    for my $n (1 .. $n_expected) {
+        diag("$n of $n_expected");
+        my $name = new_domain_name;
+        my $req = Ravada::Request->clone(
+            uid => user_admin->id
+            ,id_domain => $base->id
+            ,name => $name
+            ,start => 1
+        );
+        wait_request( check_error => 0);
+        my $domain = rvd_back->search_domain($name);
+        $domain->_data('status','active');
+        is($domain->is_active,1) if $vm->type eq 'Void';
+        check_hd_from_node($domain,\%devices_nodes);
+        my $hd = check_host_device($domain);
+        push(@{$dupe{$hd}},($base->name." ".$base->id));
+        is(scalar(@{$dupe{$hd}}),1) or die Dumper(\%dupe);
+        $found{$domain->_data('id_vm')}++;
+    }
+    test_clone_nohd($base, $hd);
+    die Dumper(\%found);
+
+    remove_domain($base);
+}
+
 sub test_assign($vm, $node, $hd, $n_expected_in_vm, $n_expected_in_node) {
     my $base = create_domain($vm);
     $base->add_host_device($hd);
@@ -141,7 +211,8 @@ sub test_assign($vm, $node, $hd, $n_expected_in_vm, $n_expected_in_node) {
     my %dupe;
 
     my %devices_nodes = $hd->list_devices_nodes();
-    for (0 .. $n_expected_in_vm+$n_expected_in_node) {
+    for my $n (1 .. $n_expected_in_vm+$n_expected_in_node) {
+        diag("$n [$n_expected_in_vm + $n_expected_in_node]");
         my $name = new_domain_name;
         my $req = Ravada::Request->clone(
             uid => user_admin->id
@@ -166,7 +237,7 @@ sub test_assign($vm, $node, $hd, $n_expected_in_vm, $n_expected_in_node) {
     is($found_in_node, $n_expected_in_node);
     is($found_in_vm, $n_expected_in_vm);
 
-    test_clone_nohd($base);
+    test_clone_nohd($base, $hd);
 
     remove_domain($base2, $base);
 }
@@ -178,17 +249,20 @@ sub check_hd_from_node($domain, $devices_node) {
     my @devices = $domain->list_host_devices_attached();
     my ($locked) = grep { $_->{is_locked} } @devices;
 
-    warn Dumper($locked);
+    diag("locked=".($locked->{is_locked} or 0)." id_vm=$id_vm ".$locked->{name});
+    ok($locked) or return;
 
     my $vm = Ravada::VM->open($id_vm);
     my $devices = $devices_node->{$vm->name};
 
     my ($match) = grep { $_ eq $locked->{name} } @$devices;
     ok($match,"Expecting $match in ".Dumper($devices));
-    exit;
 }
 
-sub test_clone_nohd($base) {
+sub test_clone_nohd($base, $hd) {
+
+    my ($clone_hd) = $base->clones;
+
     my $name = new_domain_name();
     my $req0 = Ravada::Request->clone(
         uid => user_admin->id
@@ -221,6 +295,16 @@ sub test_clone_nohd($base) {
     my $domain2 = rvd_back->search_domain($name);
     is($domain2->is_active,1);
 
+    Ravada::Request->shutdown_domain( uid => user_admin->id, id_domain => $domain2->id);
+    Ravada::Request->shutdown_domain( uid => user_admin->id, id_domain => $clone_hd->{id});
+    wait_request();
+
+    $req2->status('requested');
+    wait_request();
+    check_host_device($domain2);
+
+    my %devices_nodes = $hd->list_devices_nodes();
+    check_hd_from_node($domain2,\%devices_nodes);
 }
 
 sub check_host_device($domain) {
@@ -316,9 +400,15 @@ for my $vm_name (reverse vm_names() ) {
         my $node = remote_node($vm_name)  or next;
         clean_remote_node($node);
 
+        my ($node1, $node2) = remote_node_2($vm_name);
+        test_devices_v2([$vm,$node1,$node2],[6,6,6]);
+        exit;
+
         test_devices($vm, $node,2,2);
         test_devices($vm, $node,3,1);
         test_devices($vm, $node,1,3);
+        test_devices($vm, $node,6,5);
+        test_devices($vm, $node,8,7);
 
         clean_remote_node($node);
 
