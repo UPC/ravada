@@ -139,7 +139,9 @@ sub test_assign($vm, $node, $hd, $n_expected_in_vm, $n_expected_in_node) {
     my $found_in_node=0;
     my $found_in_vm=0;
     my %dupe;
-    for ($hd->list_devices_nodes) {
+
+    my %devices_nodes = $hd->list_devices_nodes();
+    for (0 .. $n_expected_in_vm+$n_expected_in_node) {
         my $name = new_domain_name;
         my $req = Ravada::Request->clone(
             uid => user_admin->id
@@ -151,6 +153,7 @@ sub test_assign($vm, $node, $hd, $n_expected_in_vm, $n_expected_in_node) {
         my $domain = rvd_back->search_domain($name);
         $domain->_data('status','active');
         is($domain->is_active,1) if $vm->type eq 'Void';
+        check_hd_from_node($domain,\%devices_nodes);
         my $hd = check_host_device($domain);
         push(@{$dupe{$hd}},($base->name." ".$base->id));
         is(scalar(@{$dupe{$hd}}),1) or die Dumper(\%dupe);
@@ -166,6 +169,23 @@ sub test_assign($vm, $node, $hd, $n_expected_in_vm, $n_expected_in_node) {
     test_clone_nohd($base);
 
     remove_domain($base2, $base);
+}
+
+sub check_hd_from_node($domain, $devices_node) {
+    my $id_vm = $domain->_data('id_vm');
+    is($domain->_vm->id,$id_vm);
+
+    my @devices = $domain->list_host_devices_attached();
+    my ($locked) = grep { $_->{is_locked} } @devices;
+
+    warn Dumper($locked);
+
+    my $vm = Ravada::VM->open($id_vm);
+    my $devices = $devices_node->{$vm->name};
+
+    my ($match) = grep { $_ eq $locked->{name} } @$devices;
+    ok($match,"Expecting $match in ".Dumper($devices));
+    exit;
 }
 
 sub test_clone_nohd($base) {
