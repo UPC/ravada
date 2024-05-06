@@ -1593,6 +1593,7 @@ sub _add_indexes_generic($self) {
         ,host_devices_domain_locked => [
             "unique(id_vm,name)"
             ,"index(id_domain)"
+            ,"unique(name)"
         ],
         ,messages => [
              "index(id_user)"
@@ -2240,7 +2241,6 @@ sub _sql_create_tables($self) {
                 ,list_command => 'varchar(128) not null'
                 ,list_filter => 'varchar(128) not null'
                 ,template_args => 'varchar(255) not null'
-                ,devices => 'TEXT'
                 ,devices_node => 'TEXT'
                 ,enabled => "integer NOT NULL default 1"
                 ,'date_changed'

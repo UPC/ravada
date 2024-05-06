@@ -6,13 +6,31 @@
     %= include 'bootstrap/navigation'
     <div id="page-wrapper"
                 ng-controller="manage_host_devices"
-                ng-init="init('<%= $id_vm %>','<%= url_for("ws_subscribe")->to_abs %>')"
+                ng-init="init('<%= $id_vm %>','<%= $vm_type %>'
+                            ,'<%= url_for("ws_subscribe")->to_abs %>')"
     >
 
         <div class="page-header">
             <div class="card">
                 <div class="card-header">
-                    <h2><%=l 'Host Devices' %></h2>
+                    <div class="row">
+                        <div class="col col-lg-8">
+                            <h2><%=l 'Host Devices' %></h2>
+                        </div>
+                        <div class="col col-lg-4" align="right">
+
+                            <select ng-model="vm_type"
+                                ng-options="name for name in vm_types | orderBy:'name'"
+                                >
+                            </select>
+                            <a type="button" class="btn btn-light border"
+                                             ng-show="vm_type != vm_type_orig"
+                                             href="/admin/hostdev/{{vm_type}}">
+                                <%=l 'apply' %>
+                            </a>
+                        </div>
+                    </div>
+
                 </div>
             </div>
         </div>
@@ -63,17 +81,13 @@
     <div ng-show = "show_hdev[hdev.id]" class="border rounded border-primary mb-4 p-4">
         list command: <input type="text" ng-model = "hdev.list_command">
         filter: <input type="text" ng-model = "hdev.list_filter">
-        <button type="btn" ng-click="update_host_device(hdev)">apply</button>
+        <button type="btn" ng-click="update_host_device(hdev)"
+            ng-disabled="hdev._loading"
+                           ><%=l 'apply' %>
+        </button>
         <div class="alert alert-danger" ng-show="hdev.devices.length==0">No devices found</div>
         <div ng-show="hdev._loading"><i class="fa fa-sync-alt fa-spin"></i></div>
-        <ul ng-show="hdev._nodes.length==1">
-            <li ng-repeat="device in hdev.devices_node[hdev._nodes[0]]">
-                {{device.name}}
-                <a class="badge badge-primary" href="/machine/manage/{{device.domain.id}}.html#!#v-pills-hostdev"
-                    ng-show="device.domain">{{device.domain.name}}</a>
-            </li>
-        </ul>
-        <ul ng-hide="hdev._nodes.length<2 || hdev._n_devices==0">
+        <ul>
             <li ng-repeat="node in hdev._nodes" >
                 <span>{{node}}</span>
                 <ul>

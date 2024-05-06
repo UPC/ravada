@@ -1201,9 +1201,53 @@ ravadaApp.directive("solShowMachine", swMach)
     };
 
    function manage_host_devices($scope, $http, $timeout) {
-        $scope.init=function(id,url) {
+        $scope.init=function(id, vm_type, url) {
+            $scope.id_vm= id;
+            $scope.vm_type = vm_type;
+            $scope.vm_type_orig = vm_type;
             subscribe_list_host_devices(id, url);
+            list_templates(id);
+            list_backends();
         };
+
+       list_backends=function() {
+            $http.get('/list_vm_types.json')
+            .then(function(response) {
+                   $scope.vm_types = response.data;
+               });
+       };
+
+        list_templates = function(id) {
+            $http.get('/host_devices/templates/list/'+ id)
+            .then(function(response) {
+                   $scope.templates = response.data;
+               });
+        };
+
+        $scope.add_host_device = function() {
+            $http.post('/node/host_device/add'
+                ,JSON.stringify({ 'template': $scope.new_template.name , 'id_vm': $scope.id_vm}))
+            .then(function(response) {
+            });
+        };
+
+        $scope.update_host_device = function(hdev) {
+            hdev._loading=true;
+            hdev.devices_node=[];
+            hdev._nodes = [];
+            $http.post('/node/host_device/update'
+                ,JSON.stringify(hdev))
+            .then(function(response) {
+                $scope.error = response.data.error;
+            });
+            hdev.devices = undefined;
+        };
+        $scope.remove_host_device = function(id) {
+            $http.get('/node/host_device/remove/'+id).then(function(response) {
+                // TODO: add some reponse
+            });
+        };
+
 
         subscribe_list_host_devices= function(id, url) {
             $scope.show_requests = false;

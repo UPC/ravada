@@ -100,9 +100,19 @@ sub test_devices($vm, $node, $n_local=3, $n_node=3) {
     my $vm_name = $vm->name;
     my $node_name = $node->name;
 
-    my @devices = $hd->list_devices;
-    ok(grep /$vm_name/,@devices);
-    ok(!grep /$node_name/,@devices);
+    my %devices_nodes = $hd->list_devices_nodes();
+    warn Dumper(\%devices_nodes);
+    my %dupe;
+    for my $node (keys %devices_nodes) {
+        for my $dev (@{$devices_nodes{$node}}) {
+            $dupe{$dev}++;
+        }
+    }
+    warn Dumper(\%dupe);
+    is(scalar(keys %dupe), $n_local+ $n_node);
+    for my $dev (keys %dupe) {
+        is($dupe{$dev},1);
+    }
 
     test_assign($vm, $node, $hd, $n_local, $n_node);
 

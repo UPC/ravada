@@ -438,13 +438,39 @@ get '/admin/storage' => sub($c) {
 
 };
 
-get '/admin/hostdev/(#vm)' => sub($c) {
+get '/admin/hostdev/(#vm_type)' => sub($c) {
     _admin_host_devices($c);
 };
 
+sub _select_vm_by_type($c) {
+
+    my $type = $c->stash('vm_type');
+
+    my $sql = "SELECT id,name,vm_type FROM vms "
+        ." WHERE hostname='localhost'";
+    $sql .= " AND vm_type=?" if defined $type;
+
+    my $sth = $RAVADA->_dbh->prepare($sql);
+
+    if (defined ($type)) {
+        $sth->execute($type);
+    } else {
+        $sth->execute();
+    }
+    my ($id,$name,$vm_type) = $sth->fetchrow;
+
+    return not_found($c, 404, "vm type ".($type or 'UNDEF')." not found")
+    if !$id;
+
+    $c->stash('vm_type' => $vm_type);
+    $c->stash('id_vm' => $id);
+
+}
+
 sub _admin_host_devices($c) {
     _add_admin_libs($c);
-    _select_vm($c);
+
+    _select_vm_by_type($c);
 
     $c->stash(tab => ($c->param('tab') or ''));
     $c->stash('id' => $c->stash('id_vm'));
@@ -3476,13 +3502,14 @@ sub admin {
         $c->stash( csp => $csp , csp_advanced => $csp_advanced);
         $c->stash(url_login => "/login");
     }
-    if ($page eq 'storage' || $page eq 'hostdev') {
+    if ($page eq 'storage') {
         _select_vm($c);
     }
+    return _admin_host_devices($c) if ($page eq 'hostdev');
     $c->render( template => 'main/admin_'.$page);
 };
 
-sub _select_vm($c) {
+sub _select_vm($c , $type =undef) {
     my $sth = $RAVADA->_dbh->prepare("SELECT id,name FROM vms WHERE hostname='localhost' AND vm_type=?");
     my $types = Ravada::Front::list_vm_types();
     for my $type ('KVM',@$types) {

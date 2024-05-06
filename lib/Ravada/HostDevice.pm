@@ -9,7 +9,7 @@ Ravada::HostDevice - Host Device basic library for Ravada
 
 =cut
 
-use Carp qw(cluck);
+use Carp qw(croak cluck);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
@@ -61,12 +61,6 @@ has 'enabled' => (
     ,is => 'rw'
 );
 
-has 'devices' => (
-    isa => 'Str'
-    ,is => 'rw'
-    ,default => ''
-);
-
 has 'devices_node' => (
     isa => 'Str'
     ,is => 'rw'
@@ -85,7 +79,6 @@ sub search_by_id($self, $id) {
     $sth->execute($id);
     my $row = $sth->fetchrow_hashref;
     die "Error: device id='$id' not found" if !exists $row->{id};
-    $row->{devices} = '' if !defined $row->{devices};
     $row->{devices_node} = encode_json({}) if !defined $row->{devices_node};
 
     return Ravada::HostDevice->new(%$row);
@@ -141,7 +134,6 @@ sub list_devices($self, $id_vm=$self->id_vm) {
     for my $line (split /\n/, $out ) {
         push @device,($line) if !defined $filter || $line =~ qr($filter)i;
     }
-    $self->_data( 'devices' => \@device) if $id_vm == $self->id_vm;
     return @device;
 }
 
@@ -265,7 +257,7 @@ sub _data($self, $field, $value=undef) {
         );
         $sth->execute($self->id);
         my $row = $sth->fetchrow_hashref();
-        die "Error: No field '$field' in host_devices" if !exists $row->{$field};
+        croak "Error: No field '$field' in host_devices" if !exists $row->{$field};
         return $row->{$field};
     }
 }

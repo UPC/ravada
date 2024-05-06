@@ -608,10 +608,11 @@ sub _balance_vm($self, $request=undef, $host_devices=undef) {
     $base = Ravada::Domain->open($self->id_base) if $self->id_base;
 
     my $vm_free;
-    for (;;) {
+    for (my $count=0;$count<10;$count++) {
         $vm_free = $self->_vm->balance_vm($self->_data('id_owner'),$base
                                             , $self->id, $host_devices);
         return if !$vm_free;
+        next if !$vm_free->vm || !$vm_free->is_active;
 
         last if $vm_free->id == $self->_vm->id;
         eval { $self->migrate($vm_free, $request) };
@@ -627,7 +628,7 @@ sub _balance_vm($self, $request=undef, $host_devices=undef) {
         }
         die $@;
     }
-    return if !$vm_free;
+    return if !$vm_free || !$vm_free->vm || !$vm_free->is_active;
     return $vm_free->id;
 }
 
