@@ -1593,7 +1593,6 @@ sub _add_indexes_generic($self) {
         ,host_devices_domain_locked => [
             "unique(id_vm,name)"
             ,"index(id_domain)"
-            ,"unique(name)"
         ],
         ,messages => [
              "index(id_user)"

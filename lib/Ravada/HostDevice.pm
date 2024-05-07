@@ -111,7 +111,7 @@ sub list_devices_nodes($self) {
         };
         warn $@ if $@;
         #        push @devices, @current_devs;
-        $devices{$node->name}=\@current_devs;
+        $devices{$node->id}=\@current_devs;
     }
 
     $self->_data( devices_node => \%devices );

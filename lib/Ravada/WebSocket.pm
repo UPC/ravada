@@ -267,14 +267,17 @@ sub _list_devices_node($rvd, $row) {
             $row->{_n_devices} += scalar(@{$devices->{$_}});
         }
         $row->{_loading} = 0;
-        for my $node ( keys %$devices ) {
+        for my $id_node ( keys %$devices ) {
             my @devs;
-            for my $name ( @{$devices->{$node}} ) {
+            for my $name ( @{$devices->{$id_node}} ) {
                 my $dev = { name => $name };
-                $dev->{domain} = $attached{$name} if exists $attached{$name};
+
+                $dev->{domain} = $attached{"$id_node.$name"}
+                if exists $attached{"$id_node.$name"};
+
                 push @devs,($dev);
             }
-            $ret{$node} = \@devs;
+            $ret{$id_node} = \@devs;
         }
     } else {
         $row->{_nodes} = [];
@@ -284,7 +287,9 @@ sub _list_devices_node($rvd, $row) {
 }
 
 sub _list_devices_attached($rvd) {
-    my $sth=$rvd->_dbh->prepare("SELECT d.id,d.name,d.is_base, d.status, l.id, l.name "
+    my $sth=$rvd->_dbh->prepare(
+        "SELECT d.id,d.name,d.is_base, d.status, l.id, l.name "
+        ."     ,l.id_vm "
         ." FROM host_devices_domain hdd, domains d"
         ." LEFT JOIN host_devices_domain_locked l"
         ."    ON d.id=l.id_domain "
@@ -293,13 +298,13 @@ sub _list_devices_attached($rvd) {
     );
     $sth->execute();
     my %devices;
-    while ( my ($id,$name,$is_base, $status, $is_locked, $device) = $sth->fetchrow ) {
+    while ( my ($id,$name,$is_base, $status, $is_locked, $device, $id_vm) = $sth->fetchrow ) {
         next if !$device;
         $is_locked = 0 if !$is_locked || $status ne 'active';
         my $domain = {     id => $id       ,name => $name, is_locked => $is_locked
                       ,is_base => $is_base ,device => $device
         };
-        $devices{$device} = $domain;
+        $devices{"$id_vm.$device"} = $domain;
     }
     return %devices;
 
