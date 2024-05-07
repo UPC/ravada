@@ -103,7 +103,7 @@ sub test_devices_v2($node, $number) {
 
     test_assign_v2($hd,$node,$number);
 
-    _clean_devices($vm, $node);
+    _clean_devices(@$node);
 }
 
 sub test_devices($vm, $node, $n_local=3, $n_node=3) {
@@ -165,7 +165,6 @@ sub test_assign_v2($hd, $node, $number) {
 
     my %devices_nodes = $hd->list_devices_nodes();
     for my $n (1 .. $n_expected) {
-        diag("$n of $n_expected");
         my $name = new_domain_name;
         my $domain = _req_clone($base, $name);
         $domain->_data('status','active');
@@ -212,11 +211,21 @@ sub test_start_in_another_node($hd, $base) {
 }
 
 sub _req_shutdown($id) {
-    Ravada::Request->force_shutdown_domain(
+    my $sth_locked = connector->dbh->prepare(
+        "SELECT * FROM host_devices_domain_locked "
+        ." WHERE id_domain=?"
+    );
+    $sth_locked->execute($id);
+    my ($locked) = $sth_locked->fetchrow;
+    my $req = Ravada::Request->force_shutdown_domain(
         uid => user_admin->id
         ,id_domain => $id
     );
     wait_request();
+    return if !$locked;
+    sleep 3;
+    $req->status('requested');
+    wait_request(debug => 0);
 }
 
 sub _req_start($id) {
@@ -267,7 +276,6 @@ sub test_assign($vm, $node, $hd, $n_expected_in_vm, $n_expected_in_node) {
 
     my %devices_nodes = $hd->list_devices_nodes();
     for my $n (1 .. $n_expected_in_vm+$n_expected_in_node) {
-        diag("$n [$n_expected_in_vm + $n_expected_in_node]");
         my $name = new_domain_name;
         my $req = Ravada::Request->clone(
             uid => user_admin->id
@@ -288,7 +296,6 @@ sub test_assign($vm, $node, $hd, $n_expected_in_vm, $n_expected_in_node) {
     }
     ok($found_in_node,"Expecting in node, found $found_in_node");
     ok($found_in_vm,"Expecting in node, found $found_in_vm");
-    diag("In node: $found_in_node, in vm: $found_in_vm");
     is($found_in_node, $n_expected_in_node);
     is($found_in_vm, $n_expected_in_vm);
 
@@ -304,14 +311,13 @@ sub check_hd_from_node($domain, $devices_node) {
     my @devices = $domain->list_host_devices_attached();
     my ($locked) = grep { $_->{is_locked} } @devices;
 
-    diag($domain->name." locked=".($locked->{is_locked} or 0)." id_vm=$id_vm ".$locked->{name});
     ok($locked) or return;
 
     my $vm = Ravada::VM->open($id_vm);
     my $devices = $devices_node->{$vm->name};
 
     my ($match) = grep { $_ eq $locked->{name} } @$devices;
-    ok($match,"Expecting $match in ".Dumper($devices));
+    ok($match,"Expecting $locked->{name} in ".Dumper($devices));
 }
 
 sub test_clone_nohd($hd, $base) {
@@ -350,8 +356,12 @@ sub test_clone_nohd($hd, $base) {
     my $domain2 = rvd_back->search_domain($name);
     is($domain2->is_active,1);
 
-    Ravada::Request->force_shutdown_domain( uid => user_admin->id, id_domain => $domain2->id);
-    Ravada::Request->force_shutdown_domain( uid => user_admin->id, id_domain => $clone_hd->{id});
+    _req_shutdown($domain2->id);
+    _req_shutdown($clone_hd->{id});
+
+    _check_no_hd_locked($domain2->id);
+    _check_no_hd_locked($clone_hd->{id});
+
     wait_request();
 
     _req_start($domain0->id);
@@ -362,6 +372,16 @@ sub test_clone_nohd($hd, $base) {
 
     my %devices_nodes = $hd->list_devices_nodes();
     check_hd_from_node($domain2b,\%devices_nodes);
+}
+
+sub _check_no_hd_locked($id_domain) {
+    my $sth = connector->dbh->prepare(
+        "SELECT * FROM host_devices_domain_locked "
+        ." WHERE id_domain=?"
+    );
+    $sth->execute($id_domain);
+    my $row = $sth->fetchrow_hashref;
+    ok(!$row) or die Dumper($row);
 }
 
 sub check_host_device($domain) {

@@ -2065,12 +2065,12 @@ sub balance_vm($self, $uid, $base=undef, $id_domain=undef, $host_devices=undef) 
         @vms = $self->list_nodes();
     }
 
-
     my @vms_active;
     for my $vm (@vms) {
         push @vms_active,($vm) if $vm && $vm->vm && $vm->is_active && $vm->enabled;
     }
     return $vms_active[0] if scalar(@vms_active)==1;
+
     if ($base && $base->_data('balance_policy') == 1 ) {
         my $vm = $self->_balance_already_started($uid, $id_domain, \@vms_active);
         return $vm if $vm;

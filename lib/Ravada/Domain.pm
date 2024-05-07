@@ -474,9 +474,13 @@ sub _start_checks($self, @args) {
     if !$id_vm && defined $self->_data('id_vm')
     && $self->_data('id_vm') != $vm_local->id;
 
+    # check the requested id_vm is suitable
     if ($id_vm) {
         $vm = Ravada::VM->open($id_vm);
         if ( !$vm->enabled || !$vm->ping ) {
+            $vm = $vm_local;
+            $id_vm = undef;
+        } elsif ($enable_host_devices && !$self->_available_hds($vm)) {
             $vm = $vm_local;
             $id_vm = undef;
         }
@@ -575,6 +579,21 @@ sub _search_already_started($self, $fast = 0) {
         }
     }
     return keys %started;
+}
+
+sub _available_hds($self, $vm) {
+
+    my @host_devices = $self->list_host_devices();
+    return 1 if !@host_devices;
+
+    my $available=1;
+    for my $hd (@host_devices) {
+        if  (! $hd->list_available_devices($vm->id) ) {
+            $available=0;
+            last;
+        }
+    }
+    return $available;
 }
 
 sub _filter_vm_available_hd($self, @vms) {
