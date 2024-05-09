@@ -7255,6 +7255,7 @@ sub _add_host_devices($self, @args) {
         $request = delete $args{request} if exists $args{request};
     }
 
+    $self->_clean_old_hd_locks();
     my $doc = $self->get_config();
     for my $host_device ( @host_devices ) {
         my $device_configured = $self->_device_already_configured($host_device);
@@ -7375,6 +7376,14 @@ sub _lock_host_device($self, $host_device, $device=undef) {
     $sth->execute($device, $self->id, $host_device->id);
 
     return 1;
+}
+
+sub _clean_old_hd_locks($self) {
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
+        ." WHERE id_domain=? AND id_vm <> ?"
+    );
+    $sth->execute($self->id, $self->_vm->id);
+
 }
 
 sub _unlock_host_devices($self, $time_changed=3) {

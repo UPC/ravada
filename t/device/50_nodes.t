@@ -200,6 +200,8 @@ sub test_start_in_another_node($hd, $base) {
     _req_clone($base);
     _req_shutdown($clone2->{id});
 
+    _list_locked($clone1->{id});
+    _force_wrong_lock($clone1->{id_vm},$clone1->{id});
     _req_start($clone1->{id});
 
     my $clone1b = Ravada::Domain->open($clone1->{id});
@@ -208,6 +210,24 @@ sub test_start_in_another_node($hd, $base) {
     my %devices_nodes = $hd->list_devices_nodes();
     check_hd_from_node($clone1b,\%devices_nodes);
 
+    check_host_device($clone1b);
+}
+
+sub _force_wrong_lock($id_vm, $id_domain) {
+    my $sth = connector->dbh->prepare(
+        "INSERT INTO host_devices_domain_locked "
+        ." ( id_vm, id_domain, name, time_changed )"
+        ." values (?, ?, ?, 0) "
+    );
+    $sth->execute($id_vm, $id_domain, 'fake');
+}
+
+sub _list_locked($id_domain) {
+    my $sth = connector->dbh->prepare("SELECT * FROM host_devices_domain_locked WHERE id_domain=?");
+    $sth->execute($id_domain);
+    while ( my $row = $sth->fetchrow_hashref ) {
+        warn Dumper($row);
+    }
 }
 
 sub _req_shutdown($id) {
@@ -223,7 +243,7 @@ sub _req_shutdown($id) {
     );
     wait_request();
     return if !$locked;
-    sleep 3;
+    sleep 4;
     $req->status('requested');
     wait_request(debug => 0);
 }
@@ -309,15 +329,19 @@ sub check_hd_from_node($domain, $devices_node) {
     is($domain->_vm->id,$id_vm);
 
     my @devices = $domain->list_host_devices_attached();
-    my ($locked) = grep { $_->{is_locked} } @devices;
+    my @locked = grep { $_->{is_locked} } @devices;
 
-    ok($locked) or return;
+    ok(@locked) or return;
+    is(scalar(@locked),1) or die Dumper(\@locked);
+    my ($locked) = @locked;
 
     my $vm = Ravada::VM->open($id_vm);
-    my $devices = $devices_node->{$vm->name};
+    diag("Checking ".$domain->name." in node "
+        ." [ ".$vm->id." ] ".$vm->name);
+    my $devices = $devices_node->{$vm->id};
 
     my ($match) = grep { $_ eq $locked->{name} } @$devices;
-    ok($match,"Expecting $locked->{name} in ".Dumper($devices));
+    ok($match,"Expecting $locked->{name} in ".Dumper($devices)) or confess;
 }
 
 sub test_clone_nohd($hd, $base) {
@@ -388,8 +412,11 @@ sub check_host_device($domain) {
     my $sth = connector->dbh->prepare("SELECT * FROM host_devices_domain_locked "
         ." WHERE id_domain=?");
     $sth->execute($domain->id);
-    my $found = $sth->fetchrow_hashref;
-    ok($found) or confess "Domain ".$domain->name." has no hds locked";
+    my @found;
+    while ( my $row = $sth->fetchrow_hashref) {
+        push @found,($row);
+    }
+    is(scalar(@found),1) or confess "Domain ".$domain->name." should have 1 HD locked\n".Dumper(\@found);
     if ($domain->type eq 'Void') {
         return check_host_device_void($domain);
     } else {
