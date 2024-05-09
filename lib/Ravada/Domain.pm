@@ -7261,6 +7261,7 @@ sub _add_host_devices($self, @args) {
         my $device_configured = $self->_device_already_configured($host_device);
 
         if ( $device_configured ) {
+            warn "device already configured $device_configured";
             if ( $host_device->enabled() && $host_device->is_device($device_configured) && $self->_lock_host_device($host_device) ) {
                 next;
             } else {
@@ -7361,6 +7362,18 @@ sub _lock_host_device($self, $host_device, $device=undef) {
     return 0 if defined $id_domain_locked;
 
     my $query = "INSERT INTO host_devices_domain_locked (id_domain,id_vm,name,time_changed) VALUES(?,?,?,?)";
+
+    if ( $self->_vm->type eq 'Void' ) {
+        my $vm_name = $self->_vm->name;
+        confess Dumper(
+            [   $self->id
+                ,$self->name
+                ,$self->_vm->id
+                ,$self->_vm->name
+            ])
+        if $device !~ /$vm_name$/;
+    }
+    warn Dumper(["Locking hd [".$self->id."]".$self->name, $self->_vm->id,$self->_vm->name,$device]);
 
     my $sth = $$CONNECTOR->dbh->prepare($query);
     eval { $sth->execute($self->id,$self->_vm->id, $device,time) };

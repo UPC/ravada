@@ -508,13 +508,17 @@ for my $vm_name (reverse vm_names() ) {
         test_devices_v2([$vm,$node1,$node2],[1,1,1]);
         test_devices_v2([$vm,$node1,$node2],[2,2,2]);
         test_devices_v2([$vm,$node1,$node2],[6,6,6]);
-        exit;
+        test_devices_v2([$vm,$node1,$node2],[6,1,1]);
+        test_devices_v2([$vm,$node1,$node2],[1,6,1]);
+        test_devices_v2([$vm,$node1,$node2],[1,1,6]);
 
         test_devices($vm, $node,2,2);
         test_devices($vm, $node,3,1);
         test_devices($vm, $node,1,3);
         test_devices($vm, $node,6,5);
         test_devices($vm, $node,8,7);
+        test_devices($vm, $node,1,7);
+        test_devices($vm, $node,7,1);
 
         clean_remote_node($node);
 

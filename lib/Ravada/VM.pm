@@ -2703,6 +2703,7 @@ sub add_host_device($self, %args) {
     ." VALUES ( ".join(", ",map { '?' } keys %$info)." ) "
     ;
 
+    warn Dumper($info);
     my $sth = $$CONNECTOR->dbh->prepare($query);
     $sth->execute(map { $info->{$_} } sort keys %$info );
 
