@@ -2703,9 +2703,11 @@ sub add_host_device($self, %args) {
     ." VALUES ( ".join(", ",map { '?' } keys %$info)." ) "
     ;
 
-    warn Dumper($info);
     my $sth = $$CONNECTOR->dbh->prepare($query);
+    eval {
     $sth->execute(map { $info->{$_} } sort keys %$info );
+    };
+    confess Dumper([$info,$@]) if $@;
 
     my $id = Ravada::Request->_last_insert_id( $$CONNECTOR );
 

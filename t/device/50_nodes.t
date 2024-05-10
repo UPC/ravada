@@ -104,6 +104,7 @@ sub test_devices_v2($node, $number) {
     test_assign_v2($hd,$node,$number);
 
     _clean_devices(@$node);
+    $hd->remove();
 }
 
 sub test_devices($vm, $node, $n_local=3, $n_node=3) {
@@ -141,6 +142,8 @@ sub test_devices($vm, $node, $n_local=3, $n_node=3) {
     test_assign($vm, $node, $hd, $n_local, $n_node);
 
     _clean_devices($vm, $node);
+
+    $hd->remove();
 }
 
 sub test_assign_v2($hd, $node, $number) {
