@@ -3921,6 +3921,12 @@ sub remove_config_node($self, $path, $content, $doc) {
 
 sub _xml_equal_hostdev($doc1, $doc2) {
     return 1 if $doc1 eq $doc2;
+
+    $doc1 =~ s/\n//g;
+    $doc2 =~ s/\n//g;
+
+    return 1 if $doc1 eq $doc2;
+
     my $parser = XML::LibXML->new() or die $!;
     $doc1 =~ s{(</?)\w+:(\w+)}{$1$2}mg;
     my $xml1 = $parser->parse_string($doc1);
