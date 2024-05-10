@@ -137,9 +137,9 @@ sub list_devices($self, $id_vm=$self->id_vm) {
     return @device;
 }
 
-sub is_device($self, $device) {
+sub is_device($self, $device, $id_vm) {
     return if !defined $device;
-    for my $dev ( $self->list_devices ) {
+    for my $dev ( $self->list_devices($id_vm) ) {
        return 1 if $dev eq $device;
     }
     return 0;

@@ -85,7 +85,6 @@
             ng-disabled="hdev._loading"
                            ><%=l 'apply' %>
         </button>
-        <div class="alert alert-danger" ng-show="hdev.devices.length==0">No devices found</div>
         <div ng-show="hdev._loading"><i class="fa fa-sync-alt fa-spin"></i></div>
         <ul>
             <li ng-repeat="node in hdev._nodes" >
