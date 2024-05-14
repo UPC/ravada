@@ -7261,8 +7261,6 @@ sub _add_host_devices($self, @args) {
         my $device_configured = $self->_device_already_configured($host_device);
 
         if ( $device_configured ) {
-            warn "device already configured $device_configured ";
-            warn "current vm ".$self->_vm->id." ".$self->_vm->name;
             if ( $host_device->enabled()
                     && $host_device->is_device($device_configured, $self->_vm->id)
                     && $self->_lock_host_device($host_device) ) {
@@ -7377,8 +7375,6 @@ sub _lock_host_device($self, $host_device, $device=undef) {
             ])
         if $device !~ /$vm_name$/;
     }
-    warn Dumper(["Locking hd [".$self->id."]".$self->name, $self->_vm->id,$self->_vm->name,$device]);
-
     my $sth = $$CONNECTOR->dbh->prepare($query);
     eval { $sth->execute($self->id,$self->_vm->id, $device,time) };
     if ($@) {

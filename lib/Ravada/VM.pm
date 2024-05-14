@@ -2659,7 +2659,7 @@ sub _check_equal_storage_pools($vm1, $vm2) {
 
         my ($path1, $path2) = ($vm1->_storage_path($pool), $vm2->_storage_path($pool));
 
-        die "Error: Storage pool '$pool' different. In ".$vm1->name." $path1 , "
+        confess "Error: Storage pool '$pool' different. In ".$vm1->name." $path1 , "
             ." in ".$vm2->name." $path2" if $path1 ne $path2;
     }
     return 1;
