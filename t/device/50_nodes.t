@@ -535,17 +535,22 @@ for my $vm_name (vm_names() ) {
         clean_remote_node($node1, $node2);
 
         test_devices_v2([$vm,$node1,$node2],[1,1,1]);
-        #        test_devices_v2([$vm,$node1,$node2],[1,6,1]);
-        #        test_devices_v2([$vm,$node1,$node2],[1,1,6]);
+        test_devices_v2([$vm,$node1,$node2],[1,3,1]);
+        test_devices_v2([$vm,$node1,$node2],[1,1,3]);
 
         clean_remote_node($node1, $node2);
+        $node1->remove();
+        $node2->remove();
 
-        my $node = remote_node($vm_name)  or next;
-        clean_remote_node($node);
-        test_devices($vm, $node,1,7);
-        #        test_devices($vm, $node,7,1);
+        if ($ENV{TEST_LONG}) {
+            my $node = remote_node($vm_name)  or next;
+            clean_remote_node($node);
+            test_devices($vm, $node,1,3);
+            test_devices($vm, $node,3,1);
 
-        clean_remote_node($node);
+            clean_remote_node($node);
+            $node->remove();
+        }
 
         $MOCK_DEVICES=0;
     }
