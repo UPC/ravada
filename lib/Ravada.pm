@@ -2271,6 +2271,7 @@ sub _sql_create_tables($self) {
                 ,id_vm => 'integer NOT NULL references `vms`(`id`) ON DELETE CASCADE'
                 ,id_domain => 'integer NOT NULL references `domains`(`id`) ON DELETE CASCADE'
                 ,name => 'varchar(255)'
+                ,old => 'text'
             }
         ]
         ,[

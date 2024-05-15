@@ -3921,6 +3921,11 @@ sub remove_config_node($self, $path, $content, $doc) {
 
 sub _xml_equal_hostdev($doc1, $doc2) {
     return 1 if $doc1 eq $doc2;
+
+    $doc1 =~ s/\n//g;
+    $doc2 =~ s/\n//g;
+    return 1 if $doc1 eq $doc2;
+
     my $parser = XML::LibXML->new() or die $!;
     $doc1 =~ s{(</?)\w+:(\w+)}{$1$2}mg;
     my $xml1 = $parser->parse_string($doc1);
@@ -3966,18 +3971,49 @@ sub add_config_node($self, $path, $content, $doc) {
     die "Error: I found ".scalar(@parent)." nodes for $dir, expecting 1"
     unless scalar(@parent)==1;
 
-    my $element;
+    my @old ;
+    my @element;
     eval {
-    ($element) = $parent[0]->findnodes($entry);
+    (@element) = $parent[0]->findnodes($entry);
     };
     die $@ if $@ && $@ !~ /Undefined namespace prefix/;
-    return if $element && $element->toString eq $content;
+    for my $element (@element) {
+        return if $element && $element->toString eq $content;
+    }
+
+    @old = map { $_->toString } @element;
 
     if ($content =~ /<qemu:commandline/) {
         _add_xml_parse($parent[0], $content);
     } else {
         $self->_fix_pci_slot(\$content);
         $parent[0]->appendWellBalancedChunk($content);
+    }
+
+    return \@old;
+}
+
+sub set_config_node($self, $path, $content, $doc) {
+
+    my ($dir,$entry) = $path =~ m{(.*)/(.*)};
+    confess "Error: missing entry in '$path'" if !$entry;
+
+    my @parent = $doc->findnodes($dir);
+    if (scalar(@parent)==0) {
+        @parent = $self->_xml_create_path($doc, $dir);
+    }
+
+    die "Error: I found ".scalar(@parent)." nodes for $dir, expecting 1"
+    unless scalar(@parent)==1;
+
+    my $parent = $parent[0];
+
+    for my $child ($parent->findnodes($entry)) {
+        $parent->removeChild($child);
+    }
+
+    for my $curr_entry (@$content) {
+        $parent->appendWellBalancedChunk($curr_entry);
     }
 
 }
@@ -4046,7 +4082,9 @@ sub add_config_unique_node($self, $path, $content, $doc) {
     die $@ if $@ && $@ !~ /Undefined namespace prefix/;
     return if $element && $element->toString eq $content;
 
+    my $old;
     if ($element ) {
+        $old = $element->toString();
         my $child = $parent[0]->removeChild($element);
     }
     if ($content =~ /<qemu:commandline/) {
@@ -4055,6 +4093,7 @@ sub add_config_unique_node($self, $path, $content, $doc) {
         $parent[0]->appendWellBalancedChunk($content);
     }
 
+    return $old;
 }
 sub change_config_attribute($self, $path, $content, $doc) {
 

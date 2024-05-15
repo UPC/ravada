@@ -177,6 +177,26 @@ our @TEMPLATES_VOID = (
             }
         ]
     }
+    ,{ name => "GPU Mediated Device"
+        ,list_command => "lsusb "
+        ,list_filter => '.*'
+        ,template_args => encode_json(
+            { uuid => '^(.*?) '}
+        )
+
+        ,templates => [{path => "/hardware/host_devices"
+                ,type => 'node'
+                ,template => Dump( device => {
+                        uuid => '<%= $uuid %>'
+                    })
+            }
+            ,{ path => "/features"
+                ,type => 'unique_node'
+                ,template => Dump( { hidden => 'on' } )
+             }
+
+        ]
+    }
 );
 
 my %TEMPLATES = (

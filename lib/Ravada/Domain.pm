@@ -355,7 +355,7 @@ sub _around_start($orig, $self, @arg) {
             $arg{listen_ip} = $display_ip;
         }
         if ($enable_host_devices) {
-            $self->_add_host_devices(@arg);
+            $self->_attach_host_devices(@arg);
         } else {
             $self->_dettach_host_devices();
         }
@@ -7195,6 +7195,10 @@ sub list_host_devices_attached($self) {
 # adds host devices to domain instance
 # usually run right before startup
 sub _add_host_devices($self, @args) {
+    $self->_attach_host_devices(@args);
+}
+
+sub _attach_host_devices($self, @args) {
     my @host_devices = $self->list_host_devices();
     return if !@host_devices;
     return if $self->is_active();
@@ -7233,11 +7237,19 @@ sub _add_host_devices($self, @args) {
 
         $self->_lock_host_device($host_device, $device);
 
+        my %old;
         for my $entry( $host_device->render_template($device) ) {
+            my $old_entry;
             if ($entry->{type} eq 'node') {
-                $self->add_config_node($entry->{path}, $entry->{content}, $doc);
+                $old_entry = $self->add_config_node($entry->{path}, $entry->{content}, $doc);
+                die Dumper(["old entry should be ARRAY ref ",
+                        ,$self->name
+                        ,$old_entry
+                ])unless ref($old_entry) && ref($old_entry) eq 'ARRAY';
             } elsif ($entry->{type} eq 'unique_node') {
-                $self->add_config_unique_node($entry->{path}, $entry->{content}, $doc);
+                $old_entry = $self->add_config_unique_node($entry->{path}, $entry->{content}, $doc);
+                $old_entry = undef if $old_entry && ref($old_entry)
+                    && ref($old_entry) eq 'HASH' && !keys %$old_entry;
             } elsif($entry->{type} eq 'attribute') {
                 $self->change_config_attribute($entry->{path}, $entry->{content}, $doc);
             } elsif($entry->{type} eq 'namespace') {
@@ -7247,10 +7259,20 @@ sub _add_host_devices($self, @args) {
                 ." template: ".$entry->{path}
                 ." Unknown type ".($entry->{type} or '<UNDEF>');
             }
+            $old{$entry->{path}} = $old_entry if $old_entry;
         }
+        $self->_store_hd_old_config($device,\%old) if keys %old;
     }
     $self->reload_config($doc);
 
+}
+
+sub _store_hd_old_config($self, $device, $old) {
+    my $sth = $self->_dbh->prepare("UPDATE host_devices_domain_locked "
+        ." SET old=? "
+        ." WHERE id_domain=? AND name=?"
+    );
+    $sth->execute(encode_json($old), $self->id, $device);
 }
 
 sub _dettach_host_devices($self) {
@@ -7267,10 +7289,30 @@ sub _dettach_host_device($self, $host_device, $doc=$self->get_config
 
     return if !defined $device or !length($device);
 
+    my $sth0 = $self->_dbh->prepare("SELECT * FROM host_devices_domain_locked "
+        ." WHERE id_domain=? AND name=? "
+    );
+    $sth0->execute($self->id, $device);
+    my $row = $sth0->fetchrow_hashref();
+    my $old = {};
+    $old = decode_json($row->{old}) if $row->{old};
+
     for my $entry( $host_device->render_template($device) ) {
+        my $curr_old = $old->{$entry->{path}};
+
         if ($entry->{type} eq 'node') {
+            if ($curr_old) {
+                $self->set_config_node($entry->{path}, $curr_old, $doc);
+                next;
+            }
             $self->remove_config_node($entry->{path}, $entry->{content}, $doc);
         } elsif ($entry->{type} eq 'unique_node') {
+            if ($curr_old) {
+                $self->add_config_unique_node($entry->{path}, $curr_old
+                                                ,$doc);
+                next;
+            }
+
             $self->remove_config_node($entry->{path}, $entry->{content}, $doc);
         } elsif($entry->{type} eq 'attribute') {
             $self->remove_config_attribute($entry->{path}, $entry->{content}, $doc);
