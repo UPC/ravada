@@ -418,8 +418,8 @@ sub test_host_device_usb_mock($vm, $n_hd=1) {
             like( ''.$@,qr(Did not find USB device)) if $vm->type eq 'KVM';
             is( ''.$@, '' ) if $vm->type eq 'Void';
             _check_hostdev($clone, $n_hd);
+            is(scalar($clone->list_host_devices_attached()), $n_hd, $clone->name);
         }
-        is(scalar($clone->list_host_devices_attached()), $n_hd, $clone->name);
         push @clones,($clone);
     }
     $clones[0]->shutdown_now(user_admin);
