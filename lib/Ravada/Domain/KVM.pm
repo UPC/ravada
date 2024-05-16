@@ -3912,6 +3912,8 @@ sub remove_config_node($self, $path, $content, $doc) {
             if ( _xml_equal_hostdev($content, $element_s) ) {
                 $parent->removeChild($element);
             } else {
+=pod
+
                 my @lines_c = split /\n/,$content;
                 my @lines_e = split /\n/,$element_s;
                 warn $element->getName." ".(scalar(@lines_c)." ".scalar(@lines_e));
@@ -3921,6 +3923,7 @@ sub remove_config_node($self, $path, $content, $doc) {
                 }
                 warn $content;
                 die $self->name if $element->getName eq 'hostdev';
+=cut
             }
         }
     }

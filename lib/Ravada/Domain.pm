@@ -7287,24 +7287,12 @@ sub _dettach_host_device($self, $host_device, $doc=$self->get_config
 
     return if !defined $device or !length($device);
 
-    my $sth0 = $self->_dbh->prepare("SELECT * FROM host_devices_domain_locked "
-        ." WHERE id_domain=? AND name=? "
-    );
-    $sth0->execute($self->id, $device);
-    my $row = $sth0->fetchrow_hashref();
-    my $old = {};
-    $old = decode_json($row->{old}) if $row->{old};
-
     for my $entry( $host_device->render_template($device) ) {
-        my $curr_old = $old->{$entry->{path}};
 
         if ($entry->{type} eq 'node') {
-            $self->set_config_node($entry->{path}, $curr_old, $doc)
-            if $curr_old;
+            $self->remove_config_node($entry->{path}, $entry->{content}, $doc);
         } elsif ($entry->{type} eq 'unique_node') {
-            $self->add_config_unique_node($entry->{path}, $curr_old
-                                                ,$doc)
-            if $curr_old;
+            $self->remove_config_node($entry->{path}, $entry->{content}, $doc);
         } elsif($entry->{type} eq 'attribute') {
             $self->remove_config_attribute($entry->{path}, $entry->{content}, $doc);
         } elsif($entry->{type} eq 'namespace') {
