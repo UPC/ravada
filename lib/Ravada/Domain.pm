@@ -7184,8 +7184,8 @@ sub list_host_devices_attached($self) {
             $sth_locked->execute($self->id, $row->{name});
             my ($is_locked) = $sth_locked->fetchrow();
             $row->{is_locked} = 1 if $is_locked;
+            push @found,($row);
         }
-        push @found,($row);
     }
 
     return @found;
@@ -7198,7 +7198,7 @@ sub _add_host_devices($self, @args) {
 }
 
 sub _backup_config_no_hd($self) {
-    $self->remove_host_devices();
+    $self->_dettach_host_devices();
     $self->_data('config_no_hd' => $self->get_config_txt);
 }
 
