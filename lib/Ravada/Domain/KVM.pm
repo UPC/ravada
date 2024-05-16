@@ -3651,6 +3651,9 @@ sub _validate_xml($self, $doc) {
 }
 
 sub reload_config($self, $doc) {
+    if (!ref($doc)) {
+        $doc = XML::LibXML->load_xml(string => $doc);
+    }
     $self->_validate_xml($doc) if $self->_vm->vm->get_major_version >= 4;
 
     my $new_domain;
@@ -3691,6 +3694,10 @@ sub copy_config($self, $domain) {
 
 sub get_config($self) {
     return XML::LibXML->load_xml( string => $self->xml_description());
+}
+
+sub get_config_txt($self) {
+    return $self->xml_description();
 }
 
 sub _change_xml_address($self, $doc, $address, $bus) {
@@ -3852,6 +3859,7 @@ sub _add_xml_parse($parent, $content) {
 }
 
 sub remove_config_node($self, $path, $content, $doc) {
+    confess;
     my ($dir,$entry) = $path =~ m{(.*)/(.*)};
     confess "Error: missing entry in '$path'" if !$entry;
 
@@ -3971,7 +3979,6 @@ sub add_config_node($self, $path, $content, $doc) {
     die "Error: I found ".scalar(@parent)." nodes for $dir, expecting 1"
     unless scalar(@parent)==1;
 
-    my @old ;
     my @element;
     eval {
     (@element) = $parent[0]->findnodes($entry);
@@ -3981,16 +3988,12 @@ sub add_config_node($self, $path, $content, $doc) {
         return if $element && $element->toString eq $content;
     }
 
-    @old = map { $_->toString } @element;
-
     if ($content =~ /<qemu:commandline/) {
         _add_xml_parse($parent[0], $content);
     } else {
         $self->_fix_pci_slot(\$content);
         $parent[0]->appendWellBalancedChunk($content);
     }
-
-    return \@old;
 }
 
 sub set_config_node($self, $path, $content, $doc) {
@@ -4082,9 +4085,7 @@ sub add_config_unique_node($self, $path, $content, $doc) {
     die $@ if $@ && $@ !~ /Undefined namespace prefix/;
     return if $element && $element->toString eq $content;
 
-    my $old;
     if ($element ) {
-        $old = $element->toString();
         my $child = $parent[0]->removeChild($element);
     }
     if ($content =~ /<qemu:commandline/) {
@@ -4093,7 +4094,6 @@ sub add_config_unique_node($self, $path, $content, $doc) {
         $parent[0]->appendWellBalancedChunk($content);
     }
 
-    return $old;
 }
 sub change_config_attribute($self, $path, $content, $doc) {
 
@@ -4135,7 +4135,6 @@ sub remove_host_devices($self) {
     my ($dev) = $doc->findnodes("/domain/devices");
     for my $hostdev ( $dev->findnodes("hostdev") ) {
         $dev->removeChild($hostdev);
-        warn $hostdev->toString();
     }
     $self->reload_config($doc);
 }

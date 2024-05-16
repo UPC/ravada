@@ -315,6 +315,7 @@ sub test_host_device_usb($vm) {
     _check_hostdev($clone, 1);
 
     shutdown_domain_internal($clone);
+    _check_hostdev($clone, 1) or exit;
     eval { $clone->start(user_admin) };
     is(''.$@, '') or exit;
     _check_hostdev($clone, 1) or exit;
@@ -422,7 +423,7 @@ sub test_host_device_usb_mock($vm, $n_hd=1) {
         push @clones,($clone);
     }
     $clones[0]->shutdown_now(user_admin);
-    _check_hostdev($clones[0], $n_hd);
+    _check_hostdev($clones[0], 0);
     my @devs_attached = $clones[0]->list_host_devices_attached();
     is(scalar(@devs_attached), $n_hd);
     is($devs_attached[0]->{is_locked},0);
@@ -553,8 +554,11 @@ sub test_host_device_gpu($vm) {
     test_hostdev_gpu($base);
 
     diag("Remove host device ".$list_hostdev[0]->name);
+    warn 1;
     $list_hostdev[0]->remove();
+    warn 2;
     remove_domain($base);
+    warn 3;
 }
 
 sub test_xmlns($vm) {

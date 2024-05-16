@@ -1242,12 +1242,14 @@ sub add_config_unique_node($self, $path, $content, $data) {
     if $path eq "/hardware/host_devices" && !exists $data->{hardware}->{host_devices};
 
     my $found = $data;
+    my $parent;
     for my $item (split m{/}, $path ) {
         next if !$item;
 
         if ( !exists $found->{$item} ) {
             $found->{$item} ={};
         }
+        $parent = $found;
         $found = $found->{$item};
     }
     my $old;
@@ -1255,8 +1257,13 @@ sub add_config_unique_node($self, $path, $content, $data) {
         push @$found, ( $content_hash );
     } else {
         my ($item) = keys %$content_hash;
-        $old = dclone($found);
-        $found->{$item} = $content_hash->{$item};
+        if ($item) {
+            $old = dclone($found);
+            $found->{$item} = $content_hash->{$item};
+        } else {
+            my ($last) = $path =~ m{.*/(.*)};
+            $parent->{$last} = $content_hash;
+        }
     }
     return $old;
 }
@@ -1278,7 +1285,14 @@ sub get_config($self) {
     return $self->_load();
 }
 
+sub get_config_txt($self) {
+    return $self->_vm->read_file($self->_config_file);
+}
+
 sub reload_config($self, $data) {
+    if (!ref($data)) {
+        $data = Load($data);
+    }
     eval { DumpFile($self->_config_file(), $data) };
     confess $@ if $@;
 }

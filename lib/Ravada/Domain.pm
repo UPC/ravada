@@ -913,7 +913,7 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
             sleep 1;
         }
     }
-    $self->_unlock_host_devices() if !$self->is_active;
+    $self->_dettach_host_devices() if !$self->is_active;
 
     #    $self->_post_remove_base();
     if (!$self->is_local) {
@@ -3126,7 +3126,7 @@ sub _post_shutdown {
     my $is_active = $self->is_active;
 
     if ( $self->is_known && !$self->is_volatile && !$is_active ) {
-        $self->_unlock_host_devices();
+        $self->_dettach_host_devices();
         if ($self->is_hibernated) {
             $self->_data(status => 'hibernated');
         } else {
@@ -7125,9 +7125,7 @@ sub add_host_device($self, $host_device) {
 
 sub remove_host_device($self, $host_device) {
     confess if !ref($host_device);
-
     confess if $self->readonly;
-    $self->_dettach_host_device($host_device);
 
     my $id_hd = $host_device->id;
 
@@ -7198,6 +7196,16 @@ sub _add_host_devices($self, @args) {
     $self->_attach_host_devices(@args);
 }
 
+sub _backup_config_no_hd($self) {
+    $self->_data('config_no_hd' => $self->get_config_txt);
+}
+
+sub _restore_config_no_hd($self) {
+    my $config_no_hd = $self->_data('config_no_hd');
+    return if !$config_no_hd;
+    $self->reload_config($config_no_hd);
+}
+
 sub _attach_host_devices($self, @args) {
     my @host_devices = $self->list_host_devices();
     return if !@host_devices;
@@ -7212,6 +7220,7 @@ sub _attach_host_devices($self, @args) {
         $request = delete $args{request} if exists $args{request};
     }
 
+    $self->_backup_config_no_hd();
     my $doc = $self->get_config();
     for my $host_device ( @host_devices ) {
         my $device_configured = $self->_device_already_configured($host_device);
@@ -7237,19 +7246,11 @@ sub _attach_host_devices($self, @args) {
 
         $self->_lock_host_device($host_device, $device);
 
-        my %old;
         for my $entry( $host_device->render_template($device) ) {
-            my $old_entry;
             if ($entry->{type} eq 'node') {
-                $old_entry = $self->add_config_node($entry->{path}, $entry->{content}, $doc);
-                die Dumper(["old entry should be ARRAY ref ",
-                        ,$self->name
-                        ,$old_entry
-                ])unless ref($old_entry) && ref($old_entry) eq 'ARRAY';
+                $self->add_config_node($entry->{path}, $entry->{content}, $doc);
             } elsif ($entry->{type} eq 'unique_node') {
-                $old_entry = $self->add_config_unique_node($entry->{path}, $entry->{content}, $doc);
-                $old_entry = undef if $old_entry && ref($old_entry)
-                    && ref($old_entry) eq 'HASH' && !keys %$old_entry;
+                $self->add_config_unique_node($entry->{path}, $entry->{content}, $doc);
             } elsif($entry->{type} eq 'attribute') {
                 $self->change_config_attribute($entry->{path}, $entry->{content}, $doc);
             } elsif($entry->{type} eq 'namespace') {
@@ -7259,20 +7260,10 @@ sub _attach_host_devices($self, @args) {
                 ." template: ".$entry->{path}
                 ." Unknown type ".($entry->{type} or '<UNDEF>');
             }
-            $old{$entry->{path}} = $old_entry if $old_entry;
         }
-        $self->_store_hd_old_config($device,\%old) if keys %old;
     }
     $self->reload_config($doc);
 
-}
-
-sub _store_hd_old_config($self, $device, $old) {
-    my $sth = $self->_dbh->prepare("UPDATE host_devices_domain_locked "
-        ." SET old=? "
-        ." WHERE id_domain=? AND name=?"
-    );
-    $sth->execute(encode_json($old), $self->id, $device);
 }
 
 sub _dettach_host_devices($self) {
@@ -7281,6 +7272,8 @@ sub _dettach_host_devices($self) {
         $self->_dettach_host_device($host_device);
     }
     $self->remove_host_devices();
+
+    $self->_restore_config_no_hd();
 }
 
 sub _dettach_host_device($self, $host_device, $doc=$self->get_config
@@ -7301,19 +7294,12 @@ sub _dettach_host_device($self, $host_device, $doc=$self->get_config
         my $curr_old = $old->{$entry->{path}};
 
         if ($entry->{type} eq 'node') {
-            if ($curr_old) {
-                $self->set_config_node($entry->{path}, $curr_old, $doc);
-                next;
-            }
-            $self->remove_config_node($entry->{path}, $entry->{content}, $doc);
+            $self->set_config_node($entry->{path}, $curr_old, $doc)
+            if $curr_old;
         } elsif ($entry->{type} eq 'unique_node') {
-            if ($curr_old) {
-                $self->add_config_unique_node($entry->{path}, $curr_old
-                                                ,$doc);
-                next;
-            }
-
-            $self->remove_config_node($entry->{path}, $entry->{content}, $doc);
+            $self->add_config_unique_node($entry->{path}, $curr_old
+                                                ,$doc)
+            if $curr_old;
         } elsif($entry->{type} eq 'attribute') {
             $self->remove_config_attribute($entry->{path}, $entry->{content}, $doc);
         } elsif($entry->{type} eq 'namespace') {
@@ -7356,7 +7342,10 @@ sub _lock_host_device($self, $host_device, $device=undef) {
     my $query = "INSERT INTO host_devices_domain_locked (id_domain,id_vm,name) VALUES(?,?,?)";
 
     my $sth = $$CONNECTOR->dbh->prepare($query);
-    eval { $sth->execute($self->id,$self->_vm->id, $device) };
+    my $id_vm = $self->_data('id_vm');
+    $id_vm = $self->_vm->id if !$id_vm;
+    cluck if !$id_vm;
+    eval { $sth->execute($self->id,$id_vm, $device) };
     if ($@) {
         warn $@;
         $self->_data(status => 'shutdown');
@@ -7392,7 +7381,7 @@ sub _check_host_device_already_used($self, $device) {
     ." WHERE id_vm=? AND name=?"
     ;
     my $sth = $$CONNECTOR->dbh->prepare($query);
-    $sth->execute($self->_vm->id, $device);
+    $sth->execute($self->_data('id_vm'), $device);
     my ($id_domain) = $sth->fetchrow;
     #    warn "\n".($id_domain or '<UNDEF>')." [".$self->id."] had locked $device\n";
 

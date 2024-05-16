@@ -69,16 +69,47 @@ sub _check_used_mdev($vm, $hd) {
             warn "No uuid in ".$hostdev->toString;
             next;
         }
-        my $dom = $vm->import_domain($dom->get_name,user_admin);
-        $dom->add_host_device($hd->id);
+        my $dom_imported = rvd_front->search_domain($dom->get_name);
+        $dom_imported = $vm->import_domain($dom->get_name,user_admin)
+        unless $dom_imported;
+
+        $dom_imported->add_host_device($hd->id);
         my ($dev) = grep /^$uuid/, $hd->list_devices;
         if (!$dev) {
             warn "No $uuid found in mdevctl list";
             next;
         }
-        $dom->_lock_host_device($hd, $dev);
+        $dom_imported->_lock_host_device($hd, $dev);
     }
     return $hd->list_available_devices();
+}
+
+sub _req_start($domain) {
+    if ($MOCK_MDEV) {
+        $domain->_attach_host_devices();
+    } else {
+        Ravada::Request->start_domain(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+        );
+        wait_request();
+    }
+}
+
+sub _req_shutdown($domain) {
+    #    $domain->_dettach_host_devices();
+    my $req = Ravada::Request->shutdown_domain(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+    );
+    wait_request();
+
+    for ( 1 .. 10 ) {
+        last if !$domain->is_active;
+        diag("Waiting for ".$domain." down");
+        sleep 1;
+    }
+
 }
 
 sub test_mdev($vm) {
@@ -99,11 +130,13 @@ sub test_mdev($vm) {
     );
     test_config_no_hd($domain);
     $domain->add_host_device($id);
-    $domain->_attach_host_devices();
+    _req_start($domain);
     is($hd->list_available_devices(), $n_devices-1);
     test_config($domain);
 
-    $domain->_dettach_host_devices();
+    diag("gonna shutdown ".$domain->name);
+    _req_shutdown($domain);
+    #    $domain->_dettach_host_devices();
     is($hd->list_available_devices(), $n_devices);
 
     test_config_no_hd($domain);
@@ -225,7 +258,7 @@ sub test_no_timer($domain) {
     } else {
         die $domain->type;
     }
-    is(scalar(@$timers), $N_TIMERS) or confess;
+    is(scalar(@$timers), $N_TIMERS) or confess $domain->name;
     is(scalar(@$list_timer_tsc),0);
     my $timer_tsc = $list_timer_tsc->[0];
     is_deeply($timer_tsc, $expected_tsc) or confess Dumper($timer_tsc);
@@ -297,15 +330,14 @@ sub test_mdev_kvm_state($vm) {
     my ($mdev) = grep { $_->{name} eq "GPU Mediated Device" } @$templates;
     ok($mdev,"Expecting PCI template in ".$vm->name) or return;
 
-    my $dir = _prepare_dir_mdev();
-
     my $id = $vm->add_host_device(template => $mdev->{name});
     my $hd = Ravada::HostDevice->search_by_id($id);
 
-    $hd->_data('list_command' => "ls $dir");
+    my $n_devices = _check_mdev($vm, $hd);
+
     _add_template_timer($hd);
 
-    is( $hd->list_available_devices() , 2);
+    is( $hd->list_available_devices() , $n_devices);
 
     my $domain = $BASE->clone(
         name =>new_domain_name
@@ -317,14 +349,16 @@ sub test_mdev_kvm_state($vm) {
     test_no_timer($domain);
     $domain->add_host_device($id);
 
-    $domain->_attach_host_devices();
+    _req_start($domain);
 
     test_hidden($domain);
     test_old_in_locked($domain);
     test_timer($domain,'present' => 'yes');
 
-    $domain->_dettach_host_device($hd);
-    diag("Test hidden after remove");
+    _req_shutdown($domain);
+    $domain->_dettach_host_devices();
+
+    diag("Test hidden after dettach");
     test_hidden($domain);
     test_no_timer($domain);
 
@@ -334,12 +368,12 @@ sub test_mdev_kvm_state($vm) {
 }
 
 sub test_old_in_locked($domain) {
-    my $sth = connector->dbh->prepare("SELECT * FROM host_devices_domain_locked hdd "
-        ." WHERE id_domain=?"
+    my $sth = connector->dbh->prepare("SELECT config_no_hd FROM domains d "
+        ." WHERE id=?"
     );
     $sth->execute($domain->id);
-    my $row = $sth->fetchrow_hashref();
-    like($row->{old},qr/\w/);
+    my ($old) = $sth->fetchrow();
+    like($old,qr/\w/);
 }
 
 sub test_hidden($domain) {
@@ -403,7 +437,7 @@ sub test_yaml_no_hd($domain) {
     ok(!$hd) or confess;
 
     my $features = $config->{features};
-    ok(!$features || !keys(%$features));
+    ok(!$features || !keys(%$features)) or confess(Dumper($features));
 }
 
 
