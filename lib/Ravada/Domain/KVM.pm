@@ -3859,7 +3859,6 @@ sub _add_xml_parse($parent, $content) {
 }
 
 sub remove_config_node($self, $path, $content, $doc) {
-    confess;
     my ($dir,$entry) = $path =~ m{(.*)/(.*)};
     confess "Error: missing entry in '$path'" if !$entry;
 

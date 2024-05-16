@@ -134,7 +134,6 @@ sub test_mdev($vm) {
     is($hd->list_available_devices(), $n_devices-1);
     test_config($domain);
 
-    diag("gonna shutdown ".$domain->name);
     _req_shutdown($domain);
     #    $domain->_dettach_host_devices();
     is($hd->list_available_devices(), $n_devices);

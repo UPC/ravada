@@ -554,11 +554,8 @@ sub test_host_device_gpu($vm) {
     test_hostdev_gpu($base);
 
     diag("Remove host device ".$list_hostdev[0]->name);
-    warn 1;
     $list_hostdev[0]->remove();
-    warn 2;
     remove_domain($base);
-    warn 3;
 }
 
 sub test_xmlns($vm) {
