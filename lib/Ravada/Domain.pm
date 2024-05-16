@@ -7198,6 +7198,7 @@ sub _add_host_devices($self, @args) {
 }
 
 sub _backup_config_no_hd($self) {
+    $self->remove_host_devices();
     $self->_data('config_no_hd' => $self->get_config_txt);
 }
 
