@@ -48,7 +48,12 @@
                 <li ng-show="domain.host_devices && domain.host_devices.length"><b>Host Devices</b>
                     <ul>
                         <li ng-repeat="device in domain.host_devices">
+                            <span class="badge badge-pill badge-secondary" ng-show="!device.is_locked">
+                                <%=l 'disabled' %>
+                            </span>
+                            <span ng-class="{'disabled': !device.is_locked }">
                             {{device.name}}
+                            </span>
                         </li>
                     </ul>
                 </li>
@@ -106,7 +111,6 @@
             </div>
         </div>
         </div> <! -- show=domain -->
-        <div ng-show="request.status == 'done' && request.error">{{request.error}}</div>
 
     </div><!-- jumbotron -->
 </div><!-- container -->

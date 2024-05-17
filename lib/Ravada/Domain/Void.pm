@@ -13,6 +13,7 @@ use Hash::Util qw(lock_keys lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
 use Mojo::JSON qw(decode_json);
 use Moose;
+use Storable qw(dclone);
 use YAML qw(Load Dump  LoadFile DumpFile);
 use Image::Magick;
 use MIME::Base64;
@@ -1162,12 +1163,34 @@ sub add_config_node($self, $path, $content, $data) {
 
         $found = $found->{$item};
     }
+    my $old;
     if (ref($found) eq 'ARRAY') {
+        $old = dclone($found);
         push @$found, ( $content_hash );
     } else {
         my ($item) = keys %$content_hash;
+        $old = dclone($found->{$item});
         $found->{$item} = $content_hash->{$item};
     }
+    return $old;
+}
+
+sub set_config_node($self, $path, $content, $data) {
+    my $found = $data;
+    my ($pre,$last) = $path =~ m{(.+)/(.*)};
+    if ($pre) {
+        for my $item (split m{/}, $pre) {
+            next if !$item;
+
+            confess "Error, no $item in ".Dumper($found)
+            if !exists $found->{$item};
+
+            $found = $found->{$item};
+        }
+    } else {
+        ($last) = $path =~ m{.*/(.*)};
+    }
+    $found->{$last} = $content;
 }
 
 sub remove_config_node($self, $path, $content, $data) {
@@ -1211,28 +1234,38 @@ sub _equal_hash($a,$b) {
 }
 
 sub add_config_unique_node($self, $path, $content, $data) {
-    my $content_hash;
-    eval { $content_hash = Load($content) };
+    my $content_hash = $content;
+    eval { $content_hash = Load($content) if !ref($content) };
     confess $@."\n$content" if $@;
 
     $data->{hardware}->{host_devices} = []
     if $path eq "/hardware/host_devices" && !exists $data->{hardware}->{host_devices};
 
     my $found = $data;
+    my $parent;
     for my $item (split m{/}, $path ) {
         next if !$item;
 
-        confess "Error, no $item in ".Dumper($found)
-        if !exists $found->{$item};
-
+        if ( !exists $found->{$item} ) {
+            $found->{$item} ={};
+        }
+        $parent = $found;
         $found = $found->{$item};
     }
+    my $old;
     if (ref($found) eq 'ARRAY') {
         push @$found, ( $content_hash );
     } else {
         my ($item) = keys %$content_hash;
-        $found->{$item} = $content_hash->{$item};
+        if ($item) {
+            $old = dclone($found);
+            $found->{$item} = $content_hash->{$item};
+        } else {
+            my ($last) = $path =~ m{.*/(.*)};
+            $parent->{$last} = $content_hash;
+        }
     }
+    return $old;
 }
 
 
@@ -1252,7 +1285,14 @@ sub get_config($self) {
     return $self->_load();
 }
 
+sub get_config_txt($self) {
+    return $self->_vm->read_file($self->_config_file);
+}
+
 sub reload_config($self, $data) {
+    if (!ref($data)) {
+        $data = Load($data);
+    }
     eval { DumpFile($self->_config_file(), $data) };
     confess $@ if $@;
 }

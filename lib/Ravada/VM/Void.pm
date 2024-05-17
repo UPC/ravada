@@ -177,6 +177,7 @@ sub create_domain {
                 $domain->change_hardware('network', $index ,{name => $network})
             }
         }
+        $active = 0 if $domain_base->list_host_devices();
     } elsif (!exists $args{config}) {
         $storage = $self->default_storage_pool_name() if !$storage;
         my ($vda_name) = "$args{name}-vda-".Ravada::Utils::random_name(4).".void";
@@ -194,7 +195,7 @@ sub create_domain {
 
     }
     $domain->set_memory($args{memory}) if $args{memory};
-    if ( $volatile || $user->is_temporary ) {
+    if ( $active ) {
         $domain->_store( is_active => 1 );
     }
 #    $domain->start();

@@ -3651,6 +3651,9 @@ sub _validate_xml($self, $doc) {
 }
 
 sub reload_config($self, $doc) {
+    if (!ref($doc)) {
+        $doc = XML::LibXML->load_xml(string => $doc);
+    }
     $self->_validate_xml($doc) if $self->_vm->vm->get_major_version >= 4;
 
     my $new_domain;
@@ -3691,6 +3694,10 @@ sub copy_config($self, $domain) {
 
 sub get_config($self) {
     return XML::LibXML->load_xml( string => $self->xml_description());
+}
+
+sub get_config_txt($self) {
+    return $self->xml_description();
 }
 
 sub _change_xml_address($self, $doc, $address, $bus) {
@@ -3905,6 +3912,8 @@ sub remove_config_node($self, $path, $content, $doc) {
             if ( _xml_equal_hostdev($content, $element_s) ) {
                 $parent->removeChild($element);
             } else {
+=pod
+
                 my @lines_c = split /\n/,$content;
                 my @lines_e = split /\n/,$element_s;
                 warn $element->getName." ".(scalar(@lines_c)." ".scalar(@lines_e));
@@ -3914,6 +3923,7 @@ sub remove_config_node($self, $path, $content, $doc) {
                 }
                 warn $content;
                 die $self->name if $element->getName eq 'hostdev';
+=cut
             }
         }
     }
@@ -3921,6 +3931,11 @@ sub remove_config_node($self, $path, $content, $doc) {
 
 sub _xml_equal_hostdev($doc1, $doc2) {
     return 1 if $doc1 eq $doc2;
+
+    $doc1 =~ s/\n//g;
+    $doc2 =~ s/\n//g;
+    return 1 if $doc1 eq $doc2;
+
     my $parser = XML::LibXML->new() or die $!;
     $doc1 =~ s{(</?)\w+:(\w+)}{$1$2}mg;
     my $xml1 = $parser->parse_string($doc1);
@@ -3966,18 +3981,44 @@ sub add_config_node($self, $path, $content, $doc) {
     die "Error: I found ".scalar(@parent)." nodes for $dir, expecting 1"
     unless scalar(@parent)==1;
 
-    my $element;
+    my @element;
     eval {
-    ($element) = $parent[0]->findnodes($entry);
+    (@element) = $parent[0]->findnodes($entry);
     };
     die $@ if $@ && $@ !~ /Undefined namespace prefix/;
-    return if $element && $element->toString eq $content;
+    for my $element (@element) {
+        return if $element && $element->toString eq $content;
+    }
 
     if ($content =~ /<qemu:commandline/) {
         _add_xml_parse($parent[0], $content);
     } else {
         $self->_fix_pci_slot(\$content);
         $parent[0]->appendWellBalancedChunk($content);
+    }
+}
+
+sub set_config_node($self, $path, $content, $doc) {
+
+    my ($dir,$entry) = $path =~ m{(.*)/(.*)};
+    confess "Error: missing entry in '$path'" if !$entry;
+
+    my @parent = $doc->findnodes($dir);
+    if (scalar(@parent)==0) {
+        @parent = $self->_xml_create_path($doc, $dir);
+    }
+
+    die "Error: I found ".scalar(@parent)." nodes for $dir, expecting 1"
+    unless scalar(@parent)==1;
+
+    my $parent = $parent[0];
+
+    for my $child ($parent->findnodes($entry)) {
+        $parent->removeChild($child);
+    }
+
+    for my $curr_entry (@$content) {
+        $parent->appendWellBalancedChunk($curr_entry);
     }
 
 }
@@ -4096,7 +4137,6 @@ sub remove_host_devices($self) {
     my ($dev) = $doc->findnodes("/domain/devices");
     for my $hostdev ( $dev->findnodes("hostdev") ) {
         $dev->removeChild($hostdev);
-        warn $hostdev->toString();
     }
     $self->reload_config($doc);
 }
