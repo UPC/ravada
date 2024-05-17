@@ -60,7 +60,7 @@ sub test_hostdev_not_in_domain_config($domain) {
 
 sub test_hostdev_in_domain_void($domain) {
     my $config = $domain->_load();
-    ok(exists $config->{hardware}->{host_devices}) or return;
+    ok(exists $config->{hardware}->{host_devices}) or confess $domain->name;
     ok(scalar(@{ $config->{hardware}->{host_devices}})) or die "Expecting host_devices"
         ." in ".Dumper($config->{hardware});
 }
@@ -244,7 +244,7 @@ sub test_grab_free_device($base) {
     ok($down_dev->{name});
     ($up_dev) = $up->list_host_devices_attached();
     is($up_dev->{is_locked},0);
-    test_hostdev_in_domain_config($up, $expect_feat_kvm);
+    test_hostdev_not_in_domain_config($up);
     test_hostdev_in_domain_config($down, $expect_feat_kvm);
 
     eval { $up->start(user_admin) };
@@ -271,7 +271,7 @@ sub test_grab_free_device($base) {
     my ($third_dev_down) = $third->list_host_devices_attached();
     is($third_dev_down->{is_locked},0) or die Dumper($third_dev_down);
     test_hostdev_in_domain_config($up, $expect_feat_kvm);
-    test_hostdev_in_domain_config($third, $expect_feat_kvm);
+    test_hostdev_not_in_domain_config($third);
 
 }
 
@@ -392,8 +392,6 @@ sub test_templates_start_nohd($vm) {
         is($req->error, '') or exit;
         test_hostdev_not_in_domain_config($domain);
         $domain->shutdown_now(user_admin);
-        my $device_configured = $domain->_device_already_configured($hd);
-        is($device_configured, undef);
 
         $req = Ravada::Request->start_domain( uid => user_admin->id
             ,id_domain => $domain->id
@@ -580,22 +578,12 @@ sub _mangle_dom_hd($domain) {
 
 sub _mangle_dom_hd_void($domain) {
     my $config = $domain->_load();
-    die "Error: ho host devices in ".$domain->name
-    if !exists $config->{hardware}->{host_devices}
-        || !exists $config->{hardware}->{host_devices}->[0]
-        || !defined $config->{hardware}->{host_devices}->[0]
-    ;
-    my ($hd) = $config->{hardware}->{host_devices}->[0];
-    my $vendor_id = $hd->{vendor_id};
     my $sth = connector->dbh->prepare("SELECT id,name FROM host_devices_domain "
         ." WHERE id_domain=?");
     $sth->execute($domain->id);
     my $new_id = "aaaa";
     my ($id_hd, $device_name) = $sth->fetchrow;
     $device_name =~ s/(.* ID ).*?(:.*)/${1}$new_id$2/;
-
-    $config->{hardware}->{host_devices}->[0]->{vendor_id} = $new_id;
-    $domain->_store(hardware => $config->{hardware});
 
     $sth = connector->dbh->prepare("UPDATE host_devices_domain set name=?"
         ." WHERE id=?");
@@ -611,20 +599,15 @@ sub _mangle_dom_hd_kvm($domain) {
         my ($current) = $line =~ /Device (\d+)/;
         $device = $current if $current>$device;
     }
-    my $xml = XML::LibXML->load_xml(string => $domain->domain->get_xml_description);
-
-    my ($address) = $xml->findnodes("/domain/devices/hostdev/source/address");
-    my ($old_device) = $address->getAttribute('device');
     my $sth = connector->dbh->prepare("SELECT id,name FROM host_devices_domain "
         ." WHERE id_domain=?");
     $sth->execute($domain->id);
     my ($id_hd, $device_name) = $sth->fetchrow;
-    $address->setAttribute(device => ++$device);
+    $device++;
     $device_name =~ s/(.*Device )\d+(.*)/$1$device$2/;
     $sth = connector->dbh->prepare("UPDATE host_devices_domain set name=?"
         ." WHERE id=?");
     $sth->execute($device_name, $id_hd);
-    $domain->reload_config($xml);
 }
 
 sub _create_host_devices($vm, $n) {

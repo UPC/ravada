@@ -483,6 +483,7 @@ sub _around_create_domain {
     confess "ERROR: Unknown args ".Dumper(\%args) if keys %args;
 
     $self->_check_duplicate_name($name);
+    my $create_volatile;
     if ($id_base) {
         my $vm_local = $self;
         $vm_local = $self->new( host => 'localhost') if !$vm_local->is_local;
@@ -493,6 +494,7 @@ sub _around_create_domain {
         unless $owner->allowed_access($base->id);
 
         $volatile = $base->volatile_clones if (! defined($volatile));
+        $create_volatile=$volatile if !$base->list_host_devices();
         if ($add_to_pool) {
             confess "Error: you can't add to pool and also pick from pool" if $from_pool;
             $from_pool = 0;
@@ -530,7 +532,7 @@ sub _around_create_domain {
         $args_create{listen_ip} = $self->listen_ip($remote_ip);
     }
 
-    my $domain = $self->$orig(%args_create, volatile => $volatile);
+    my $domain = $self->$orig(%args_create, volatile => $create_volatile);
     $self->_add_instance_db($domain->id);
     $domain->add_volume_swap( size => $swap )   if $swap;
     $domain->_data('is_compacted' => 1);

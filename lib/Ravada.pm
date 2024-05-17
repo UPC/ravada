@@ -2953,6 +2953,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','auto_compact','int default NULL');
     $self->_upgrade_table('domains','date_status_change' , 'datetime');
     $self->_upgrade_table('domains','show_clones' , 'int not null default 1');
+    $self->_upgrade_table('domains','config_no_hd' , 'text');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
@@ -5648,7 +5649,7 @@ sub _cmd_refresh_machine($self, $request) {
         ,timeout => 60, retry => 10)
     if $is_active && $domain->ip && $domain->list_ports;
 
-    $domain->_unlock_host_devices() if !$is_active;
+    $domain->_dettach_host_devices() if !$is_active;
 }
 
 sub _cmd_refresh_machine_ports($self, $request) {

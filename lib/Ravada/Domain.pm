@@ -300,6 +300,7 @@ sub _vm_disconnect {
 sub _around_start($orig, $self, @arg) {
 
     $self->_post_hibernate() if $self->is_hibernated && !$self->_data('post_hibernated');
+    $self->_dettach_host_devices() if !$self->is_active;
 
     $self->_start_preconditions(@arg);
 
@@ -355,7 +356,7 @@ sub _around_start($orig, $self, @arg) {
             $arg{listen_ip} = $display_ip;
         }
         if ($enable_host_devices) {
-            $self->_add_host_devices(@arg);
+            $self->_attach_host_devices(@arg);
         } else {
             $self->_dettach_host_devices();
         }
@@ -959,7 +960,7 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
             sleep 1;
         }
     }
-    $self->_unlock_host_devices() if !$self->is_active;
+    $self->_dettach_host_devices() if !$self->is_active;
 
     #    $self->_post_remove_base();
     if (!$self->is_local) {
@@ -3173,7 +3174,7 @@ sub _post_shutdown {
     my $is_active = $self->is_active;
 
     if ( $self->is_known && !$self->is_volatile && !$is_active ) {
-        $self->_unlock_host_devices();
+        $self->_dettach_host_devices();
         if ($self->is_hibernated) {
             $self->_data(status => 'hibernated');
         } else {
@@ -7174,9 +7175,7 @@ sub add_host_device($self, $host_device) {
 
 sub remove_host_device($self, $host_device) {
     confess if !ref($host_device);
-
     confess if $self->readonly;
-    $self->_dettach_host_device($host_device);
 
     my $id_hd = $host_device->id;
 
@@ -7235,8 +7234,8 @@ sub list_host_devices_attached($self) {
             $sth_locked->execute($self->id, $row->{name});
             my ($is_locked) = $sth_locked->fetchrow();
             $row->{is_locked} = 1 if $is_locked;
+            push @found,($row);
         }
-        push @found,($row);
     }
 
     return @found;
@@ -7245,6 +7244,21 @@ sub list_host_devices_attached($self) {
 # adds host devices to domain instance
 # usually run right before startup
 sub _add_host_devices($self, @args) {
+    $self->_attach_host_devices(@args);
+}
+
+sub _backup_config_no_hd($self) {
+    $self->_dettach_host_devices();
+    $self->_data('config_no_hd' => $self->get_config_txt);
+}
+
+sub _restore_config_no_hd($self) {
+    my $config_no_hd = $self->_data('config_no_hd');
+    return if !$config_no_hd;
+    $self->reload_config($config_no_hd);
+}
+
+sub _attach_host_devices($self, @args) {
     my @host_devices = $self->list_host_devices();
     return if !@host_devices;
     return if $self->is_active();
@@ -7256,31 +7270,23 @@ sub _add_host_devices($self, @args) {
     }
 
     $self->_clean_old_hd_locks();
+    $self->_backup_config_no_hd();
     my $doc = $self->get_config();
     for my $host_device ( @host_devices ) {
+        next if !$host_device->enabled();
         my $device_configured = $self->_device_already_configured($host_device);
 
+        my $device;
         if ( $device_configured ) {
             if ( $host_device->enabled()
                     && $host_device->is_device($device_configured, $self->_vm->id)
                     && $self->_lock_host_device($host_device) ) {
-                next;
+                $device = $device_configured;
             } else {
                 $self->_dettach_host_device($host_device, $doc, $device_configured);
             }
         }
-        next if !$host_device->enabled();
-
-        my ($device) = $host_device->list_available_devices($self->_vm->id);
-        if ( !$device ) {
-            $device = _refresh_domains_with_locked_devices($host_device);
-            if (!$device) {
-                $self->_data(status => 'down');
-                $self->_unlock_host_devices();
-                die "Error: [".$self->_vm->id.",".$self->_vm->name."]"
-                            ." No available devices in ".$host_device->name."\n";
-            }
-        }
+        $device = $self->_search_free_device($host_device) if !$device;
 
         $self->_lock_host_device($host_device, $device);
 
@@ -7304,12 +7310,25 @@ sub _add_host_devices($self, @args) {
 
 }
 
+sub _search_free_device($self, $host_device) {
+    my ($device) = $host_device->list_available_devices();
+    if ( !$device ) {
+       $device = _refresh_domains_with_locked_devices($host_device);
+       if (!$device) {
+           $self->_data(status => 'down');
+           $self->_unlock_host_devices();
+           die "Error: No available devices in ".$host_device->name."\n";
+       }
+    }
+    return $device;
+}
+
 sub _dettach_host_devices($self) {
     my @host_devices = $self->list_host_devices();
     for my $host_device ( @host_devices ) {
         $self->_dettach_host_device($host_device);
     }
-    $self->remove_host_devices();
+    $self->_restore_config_no_hd();
 }
 
 sub _dettach_host_device($self, $host_device, $doc=$self->get_config
@@ -7319,6 +7338,7 @@ sub _dettach_host_device($self, $host_device, $doc=$self->get_config
     return if !defined $device or !length($device);
 
     for my $entry( $host_device->render_template($device) ) {
+
         if ($entry->{type} eq 'node') {
             $self->remove_config_node($entry->{path}, $entry->{content}, $doc);
         } elsif ($entry->{type} eq 'unique_node') {
@@ -7336,12 +7356,6 @@ sub _dettach_host_device($self, $host_device, $doc=$self->get_config
     $self->reload_config($doc);
 
     $self->_unlock_host_device($device);
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "UPDATE host_devices_domain SET name=NULL "
-        ." WHERE id_domain=? AND id_host_device=?"
-    );
-    $sth->execute($self->id, $host_device->id);
-
 }
 
 # marks a host device as being used by a domain
@@ -7376,7 +7390,10 @@ sub _lock_host_device($self, $host_device, $device=undef) {
         if $device !~ /$vm_name$/;
     }
     my $sth = $$CONNECTOR->dbh->prepare($query);
-    eval { $sth->execute($self->id,$self->_vm->id, $device,time) };
+    my $id_vm = $self->_data('id_vm');
+    $id_vm = $self->_vm->id if !$id_vm;
+    cluck if !$id_vm;
+    eval { $sth->execute($self->id,$id_vm, $device,time) };
     if ($@) {
         warn $@;
         $self->_data(status => 'shutdown');
@@ -7420,7 +7437,8 @@ sub _check_host_device_already_used($self, $device) {
     ." WHERE id_vm=? AND name=?"
     ;
     my $sth = $$CONNECTOR->dbh->prepare($query);
-    $sth->execute($self->_vm->id, $device);
+    $sth->execute($self->_data('id_vm'), $device);
+    my ($id_domain) = $sth->fetchrow;
     my ($id_domain,$time_changed) = $sth->fetchrow;
     #    warn "\n".($id_domain or '<UNDEF>')." [".$self->id."] had locked $device\n";
 

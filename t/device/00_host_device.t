@@ -315,6 +315,7 @@ sub test_host_device_usb($vm) {
     _check_hostdev($clone, 1);
 
     shutdown_domain_internal($clone);
+    _check_hostdev($clone, 1) or exit;
     eval { $clone->start(user_admin) };
     is(''.$@, '') or exit;
     _check_hostdev($clone, 1) or exit;
@@ -417,13 +418,13 @@ sub test_host_device_usb_mock($vm, $n_hd=1) {
             like( ''.$@,qr(Did not find USB device)) if $vm->type eq 'KVM';
             is( ''.$@, '' ) if $vm->type eq 'Void';
             _check_hostdev($clone, $n_hd);
+            is(scalar($clone->list_host_devices_attached()), $n_hd, $clone->name);
         }
-        is(scalar($clone->list_host_devices_attached()), $n_hd, $clone->name);
         push @clones,($clone);
     }
     sleep 2;
     $clones[0]->shutdown_now(user_admin);
-    _check_hostdev($clones[0], $n_hd);
+    _check_hostdev($clones[0], 0);
     my @devs_attached = $clones[0]->list_host_devices_attached();
     is(scalar(@devs_attached), $n_hd);
     is($devs_attached[0]->{is_locked},0);
