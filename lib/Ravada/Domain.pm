@@ -7311,13 +7311,13 @@ sub _attach_host_devices($self, @args) {
 }
 
 sub _search_free_device($self, $host_device) {
-    my ($device) = $host_device->list_available_devices();
+    my ($device) = $host_device->list_available_devices($self->_data('id_vm'));
     if ( !$device ) {
        $device = _refresh_domains_with_locked_devices($host_device);
        if (!$device) {
            $self->_data(status => 'down');
            $self->_unlock_host_devices();
-           die "Error: No available devices in ".$host_device->name."\n";
+           die "Error: No available devices in ".$self->_vm->name." for ".$host_device->name."\n";
        }
     }
     return $device;
