@@ -1208,7 +1208,15 @@ ravadaApp.directive("solShowMachine", swMach)
             subscribe_list_host_devices(id, url);
             list_templates(id);
             list_backends();
+            list_nodes();
         };
+
+       list_nodes=function() {
+            $http.get('/list_nodes_by_id.json')
+            .then(function(response) {
+                   $scope.nodes = response.data;
+               });
+       };
 
        list_backends=function() {
             $http.get('/list_vm_types.json')

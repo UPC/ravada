@@ -2223,7 +2223,7 @@ sub start_node($node) {
 
     for my $try ( 1 .. 3) {
         my $is_active;
-        for ( 1 .. 60 ) {
+        for ( 1 .. 90 ) {
             eval {
                 $node->disconnect;
                 $node->clear_netssh();
@@ -2272,6 +2272,7 @@ sub start_node($node) {
     for ( reverse 1 .. 120 ) {
         $node->is_active(1);
         $node->enabled(1);
+        next if !$node2;
         $node2 = Ravada::VM->open(id => $node->id);
         last if $node2->is_active(1) && $node2->ip && $node2->_ssh;
         diag("Waiting for node ".$node2->name." active ... $_")  if !($_ % 10);

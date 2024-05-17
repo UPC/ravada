@@ -618,6 +618,35 @@ sub list_vms($self, $type=undef) {
     return @list;
 }
 
+=head2 list_nodes_by_id
+
+Returns a list of Nodes by id
+
+=cut
+
+sub list_nodes_by_id($self, $type=undef) {
+
+    my $sql = "SELECT id,name,hostname,is_active, vm_type, enabled FROM vms ";
+
+    my @args = ();
+    if ($type) {
+        $sql .= "WHERE (vm_type=? or vm_type=?)";
+        my $type2 = $type;
+        $type2 = 'qemu' if $type eq 'KVM';
+        @args = ( $type, $type2);
+    }
+    my $sth = $CONNECTOR->dbh->prepare($sql." ORDER BY vm_type,name");
+    $sth->execute(@args);
+
+    my %list;
+    while (my $row = $sth->fetchrow_hashref) {
+        $list{$row->{id}}= $row->{name};
+    }
+    $sth->finish;
+    return \%list;
+}
+
+
 sub _list_bases_vm($self, $id_node) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT d.id FROM domains d,bases_vm bv"

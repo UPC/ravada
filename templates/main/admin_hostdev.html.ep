@@ -88,7 +88,7 @@
         <div ng-show="hdev._loading"><i class="fa fa-sync-alt fa-spin"></i></div>
         <ul>
             <li ng-repeat="node in hdev._nodes" >
-                <span>{{node}}</span>
+                <span>{{nodes[node]}}</span>
                 <ul>
                     <li ng-show="hdev.devices_node[node].length==0">
                         <span class="error"><%=l 'No devices found'%></span>

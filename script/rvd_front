@@ -545,6 +545,13 @@ get '/list_nodes.json' => sub {
     $c->render(json => [$RAVADA->list_vms]);
 };
 
+get '/list_nodes_by_id.json' => sub {
+    my $c = shift;
+    return _access_denied($c) if !$USER || !$USER->is_admin;
+
+    $c->render(json => $RAVADA->list_nodes_by_id);
+};
+
 get '/list_host_devices/(:id_vm)' => sub($c) {
     $c->render(json => Ravada::WebSocket::_list_host_devices($RAVADA
             , {

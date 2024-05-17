@@ -7438,7 +7438,6 @@ sub _check_host_device_already_used($self, $device) {
     ;
     my $sth = $$CONNECTOR->dbh->prepare($query);
     $sth->execute($self->_data('id_vm'), $device);
-    my ($id_domain) = $sth->fetchrow;
     my ($id_domain,$time_changed) = $sth->fetchrow;
     #    warn "\n".($id_domain or '<UNDEF>')." [".$self->id."] had locked $device\n";
 
