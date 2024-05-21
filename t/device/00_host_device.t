@@ -306,7 +306,7 @@ sub test_host_device_usb($vm) {
     );
     my @list_hostdev_c = $clone->list_host_devices();
     is(scalar @list_hostdev_c, 1) or exit;
-    my $device = $list_hostdev_c[0]->{devices};
+    my ($device) = $list_hostdev_c[0]->list_devices;
 
     test_kvm_usb_template_args($device, $list_hostdev_c[0]);
 
@@ -342,6 +342,8 @@ sub test_host_device_usb($vm) {
 }
 
 sub test_kvm_usb_template_args($device_usb, $hostdev) {
+
+    confess "Error: undefined device_usb " if !defined $device_usb;
     my ($bus, $device, $vendor_id, $product_id)
     = $device_usb =~ /Bus 0*([0-9a-f]+) Device 0*([0-9a-f]+).*ID 0*([0-9a-f]+):0*([0-9a-f]+) /;
     my $args = $hostdev->_fetch_template_args($device_usb);
@@ -424,10 +426,12 @@ sub test_host_device_usb_mock($vm, $n_hd=1) {
     }
     sleep 2;
     $clones[0]->shutdown_now(user_admin);
+    sleep 1;
+    $clones[0]->shutdown_now(user_admin);
     _check_hostdev($clones[0], 0);
     my @devs_attached = $clones[0]->list_host_devices_attached();
     is(scalar(@devs_attached), $n_hd);
-    is($devs_attached[0]->{is_locked},0);
+    is($devs_attached[0]->{is_locked},0) or die Dumper(\@devs_attached);
 
     for (@list_hostdev) {
         $_->_data('enabled' => 0 );
@@ -602,11 +606,12 @@ sub test_check_list_command($vm) {
         }
     }
 
-    for my $something ('lssomething' , 'findsomething') {
+    for my $something ('ls' , 'find') {
         $hdev->_data('list_command' => $something);
         is($hdev->list_command, $something);
         is($hdev->_data('list_command'), $something);
     }
+    wait_request();
 
     $hdev->remove();
 }

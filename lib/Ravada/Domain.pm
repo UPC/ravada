@@ -7328,6 +7328,7 @@ sub _dettach_host_devices($self) {
     for my $host_device ( @host_devices ) {
         $self->_dettach_host_device($host_device);
     }
+    $self->_unlock_host_devices();
     $self->_restore_config_no_hd();
 }
 
@@ -7378,17 +7379,6 @@ sub _lock_host_device($self, $host_device, $device=undef) {
 
     my $query = "INSERT INTO host_devices_domain_locked (id_domain,id_vm,name,time_changed) VALUES(?,?,?,?)";
 
-    if ( $self->_vm->type eq 'Void' ) {
-        my $vm_name = $self->_vm->name;
-        confess Dumper(
-            [   $self->id
-                ,$self->name
-                ,$self->_vm->id
-                ,$self->_vm->name
-                ,$device
-            ])
-        if $device !~ /$vm_name$/;
-    }
     my $sth = $$CONNECTOR->dbh->prepare($query);
     my $id_vm = $self->_data('id_vm');
     $id_vm = $self->_vm->id if !$id_vm;

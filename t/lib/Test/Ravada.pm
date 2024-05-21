@@ -193,7 +193,10 @@ sub config_host_devices($type, $die=1) {
 
     die "Error loading $FILE_CONFIG_HOST_DEVICES $@" if $@;
 
-    die "Error: no host devices config in $FILE_CONFIG_HOST_DEVICES for $type"
+    $type = lc($type);
+    $type = 'usb' if $type =~ /usb/i;
+    $type = 'pci' if $type =~ /pci/i;
+    confess "Error: no host devices config in $FILE_CONFIG_HOST_DEVICES for $type"
     if ( !exists $config->{$type} || !$config->{$type} ) && $die;
     return $config->{$type};
 }

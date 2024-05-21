@@ -3650,11 +3650,21 @@ sub _validate_xml($self, $doc) {
     }
 }
 
+sub _fix_uuid($self, $doc) {
+    my ($uuid) = $doc->findnodes("/domain/uuid/text()");
+    confess "I cant'find /domain/uuid in ".$self->name if !$uuid;
+
+    $uuid->setData($self->domain->get_uuid_string);
+
+}
+
 sub reload_config($self, $doc) {
     if (!ref($doc)) {
         $doc = XML::LibXML->load_xml(string => $doc);
     }
     $self->_validate_xml($doc) if $self->_vm->vm->get_major_version >= 4;
+
+    $self->_fix_uuid($doc);
 
     my $new_domain;
 

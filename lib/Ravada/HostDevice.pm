@@ -167,17 +167,21 @@ sub list_available_devices($self, $id_vm=$self->id_vm) {
 
 sub remove($self) {
     _init_connector();
+    my $id = $self->id;
 
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id_domain FROM host_devices_domain "
         ." WHERE id_host_device=?"
     );
-    $sth->execute($self->id);
+    $sth->execute($id);
     while ( my ( $id_domain ) = $sth->fetchrow) {
         my $domain = Ravada::Domain->open($id_domain);
         $domain->remove_host_device($self);
     }
+
     $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices WHERE id=?");
-    $sth->execute($self->id);
+    $sth->execute($id);
+
+    Ravada::Request::remove('requested', id_host_device => $id );
 }
 
 sub _fetch_template_args($self, $device) {
@@ -249,7 +253,16 @@ sub _data($self, $field, $value=undef) {
         );
         $sth->execute($value, $self->id);
         $self->meta->get_attribute($field)->set_value($self, $value);
-        $self->_dettach_in_domains() if $field =~ /^(devices|list_)/;
+        if ( $field =~ /^(devices|list_)/ ) {
+            $self->_dettach_in_domains();
+            if ($field =~ /^list_/) {
+                Ravada::Request->list_host_devices(
+                    uid => Ravada::Utils::user_daemon->id
+                    ,id_host_device => $self->id
+                );
+                $self->_data('devices_node' => '');
+            }
+        }
         return $value;
     } else {
         my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM host_devices"
