@@ -6763,7 +6763,7 @@ sub _clean_volatile_machines($self, %args) {
             my $user;
             eval { $user = Ravada::Auth::SQL->search_by_id($domain->{id_owner})};
             warn $@ if $@;
-            $user->remove() if $user;
+            $user->remove() if $user && $user->is_temporary;
         }
 
         $sth_remove->execute($domain->{id});
