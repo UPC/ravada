@@ -282,7 +282,12 @@ sub _req_clone($base, $name=undef) {
             ,name => $name
             ,start => $start
     );
-    wait_request(debug => 1);
+    wait_request(debug => 1, check_error => 0);
+    if ($base->type eq 'KVM' && $MOCK_DEVICES) {
+        diag($req->error);
+    } else {
+        is($req->error, '');
+    }
 
     my $domain = rvd_back->search_domain($name);
     die "Error: $name not created" if !$domain;

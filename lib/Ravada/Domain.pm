@@ -7262,10 +7262,6 @@ sub _restore_config_no_hd($self) {
 
 sub _attach_host_devices($self, @args) {
     my @host_devices = $self->list_host_devices();
-    warn $self->name." attching hds ".scalar(@host_devices)
-    ." is_active=".$self->is_active()
-    ;
-    confess if $self->is_active;
     return if !@host_devices;
     return if $self->is_active();
 
@@ -7293,7 +7289,6 @@ sub _attach_host_devices($self, @args) {
             }
         }
         $device = $self->_search_free_device($host_device) if !$device;
-        warn $device;
 
         $self->_lock_host_device($host_device, $device);
 
