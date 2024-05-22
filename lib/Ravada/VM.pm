@@ -494,7 +494,11 @@ sub _around_create_domain {
         unless $owner->allowed_access($base->id);
 
         $volatile = $base->volatile_clones if (! defined($volatile));
-        $create_volatile=$volatile if !$base->list_host_devices();
+        if ( $base->list_host_devices() ) {
+            $create_volatile=0;
+        } else {
+            $create_volatile=$volatile;
+        }
         if ($add_to_pool) {
             confess "Error: you can't add to pool and also pick from pool" if $from_pool;
             $from_pool = 0;
@@ -532,7 +536,11 @@ sub _around_create_domain {
         $args_create{listen_ip} = $self->listen_ip($remote_ip);
     }
 
+    warn $args_create{name}." volatile=".($create_volatile or 0 )
+    ." start=".($args_create{start} or 0 );
+
     my $domain = $self->$orig(%args_create, volatile => $create_volatile);
+    confess Dumper(\%args_create) if $domain->is_active;
     $self->_add_instance_db($domain->id);
     $domain->add_volume_swap( size => $swap )   if $swap;
     $domain->_data('is_compacted' => 1);
@@ -550,6 +558,7 @@ sub _around_create_domain {
             $domain->expose(%port);
         }
         $base->_copy_host_devices($domain);
+        $domain->_attach_host_devices();
         $domain->_clone_filesystems();
         my @displays = $base->_get_controller_display();
         for my $display (@displays) {

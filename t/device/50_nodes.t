@@ -84,7 +84,7 @@ sub _create_mock_devices($vm, $n_devices, $type, $value="fff:fff") {
     }
 }
 
-sub test_devices_v2($node, $number) {
+sub test_devices_v2($node, $number, $volatile=0) {
     _clean_devices(@$node);
     my $vm = $node->[0];
     my ($list_command,$list_filter) = _create_mock_devices($node->[0], $number->[0], "USB" );
@@ -103,7 +103,7 @@ sub test_devices_v2($node, $number) {
 
     my %devices_nodes = $hd->list_devices_nodes();
 
-    test_assign_v2($hd,$node,$number);
+    test_assign_v2($hd,$node,$number, $volatile);
 
     _clean_devices(@$node);
     $hd->remove();
@@ -148,10 +148,11 @@ sub test_devices($vm, $node, $n_local=3, $n_node=3) {
 
 }
 
-sub test_assign_v2($hd, $node, $number) {
+sub test_assign_v2($hd, $node, $number, $volatile=0) {
     my $vm = $node->[0];
     my $base = create_domain($vm);
     $base->add_host_device($hd);
+    $base->volatile_clones($volatile);
     Ravada::Request->add_hardware(
         uid => user_admin->id
         ,id_domain => $base->id
@@ -533,6 +534,8 @@ for my $vm_name (vm_names() ) {
 
         my ($node1, $node2) = remote_node_2($vm_name);
         clean_remote_node($node1, $node2);
+
+        test_devices_v2([$vm,$node1,$node2],[1,1,1],1);
 
         test_devices_v2([$vm,$node1,$node2],[1,1,1]);
         test_devices_v2([$vm,$node1,$node2],[1,3,1]);

@@ -2275,13 +2275,14 @@ sub start_node($node) {
     for ( reverse 1 .. 120 ) {
         $node->is_active(1);
         $node->enabled(1);
-        next if !$node2;
         $node2 = Ravada::VM->open(id => $node->id);
-        last if $node2->is_active(1) && $node2->ip && $node2->_ssh;
-        diag("Waiting for node ".$node2->name." active ... $_")  if !($_ % 10);
-        $node2->disconnect();
-        $node2->connect();
-        $node2->clear_netssh();
+        if ($node2) {
+            last if $node2->is_active(1) && $node2->ip && $node2->_ssh;
+            diag("Waiting for node ".$node2->name." active ... $_")  if !($_ % 10);
+            $node2->disconnect();
+            $node2->connect();
+            $node2->clear_netssh();
+        }
         sleep 1;
     }
     eval { $node2->run_command("hwclock","--hctosys") };

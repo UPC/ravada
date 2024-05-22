@@ -332,7 +332,7 @@ sub _around_start($orig, $self, @arg) {
                 next;
             } elsif ($error =~ /No free memory/) {
                 warn $error;
-                die $error if $self->is_local;
+                die $error if $self->is_local || $self->is_volatile;
                 my $vm_local = $self->_vm->new( host => 'localhost' );
                 $self->migrate($vm_local, $request);
                 next;
@@ -504,7 +504,8 @@ sub _start_checks($self, @args) {
         if ($id_vm) {
             $self->_set_vm($vm);
         } else {
-            $self->_balance_vm($request, $enable_host_devices);
+            $self->_balance_vm($request, $enable_host_devices)
+            if !$self->is_volatile;
         }
         if ( !$self->is_volatile && !$self->_vm->is_local() ) {
             if (!base_in_vm($self->id_base, $self->_vm->id)) {
@@ -2981,6 +2982,7 @@ sub clone {
             $vm = $node if $node->is_local;
         }
     }
+
     my $clone = $vm->create_domain(
         name => $name
         ,id_base => $self->id
@@ -7260,6 +7262,10 @@ sub _restore_config_no_hd($self) {
 
 sub _attach_host_devices($self, @args) {
     my @host_devices = $self->list_host_devices();
+    warn $self->name." attching hds ".scalar(@host_devices)
+    ." is_active=".$self->is_active()
+    ;
+    confess if $self->is_active;
     return if !@host_devices;
     return if $self->is_active();
 
@@ -7287,6 +7293,7 @@ sub _attach_host_devices($self, @args) {
             }
         }
         $device = $self->_search_free_device($host_device) if !$device;
+        warn $device;
 
         $self->_lock_host_device($host_device, $device);
 
