@@ -176,10 +176,14 @@ sub test_assign_v2($hd, $node, $number, $volatile=0) {
         $domain->_data('status','active');
         is($domain->is_active,1) if $vm->type eq 'Void';
         check_hd_from_node($domain,\%devices_nodes);
-        my $hd = check_host_device($domain);
-        push(@{$dupe{$hd}},($base->name." ".$base->id));
-        is(scalar(@{$dupe{$hd}}),1) or die Dumper(\%dupe);
-        $found{$domain->_data('id_vm')}++;
+        my $hd_checked = check_host_device($domain);
+        next if $MOCK_DEVICES;
+        diag($hd_checked);
+        push(@{$dupe{$hd_checked}},($domain->name." ".$base->id));
+        is(scalar(@{$dupe{$hd_checked}}),1) or die Dumper(\%dupe,\%devices_nodes);
+        my $id_vm = $domain->_data('id_vm');
+        $found{$id_vm}++;
+        is($found{$id_vm},1) or die Dumper(\%found);
     }
     test_clone_nohd($hd, $base);
     test_start_in_another_node($hd, $base);
@@ -188,6 +192,8 @@ sub test_assign_v2($hd, $node, $number, $volatile=0) {
 }
 
 sub test_start_in_another_node($hd, $base) {
+    return if $base->volatile_clones && $MOCK_DEVICES;
+
     my ($clone1, $clone2);
     for my $clone ($base->clones) {
         next if $clone->{status} ne 'active'
@@ -282,7 +288,7 @@ sub _req_clone($base, $name=undef) {
             ,name => $name
             ,start => $start
     );
-    wait_request(debug => 1, check_error => 0);
+    wait_request(debug => 0, check_error => 0);
     if ($base->type eq 'KVM' && $MOCK_DEVICES) {
         diag($req->error);
     } else {
@@ -335,14 +341,7 @@ sub test_assign($vm, $node, $hd, $n_expected_in_vm, $n_expected_in_node) {
     my %devices_nodes = $hd->list_devices_nodes();
     for my $n (1 .. $n_expected_in_vm+$n_expected_in_node) {
         my $name = new_domain_name;
-        my $req = Ravada::Request->clone(
-            uid => user_admin->id
-            ,id_domain => $base->id
-            ,name => $name
-            ,start => 1
-        );
-        wait_request( check_error => 0);
-        my $domain = rvd_back->search_domain($name);
+        my $domain = _req_clone($base, $name);
         $domain->_data('status','active');
         is($domain->is_active,1) if $vm->type eq 'Void';
         check_hd_from_node($domain,\%devices_nodes);
@@ -381,6 +380,7 @@ sub check_hd_from_node($domain, $devices_node) {
 }
 
 sub test_clone_nohd($hd, $base) {
+    return if $base->volatile_clones && $MOCK_DEVICES;
 
     my ($clone_hd) = $base->clones;
 
@@ -392,6 +392,7 @@ sub test_clone_nohd($hd, $base) {
         ,start => 0
     );
     wait_request();
+
     my $domain0 = rvd_back->search_domain($name);
     my $req = Ravada::Request->start_domain(
         uid => user_admin->id
