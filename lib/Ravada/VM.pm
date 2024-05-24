@@ -551,7 +551,6 @@ sub _around_create_domain {
             $domain->expose(%port);
         }
         $base->_copy_host_devices($domain);
-        $domain->_attach_host_devices();
         $domain->_clone_filesystems();
         my @displays = $base->_get_controller_display();
         for my $display (@displays) {

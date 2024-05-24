@@ -338,6 +338,7 @@ sub _around_start($orig, $self, @arg) {
                 next;
             }
         }
+        warn $error if $error;
         die $error if $error;
         if (!defined $listen_ip) {
             my $display_ip;
@@ -7375,6 +7376,10 @@ sub _lock_host_device($self, $host_device, $device=undef) {
     }
 
     my $id_domain_locked = $self->_check_host_device_already_used($device);
+
+    my $id_vm = $self->_data('id_vm');
+    $id_vm = $self->_vm->id if !$id_vm;
+
     return 1 if defined $id_domain_locked &&  $self->id == $id_domain_locked;
 
     return 0 if defined $id_domain_locked;
@@ -7382,8 +7387,6 @@ sub _lock_host_device($self, $host_device, $device=undef) {
     my $query = "INSERT INTO host_devices_domain_locked (id_domain,id_vm,name,time_changed) VALUES(?,?,?,?)";
 
     my $sth = $$CONNECTOR->dbh->prepare($query);
-    my $id_vm = $self->_data('id_vm');
-    $id_vm = $self->_vm->id if !$id_vm;
     cluck if !$id_vm;
     eval { $sth->execute($self->id,$id_vm, $device,time) };
     if ($@) {

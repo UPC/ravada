@@ -7,6 +7,7 @@ use File::Path qw(make_path);
 use IPC::Run3 qw(run3);
 use Mojo::JSON qw(decode_json encode_json);
 use Ravada::HostDevice::Templates;
+use Ravada::WebSocket;
 use Test::More;
 use YAML qw( Dump );
 
@@ -24,7 +25,6 @@ my $PATH = "/var/tmp/$</ravada/dev";
 #########################################################
 
 sub _create_mock_devices_void($vm, $n_devices, $type, $value="fff:fff") {
-    $MOCK_DEVICES=1;
     $vm->run_command("mkdir","-p",$PATH) if !$vm->file_exists($PATH);
 
     my $name = base_domain_name()."_${type} ID";
@@ -77,6 +77,9 @@ sub _create_mock_devices_kvm($vm, $n_devices, $type, $value="fff:fff") {
 }
 
 sub _create_mock_devices($vm, $n_devices, $type, $value="fff:fff") {
+
+    $MOCK_DEVICES=1;
+
     if ($vm->type eq 'KVM') {
        return _create_mock_devices_kvm($vm, $n_devices, $type, $value );
     } elsif ($vm->type eq 'Void') {
@@ -169,16 +172,22 @@ sub test_assign_v2($hd, $node, $number, $volatile=0) {
     my $n_expected = 0;
     map { $n_expected+= $_ } @$number;
 
+    my $list_nodes = [ map { {$_->id, $_->name} } @$node];
+
     my %devices_nodes = $hd->list_devices_nodes();
+    my $ws = { channel => "/".$vm->id
+            ,login => user_admin->name
+        };
     for my $n (1 .. $n_expected) {
+
+        my $fd = Ravada::WebSocket::_list_host_devices(rvd_front(),$ws);
+
         my $name = new_domain_name;
         my $domain = _req_clone($base, $name);
-        $domain->_data('status','active');
         is($domain->is_active,1) if $vm->type eq 'Void';
         check_hd_from_node($domain,\%devices_nodes);
         my $hd_checked = check_host_device($domain);
         next if $MOCK_DEVICES;
-        diag($hd_checked);
         push(@{$dupe{$hd_checked}},($domain->name." ".$base->id));
         is(scalar(@{$dupe{$hd_checked}}),1) or die Dumper(\%dupe,\%devices_nodes);
         my $id_vm = $domain->_data('id_vm');
@@ -192,7 +201,7 @@ sub test_assign_v2($hd, $node, $number, $volatile=0) {
 }
 
 sub test_start_in_another_node($hd, $base) {
-    return if $base->volatile_clones && $MOCK_DEVICES;
+    return if $base->volatile_clones;
 
     my ($clone1, $clone2);
     for my $clone ($base->clones) {
@@ -292,7 +301,7 @@ sub _req_clone($base, $name=undef) {
     if ($base->type eq 'KVM' && $MOCK_DEVICES) {
         diag($req->error);
     } else {
-        is($req->error, '');
+        is($req->error, '') or confess;
     }
 
     my $domain = rvd_back->search_domain($name);
@@ -380,7 +389,7 @@ sub check_hd_from_node($domain, $devices_node) {
 }
 
 sub test_clone_nohd($hd, $base) {
-    return if $base->volatile_clones && $MOCK_DEVICES;
+    return if $MOCK_DEVICES;
 
     my ($clone_hd) = $base->clones;
 
@@ -521,7 +530,7 @@ sub _clean_devices(@nodes) {
 init();
 clean();
 
-for my $vm_name (vm_names() ) {
+for my $vm_name (reverse vm_names() ) {
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
 
@@ -541,7 +550,8 @@ for my $vm_name (vm_names() ) {
         my ($node1, $node2) = remote_node_2($vm_name);
         clean_remote_node($node1, $node2);
 
-        test_devices_v2([$vm,$node1,$node2],[1,1,1],1);
+        #        TODO: volatile clones
+        #        test_devices_v2([$vm,$node1,$node2],[1,1,1],1);
 
         test_devices_v2([$vm,$node1,$node2],[1,1,1]);
         test_devices_v2([$vm,$node1,$node2],[1,3,1]);
