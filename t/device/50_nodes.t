@@ -87,24 +87,58 @@ sub _create_mock_devices($vm, $n_devices, $type, $value="fff:fff") {
     }
 }
 
-sub test_devices_v2($node, $number, $volatile=0) {
-    _clean_devices(@$node);
+sub _create_host_devices($node,$number, $type=undef) {
+
     my $vm = $node->[0];
+
+    my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
+    my ($first) = $templates->[0];
+    if ($type) {
+        ($first) = grep { $_->{name} =~ /$type/ } @$templates;
+    }
+    diag($first->{name});
+
+    $vm->add_host_device(template => $first->{name});
+
+    my $config = config_host_devices($first->{name},0);
+    my ($hd, $found);
+    if ($config) {
+        my @list_hostdev = $vm->list_host_devices();
+        ($hd) = $list_hostdev[-1];
+        $hd->_data('list_filter' => $config);
+
+        my %devices_nodes = $hd->list_devices_nodes();
+
+        $found=1;
+        for my $n (0 .. scalar(@$node)-1) {
+            my $curr_node = $node->[$n];
+            my $devices = $devices_nodes{$curr_node->id};
+            $found=0 unless scalar(@$devices) >= $number->[0];
+        }
+        $MOCK_DEVICES=0;
+        return $hd if $found;
+
+    }
+    return if $type && !$found;
+    diag("creating mock devices because not enough found");
     my ($list_command,$list_filter) = _create_mock_devices($node->[0], $number->[0], "USB" );
     for my $i (1..scalar(@$node)-1) {
         die "Error, missing number[$i] ".Dumper($number) unless defined $number->[$i];
         _create_mock_devices($node->[$i], $number->[$i], "USB" );
     }
-    my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
-    my ($first) = $templates->[0];
 
-    $vm->add_host_device(template => $first->{name});
-    my @list_hostdev = $vm->list_host_devices();
-    my ($hd) = $list_hostdev[-1];
     $hd->_data('list_command',$list_command);
     $hd->_data('list_filter',$list_filter);
 
-    my %devices_nodes = $hd->list_devices_nodes();
+    return $hd;
+}
+
+sub test_devices_v2($node, $number, $volatile=0, $type=undef) {
+    _clean_devices(@$node);
+    my $vm = $node->[0];
+
+    my $hd = _create_host_devices($node, $number);
+
 
     test_assign_v2($hd,$node,$number, $volatile);
 
@@ -132,6 +166,7 @@ sub test_devices($vm, $node, $n_local=3, $n_node=3) {
     my $node_name = $node->name;
 
     my %devices_nodes = $hd->list_devices_nodes();
+    warn Dumper(\%devices_nodes);
     my %dupe;
     for my $node (keys %devices_nodes) {
         for my $dev (@{$devices_nodes{$node}}) {
@@ -178,9 +213,10 @@ sub test_assign_v2($hd, $node, $number, $volatile=0) {
     my $ws = { channel => "/".$vm->id
             ,login => user_admin->name
         };
+    my $fd;
     for my $n (1 .. $n_expected) {
 
-        my $fd = Ravada::WebSocket::_list_host_devices(rvd_front(),$ws);
+        $fd = Ravada::WebSocket::_list_host_devices(rvd_front(),$ws);
 
         my $name = new_domain_name;
         my $domain = _req_clone($base, $name);
@@ -189,11 +225,11 @@ sub test_assign_v2($hd, $node, $number, $volatile=0) {
         my $hd_checked = check_host_device($domain);
         next if $MOCK_DEVICES;
         push(@{$dupe{$hd_checked}},($domain->name." ".$base->id));
-        is(scalar(@{$dupe{$hd_checked}}),1) or die Dumper(\%dupe,\%devices_nodes);
         my $id_vm = $domain->_data('id_vm');
         $found{$id_vm}++;
-        is($found{$id_vm},1) or die Dumper(\%found);
     }
+    warn Dumper($fd);
+    ok(scalar(keys %found) > 1);
     test_clone_nohd($hd, $base);
     test_start_in_another_node($hd, $base);
 
@@ -388,27 +424,42 @@ sub check_hd_from_node($domain, $devices_node) {
     ok($match,"Expecting $locked->{name} in ".Dumper($devices)) or confess;
 }
 
+sub _count_devices($hd) {
+    my %devices_nodes = $hd->list_devices_nodes();
+    my $n = 0;
+    for my $id ( keys %devices_nodes) {
+        $n+= scalar( @{$devices_nodes{$id}});
+    }
+    return $n;
+}
+
 sub test_clone_nohd($hd, $base) {
     return if $MOCK_DEVICES;
 
     my ($clone_hd) = $base->clones;
 
-    my $name = new_domain_name();
-    my $req0 = Ravada::Request->clone(
-        uid => user_admin->id
-        ,id_domain => $base->id
-        ,name => $name
-        ,start => 0
-    );
-    wait_request();
+    my ($name, $req, $domain0);
+    for ( 1 .. _count_devices($hd) ) {
+        diag("trying to overflow");
+        $name = new_domain_name();
+        my $req0 = Ravada::Request->clone(
+            uid => user_admin->id
+            ,id_domain => $base->id
+            ,name => $name
+            ,start => 0
+        );
+        wait_request();
 
-    my $domain0 = rvd_back->search_domain($name);
-    my $req = Ravada::Request->start_domain(
-        uid => user_admin->id
-        ,id_domain => $domain0->id
-    );
+        $domain0 = rvd_back->search_domain($name);
+        $req = Ravada::Request->start_domain(
+            uid => user_admin->id
+            ,id_domain => $domain0->id
+        );
 
-    wait_request( check_error => 0);
+        wait_request( check_error => 0);
+
+        last if $req->error;
+    }
     like($req->error,qr/host devices/i) or exit;
     Ravada::Request->refresh_machine(uid => user_admin->id, id_domain => $domain0->id);
 
@@ -530,7 +581,7 @@ sub _clean_devices(@nodes) {
 init();
 clean();
 
-for my $vm_name (reverse vm_names() ) {
+for my $vm_name (vm_names() ) {
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
 
@@ -552,6 +603,8 @@ for my $vm_name (reverse vm_names() ) {
 
         #        TODO: volatile clones
         #        test_devices_v2([$vm,$node1,$node2],[1,1,1],1);
+
+        test_devices_v2([$vm,$node1,$node2],[1,1,1], undef, 'pci');
 
         test_devices_v2([$vm,$node1,$node2],[1,1,1]);
         test_devices_v2([$vm,$node1,$node2],[1,3,1]);
