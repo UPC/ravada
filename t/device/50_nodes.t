@@ -73,7 +73,6 @@ sub _create_mock_devices_kvm($vm, $n_devices, $type, $value="fff:fff") {
 
     return ("find $PATH/",$name);
 
-
 }
 
 sub _create_mock_devices($vm, $n_devices, $type, $value="fff:fff") {
@@ -94,17 +93,19 @@ sub _create_host_devices($node,$number, $type=undef) {
     my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
     my ($first) = $templates->[0];
     if ($type) {
-        ($first) = grep { $_->{name} =~ /$type/ } @$templates;
+        ($first) = grep { $_->{name} =~ /$type/i } @$templates;
+        die "Error no template $type found in ".Dumper($templates) if !$first;
     }
     diag($first->{name});
 
     $vm->add_host_device(template => $first->{name});
 
     my $config = config_host_devices($first->{name},0);
+
     my ($hd, $found);
+    my @list_hostdev = $vm->list_host_devices();
+    ($hd) = $list_hostdev[-1];
     if ($config) {
-        my @list_hostdev = $vm->list_host_devices();
-        ($hd) = $list_hostdev[-1];
         $hd->_data('list_filter' => $config);
 
         my %devices_nodes = $hd->list_devices_nodes();
@@ -119,7 +120,10 @@ sub _create_host_devices($node,$number, $type=undef) {
         return $hd if $found;
 
     }
-    return if $type && !$found;
+    if ( $type && !$found ) {
+        $hd->remove;
+        return;
+    }
     diag("creating mock devices because not enough found");
     my ($list_command,$list_filter) = _create_mock_devices($node->[0], $number->[0], "USB" );
     for my $i (1..scalar(@$node)-1) {
@@ -137,8 +141,10 @@ sub test_devices_v2($node, $number, $volatile=0, $type=undef) {
     _clean_devices(@$node);
     my $vm = $node->[0];
 
-    my $hd = _create_host_devices($node, $number);
+    my $hd = _create_host_devices($node, $number, $type);
+    return if $type && !$hd;
 
+    die "Error: no hd found" if !$hd;
 
     test_assign_v2($hd,$node,$number, $volatile);
 
@@ -206,6 +212,7 @@ sub test_assign_v2($hd, $node, $number, $volatile=0) {
     my %dupe;
     my $n_expected = 0;
     map { $n_expected+= $_ } @$number;
+    die Dumper($number) if !$n_expected;
 
     my $list_nodes = [ map { {$_->id, $_->name} } @$node];
 
@@ -214,6 +221,7 @@ sub test_assign_v2($hd, $node, $number, $volatile=0) {
             ,login => user_admin->name
         };
     my $fd;
+    warn $n_expected;
     for my $n (1 .. $n_expected) {
 
         $fd = Ravada::WebSocket::_list_host_devices(rvd_front(),$ws);
@@ -227,6 +235,9 @@ sub test_assign_v2($hd, $node, $number, $volatile=0) {
         push(@{$dupe{$hd_checked}},($domain->name." ".$base->id));
         my $id_vm = $domain->_data('id_vm');
         $found{$id_vm}++;
+
+        warn Dumper(\%found);
+
     }
     warn Dumper($fd);
     ok(scalar(keys %found) > 1);
