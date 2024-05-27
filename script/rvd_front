@@ -438,6 +438,48 @@ get '/admin/storage' => sub($c) {
 
 };
 
+get '/admin/hostdev/(#vm_type)' => sub($c) {
+    _admin_host_devices($c);
+};
+
+sub _select_vm_by_type($c) {
+
+    my $type = $c->stash('vm_type');
+
+    my $sql = "SELECT id,name,vm_type FROM vms "
+        ." WHERE hostname='localhost'";
+    $sql .= " AND vm_type=?" if defined $type;
+
+    my $sth = $RAVADA->_dbh->prepare($sql);
+
+    if (defined ($type)) {
+        $sth->execute($type);
+    } else {
+        $sth->execute();
+    }
+    my ($id,$name,$vm_type) = $sth->fetchrow;
+
+    return not_found($c, 404, "vm type ".($type or 'UNDEF')." not found")
+    if !$id;
+
+    $c->stash('vm_type' => $vm_type);
+    $c->stash('id_vm' => $id);
+
+}
+
+sub _admin_host_devices($c) {
+    _add_admin_libs($c);
+
+    _select_vm_by_type($c);
+
+    $c->stash(tab => ($c->param('tab') or ''));
+    $c->stash('id' => $c->stash('id_vm'));
+
+    return $c->render( template => '/main/admin_hostdev' );
+
+};
+
+
 get '/admin/networks/*id_vm' => { id_vm => undef} => sub($c) {
 
     return access_denied($c) unless $USER->is_admin
@@ -501,6 +543,13 @@ get '/list_storage_pools/(:id_vm)' => sub($c) {
 get '/list_nodes.json' => sub {
     my $c = shift;
     $c->render(json => [$RAVADA->list_vms]);
+};
+
+get '/list_nodes_by_id.json' => sub {
+    my $c = shift;
+    return _access_denied($c) if !$USER || !$USER->is_admin;
+
+    $c->render(json => $RAVADA->list_nodes_by_id);
 };
 
 get '/list_host_devices/(:id_vm)' => sub($c) {
@@ -3463,10 +3512,11 @@ sub admin {
     if ($page eq 'storage') {
         _select_vm($c);
     }
+    return _admin_host_devices($c) if ($page eq 'hostdev');
     $c->render( template => 'main/admin_'.$page);
 };
 
-sub _select_vm($c) {
+sub _select_vm($c , $type =undef) {
     my $sth = $RAVADA->_dbh->prepare("SELECT id,name FROM vms WHERE hostname='localhost' AND vm_type=?");
     my $types = Ravada::Front::list_vm_types();
     for my $type ('KVM',@$types) {

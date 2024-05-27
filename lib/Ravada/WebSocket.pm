@@ -231,7 +231,7 @@ sub _list_host_devices($rvd, $args) {
     my $user = Ravada::Auth::SQL->new(name => $login)
         or die "Error: uknown user $login";
 
-    my $sth = $rvd->_dbh->prepare( "SELECT id,name,list_command,list_filter,devices,date_changed "
+    my $sth = $rvd->_dbh->prepare( "SELECT id,name,list_command,list_filter,devices_node,date_changed "
         ." FROM host_devices WHERE id_vm=?");
 
     $sth->execute($id_vm);
@@ -239,6 +239,7 @@ sub _list_host_devices($rvd, $args) {
     my @found;
     while (my $row = $sth->fetchrow_hashref) {
         _list_domains_with_device($rvd, $row);
+        _list_devices_node($rvd, $row);
         push @found, $row;
         next unless _its_been_a_while_channel($args->{channel});
         my $req = Ravada::Request->list_host_devices(
@@ -247,6 +248,65 @@ sub _list_host_devices($rvd, $args) {
         );
     }
     return \@found;
+}
+
+sub _list_devices_node($rvd, $row) {
+    my $devices = {};
+    eval {
+    $devices = decode_json($row->{devices_node}) if $row->{devices_node};
+    };
+    warn "Warning: $@ $row->{devices_node}" if $@;
+    $row->{_n_devices}=0;
+
+    my %ret;
+    my %attached = _list_devices_attached($rvd);
+    if (%$devices) {
+        $row->{_nodes} = [sort keys %{$devices}];
+        for (@{$row->{_nodes}}) {
+            $row->{_n_devices} += scalar(@{$devices->{$_}});
+        }
+        $row->{_loading} = 0;
+        for my $id_node ( keys %$devices ) {
+            my @devs;
+            for my $name ( @{$devices->{$id_node}} ) {
+                my $dev = { name => $name };
+
+                $dev->{domain} = $attached{"$id_node.$name"}
+                if exists $attached{"$id_node.$name"};
+
+                push @devs,($dev);
+            }
+            $ret{$id_node} = \@devs;
+        }
+    } else {
+        $row->{_nodes} = [];
+    }
+
+    $row->{devices_node} = \%ret;
+}
+
+sub _list_devices_attached($rvd) {
+    my $sth=$rvd->_dbh->prepare(
+        "SELECT d.id,d.name,d.is_base, d.status, l.id, l.name "
+        ."     ,l.id_vm "
+        ." FROM host_devices_domain hdd, domains d"
+        ." LEFT JOIN host_devices_domain_locked l"
+        ."    ON d.id=l.id_domain "
+        ." WHERE  d.id= hdd.id_domain "
+        ."  ORDER BY d.name"
+    );
+    $sth->execute();
+    my %devices;
+    while ( my ($id,$name,$is_base, $status, $is_locked, $device, $id_vm) = $sth->fetchrow ) {
+        next if !$device;
+        $is_locked = 0 if !$is_locked || $status ne 'active';
+        my $domain = {     id => $id       ,name => $name, is_locked => $is_locked
+                      ,is_base => $is_base ,device => $device
+        };
+        $devices{"$id_vm.$device"} = $domain;
+    }
+    return %devices;
+
 }
 
 sub _list_domains_with_device($rvd,$row) {
@@ -286,7 +346,6 @@ sub _list_domains_with_device($rvd,$row) {
 
     $row->{_domains} = \@domains;
     $row->{_bases} = \@bases;
-    $row->{devices} = [values %devices];
 }
 
 sub _get_domain_with_device($rvd, $dev) {

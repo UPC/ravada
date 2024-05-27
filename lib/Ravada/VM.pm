@@ -401,8 +401,8 @@ sub _connect_ssh($self) {
     confess "Don't connect to local ssh"
         if $self->is_local;
 
-    if ( $self->readonly || $> ) {
-        confess $self->name." readonly or not root, don't do ssh";
+    if ( $self->readonly ) {
+        confess $self->name." readonly, don't do ssh";
         return;
     }
 
@@ -483,7 +483,6 @@ sub _around_create_domain {
     confess "ERROR: Unknown args ".Dumper(\%args) if keys %args;
 
     $self->_check_duplicate_name($name);
-    my $create_volatile;
     if ($id_base) {
         my $vm_local = $self;
         $vm_local = $self->new( host => 'localhost') if !$vm_local->is_local;
@@ -493,8 +492,11 @@ sub _around_create_domain {
         die "Error: user ".$owner->name." can not clone from ".$base->name
         unless $owner->allowed_access($base->id);
 
-        $volatile = $base->volatile_clones if (! defined($volatile));
-        $create_volatile=$volatile if !$base->list_host_devices();
+        if ( $base->list_host_devices() ) {
+            $args_create{volatile}=0;
+        } elsif (!defined $args_create{volatile}) {
+            $args_create{volatile} = $base->volatile_clones;
+        }
         if ($add_to_pool) {
             confess "Error: you can't add to pool and also pick from pool" if $from_pool;
             $from_pool = 0;
@@ -523,8 +525,7 @@ sub _around_create_domain {
 
     return $base->_search_pool_clone($owner) if $from_pool;
 
-    if ($self->is_local && $base && $base->is_base
-            && ( $volatile || $owner->is_temporary )) {
+    if ($self->is_local && $base && $base->is_base && $args_create{volatile}) {
         $request->status("balancing")                       if $request;
         my $vm = $self->balance_vm($owner->id, $base) or die "Error: No free nodes available.";
         $request->status("creating machine on ".$vm->name)  if $request;
@@ -532,7 +533,7 @@ sub _around_create_domain {
         $args_create{listen_ip} = $self->listen_ip($remote_ip);
     }
 
-    my $domain = $self->$orig(%args_create, volatile => $create_volatile);
+    my $domain = $self->$orig(%args_create);
     $self->_add_instance_db($domain->id);
     $domain->add_volume_swap( size => $swap )   if $swap;
     $domain->_data('is_compacted' => 1);
@@ -1851,7 +1852,12 @@ sub write_file( $self, $file, $contents ) {
     return $self->_write_file_local($file, $contents )  if $self->is_local;
 
     my $ssh = $self->_ssh or confess "Error: no ssh connection";
-    my ($rin, $pid) = $self->_ssh->pipe_in("cat > $file")
+    unless ( $file =~ /^[a-z0-9 \/_:\-\.]+$/i ) {
+        my $file2=$file;
+        $file2 =~ tr/[a-z0-9 \/_:\-\.]/*/c;
+        die "Error: insecure character in '$file': '$file2'";
+    }
+    my ($rin, $pid) = $self->_ssh->pipe_in("cat > '$file'")
         or die "pipe_in method failed ".$self->_ssh->error;
 
     print $rin $contents;
@@ -2050,24 +2056,24 @@ Arguments
 
 =cut
 
-sub balance_vm($self, $uid, $base=undef, $id_domain=undef) {
+sub balance_vm($self, $uid, $base=undef, $id_domain=undef, $host_devices=undef) {
 
     my @vms;
     if ($base) {
         confess "Error: base is not an object ".Dumper($base)
         if !ref($base);
 
-        @vms = $base->list_vms();
+        @vms = $base->list_vms($host_devices);
     } else {
         @vms = $self->list_nodes();
     }
 
-    return $vms[0] if scalar(@vms)<=1;
-
     my @vms_active;
     for my $vm (@vms) {
-        push @vms_active,($vm) if $vm->is_active && $vm->enabled;
+        push @vms_active,($vm) if $vm && $vm->vm && $vm->is_active && $vm->enabled;
     }
+    return $vms_active[0] if scalar(@vms_active)==1;
+
     if ($base && $base->_data('balance_policy') == 1 ) {
         my $vm = $self->_balance_already_started($uid, $id_domain, \@vms_active);
         return $vm if $vm;
@@ -2113,7 +2119,7 @@ sub _balance_free_memory($self , $base, $vms) {
     my @status;
 
     for my $vm (_random_list( @$vms )) {
-        next if !$vm->enabled();
+        next if !$vm || !$vm->vm || !$vm->enabled();
         my $active = 0;
         eval { $active = $vm->is_active() };
         my $error = $@;
@@ -2656,7 +2662,7 @@ sub _check_equal_storage_pools($vm1, $vm2) {
 
         my ($path1, $path2) = ($vm1->_storage_path($pool), $vm2->_storage_path($pool));
 
-        die "Error: Storage pool '$pool' different. In ".$vm1->name." $path1 , "
+        confess "Error: Storage pool '$pool' different. In ".$vm1->name." $path1 , "
             ." in ".$vm2->name." $path2" if $path1 ne $path2;
     }
     return 1;
@@ -2701,7 +2707,10 @@ sub add_host_device($self, %args) {
     ;
 
     my $sth = $$CONNECTOR->dbh->prepare($query);
+    eval {
     $sth->execute(map { $info->{$_} } sort keys %$info );
+    };
+    confess Dumper([$info,$@]) if $@;
 
     my $id = Ravada::Request->_last_insert_id( $$CONNECTOR );
 
@@ -2734,6 +2743,7 @@ sub list_host_devices($self) {
     my @found;
     while (my $row = $sth->fetchrow_hashref) {
 	    $row->{devices} = '' if !defined $row->{devices};
+	    $row->{devices_node} = '' if !defined $row->{devices_node};
         push @found,(Ravada::HostDevice->new(%$row));
     }
 

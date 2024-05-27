@@ -324,7 +324,7 @@ sub _around_start($orig, $self, @arg) {
     $enable_host_devices = 1 if !defined $enable_host_devices;
 
     for (1 .. 5) {
-        eval { $self->_start_checks(@arg) };
+        eval { $self->_start_checks(@arg, enable_host_devices => $enable_host_devices) };
         my $error = $@;
         if ($error) {
             if ( $error =~/base file not found/ && !$self->_vm->is_local) {
@@ -332,12 +332,13 @@ sub _around_start($orig, $self, @arg) {
                 next;
             } elsif ($error =~ /No free memory/) {
                 warn $error;
-                die $error if $self->is_local;
+                die $error if $self->is_local || $self->is_volatile;
                 my $vm_local = $self->_vm->new( host => 'localhost' );
                 $self->migrate($vm_local, $request);
                 next;
             }
         }
+        warn $error if $error;
         die $error if $error;
         if (!defined $listen_ip) {
             my $display_ip;
@@ -469,13 +470,14 @@ sub _start_checks($self, @args) {
     my $vm_local = $self->_vm->new( host => 'localhost' );
     my $vm = $vm_local;
 
-    my ($id_vm, $request);
+    my ($id_vm, $request, $enable_host_devices);
     if (!(scalar(@args) % 2)) {
         my %args = @args;
 
         # We may be asked to start the machine in a specific id_vmanager
         $id_vm = delete $args{id_vm};
         $request = delete $args{request} if exists $args{request};
+        $enable_host_devices = delete $args{enable_host_devices};
     }
     # If not specific id_manager we go to the last id_vmanager unless it was localhost
     # If the last VManager was localhost it will try to balance here.
@@ -483,9 +485,13 @@ sub _start_checks($self, @args) {
     if !$id_vm && defined $self->_data('id_vm')
     && $self->_data('id_vm') != $vm_local->id;
 
+    # check the requested id_vm is suitable
     if ($id_vm) {
         $vm = Ravada::VM->open($id_vm);
         if ( !$vm->enabled || !$vm->ping ) {
+            $vm = $vm_local;
+            $id_vm = undef;
+        } elsif ($enable_host_devices && !$self->_available_hds($vm)) {
             $vm = $vm_local;
             $id_vm = undef;
         }
@@ -508,7 +514,8 @@ sub _start_checks($self, @args) {
         if ($id_vm) {
             $self->_set_vm($vm);
         } else {
-            $self->_balance_vm($request);
+            $self->_balance_vm($request, $enable_host_devices)
+            if !$self->is_volatile;
         }
         if ( !$self->is_volatile && !$self->_vm->is_local() ) {
             if (!base_in_vm($self->id_base, $self->_vm->id)) {
@@ -586,16 +593,57 @@ sub _search_already_started($self, $fast = 0) {
     return keys %started;
 }
 
-sub _balance_vm($self, $request=undef) {
+sub _available_hds($self, $vm) {
+
+    my @host_devices = $self->list_host_devices();
+    return 1 if !@host_devices;
+
+    my $available=1;
+    for my $hd (@host_devices) {
+        if  (! $hd->list_available_devices($vm->id) ) {
+            $available=0;
+            last;
+        }
+    }
+    return $available;
+}
+
+sub _filter_vm_available_hd($self, @vms) {
+
+    my @host_devices = $self->list_host_devices();
+
+    return @vms if !@host_devices;
+
+    my @vms_ret;
+
+    for my $vm ( @vms ) {
+        my $available = 1;
+        for my $hd (@host_devices) {
+            if  (! $hd->list_available_devices($vm->id) ) {
+                $available=0;
+                last;
+            }
+        }
+        push @vms_ret,($vm) if $available;
+    }
+
+    die "No host devices available in any node.\n" if !@vms_ret;
+
+    return @vms_ret;
+}
+
+sub _balance_vm($self, $request=undef, $host_devices=undef) {
     return if $self->{_migrated};
 
     my $base;
     $base = Ravada::Domain->open($self->id_base) if $self->id_base;
 
     my $vm_free;
-    for (;;) {
-        $vm_free = $self->_vm->balance_vm($self->_data('id_owner'),$base, $self->id);
+    for (my $count=0;$count<10;$count++) {
+        $vm_free = $self->_vm->balance_vm($self->_data('id_owner'),$base
+                                            , $self->id, $host_devices);
         return if !$vm_free;
+        next if !$vm_free->vm || !$vm_free->is_active;
 
         last if $vm_free->id == $self->_vm->id;
         eval { $self->migrate($vm_free, $request) };
@@ -611,7 +659,7 @@ sub _balance_vm($self, $request=undef) {
         }
         die $@;
     }
-    return if !$vm_free;
+    return if !$vm_free || !$vm_free->vm || !$vm_free->is_active;
     return $vm_free->id;
 }
 
@@ -1034,6 +1082,7 @@ sub _check_free_vm_memory {
     my $self = shift;
 
     return if !Ravada::Front::setting(undef,"/backend/limits/startup_ram");
+    return if !$self->is_known();
 
     my $vm_free_mem = $self->_vm->free_memory;
 
@@ -2943,6 +2992,7 @@ sub clone {
             $vm = $node if $node->is_local;
         }
     }
+
     my $clone = $vm->create_domain(
         name => $name
         ,id_base => $self->id
@@ -5356,7 +5406,7 @@ Returns a list for virtual machine managers where this domain is base
 
 =cut
 
-sub list_vms($self) {
+sub list_vms($self, $check_host_devices=0) {
     confess "Domain is not base" if !$self->is_base;
 
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id_vm FROM bases_vm WHERE id_domain=? AND enabled = 1");
@@ -5373,7 +5423,9 @@ sub list_vms($self) {
         push @vms,($vm_local);
         $self->set_base_vm(vm => $vm_local, user => Ravada::Utils::user_daemon);
     }
-    return @vms;
+    return @vms if !$check_host_devices;
+
+    return $self->_filter_vm_available_hd(@vms);
 }
 
 =head2 base_in_vm
@@ -7126,6 +7178,8 @@ sub add_host_device($self, $host_device) {
     my $id_hd = $host_device;
     $id_hd = $host_device->id if ref($host_device);
 
+    confess if !$id_hd;
+
     my $sth = $$CONNECTOR->dbh->prepare("INSERT INTO host_devices_domain "
         ."(id_host_device, id_domain) "
         ." VALUES ( ?, ? ) "
@@ -7165,6 +7219,7 @@ sub list_host_devices($self) {
     my @found;
     while (my $row = $sth->fetchrow_hashref) {
         $row->{devices} = '' if !defined $row->{devices};
+        $row->{devices_node} = '{}' if !defined $row->{devices_node};
         push @found,(Ravada::HostDevice->new(%$row));
     }
 
@@ -7222,15 +7277,13 @@ sub _attach_host_devices($self, @args) {
     return if !@host_devices;
     return if $self->is_active();
 
-    my $vm_local = $self->_vm->new( host => 'localhost' );
-    my $vm = $vm_local;
-
-    my ($id_vm, $request);
+    my ($request);
     if (!(scalar(@args) % 2)) {
         my %args = @args;
         $request = delete $args{request} if exists $args{request};
     }
 
+    $self->_clean_old_hd_locks();
     $self->_backup_config_no_hd();
     my $doc = $self->get_config();
     for my $host_device ( @host_devices ) {
@@ -7239,7 +7292,9 @@ sub _attach_host_devices($self, @args) {
 
         my $device;
         if ( $device_configured ) {
-            if ( $host_device->enabled() && $host_device->is_device($device_configured) && $self->_lock_host_device($host_device) ) {
+            if ( $host_device->enabled()
+                    && $host_device->is_device($device_configured, $self->_vm->id)
+                    && $self->_lock_host_device($host_device) ) {
                 $device = $device_configured;
             } else {
                 $self->_dettach_host_device($host_device, $doc, $device_configured);
@@ -7270,13 +7325,13 @@ sub _attach_host_devices($self, @args) {
 }
 
 sub _search_free_device($self, $host_device) {
-    my ($device) = $host_device->list_available_devices();
+    my ($device) = $host_device->list_available_devices($self->_data('id_vm'));
     if ( !$device ) {
        $device = _refresh_domains_with_locked_devices($host_device);
        if (!$device) {
            $self->_data(status => 'down');
            $self->_unlock_host_devices();
-           die "Error: No available devices in ".$host_device->name."\n";
+           die "Error: No available devices in ".$self->_vm->name." for ".$host_device->name."\n";
        }
     }
     return $device;
@@ -7287,6 +7342,7 @@ sub _dettach_host_devices($self) {
     for my $host_device ( @host_devices ) {
         $self->_dettach_host_device($host_device);
     }
+    $self->_unlock_host_devices();
     $self->_restore_config_no_hd();
 }
 
@@ -7331,17 +7387,19 @@ sub _lock_host_device($self, $host_device, $device=undef) {
     }
 
     my $id_domain_locked = $self->_check_host_device_already_used($device);
+
+    my $id_vm = $self->_data('id_vm');
+    $id_vm = $self->_vm->id if !$id_vm;
+
     return 1 if defined $id_domain_locked &&  $self->id == $id_domain_locked;
 
     return 0 if defined $id_domain_locked;
 
-    my $query = "INSERT INTO host_devices_domain_locked (id_domain,id_vm,name) VALUES(?,?,?)";
+    my $query = "INSERT INTO host_devices_domain_locked (id_domain,id_vm,name,time_changed) VALUES(?,?,?,?)";
 
     my $sth = $$CONNECTOR->dbh->prepare($query);
-    my $id_vm = $self->_data('id_vm');
-    $id_vm = $self->_vm->id if !$id_vm;
     cluck if !$id_vm;
-    eval { $sth->execute($self->id,$id_vm, $device) };
+    eval { $sth->execute($self->id,$id_vm, $device,time) };
     if ($@) {
         warn $@;
         $self->_data(status => 'shutdown');
@@ -7356,29 +7414,37 @@ sub _lock_host_device($self, $host_device, $device=undef) {
     return 1;
 }
 
-sub _unlock_host_devices($self) {
+sub _clean_old_hd_locks($self) {
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
-        ." WHERE id_domain=?"
+        ." WHERE id_domain=? AND id_vm <> ?"
     );
-    $sth->execute($self->id);
+    $sth->execute($self->id, $self->_vm->id);
+
+}
+
+sub _unlock_host_devices($self, $time_changed=3) {
+    my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
+        ." WHERE id_domain=? AND time_changed<=?"
+    );
+    $sth->execute($self->id, time-$time_changed);
 }
 
 sub _unlock_host_device($self, $name) {
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
-        ." WHERE id_domain=? AND name=?"
+        ." WHERE id_domain=? AND name=? AND time_changed<?"
     );
-    $sth->execute($self->id, $name);
+    $sth->execute($self->id, $name,time-60);
 }
 
 
 sub _check_host_device_already_used($self, $device) {
 
-    my $query = "SELECT id_domain FROM host_devices_domain_locked "
+    my $query = "SELECT id_domain,time_changed FROM host_devices_domain_locked "
     ." WHERE id_vm=? AND name=?"
     ;
     my $sth = $$CONNECTOR->dbh->prepare($query);
     $sth->execute($self->_data('id_vm'), $device);
-    my ($id_domain) = $sth->fetchrow;
+    my ($id_domain,$time_changed) = $sth->fetchrow;
     #    warn "\n".($id_domain or '<UNDEF>')." [".$self->id."] had locked $device\n";
 
     return if !defined $id_domain;
@@ -7386,7 +7452,7 @@ sub _check_host_device_already_used($self, $device) {
 
     my $domain = Ravada::Domain->open($id_domain);
 
-    return $id_domain if $domain->is_active;
+    return $id_domain if time-$time_changed < 10 || $domain->is_active;
 
     $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
         ." WHERE id_domain=?");

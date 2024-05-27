@@ -134,7 +134,13 @@ sub test_mdev($vm) {
     is($hd->list_available_devices(), $n_devices-1);
     test_config($domain);
 
+    sleep 1;
     _req_shutdown($domain);
+    for ( 1 .. 3 ) {
+        last if $hd->list_available_devices() <= $n_devices;
+        _req_shutdown($domain);
+        sleep 1;
+    }
     #    $domain->_dettach_host_devices();
     is($hd->list_available_devices(), $n_devices);
 

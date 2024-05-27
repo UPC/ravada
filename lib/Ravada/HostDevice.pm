@@ -9,6 +9,7 @@ Ravada::HostDevice - Host Device basic library for Ravada
 
 =cut
 
+use Carp qw(croak cluck);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
@@ -60,7 +61,7 @@ has 'enabled' => (
     ,is => 'rw'
 );
 
-has 'devices' => (
+has 'devices_node' => (
     isa => 'Str'
     ,is => 'rw'
     ,default => ''
@@ -78,15 +79,49 @@ sub search_by_id($self, $id) {
     $sth->execute($id);
     my $row = $sth->fetchrow_hashref;
     die "Error: device id='$id' not found" if !exists $row->{id};
-    $row->{devices} = '' if !defined $row->{devices};
+    $row->{devices_node} = encode_json({}) if !defined $row->{devices_node};
 
     return Ravada::HostDevice->new(%$row);
 }
 
-sub list_devices($self) {
+sub list_devices_nodes($self) {
     my $vm = Ravada::VM->open($self->id_vm);
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id,name,is_active,enabled FROM vms WHERE id <> ? AND vm_type=?");
+    $sth->execute($vm->id, $vm->type);
 
-    die "Error: No list_command in host_device ".$self->id_vm
+    my @nodes = ([$vm->id,$vm->name,1,1]);
+
+    while ( my ($id,$name, $is_active,$enabled) = $sth->fetchrow) {
+        push @nodes,([$id, $name, $is_active, $enabled]);
+    }
+
+    my %devices;
+    for my $ndata (@nodes) {
+        if (!$ndata->[2] || !$ndata->[3]) {
+            $devices{$ndata->[1]}=[];
+            next;
+        }
+        my $node = Ravada::VM->open($ndata->[0]);
+        next if !$node || !$node->vm;
+        my @current_devs;
+        eval {
+            @current_devs = $self->list_devices($node->id)
+                if $node->is_active;
+        };
+        warn $@ if $@;
+        #        push @devices, @current_devs;
+        $devices{$node->id}=\@current_devs;
+    }
+
+    $self->_data( devices_node => \%devices );
+    return %devices;
+}
+
+sub list_devices($self, $id_vm=$self->id_vm) {
+    my $vm = Ravada::VM->open($id_vm);
+    return [] unless $vm->is_active;
+    die "Error: No list_command in host_device ".$self->id
     if !$self->list_command;
 
     my @command = split /\s+/, $self->list_command;
@@ -99,34 +134,32 @@ sub list_devices($self) {
     for my $line (split /\n/, $out ) {
         push @device,($line) if !defined $filter || $line =~ qr($filter)i;
     }
-    my $encoded = encode_json(\@device);
-    $self->_data( devices => $encoded );
     return @device;
 }
 
-sub is_device($self, $device) {
+sub is_device($self, $device, $id_vm) {
     return if !defined $device;
-    for my $dev ( $self->list_devices ) {
+    for my $dev ( $self->list_devices($id_vm) ) {
        return 1 if $dev eq $device;
     }
     return 0;
 
 }
 
-sub _device_locked($self, $name) {
+sub _device_locked($self, $name, $id_vm=$self->id_vm) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM host_devices_domain_locked "
         ." WHERE id_vm=? AND name=? "
     );
-    $sth->execute($self->id_vm, $name);
+    $sth->execute($id_vm, $name);
     my ($is_locked) = $sth->fetchrow;
     $is_locked = 0 if !defined $is_locked;
-    return 1 if $is_locked;
+    return $is_locked;
 }
 
-sub list_available_devices($self) {
+sub list_available_devices($self, $id_vm=$self->id_vm) {
     my @device;
-    for my $dev_entry ( $self->list_devices ) {
-        next if $self->_device_locked($dev_entry);
+    for my $dev_entry ( $self->list_devices($id_vm) ) {
+        next if $self->_device_locked($dev_entry, $id_vm);
         push @device, ($dev_entry);
     }
     return @device;
@@ -134,17 +167,21 @@ sub list_available_devices($self) {
 
 sub remove($self) {
     _init_connector();
+    my $id = $self->id;
 
     my $sth = $$CONNECTOR->dbh->prepare("SELECT id_domain FROM host_devices_domain "
         ." WHERE id_host_device=?"
     );
-    $sth->execute($self->id);
+    $sth->execute($id);
     while ( my ( $id_domain ) = $sth->fetchrow) {
         my $domain = Ravada::Domain->open($id_domain);
         $domain->remove_host_device($self);
     }
+
     $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices WHERE id=?");
-    $sth->execute($self->id);
+    $sth->execute($id);
+
+    Ravada::Request::remove('requested', id_host_device => $id );
 }
 
 sub _fetch_template_args($self, $device) {
@@ -216,7 +253,16 @@ sub _data($self, $field, $value=undef) {
         );
         $sth->execute($value, $self->id);
         $self->meta->get_attribute($field)->set_value($self, $value);
-        $self->_dettach_in_domains() if $field =~ /^(devices|list_)/;
+        if ( $field =~ /^(devices|list_)/ ) {
+            $self->_dettach_in_domains();
+            if ($field =~ /^list_/) {
+                Ravada::Request->list_host_devices(
+                    uid => Ravada::Utils::user_daemon->id
+                    ,id_host_device => $self->id
+                );
+                $self->_data('devices_node' => '');
+            }
+        }
         return $value;
     } else {
         my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM host_devices"
@@ -224,7 +270,7 @@ sub _data($self, $field, $value=undef) {
         );
         $sth->execute($self->id);
         my $row = $sth->fetchrow_hashref();
-        die "Error: No field '$field' in host_devices" if !exists $row->{$field};
+        croak "Error: No field '$field' in host_devices" if !exists $row->{$field};
         return $row->{$field};
     }
 }

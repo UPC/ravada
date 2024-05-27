@@ -1640,7 +1640,7 @@ sub _add_indexes_generic($self) {
 
         ,vms=> [
             "unique(hostname, vm_type): hostname_type"
-            ,"UNIQUE (name)"
+            ,"UNIQUE (name,vm_type)"
 
         ]
         ,domain_share => [
@@ -2240,7 +2240,7 @@ sub _sql_create_tables($self) {
                 ,list_command => 'varchar(128) not null'
                 ,list_filter => 'varchar(128) not null'
                 ,template_args => 'varchar(255) not null'
-                ,devices => 'TEXT'
+                ,devices_node => 'TEXT'
                 ,enabled => "integer NOT NULL default 1"
                 ,'date_changed'
                     => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
@@ -2271,6 +2271,7 @@ sub _sql_create_tables($self) {
                 ,id_vm => 'integer NOT NULL references `vms`(`id`) ON DELETE CASCADE'
                 ,id_domain => 'integer NOT NULL references `domains`(`id`) ON DELETE CASCADE'
                 ,name => 'varchar(255)'
+                ,'time_changed' => 'integer'
             }
         ]
         ,[
@@ -4570,7 +4571,7 @@ sub _cmd_list_host_devices($self, $request) {
         $id_host_device
     );
 
-    $hd->list_devices;
+    my %list= $hd->list_devices_nodes;
 
 }
 
@@ -5840,7 +5841,7 @@ sub _cmd_list_cpu_models($self, $request) {
     my $info = $domain->get_info();
     my $vm = $domain->_vm->vm;
 
-    my @out = $vm->get_cpu_model_names('x86_64');
+    my @out = $domain->_vm->get_cpu_model_names('x86_64');
     $request->output(encode_json(\@out));
 }
 

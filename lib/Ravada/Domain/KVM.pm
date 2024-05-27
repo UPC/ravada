@@ -3671,11 +3671,21 @@ sub _validate_xml($self, $doc) {
     }
 }
 
+sub _fix_uuid($self, $doc) {
+    my ($uuid) = $doc->findnodes("/domain/uuid/text()");
+    confess "I cant'find /domain/uuid in ".$self->name if !$uuid;
+
+    $uuid->setData($self->domain->get_uuid_string);
+
+}
+
 sub reload_config($self, $doc) {
     if (!ref($doc)) {
         $doc = XML::LibXML->load_xml(string => $doc);
     }
     $self->_validate_xml($doc) if $self->_vm->vm->get_major_version >= 4;
+
+    $self->_fix_uuid($doc);
 
     my $new_domain;
 
@@ -3955,6 +3965,7 @@ sub _xml_equal_hostdev($doc1, $doc2) {
 
     $doc1 =~ s/\n//g;
     $doc2 =~ s/\n//g;
+
     return 1 if $doc1 eq $doc2;
 
     my $parser = XML::LibXML->new() or die $!;

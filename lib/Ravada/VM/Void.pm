@@ -804,6 +804,9 @@ sub active_storage_pool($self, $name, $value) {
 
     $self->write_file($file_sp, Dump( \@list));
 }
+sub get_cpu_model_names($self,$arch='x86_64') {
+    return qw(486 qemu32 qemu64);
+}
 
 sub has_networking { return 1 };
 

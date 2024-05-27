@@ -193,7 +193,10 @@ sub config_host_devices($type, $die=1) {
 
     die "Error loading $FILE_CONFIG_HOST_DEVICES $@" if $@;
 
-    die "Error: no host devices config in $FILE_CONFIG_HOST_DEVICES for $type"
+    $type = lc($type);
+    $type = 'usb' if $type =~ /usb/i;
+    $type = 'pci' if $type =~ /pci/i;
+    confess "Error: no host devices config in $FILE_CONFIG_HOST_DEVICES for $type"
     if ( !exists $config->{$type} || !$config->{$type} ) && $die;
     return $config->{$type};
 }
@@ -2223,7 +2226,7 @@ sub start_node($node) {
 
     for my $try ( 1 .. 3) {
         my $is_active;
-        for ( 1 .. 60 ) {
+        for ( 1 .. 90 ) {
             eval {
                 $node->disconnect;
                 $node->clear_netssh();
@@ -2273,11 +2276,13 @@ sub start_node($node) {
         $node->is_active(1);
         $node->enabled(1);
         $node2 = Ravada::VM->open(id => $node->id);
-        last if $node2->is_active(1) && $node2->ip && $node2->_ssh;
-        diag("Waiting for node ".$node2->name." active ... $_")  if !($_ % 10);
-        $node2->disconnect();
-        $node2->connect();
-        $node2->clear_netssh();
+        if ($node2) {
+            last if $node2->is_active(1) && $node2->ip && $node2->_ssh;
+            diag("Waiting for node ".$node2->name." active ... $_")  if !($_ % 10);
+            $node2->disconnect();
+            $node2->connect();
+            $node2->clear_netssh();
+        }
         sleep 1;
     }
     eval { $node2->run_command("hwclock","--hctosys") };

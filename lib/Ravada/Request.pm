@@ -1824,6 +1824,59 @@ sub redo($self) {
     $sth->execute($self->id);
 }
 
+=head2 remove
+
+Remove all requests that comply with the conditions
+
+=cut
+
+sub remove($status, %args) {
+    my $sth = _dbh->prepare(
+        "SELECT * FROM requests where status = ? "
+    );
+    $sth->execute($status);
+
+    my $sth_del = _dbh->prepare("DELETE FROM requests where id=?");
+
+    while ( my $row = $sth->fetchrow_hashref ) {
+        my $req_args = {};
+
+        eval {
+        $req_args = decode_json($row->{args}) if $row->{args};
+        };
+        warn "Warning: $@ ".$row->{args}
+        ."\n".Dumper($row) if $@;
+
+        next if $row->{status} ne $status;
+        delete $req_args->{uid};
+        next if scalar(keys%args) != scalar(keys(%$req_args));
+
+        my $found = 1;
+        for my $key (keys %$req_args) {
+
+            next if exists $args{$key}
+            && !defined $args{$key} && !defined $req_args->{$key};
+
+            $found=0 if
+            !exists $args{$key} ||
+            $args{$key} ne $req_args->{$key};
+        }
+        next if !$found;
+
+        for my $key (keys %args) {
+            next if exists $req_args->{$key}
+            && !defined $args{$key} && !defined $req_args->{$key};
+
+            $found=0 if
+            !exists $req_args->{$key} ||
+            $args{$key} ne $req_args->{$key};
+        }
+        next if !$found;
+
+        $sth_del->execute($row->{id});
+    }
+}
+
 sub AUTOLOAD {
     my $self = shift;
 
