@@ -1822,6 +1822,12 @@ sub redo($self) {
     $sth->execute($self->id);
 }
 
+=head2 remove
+
+Remove all requests that comply with the conditions
+
+=cut
+
 sub remove($status, %args) {
     my $sth = _dbh->prepare(
         "SELECT * FROM requests where status = ? "
