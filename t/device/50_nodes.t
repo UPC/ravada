@@ -94,6 +94,7 @@ sub _create_host_devices($node,$number, $type=undef) {
     my ($first) = $templates->[0];
     if ($type) {
         ($first) = grep { $_->{name} =~ /$type/i } @$templates;
+        return if !$first && $type && $vm->type eq 'Void';
         die "Error no template $type found in ".Dumper($templates) if !$first;
     }
 
@@ -614,7 +615,9 @@ for my $vm_name (vm_names() ) {
         #        TODO: volatile clones
         #        test_devices_v2([$vm,$node1,$node2],[1,1,1],1);
 
-        test_devices_v2([$vm,$node1,$node2],[1,1,1], undef, 'pci');
+        if ($vm->type eq 'KVM') {
+            test_devices_v2([$vm,$node1,$node2],[1,1,1], undef, 'pci');
+        }
 
         test_devices_v2([$vm,$node1,$node2],[1,1,1]);
         test_devices_v2([$vm,$node1,$node2],[1,3,1]);

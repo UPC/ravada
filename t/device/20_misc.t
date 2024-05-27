@@ -216,6 +216,10 @@ EOT
 
     my $domain = create_domain($vm);
     my $xml_config = XML::LibXML->load_xml(string => $config);
+
+    my ($name) = $xml_config->findnodes("/domain/name/text()");
+
+    $name->setData($domain->name);
     $domain->reload_config($xml_config);
 
     $domain->remove_config_node("/domain/devices/hostdev", $content, $xml_config);
