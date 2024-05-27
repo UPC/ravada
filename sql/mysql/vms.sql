@@ -6,5 +6,5 @@ create table vms (
     `default_storage` varchar(64) DEFAULT 'default',
     `security` varchar(20) default null,
     `is_active` int default 0,
-    PRIMARY KEY (`id`),
+    PRIMARY KEY (`id`)
 );

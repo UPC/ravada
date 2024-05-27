@@ -2106,7 +2106,6 @@ sub _create_table {
     my $sql = join " ",<$in>;
     close $in;
 
-    warn $sql;
     $CONNECTOR->dbh->do($sql);
     return 1;
 }
