@@ -1832,7 +1832,6 @@ sub remove($status, %args) {
 
     while ( my $row = $sth->fetchrow_hashref ) {
         my $req_args = {};
-        delete $req_args->{uid};
 
         eval {
         $req_args = decode_json($row->{args}) if $row->{args};
@@ -1840,10 +1839,12 @@ sub remove($status, %args) {
         warn "Warning: $@ ".$row->{args}
         ."\n".Dumper($row) if $@;
 
+        next if $row->{status} ne $status;
+        delete $req_args->{uid};
         next if scalar(keys%args) != scalar(keys(%$req_args));
 
         my $found = 1;
-        for my $key (%$req_args) {
+        for my $key (keys %$req_args) {
 
             next if exists $args{$key}
             && !defined $args{$key} && !defined $req_args->{$key};
@@ -1854,7 +1855,7 @@ sub remove($status, %args) {
         }
         next if !$found;
 
-        for my $key (%args) {
+        for my $key (keys %args) {
             next if exists $req_args->{$key}
             && !defined $args{$key} && !defined $req_args->{$key};
 

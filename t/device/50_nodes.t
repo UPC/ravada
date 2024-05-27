@@ -96,7 +96,6 @@ sub _create_host_devices($node,$number, $type=undef) {
         ($first) = grep { $_->{name} =~ /$type/i } @$templates;
         die "Error no template $type found in ".Dumper($templates) if !$first;
     }
-    diag($first->{name});
 
     $vm->add_host_device(template => $first->{name});
 
@@ -207,7 +206,7 @@ sub test_assign_v2($hd, $node, $number, $volatile=0) {
         $base->set_base_vm(id_vm => $curr_node->id, user => user_admin);
     }
 
-    wait_request();
+    wait_request(debug=>0);
     my %found;
     my %dupe;
     my $n_expected = 0;
