@@ -65,7 +65,14 @@ This is from an Ubuntu server:
 
 ::
 
-    sudo apt install openssh-server libvirt-clients libvirt-daemon libvirt-daemon-system qemu-kvm rsync
+    sudo apt install openssh-server libvirt-clients libvirt-daemon libvirt-daemon-system qemu-kvm rsync iptstate
+
+
+These package should be installed but make sure they are:
+
+::
+
+    sudo apt install file
 
 It is possible to have nodes with heterogeneous operative systems: different Ubuntus,
 Debians, even RedHats or Fedoras can be added, though it should be easier if all of
