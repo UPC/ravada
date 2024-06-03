@@ -166,6 +166,7 @@ our %VALID_ARG = (
         ,spinoff_disks => 2
     }
     ,update_iso_urls => { uid => 1 }
+    ,update_iso_releases => { uid => 1}
     ,list_unused_volumes => {uid => 1, id_vm => 1, start => 2, limit => 2 }
     ,remove_files => { uid => 1, id_vm => 1, files => 1 }
     ,move_volume => { uid => 1, id_domain => 1, volume => 1, storage => 1 }

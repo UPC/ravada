@@ -1569,7 +1569,8 @@ sub _search_iso($self, $id_iso, $file_iso=undef) {
 
 sub _download($self, $url) {
     $url =~ s{(http://.*)//(.*)}{$1/$2};
-    if ($url =~ m{[^*]}) {
+    warn $url;
+    if ($url =~ m{[\^*]}) {
         my @found = $self->_search_url_file($url);
         die "Error: URL not found '$url'" if !scalar @found;
         $url = $found[-1];
@@ -1669,9 +1670,11 @@ sub _cache_filename($url) {
     $file =~ tr{/:}{_-};
     $file =~ tr{a-zA-Z0-9_-}{_}c;
     $file =~ s/__+/_/g;
+    $file =~ tr{//}{/};
+    $file =~ s{^/(.*)}{$1};
 
     my ($user) = getpwuid($>);
-    my $dir = "/var/tmp/$user/ravada_cache/";
+    my $dir = "/var/tmp/$user/ravada_cache";
     make_path($dir)    if ! -e $dir;
     return "$dir/$file";
 }

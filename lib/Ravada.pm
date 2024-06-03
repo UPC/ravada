@@ -894,6 +894,19 @@ sub _update_isos {
 
 }
 
+sub _cmd_update_iso_releases($self, $request) {
+    my $data = {};
+    $self->_scheduled_fedora_releases($data);
+    $self->_scheduled_ubuntu_releases($data);
+
+    my $table = 'iso_images';
+    my $field = 'name';
+
+    $self->_update_table($table, $field, $data);
+
+    $request->output(encode_json($data));
+}
+
 sub _cmd_update_iso_urls($self, $request) {
 
     my $uid = $request->args('uid');
@@ -940,9 +953,59 @@ sub _update_table_isos_url($self, $data) {
     }
 }
 
+sub _scheduled_ubuntu_releases($self,$data) {
+    my $vm = $self->search_vm('KVM') or return; # TODO move ISO downloads off KVM
+
+    my @now = localtime(time);
+    my $year = $now[5]+1900;
+    $year-- if $year % 2;
+    my ($yy) = $year =~ /..(..)/;
+    my $url= "http://releases.ubuntu.com/$yy.04";
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM iso_images "
+        ." WHERE url=?"
+    );
+    $sth->execute($url);
+    my ($id) = $sth->fetchrow;
+    return if $id;
+
+    my $dom = $vm->_ua_get($url);
+    if ( !$dom ) {
+        return;
+    }
+
+    my $file_re = "^ubuntu-$yy.04.*-desktop-amd64.iso";
+
+    my ($found) = $vm->_search_url_file($url, $file_re);
+    return if !$found;
+
+    my $titles = $dom->find('title');
+    my ($title_dom) = @$titles;
+    my $title = $title_dom->text();
+
+    my ($name) = $title =~ /\((.*)\)/;
+    my $short_name = lc($name);
+    $short_name =~ s/ /_/g;
+    $data->{$short_name} = {
+                    name => "Ubuntu $yy 04 $name"
+            ,description => "Ubuntu $yy.04 $name 64 bits"
+                   ,arch => 'x86_64'
+                    ,xml => 'focal_fossa-amd64.xml'
+             ,xml_volume => 'focal_fossa64-volume.xml'
+                    ,url => $url
+                ,file_re => $file_re
+                ,sha256_url => '$url/SHA256SUMS'
+          ,min_disk_size => '14'
+          ,min_ram => 4
+            ,options => encode_json({ machine => 'pc-q35', bios => 'UEFI' })
+                   ,arch => 'x86_64'
+
+    };
+
+}
+
 sub _scheduled_fedora_releases($self,$data) {
 
-    return if !exists $VALID_VM{KVM} ||!$VALID_VM{KVM} || $>;
+#    return if !exists $VALID_VM{KVM} ||!$VALID_VM{KVM} || $>;
     my $vm = $self->search_vm('KVM') or return; # TODO move ISO downloads off KVM
 
     my @now = localtime(time);
@@ -957,6 +1020,10 @@ sub _scheduled_fedora_releases($self,$data) {
 
     my $release = 27;
 
+    my $sth_old = $CONNECTOR->dbh->prepare("SELECT id FROM iso_images "
+        ." WHERE url like ?"
+    );
+
     for my $y ( 2018 .. $year ) {
         for my $m ( 5, 11 ) {
             return if $y == $year && $m>$month;
@@ -966,6 +1033,10 @@ sub _scheduled_fedora_releases($self,$data) {
 
             my $url = $url_archive;
             $url = $url_current if $y>=$year-1;
+
+            $sth_old->execute("\%fedora\%releases/$release\%");
+            my ($found_old) = $sth_old->fetchrow();
+            next if $found_old;
 
             my $url_file = $url.$release
                     .'/Workstation/x86_64/iso/Fedora-Workstation-.*-x86_64-'.$release
@@ -6510,6 +6581,7 @@ sub _req_method {
     ,remove_files => \&_cmd_remove_files
     ,move_volume => \&_cmd_move_volume
     ,update_iso_urls => \&_cmd_update_iso_urls
+    ,update_iso_releases => \&_cmd_update_iso_releases
 
     ,list_networks => \&_cmd_list_virtual_networks
     ,new_network => \&_cmd_new_network
