@@ -565,7 +565,11 @@ sub _around_create_domain {
         $domain->_chroot_filesystems();
     }
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
-    $domain->is_volatile(1)     if $user->is_temporary() || $volatile;
+
+    $domain->is_volatile(1) if $user->is_temporary() || $volatile;
+
+    $domain->is_volatile(1) if $id_base && $base->volatile_clones()
+    && (!defined $volatile || $volatile);
 
     my @start_args = ( user => $owner );
     push @start_args, (remote_ip => $remote_ip) if $remote_ip;
@@ -580,6 +584,7 @@ sub _around_create_domain {
     $domain->display($owner)    if $domain->is_active;
 
     $domain->is_pool(1) if $add_to_pool;
+
 
     return $domain;
 }

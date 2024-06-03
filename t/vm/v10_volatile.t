@@ -22,7 +22,7 @@ init();
 
 my $IP = "10.0.0.1";
 my $NETWORK = $IP;
-$NETWORK =~ s{(.*\.).*}{$1.0/24};
+$NETWORK =~ s{(.*)\..*}{$1.0/24};
 
 ################################################################################
 
@@ -143,11 +143,14 @@ sub test_volatile {
         is($user->is_temporary,1);
         $user_id = $user->id;
 
-        my $clone = $base->clone(
-            user => $user
+        my $req = Ravada::Request->clone(
+            uid => $user->id
+            , id_domain => $base->id
             , name => $name
+            ,remote_ip => '192.0.9.1/32'
         );
-        $clone->start($user)                if !$clone->is_active;
+        wait_request(debug => 0);
+        my $clone = $vm->search_domain($name);
         is($clone->is_active,1,"[$vm_name] Expecting clone active");
 
         like($clone->spice_password,qr{..+},"[$vm_name] ".$clone->name)
