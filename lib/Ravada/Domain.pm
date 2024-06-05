@@ -7248,8 +7248,8 @@ sub list_host_devices_attached($self) {
             $sth_locked->execute($self->id, $row->{name});
             my ($is_locked) = $sth_locked->fetchrow();
             $row->{is_locked} = 1 if $is_locked;
-            push @found,($row);
         }
+        push @found,($row);
     }
 
     return @found;

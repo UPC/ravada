@@ -289,6 +289,21 @@ sub list_domains_with_device($self) {
 sub _dettach_in_domains($self) {
     for my $id_domain ( $self->list_domains_with_device() ) {
         my $domain = Ravada::Domain->open($id_domain);
+        if (!$domain) {
+            my $sth = $$CONNECTOR->dbh->prepare(
+                "DELETE FROM host_devices_domain_locked "
+                ." WHERE id_domain=?"
+            );
+            $sth->execute($id_domain);
+
+            $sth = $$CONNECTOR->dbh->prepare(
+                "DELETE FROM host_devices_domain "
+                ." WHERE id_host_device=?"
+                ."   AND id_domain=?"
+            );
+            $sth->execute($self->id, $id_domain);
+            next;
+        }
         $domain->_dettach_host_device($self) if !$domain->is_active();
     }
 }
