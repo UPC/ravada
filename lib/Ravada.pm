@@ -4565,13 +4565,29 @@ sub _cmd_create{
 }
 
 sub _cmd_list_host_devices($self, $request) {
-    my $id_host_device = $request->args('id_host_device');
+    my $id_host_device = $request->defined_arg('id_host_device');
 
-    my $hd = Ravada::HostDevice->search_by_id(
-        $id_host_device
-    );
+    my @id_hd;
 
-    my %list= $hd->list_devices_nodes;
+    if ( $id_host_device ) {
+        @id_hd = ($id_host_device);
+    } else {
+        my $sth = $CONNECTOR->dbh->prepare(
+            "SELECT id,name FROM host_devices "
+            ." WHERE enabled=1"
+        );
+        $sth->execute;
+        while ( my ($id_hd, $name) = $sth->fetchrow ) {
+            push @id_hd , ($id_hd );
+        }
+    }
+
+    for my $id_hd (@id_hd) {
+        my $hd = Ravada::HostDevice->search_by_id( $id_hd);
+        next if !$hd;
+        eval { $hd->list_devices_nodes };
+        warn $@ if $@;
+    }
 
 }
 
