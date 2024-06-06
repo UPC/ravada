@@ -3986,6 +3986,7 @@ sub process_requests {
 
     for my $req (sort { $a->priority <=> $b->priority } @reqs) {
         next if $req eq 'refresh_vms' && scalar@reqs > 2;
+        next if $req eq 'refresh_vms' && $self->_processing_start();
         next if !$req->id;
         next if $req->status() =~ /^(done|working)$/;
 
@@ -4018,6 +4019,17 @@ sub process_requests {
         if ($DEBUG || $debug ) && @reqs2;
 
     return scalar(@reqs);
+}
+
+sub _processing_start($self) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM requests WHERE "
+        ." ( command = 'start' OR command='refresh_vms' OR command='clone')"
+        ." AND status = 'working'"
+    );
+    $sth->execute();
+    my ($id) = $sth->fetchrow;
+    return $id;
 }
 
 sub _date_now($seconds = 0) {
@@ -6046,7 +6058,8 @@ sub _refresh_active_domains($self, $request=undef) {
                 next if $@ =~ /not found/;
                 warn $@;
             }
-            $self->_refresh_active_domain($domain, \%active_domain) if $domain;
+            $self->_refresh_active_domain($domain, \%active_domain)
+            if $domain && !$domain->is_locked;
          } else {
             my @domains;
             eval { @domains = $self->list_domains_data };
@@ -6062,7 +6075,7 @@ sub _refresh_active_domains($self, $request=undef) {
                     next if $@ =~ /not found/;
                     warn $@;
                 }
-                next if !$domain;
+                next if !$domain || $domain->is_locked;
                 $self->_refresh_active_domain($domain, \%active_domain);
                 $self->_remove_unnecessary_downs($domain) if !$domain->is_active;
                 last if !$CAN_FORK && time - $t0 > 10;

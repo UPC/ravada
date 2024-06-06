@@ -99,19 +99,18 @@ sub list_devices_nodes($self) {
     my %devices;
     for my $ndata (@nodes) {
         if (!$ndata->[2] || !$ndata->[3]) {
-            $devices{$ndata->[1]}=[];
+            $devices{$ndata->[0]}=[];
             next;
         }
         my $node = Ravada::VM->open($ndata->[0]);
-        next if !$node || !$node->vm;
         my @current_devs;
         eval {
             @current_devs = $self->list_devices($node->id)
-                if $node->is_active;
+                if $node && $node->is_active;
         };
         warn $@ if $@;
         #        push @devices, @current_devs;
-        $devices{$node->id}=\@current_devs;
+        $devices{$ndata->[0]}=\@current_devs;
     }
 
     $self->_data( devices_node => \%devices );

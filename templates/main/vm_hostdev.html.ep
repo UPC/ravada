@@ -13,7 +13,7 @@
     ng-click="toggle_host_device(hdev.id)"/> <b>{{hdev.name}}</b>
         <ul>
             <li ng-repeat="node in hdev._nodes">
-                <span ng-show="nodes_by_id.length>1">{{nodes_by_id[node]}}</span>
+                <span><b>{{nodes_by_id[node]}}</b></span>
                 <ul>
                     <li ng-show="hdev.devices_node[node].length==0">
                         <%=l 'No devices found'%>

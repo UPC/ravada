@@ -4134,6 +4134,14 @@ sub _remove_temporary_machine($self) {
 
     return if !$self->is_volatile;
 
+    my $id_req_locked = $self->is_locked();
+    my $req;
+    $req = Ravada::Request->open($id_req_locked) if $id_req_locked;
+    my $command = '';
+    $command = $req->command if $req;
+
+    warn $self->name." ".$self->_data('date_changed')." $id_req_locked $command";
+
     my $owner;
     $owner= Ravada::Auth::SQL->search_by_id($self->id_owner)    if $self->is_known();
 

@@ -420,12 +420,12 @@ sub _connect_ssh($self) {
         ,kill_ssh_on_timeout => 1
             );
             last if !$ssh->error;
-            warn "RETRYING ssh ".$self->host." ".join(" ",$ssh->error);
+            # warn "RETRYING ssh ".$self->host." ".join(" ",$ssh->error);
             sleep 1;
         }
         if ( $ssh->error ) {
             $self->_cached_active(0);
-            warn "Error connecting to ".$self->host." : ".$ssh->error();
+            # warn "Error connecting to ".$self->host." : ".$ssh->error();
             return;
         }
     }
