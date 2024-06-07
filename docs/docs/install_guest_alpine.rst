@@ -128,8 +128,19 @@ Once it is installed reboot to continue setting this virtual machine.
 Installing more software
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-You should at least install these applications and start udev:
+You should at least install ACPI, udev and qemu-guest agent.
 
+To do so, community repositories must be enabled. Uncomment the
+community line from /etc/apk/repositories
+
+::
+
+    #/media/cdrom/apks
+    http://dl-cdn.alpinelinux.org/alpine/v3.16/main
+    http://dl-cdn.alpinelinux.org/alpine/v3.16/community
+    #http://dl-cdn.alpinelinux.org/alpine/edge/main
+    #http://dl-cdn.alpinelinux.org/alpine/edge/community
+    #http://dl-cdn.alpinelinux.org/alpine/edge/testing
 
 .. prompt:: bash #
 
