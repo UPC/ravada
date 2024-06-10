@@ -2696,7 +2696,7 @@ sub _sql_insert_defaults($self){
             ,{
                 id_parent => $id_backend
                 ,name => 'time_zone'
-                ,value => _default_time_zone()
+                ,value => Ravada::Utils::default_time_zone()
             }
             ,{
                 id_parent => $id_backend
@@ -2781,26 +2781,6 @@ sub _sql_insert_defaults($self){
             $self->_sql_insert_values($table, $entry);
         }
     }
-}
-
-sub _default_time_zone() {
-    return $ENV{TZ} if exists $ENV{TZ};
-    my $timedatectl = `which timedatectl`;
-    chomp $timedatectl;
-    if (!$timedatectl) {
-        warn "Warning: No time zone found, checked TZ, missing timedatectl";
-        return 'UTC';
-    }
-    my @cmd = ( $timedatectl, '-p', 'Timezone','show');
-    my ($in, $out, $err);
-    run3(\@cmd,\$in,\$out,\$err);
-    my ($tz) = $out =~ /=(.*)/;
-    chomp $out;
-    if (!$tz) {
-        warn "Warning: No timezone found in @cmd\n$out";
-        return 'UTC'
-    }
-    return $tz;
 }
 
 sub _sql_insert_values($self, $table, $entry) {
@@ -4271,6 +4251,23 @@ sub list_vm_types {
     return keys %type;
 }
 
+sub _stop_refresh($self) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM requests where status='working' "
+        ." AND ( command like ? ) "
+    );
+    $sth->execute('refresh%');
+    while ( my ($id) = $sth->fetchrow ) {
+        warn "stopping $id";
+        eval {
+            my $req = Ravada::Request->open($id);
+            warn " [$id] ".$req->command." stopping";
+            $req->stop;
+        };
+
+    }
+}
+
 sub _execute {
     my $self = shift;
     my $request = shift;
@@ -4290,6 +4287,10 @@ sub _execute {
     if ($dont_fork || !$CAN_FORK) {
         $self->_do_execute_command($sub, $request);
         return;
+    }
+
+    if ($request->command eq 'clone' || $request->command eq 'start') {
+        $self->_stop_refresh();
     }
 
     $self->_wait_pids();
@@ -4847,10 +4848,30 @@ sub _cmd_clone($self, $request) {
 
     $args->{options}->{network} = $net_bundle->{name} if $net_bundle;
 
-    my $clone = $domain->clone(
-        name => $name
-        ,%$args
-    );
+    my $clone = $self->search_domain($name);
+    die "Error: virtual machine ".$name." already exists "
+    if $clone && $clone->id_owner != $user->id;
+
+    if (!$clone) {
+        my ($clone0) = grep { $_->{id_owner}== $user->id } $domain->clones;
+        $clone = Ravada::Domain->open($clone0->{id})
+        if $clone0->{status} && $clone0->{status} eq 'active';
+    }
+    if (!$clone) {
+        my $volatile = $domain->volatile_clones;
+        if (defined $args->{volatile}) {
+            $volatile = $args->{volatile};
+        }
+        if ($volatile) {
+            my $extra = Ravada::Utils::random_name();
+            $name .= "-".$extra;
+            $args->{alias} .= "-".$extra;
+        }
+        $clone = $domain->clone(
+            name => $name
+            ,%$args
+        )
+    }
 
     $request->id_domain($clone->id) if $clone;
     my $req_next = $request;
@@ -5983,7 +6004,7 @@ sub _cmd_migrate($self, $request) {
     if $request->defined_arg('remote_ip');
 
     $domain->start(user => $user, @remote_ip)
-    if $request->defined_arg('start');
+    if $request->defined_arg('start') && $domain->_vm->id == $node->id;
 
 }
 
@@ -6076,6 +6097,14 @@ sub _refresh_active_domains($self, $request=undef) {
                     warn $@;
                 }
                 next if !$domain || $domain->is_locked;
+
+                my $date = DateTime::Format::DateParse->parse_datetime( $domain->_data('date_status_change'));
+
+                my $now = DateTime->from_epoch( epoch => time()-300 , time_zone => Ravada::Utils::TZ_SYSTEM());
+
+                warn $domain->name.' '.$date->ymd." ".$date->hms." - ".$now->ymd." ".$now->hms." = ".DateTime->compare($date, $now) if $domain->name =~/-f3/;
+                next if DateTime->compare($date, $now) <1;
+
                 $self->_refresh_active_domain($domain, \%active_domain);
                 $self->_remove_unnecessary_downs($domain) if !$domain->is_active;
                 last if !$CAN_FORK && time - $t0 > 10;
@@ -6309,16 +6338,20 @@ sub _remove_unnecessary_downs($self, $domain) {
 
 sub _refresh_volatile_domains($self) {
    my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id, name, id_vm, id_owner, vm FROM domains WHERE is_volatile=1"
+        "SELECT id, name, id_vm, id_owner, vm FROM domains WHERE is_volatile=1 "
+        ." AND date_changed < ? "
     );
-    $sth->execute();
+    $sth->execute(Ravada::Utils::date_now(-120));
     while ( my ($id_domain, $name, $id_vm, $id_owner, $type) = $sth->fetchrow ) {
         my $domain;
         eval { $domain = Ravada::Domain->open(id => $id_domain, _force => 1) } ;
+        next if $domain && $domain->is_locked;
         if ( !$domain || $domain->status eq 'down' || !$domain->is_active) {
             if ($domain) {
-                $domain->_post_shutdown(user => $USER_DAEMON);
-                $domain->remove($USER_DAEMON);
+                Ravada::Request->shutdown_domain(
+                    uid => $USER_DAEMON->id
+                    ,id_domain => $id_domain
+                );
             } else {
                 my $user;
                 eval { $user = Ravada::Auth::SQL->search_by_id($id_owner) };
@@ -6328,14 +6361,6 @@ sub _refresh_volatile_domains($self) {
                     $user->remove();
                 }
             }
-            my $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE id=?");
-            $sth_del->execute($id_domain);
-            $sth_del->finish;
-
-            $sth_del = $CONNECTOR->dbh->prepare("DELETE FROM requests where id_domain=?");
-            $sth_del->execute($id_domain);
-            $sth_del->finish;
-            Ravada::Domain::_remove_domain_data_db($id_domain, $type);
         }
     }
 }

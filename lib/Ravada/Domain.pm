@@ -363,6 +363,7 @@ sub _around_start($orig, $self, @arg) {
         }
         $$CONNECTOR->disconnect;
         $self->status('starting') if $self->is_known();
+        $self->_vm->_add_instance_db($self->id);
         eval { $self->$orig(%arg) };
         $error = $@;
         last if !$error;
@@ -383,7 +384,7 @@ sub _around_start($orig, $self, @arg) {
         && $error !~ /child process/i
         ;
 
-        if ($error && $self->id_base && !$self->is_local && $self->_vm->enabled) {
+        if ($error && $self->is_known && $self->id_base && !$self->is_local && $self->_vm->enabled) {
             $self->_request_set_base();
             next;
         }
@@ -498,11 +499,12 @@ sub _start_checks($self, @args) {
     }
 
     # if it is a clone ( it is not a base )
-    if ($self->id_base) {
+    my $id_base = $self->id_base;
+    if ($id_base) {
         $self->_check_tmp_volumes();
 #        $self->_set_last_vm(1)
         if ( !$self->is_local
-            && ( !$self->_vm->enabled || !base_in_vm($self->id_base,$self->_vm->id)
+            && ( !$self->_vm->enabled || !base_in_vm($id_base,$self->_vm->id)
                 || !$self->_vm->ping) ) {
             $self->_set_vm($vm_local, 1);
         }
@@ -518,10 +520,10 @@ sub _start_checks($self, @args) {
             if !$self->is_volatile;
         }
         if ( !$self->is_volatile && !$self->_vm->is_local() ) {
-            if (!base_in_vm($self->id_base, $self->_vm->id)) {
+            if (!base_in_vm($id_base, $self->_vm->id)) {
                 my $args = {
                     uid => Ravada::Utils::user_daemon->id
-                    ,id_domain => $self->id_base
+                    ,id_domain => $id_base
                     ,id_vm => $self->_vm->id
                 };
 
@@ -2153,6 +2155,7 @@ sub info($self, $user) {
         ,id_vm => $self->_data('id_vm')
         ,auto_compact => $self->auto_compact
         ,date_changed => $self->_data('date_changed')
+        ,is_volatile => $self->_data('is_volatile')
     };
 
     $info->{alias} = ( $self->_data('alias') or $info->{name} );
@@ -2942,6 +2945,7 @@ sub clone {
     my $alias = delete $args{alias};
     my $options = delete $args{options};
     my $storage = delete $args{storage};
+    my $enable_host_devices = delete $args{enable_host_devices};
 
     confess "ERROR: Unknown args ".join(",",sort keys %args)
         if keys %args;
@@ -2977,6 +2981,8 @@ sub clone {
     push @args_copy, ( add_to_pool => $add_to_pool) if defined $add_to_pool;
     push @args_copy, ( storage => $storage)     if $storage;
     push @args_copy, ( options => $options)     if $options;
+    push @args_copy, ( enable_host_devices => $enable_host_devices)
+        if defined $enable_host_devices;
 
     if ( $self->volatile_clones && !defined $volatile ) {
         $volatile = 1;
@@ -4129,6 +4135,22 @@ sub _test_iptables_jump {
     warn "Expecting 0 or 1 RAVADA iptables jump, got: "    .($count or 0);
 }
 
+sub _is_creating($self) {
+    return if !$self->is_known();
+
+    my $id_base = $self->id_base();
+    return if !$id_base;
+
+    my $sth = $self->_dbh->prepare(
+        "SELECT id,command,args FROM requests WHERE id_domain=? "
+        ." AND status='working' "
+        ." AND command = 'clone' "
+
+    );
+    $sth->execute($id_base);
+    my ($found, $command, $args) = $sth->fetchrow;
+    return $found;
+}
 
 sub _remove_temporary_machine($self) {
 
@@ -4140,7 +4162,23 @@ sub _remove_temporary_machine($self) {
     my $command = '';
     $command = $req->command if $req;
 
-    warn $self->name." ".$self->_data('date_changed')." $id_req_locked $command";
+    return if $command =~ /(clone|start)/;
+
+    return if $self->_is_creating();
+
+    if ($self->is_known) {
+        warn $self->name." ".$self->_data('date_status_change')." $id_req_locked $command"
+        if $self->name =~ /aztest-/;
+
+        my $date = DateTime::Format::DateParse->parse_datetime( $self->_data('date_changed'));
+
+        my $now = DateTime->from_epoch( epoch => time()-300, time_zone => Ravada::Utils::TZ_SYSTEM());
+
+        warn $date->hms." ".$now->hms." ".DateTime->compare($date, $now)
+        if $self->name =~ /aztest-/;
+
+        return if DateTime->compare($date,$now) <1;
+    }
 
     my $owner;
     $owner= Ravada::Auth::SQL->search_by_id($self->id_owner)    if $self->is_known();
@@ -5402,7 +5440,7 @@ sub _pre_clone($self,%args) {
     confess "ERROR: Missing user owner of new domain"   if !$user;
 
     for (qw(is_pool start add_to_pool from_pool with_cd volatile id_owner
-        alias storage options)) {
+        alias storage options enable_host_devices)) {
         delete $args{$_};
     }
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)   if keys %args;

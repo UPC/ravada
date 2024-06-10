@@ -9,7 +9,7 @@ Ravada::Request - Requests library for Ravada
 
 =cut
 
-use Carp qw(confess);
+use Carp qw(confess cluck);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
 use JSON::XS;
@@ -107,6 +107,7 @@ our %VALID_ARG = (
                 ,with_cd => 2
                 ,storage => 2
                 ,options => 2
+                ,enable_host_devices => 2
     }
     ,change_owner => {uid => 1, id_domain => 1}
     ,add_hardware => {uid => 1, id_domain => 1, name => 1, number => 2, data => 2 }
@@ -1427,6 +1428,8 @@ sub set_base_vm {
 
     my $self = {};
     bless ($self, $class);
+
+    cluck(Dumper($args));
 
     return $self->_new_request(
             command => 'set_base_vm'
