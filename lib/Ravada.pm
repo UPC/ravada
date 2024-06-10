@@ -2711,7 +2711,7 @@ sub _sql_insert_defaults($self){
             ,{
                 id_parent => $id_backend
                 ,name => 'delay_migrate_back'
-                ,value => 600
+                ,value => 60 * 60 * 24
             }
             ,{
                 id_parent => $id_backend
@@ -2978,6 +2978,7 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('bases_vm','id_vm','int not null references `vms` (`id`) ON DELETE CASCADE');
     $self->_upgrade_table('bases_vm','id_domain','int not null references `domains` (`id`) ON DELETE CASCADE');
+    $self->_upgrade_table('bases_vm','id_request','integer');
 
     $self->_upgrade_table('domain_instances','id_vm','int not null references `vms` (`id`) ON DELETE CASCADE');
 

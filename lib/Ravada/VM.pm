@@ -2063,7 +2063,7 @@ sub balance_vm($self, $uid, $base=undef, $id_domain=undef, $host_devices=undef) 
         confess "Error: base is not an object ".Dumper($base)
         if !ref($base);
 
-        @vms = $base->list_vms($host_devices);
+        @vms = $base->list_vms($host_devices,1);
     } else {
         @vms = $self->list_nodes();
     }
