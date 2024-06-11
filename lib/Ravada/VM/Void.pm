@@ -107,13 +107,13 @@ sub create_domain {
                                            , _vm => $self
                                            ,storage => $storage
     );
-    my ($out, $err) = $self->run_command("/usr/bin/test",
-         "-e ".$domain->_config_file." && echo 1" );
-    chomp $out;
 
-    return $domain if $out && exists $args{config};
+    my $file_exists = $self->file_exists($domain->_config_file);
 
-    die "Error: Domain $args{name} already exists " if $out;
+    return $domain if $file_exists && exists $args{config};
+
+    die "Error: Domain $args{name} already exists in ".$self->name
+    ." ".$domain->_config_file if $file_exists;
 
     $domain->_set_default_info($listen_ip, $network);
     $domain->_store( autostart => 0 );

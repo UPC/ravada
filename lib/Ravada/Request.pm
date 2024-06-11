@@ -1429,13 +1429,19 @@ sub set_base_vm {
     my $self = {};
     bless ($self, $class);
 
-    cluck(Dumper($args));
-
-    return $self->_new_request(
+    my $req = $self->_new_request(
             command => 'set_base_vm'
              , args => $args
     );
 
+    my $id_domain = $args->{id_domain};
+    my $domain = Ravada::Front::Domain->open($id_domain);
+    my $id_vm = $args->{id_vm};
+    $id_vm = $args->{id_node} if exists $args->{id_node} && $args->{id_node};
+
+    $domain->_set_base_vm_db($id_vm, $args->{value}, $req->id);
+
+    return $req;
 }
 
 =head2 remove_base_vm
