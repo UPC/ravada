@@ -616,6 +616,7 @@ sub file_exists($self, $file) {
 
 sub _file_exists_remote($self, $file) {
     $file = $self->_follow_link($file) unless $file =~ /which$/;
+    return if !$self->vm;
     for my $pool ($self->vm->list_all_storage_pools ) {
         next if !$pool->is_active;
         $self->_wait_storage( sub { $pool->refresh() } );
@@ -809,6 +810,7 @@ sub search_domain($self, $name, $force=undef) {
     }
 
     my $dom;
+    return if !$self->vm;
     eval { $dom = $self->vm->get_domain_by_name($name); };
     my $error = $@;
     return if $error =~  /error code: 42,/ && !$force;

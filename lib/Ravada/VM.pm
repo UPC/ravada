@@ -46,7 +46,7 @@ our $MIN_DISK_MB = 1024 * 1024;
 our $CACHE_TIMEOUT = 60;
 our $FIELD_TIMEOUT = '_data_timeout';
 
-our $TIMEOUT_DOWN_CACHE = 120;
+our $TIMEOUT_DOWN_CACHE = 300;
 
 our %VM; # cache Virtual Manager Connection
 our %SSH;
@@ -207,12 +207,19 @@ sub open {
     } else {
         $args{id} = shift;
     }
+    my $force = delete $args{force};
+
     confess "Error: undefind id in ".Dumper(\%args) if !$args{id};
 
     my $class=ref($proto) || $proto;
 
     my $self = {};
     bless($self, $class);
+
+    if ($force) {
+        _set_by_id($args{id}, 'cached_down' => 0 );
+    }
+
     my $row = $self->_do_select_vm_db( id => $args{id});
     lock_hash(%$row);
     confess "ERROR: I can't find VM id=$args{id}" if !$row || !keys %$row;
@@ -242,7 +249,7 @@ sub open {
         $internal_vm = $vm->vm;
     };
     $VM{$args{id}} = $vm unless $args{readonly} || !$internal_vm;
-    return if $self->is_local && !$internal_vm;
+    return if $vm->is_local && !$internal_vm;
     return $vm;
 
 }
@@ -397,12 +404,12 @@ sub _pre_create_domain {
 
 sub _pre_search_domain($self,@) {
     $self->_connect();
-    die "ERROR: VM ".$self->name." unavailable" if !$self->ping();
+    die "ERROR: VM ".$self->name." unavailable\n" if !$self->ping();
 }
 
 sub _pre_list_domains($self,@) {
     $self->_connect();
-    die "ERROR: VM ".$self->name." unavailable" if !$self->ping();
+    die "ERROR: VM ".$self->name." unavailable\n" if !$self->ping();
 }
 
 sub _connect_ssh($self) {
@@ -419,6 +426,11 @@ sub _connect_ssh($self) {
 
     if (!$ssh || !$ssh->check_master) {
         delete $SSH{$self->host};
+        if ($self->_data('cached_down')
+                && time-$self->_data('cached_down')< $self->timeout_down_cache()) {
+            return;
+        }
+
         for ( 1 .. 3 ) {
             $ssh = Net::OpenSSH->new($self->host
                     ,timeout => 2
@@ -433,6 +445,7 @@ sub _connect_ssh($self) {
         }
         if ( $ssh->error ) {
             $self->_cached_active(0);
+            $self->_data('cached_down' => time);
             warn "Error connecting to ".$self->host." : ".$ssh->error();
             return;
         }
@@ -1071,6 +1084,17 @@ sub _data($self, $field, $value=undef) {
     confess "No field $field in vms"            if !exists$self->{_data}->{$field};
 
     return $self->{_data}->{$field};
+}
+
+sub _set_by_id($id, $field, $value) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+    "UPDATE vms set $field=?"
+    ." WHERE id=?"
+    );
+    $sth->execute($value, $id);
+    $sth->finish;
+
+    return $value;
 }
 
 sub _timed_data_cache($self) {

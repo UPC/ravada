@@ -5753,8 +5753,8 @@ sub _cmd_connect_node($self, $request) {
     my $node;
 
     if ($id_node) {
-        $node = Ravada::VM->open($id_node);
-        $hostname = $node->host;
+        $node = Ravada::VM->open(id => $id_node, force => 1);
+        $hostname = $node->host if $node;
     } else {
         $node = Ravada::VM->open( type => $backend
             , host => $hostname
@@ -5763,7 +5763,7 @@ sub _cmd_connect_node($self, $request) {
     }
 
     die "I can't ping $hostname\n"
-        if ! $node->ping();
+        if !$node || ! $node->ping();
 
     $request->error("Ping ok. Trying to connect to $hostname");
     my ($out, $err);
@@ -5779,7 +5779,10 @@ sub _cmd_connect_node($self, $request) {
         $err .= "\n";
         die $err if $err;
     }
-    $node->connect() && $request->error("Connection OK");
+    $node->connect() && do {
+        $request->error("Connection OK");
+        $node->_data('cached_down' => 0);
+    };
 }
 
 sub _cmd_list_network_interfaces($self, $request) {
@@ -6004,7 +6007,7 @@ sub _refresh_active_vms ($self) {
     my %active_vm;
     for my $vm ($self->list_vms) {
         next if !$vm;
-        if ( !$vm->enabled() || !$vm->is_active ) {
+        if ( !$vm->vm || !$vm->enabled() || !$vm->is_active ) {
             $vm->shutdown_domains();
             $active_vm{$vm->id} = 0;
             $vm->disconnect();
@@ -6039,7 +6042,7 @@ sub _refresh_active_domains($self, $request=undef) {
             my $t0 = time;
             for my $domain_data (sort { $b->{date_changed} cmp $a->{date_changed} }
                                 @domains) {
-                $request->error("checking $domain_data->{name}") if $request;
+                $request->output("checking $domain_data->{name}") if $request;
                 next if $active_domain{$domain_data->{id}};
                 my $domain;
                 eval { $domain = Ravada::Domain->open($domain_data->{id}) };
@@ -6203,6 +6206,7 @@ sub _refresh_disabled_nodes($self, $request = undef ) {
 }
 
 sub _refresh_active_domain($self, $domain, $active_domain) {
+    return if $domain->is_locked();
     $domain->check_status();
 
     return $self->_refresh_hibernated($domain) if $domain->is_hibernated();
@@ -6327,6 +6331,18 @@ sub _cmd_set_base_vm {
     my $id_vm = $request->args('id_vm')         or die "ERROR: Missing id_vm";
     my $id_domain = $request->args('id_domain') or die "ERROR: Missing id_domain";
 
+    eval {
+        $self->_do_cmd_set_base_vm($uid, $id_vm, $id_domain, $value, $request);
+    };
+    my $err = $@;
+    if ($err) {
+        my $domain = Ravada::Front::Domain->open($id_domain);
+        $domain->_set_base_vm_db($id_vm, (!$value or 0), 0);
+        die $err;
+    }
+}
+
+sub _do_cmd_set_base_vm($self, $uid, $id_vm, $id_domain, $value, $request) {
     my $user = Ravada::Auth::SQL->search_by_id($uid);
     my $domain = Ravada::Domain->open($id_domain) or confess "Error: Unknown domain id $id_domain";
 

@@ -5273,8 +5273,7 @@ sub set_base_vm($self, %args) {
     $vm = $node if $node;
     $vm = Ravada::VM->open($id_vm)  if !$vm;
 
-    if ( !$vm ) {
-        $self->_set_base_vm_db($id_vm, !$value, 0);
+    if ( !$vm || !$vm->is_active || !$vm->vm) {
         die "Error: VM ".Ravada::VM::_search_name($id_vm)." not available\n" 
     }
 
