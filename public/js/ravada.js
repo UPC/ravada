@@ -413,6 +413,12 @@
                         $scope.node = response.data;
                     });
             };
+            list_nodes=function() {
+                $http.get('/list_nodes_by_id.json')
+                .then(function(response) {
+                   $scope.nodes_by_id = response.data;
+                });
+            };
 
             var subscribed_extra = false;
             var subscribe_machine_info= function(url) {
@@ -619,6 +625,9 @@
                                     = $scope.showmachine.auto_compact;
                                 load_balance_options();
                                 get_node_info($scope.showmachine.id_vm);
+                                if (is_admin) {
+                                    list_nodes();
+                                }
                                 $http.get('/list_storage_pools/'+$scope.showmachine.type+"?active=1")
                                     .then(function(response) {
                                         $scope.list_storage= response.data;

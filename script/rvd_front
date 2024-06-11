@@ -1178,6 +1178,7 @@ get '/machine/view/(:id).(:type)' => sub {
     my ($domain) = _search_requested_machine($c);
     return access_denied($c)    if !$domain;
 
+    $c->stash(id_base => undef);
     return view_machine($c) if $USER->is_admin
                               || $USER->can_view_all;
 
@@ -3772,6 +3773,12 @@ sub base_id {
 
 sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
 
+    my $enable_host_devices = $c->req->param('enable_host_devices');
+    $enable_host_devices=1 if !defined $enable_host_devices;
+    my @enable_host_devices;
+    @enable_host_devices = ( 'enable_host_devices' => $enable_host_devices );
+
+    my @after_req;
     if ( $RAVADA->domain_exists($name) ) {
         my $domain = $RAVADA->search_domain($name);
         if ( $domain->id_owner == $USER->id
@@ -3794,11 +3801,20 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
             app->log->info($USER->name." start_domain ".$domain->name." from "._remote_ip($c))
             if $CONFIG_FRONT->{log}->{log};
 
-            return Ravada::Request->start_domain(
+            if ($domain->is_volatile && !$domain->is_active) {
+                my $req_remove = Ravada::Request->remove_domain(
+                    uid => Ravada::Utils::user_daemon->id
+                    ,name => $name
+                );
+                @after_req = ( after_request => $req_remove );
+            } else {
+                return Ravada::Request->start_domain(
                 uid => $USER->id
                 , id_domain => $domain->id
                 , remote_ip => _remote_ip($c)
-            )
+                , @enable_host_devices
+                )
+            }
         }
     }
 
@@ -3808,10 +3824,13 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
     my @create_args = ( start => 1, remote_ip => _remote_ip($c));
     push @create_args, ( memory => $ram ) if $ram;
     push @create_args, (   disk => $disk) if $disk;
+
     my $req = Ravada::Request->clone(
         id_domain => $id_base
         ,uid => $USER->id
        ,@create_args
+       ,@after_req
+       , @enable_host_devices
     );
     return $req;
 
@@ -3820,6 +3839,7 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
 sub run_request($c, $request, $anonymous = 0) {
     my $timeout = $SESSION_TIMEOUT;
     $timeout = $SESSION_TIMEOUT_ADMIN    if $USER->is_admin;
+    warn $request->id." ".$request->command;
     return $c->render(template => 'main/run_request', request => $request
         , auto_view => ( $CONFIG_FRONT->{auto_view} or $c->session('auto_view') or 0)
         , anonymous => $anonymous
@@ -4154,6 +4174,7 @@ sub clone_machine($c, $anonymous=0) {
         $c->stash( error => "Unknown base ") if !$c->stash('error');
         return $c->render(template => 'main/fail');
     };
+    $c->stash(id_base => $base->id);
     return quick_start_domain($c, $base->id, $USER->name, $anonymous);
 }
 

@@ -202,6 +202,14 @@ sub test_assign_v2($hd, $node, $number, $volatile=0) {
         ,id_domain => $base->id
         ,name => 'usb controller'
     );
+    my $new_mem = 5*1024;
+    Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,hardware=> 'memory'
+            ,data => { memory => $new_mem*1024,max_mem => ($new_mem+1)*1024 }
+    );
+    wait_request();
     $base->prepare_base(user_admin);
     for my $curr_node (@$node) {
         $base->set_base_vm(id_vm => $curr_node->id, user => user_admin);
@@ -557,9 +565,30 @@ sub check_host_device_void($domain) {
 sub check_host_device_kvm($domain) {
     my $doc = $domain->xml_description();
     my $xml = XML::LibXML->load_xml(string => $doc);
+    my ($hd) = $xml->findnodes("/domain/devices/hostdev");
+
+    if ($hd->getAttribute('type') eq 'usb') {
+        return check_host_device_kvm_usb($xml);
+    } elsif ($hd->getAttribute('type') eq 'pci') {
+        return check_host_device_kvm_pci($xml);
+    }
+}
+
+sub check_host_device_kvm_pci($xml) {
+    my ($address) = $xml->findnodes("/domain/devices/hostdev/source/address");
+    my $domain = $address->getAttribute('domain');
+    my $bus = $address->getAttribute('bus');
+    my $slot = $address->getAttribute('slot');
+    my $function = $address->getAttribute('function');
+
+    return ''."$domain-$bus-$slot-$function";
+
+}
+
+sub check_host_device_kvm_usb($xml) {
     my ($hd_source) = $xml->findnodes("/domain/devices/hostdev/source");
-    ok($hd_source) or return;
     my ($vendor) = $hd_source->findnodes("vendor");
+    die $hd_source->toString() if !$vendor;
     my $vendor_id=$vendor->getAttribute('id');
     my ($product) = $hd_source->findnodes("product");
     my $product_id=$product->getAttribute('id');

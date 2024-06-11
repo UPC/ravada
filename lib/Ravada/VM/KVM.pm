@@ -1243,22 +1243,34 @@ sub _domain_create_from_base {
     confess "argument id_base or base required ".Dumper(\%args)
         if !$args{id_base} && !$args{base};
 
-    confess "Domain $args{name} already exists in ".$self->name
-        if $self->search_domain($args{name});
-
-    my $base = $args{base};
-    my $with_cd = delete $args{with_cd};
-
     my $vm_local = $self;
     $vm_local = $self->new( host => 'localhost') if !$vm_local->is_local;
+
+    my $base = $args{base};
     $base = $vm_local->_search_domain_by_id($args{id_base}) if $args{id_base};
+
     confess "Unknown base id: $args{id_base}" if !$base;
+    my $volatile;
+    $volatile = $base->volatile_clones if $base;
+    $volatile = delete $args{volatile} if exists $args{volatile} && defined $args{volatile};
+
+    if ( my $dom = $self->search_domain($args{name})) {
+        if (!$self->is_local) {
+            $dom->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner}
+            , id_vm => $self->id
+            ) if !$dom->is_known();
+            return $dom;
+        } else {
+            confess "Domain $args{name} already exists in ".$self->name;
+        }
+    }
+
+    my $with_cd = delete $args{with_cd};
+
 
     confess Dumper(\%args) if $args{name} eq 'tst_device_50_nodes_01' 
     && ( !exists $args{volatile} || !defined $args{volatile});
 
-    my $volatile = $base->volatile_clones;
-    $volatile = delete $args{volatile} if exists $args{volatile} && defined $args{volatile};
     my $options = delete $args{options};
     my $network = delete $options->{network};
 

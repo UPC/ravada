@@ -410,8 +410,14 @@ sub _connect_ssh($self) {
     $ssh = $SSH{$self->host}    if exists $SSH{$self->host};
 
     if (!$ssh || !$ssh->check_master) {
+
+        if ($self->_data('cached_down') && time-$self->_data('cached_down')< $self->timeout_down_cache()) {
+            return;
+        }
+
         delete $SSH{$self->host};
         for ( 1 .. 3 ) {
+            warn "try $_ " if $self->host =~ /192.168.122/;
             $ssh = Net::OpenSSH->new($self->host
                     ,timeout => 2
                  ,batch_mode => 1
@@ -420,12 +426,13 @@ sub _connect_ssh($self) {
         ,kill_ssh_on_timeout => 1
             );
             last if !$ssh->error;
-            warn "RETRYING ssh ".$self->host." ".join(" ",$ssh->error);
+            # warn "RETRYING ssh ".$self->host." ".join(" ",$ssh->error);
             sleep 1;
         }
         if ( $ssh->error ) {
             $self->_cached_active(0);
-            warn "Error connecting to ".$self->host." : ".$ssh->error();
+            $self->_data('cached_down' => time);
+            # warn "Error connecting to ".$self->host." : ".$ssh->error();
             return;
         }
     }
@@ -438,8 +445,11 @@ sub _ssh($self) {
     return if !$ssh;
     return $ssh if $ssh->check_master;
     warn "WARNING: ssh error '".$ssh->error."'" if $ssh->error;
+    warn "_ssh ".localtime(time);
     $self->netssh->disconnect;
+    warn "_ssh ".localtime(time);
     $self->clear_netssh();
+    warn "_ssh ".localtime(time);
     return $self->netssh;
 }
 
@@ -478,11 +488,12 @@ sub _around_create_domain {
      my $request = delete $args{request};
      delete $args{iso_file};
      delete $args{id_template};
-     delete @args{'description','remove_cpu','vm','start','options','id', 'alias','storage'};
+     delete @args{'description','remove_cpu','vm','start','options','id', 'alias','storage'
+                    ,'enable_host_devices'};
 
     confess "ERROR: Unknown args ".Dumper(\%args) if keys %args;
 
-    $self->_check_duplicate_name($name);
+    $self->_check_duplicate_name($name, $volatile);
     if ($id_base) {
         my $vm_local = $self;
         $vm_local = $self->new( host => 'localhost') if !$vm_local->is_local;
@@ -565,7 +576,11 @@ sub _around_create_domain {
         $domain->_chroot_filesystems();
     }
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
-    $domain->is_volatile(1)     if $user->is_temporary() || $volatile;
+
+    $domain->is_volatile(1) if $user->is_temporary() || $volatile;
+
+    $domain->is_volatile(1) if $id_base && $base->volatile_clones()
+    && (!defined $volatile || $volatile);
 
     my @start_args = ( user => $owner );
     push @start_args, (remote_ip => $remote_ip) if $remote_ip;
@@ -580,6 +595,7 @@ sub _around_create_domain {
     $domain->display($owner)    if $domain->is_active;
 
     $domain->is_pool(1) if $add_to_pool;
+
 
     return $domain;
 }
@@ -989,13 +1005,15 @@ sub _check_require_base {
     delete $args{start};
     delete $args{remote_ip};
 
-    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool', 'volatile', 'alias','storage', 'options', 'network'};
+    delete @args{'_vm','name','vm', 'memory','description','id_iso','listen_ip','spice_password','from_pool', 'volatile', 'alias','storage', 'options', 'network','enable_host_devices'};
 
     confess "ERROR: Unknown arguments ".join(",",keys %args)
         if keys %args;
 
     my $base = Ravada::Domain->open($id_base);
-    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones shutdown force_shutdown refresh_machine_ports set_time open_exposed_ports manage_pools screenshot remove_clones);
+    my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones shutdown force_shutdown refresh_machine_ports set_time open_exposed_ports manage_pools screenshot remove_clones
+    list_cpu_models
+    );
     my @requests;
     for my $req ( $base->list_requests ) {
         push @requests,($req) if !$ignore_requests{$req->command};
@@ -1334,6 +1352,7 @@ sub is_locked($self) {
         next if defined $at && $at < time + 2;
         next if !$args;
         my $args_d = decode_json($args);
+        warn Dumper($args_d) if $args_d->{id_vm} && $args_d->{id_vm} eq 'KVM';
         if ( exists $args_d->{id_vm} && $args_d->{id_vm} == $self->id ) {
             warn "locked by $command\n";
             return 1;
@@ -1769,11 +1788,14 @@ sub run_command($self, @command) {
     }
     return $self->_run_command_local(@command) if $self->is_local();
 
+    warn "1 ".localtime(time) if $self->_data('hostname') =~ /192.168.122./;
     my $ssh = $self->_ssh or confess "Error: Error connecting to ".$self->host;
+    warn "2 ".localtime(time) if $self->_data('hostname') =~ /192.168.122./;
 
     my ($out, $err) = $ssh->capture2({timeout => 10},join " ",@command);
     chomp $err if $err;
     $err = '' if !defined $err;
+    warn "3 ".localtime(time)." $err" if $self->_data('hostname') =~ /192.168.122./;
 
     confess "Error: Failed remote command on ".$self->host." err='$err'\n"
     ."ssh error: '".$ssh->error."'\n"
@@ -1818,7 +1840,9 @@ sub run_command_nowait($self, @command) {
 
 =pod
 
+    warn "1 ".localtime(time) if $self->_data('hostname') =~ /192.168.122./;
     my $chan = $self->_ssh_channel() or die "ERROR: No SSH channel to host ".$self->host;
+    warn "2 ".localtime(time) if $self->_data('hostname') =~ /192.168.122./;
 
     my $command = join(" ",@command);
     $chan->exec($command);# or $self->{_ssh}->die_with_error;

@@ -99,19 +99,18 @@ sub list_devices_nodes($self) {
     my %devices;
     for my $ndata (@nodes) {
         if (!$ndata->[2] || !$ndata->[3]) {
-            $devices{$ndata->[1]}=[];
+            $devices{$ndata->[0]}=[];
             next;
         }
         my $node = Ravada::VM->open($ndata->[0]);
-        next if !$node || !$node->vm;
         my @current_devs;
         eval {
             @current_devs = $self->list_devices($node->id)
-                if $node->is_active;
+                if $node && $node->is_active;
         };
         warn $@ if $@;
         #        push @devices, @current_devs;
-        $devices{$node->id}=\@current_devs;
+        $devices{$ndata->[0]}=\@current_devs;
     }
 
     $self->_data( devices_node => \%devices );
@@ -289,6 +288,21 @@ sub list_domains_with_device($self) {
 sub _dettach_in_domains($self) {
     for my $id_domain ( $self->list_domains_with_device() ) {
         my $domain = Ravada::Domain->open($id_domain);
+        if (!$domain) {
+            my $sth = $$CONNECTOR->dbh->prepare(
+                "DELETE FROM host_devices_domain_locked "
+                ." WHERE id_domain=?"
+            );
+            $sth->execute($id_domain);
+
+            $sth = $$CONNECTOR->dbh->prepare(
+                "DELETE FROM host_devices_domain "
+                ." WHERE id_host_device=?"
+                ."   AND id_domain=?"
+            );
+            $sth->execute($self->id, $id_domain);
+            next;
+        }
         $domain->_dettach_host_device($self) if !$domain->is_active();
     }
 }
