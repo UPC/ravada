@@ -5231,6 +5231,7 @@ sub _set_base_vm_db($self, $id_vm, $value, $id_request=undef) {
             "UPDATE bases_vm SET enabled=?, id_request=?"
             ." WHERE id_domain=? AND id_vm=?"
         );
+        $value = 0 if !defined $value;
         $sth->execute($value, $id_request, $self->id, $id_vm);
         $sth->finish;
     }
@@ -5271,6 +5272,11 @@ sub set_base_vm($self, %args) {
     $request->status("working") if $request;
     $vm = $node if $node;
     $vm = Ravada::VM->open($id_vm)  if !$vm;
+
+    if ( !$vm ) {
+        $self->_set_base_vm_db($id_vm, !$value, 0);
+        die "Error: VM ".Ravada::VM::_search_name($id_vm)." not available\n" 
+    }
 
     $value = 1 if !defined $value;
 

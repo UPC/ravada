@@ -256,6 +256,14 @@ sub _search_id($name) {
     return $id;
 }
 
+sub _search_name($id) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT name FROM vms WHERE id=?"
+    );
+    $sth->execute($id);
+    my ($name) = $sth->fetchrow;
+    return $name;
+}
 sub _refresh_version($self) {
     my $version = $self->get_library_version();
     return if defined $self->_data('version')
