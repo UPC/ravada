@@ -3227,6 +3227,7 @@ sub _post_shutdown {
                  , at => time+$timeout
         );
     }
+    $self->_unlock_host_devices() if !$is_active && $self->is_known;
     if ($self->is_volatile) {
         $self->_remove_temporary_machine();
         return;
@@ -5831,6 +5832,8 @@ sub _post_change_hardware($self, $hardware, $index, $data=undef) {
 
     $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active' && $hardware ne 'memory' && $hardware !~ /cpu/;
     $self->post_prepare_base() if $self->is_base();
+
+    $self->_backup_config_no_hd() if $self->is_known;
 }
 
 sub _fix_hw_booleans($data) {
@@ -5860,6 +5863,9 @@ sub _fix_hw_ignore_fields($data) {
 }
 
 sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) {
+
+    die "Error: Virtual Machines with host devices can not be modified while running"
+    if $self->is_active && $self->list_host_devices_locked;
 
     _fix_hw_booleans($data);
 
@@ -7226,7 +7232,7 @@ sub list_host_devices($self) {
     return @found;
 }
 
-sub list_host_devices_attached($self) {
+sub list_host_devices_attached($self, $only_locked=0) {
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT hdd.*, hd.name as host_device_name "
         ." FROM host_devices_domain hdd , host_devices hd "
@@ -7248,11 +7254,15 @@ sub list_host_devices_attached($self) {
             $sth_locked->execute($self->id, $row->{name});
             my ($is_locked) = $sth_locked->fetchrow();
             $row->{is_locked} = 1 if $is_locked;
-            push @found,($row);
+            push @found,($row) unless $only_locked && !$is_locked;
         }
     }
 
     return @found;
+}
+
+sub list_host_devices_locked($self) {
+    return $self->list_host_devices_attached(1);
 }
 
 # adds host devices to domain instance
@@ -7262,7 +7272,7 @@ sub _add_host_devices($self, @args) {
 }
 
 sub _backup_config_no_hd($self) {
-    $self->_dettach_host_devices();
+    $self->_dettach_host_devices(0);
     $self->_data('config_no_hd' => $self->get_config_txt);
 }
 
@@ -7337,13 +7347,13 @@ sub _search_free_device($self, $host_device) {
     return $device;
 }
 
-sub _dettach_host_devices($self) {
+sub _dettach_host_devices($self, $restore_config=1) {
     my @host_devices = $self->list_host_devices();
     for my $host_device ( @host_devices ) {
         $self->_dettach_host_device($host_device);
     }
     $self->_unlock_host_devices();
-    $self->_restore_config_no_hd();
+    $self->_restore_config_no_hd() if $restore_config;
 }
 
 sub _dettach_host_device($self, $host_device, $doc=$self->get_config
