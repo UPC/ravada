@@ -134,7 +134,7 @@ sub test_mdev($vm) {
     is($hd->list_available_devices(), $n_devices-1);
     test_config($domain);
 
-    sleep 1;
+    sleep 3;
     _req_shutdown($domain);
     for ( 1 .. 3 ) {
         last if $hd->list_available_devices() <= $n_devices;
@@ -548,6 +548,7 @@ sub test_volatile_clones($vm, $domain, $host_device) {
         is($clone->is_active,1) unless $MOCK_MDEV;
         is($clone->is_volatile,1);
         test_config($clone);
+        sleep 3;
         $clone->shutdown_now(user_admin);
 
         $n_device = $host_device->list_available_devices();

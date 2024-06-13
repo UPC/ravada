@@ -110,6 +110,13 @@ sub create_domain {
 
     my $file_exists = $self->file_exists($domain->_config_file);
 
+    $domain->_insert_db(name => $args{name} , id_owner => $user->id
+        , id => $id
+        , id_vm => $self->id
+        , id_base => $args{id_base} 
+        , description => $description
+    ) unless $domain->is_known();
+
     return $domain if $file_exists && exists $args{config};
 
     die "Error: Domain $args{name} already exists in ".$self->name
@@ -119,13 +126,6 @@ sub create_domain {
     $domain->_store( autostart => 0 );
     $domain->_store( is_active => $active );
     $domain->set_memory($args{memory}) if $args{memory};
-
-    $domain->_insert_db(name => $args{name} , id_owner => $user->id
-        , id => $id
-        , id_vm => $self->id
-        , id_base => $args{id_base} 
-        , description => $description
-    );
 
     if ($args{id_base}) {
         my $owner = $user;

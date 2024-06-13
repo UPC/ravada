@@ -586,7 +586,7 @@ sub _around_create_domain {
         $domain->_chroot_filesystems();
     }
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
-    $domain->is_volatile(1)     if $user->is_temporary() || $volatile;
+    $domain->is_volatile(1)     if $user->is_temporary() || $volatile || $args_create{volatile};
 
     my @start_args = ( user => $owner );
     push @start_args, (remote_ip => $remote_ip) if $remote_ip;
@@ -1100,6 +1100,13 @@ sub _set_by_id($id, $field, $value) {
 sub _timed_data_cache($self) {
     return if !$self->{$FIELD_TIMEOUT} || time - $self->{$FIELD_TIMEOUT} < $CACHE_TIMEOUT;
     return _clean($self);
+}
+
+sub _get_name_by_id($id) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT name FROM vms WHERE id=?");
+    $sth->execute($id);
+    my ($name) = $sth->fetchrow;
+    return $name;
 }
 
 sub _clean($self) {

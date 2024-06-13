@@ -367,12 +367,14 @@ sub _around_start($orig, $self, @arg) {
         $error = $@;
         last if !$error;
 
-        die "Error: starting ".$self->name." on ".$self->_vm->name." $error"
+        my $vm_name = Ravada::VM::_get_name_by_id($self->_data('id_vm'));
+
+        die "Error: starting ".$self->name." on ".$vm_name." $error"
         if $error =~ /there is no device|Did not find .*device/;
 
         die $error if $error =~ /No DRM render nodes/;
 
-        warn "WARNING: $error ".$self->_vm->name." ".$self->_vm->enabled if $error;
+        warn "WARNING: $error ".$vm_name if $error;
 
         ;# pool has asynchronous jobs running.
         next if $error && ref($error) && $error->code == 1
