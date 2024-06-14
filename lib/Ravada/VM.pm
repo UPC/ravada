@@ -464,11 +464,8 @@ sub _ssh($self) {
     return if !$ssh;
     return $ssh if $ssh->check_master;
     warn "WARNING: ssh error '".$ssh->error."'" if $ssh->error;
-    warn "_ssh ".localtime(time);
     $self->netssh->disconnect;
-    warn "_ssh ".localtime(time);
     $self->clear_netssh();
-    warn "_ssh ".localtime(time);
     return $self->netssh;
 }
 

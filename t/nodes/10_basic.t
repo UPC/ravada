@@ -440,7 +440,8 @@ sub test_removed_base_file_and_swap_remote($vm, $node) {
     }
     ok(grep { $_->command eq 'set_base_vm' } $base->list_requests)
         or die $vm->type." ".Dumper([$base->list_requests]);
-    is(scalar($base->list_vms),1) or exit;
+    is(scalar($base->list_vms(0,1)),1) #hostdev=0 , only_avail=1
+        or exit;
     wait_request(debug => 0);
     is($base->base_in_vm($node->id),1);
     my $node2 = Ravada::VM->open($node->id);

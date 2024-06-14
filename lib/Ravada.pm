@@ -4858,15 +4858,17 @@ sub _cmd_clone($self, $request) {
         if (defined $args->{volatile}) {
             $volatile = $args->{volatile};
         }
-        if ($volatile) {
-            my $extra = Ravada::Utils::random_name();
-            $name .= "-".$extra;
-            $args->{alias} .= "-".$extra;
+        for my $try ( 1 .. 3 ) {
+            eval {
+                $clone = $domain->clone( name => $name ,%$args);
+            };
+            my $err = $@;
+            warn $err if $err;
+            warn "try $try";
+            next if $err && $err =~ /No field in .*_data/i;
+            die $err if $err;
+            last if $clone;
         }
-        $clone = $domain->clone(
-            name => $name
-            ,%$args
-        )
     }
 
     $request->id_domain($clone->id) if $clone;
@@ -4877,7 +4879,7 @@ sub _cmd_clone($self, $request) {
         ,id_domain => $clone->id
         ,remote_ip => $request->defined_arg('remote_ip')
         ,after_request => $req_next->id
-    ) if $request->defined_arg('start');
+    ) if $clone && $request->defined_arg('start');
 
 }
 
