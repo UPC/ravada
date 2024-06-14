@@ -1719,6 +1719,7 @@ sub is_active($self, $force=0) {
 
 sub _do_is_active($self, $force=undef) {
     my $ret = 0;
+    $self->_data('cached_down' => 0);
     if ( $self->is_local ) {
         eval {
         $ret = 1 if $self->vm;
