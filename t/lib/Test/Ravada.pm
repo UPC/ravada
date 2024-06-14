@@ -2227,7 +2227,7 @@ sub start_node($node) {
     for my $try ( 1 .. 3) {
         my $is_active;
         for ( 1 .. 90 ) {
-            Ravada::Request::connect_node(uid => user_admin->id
+            Ravada::Request->connect_node(uid => user_admin->id
                 ,id_vm => $node->id
             );
             wait_request();
