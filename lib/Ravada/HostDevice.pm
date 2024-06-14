@@ -146,13 +146,27 @@ sub is_device($self, $device, $id_vm) {
 }
 
 sub _device_locked($self, $name, $id_vm=$self->id_vm) {
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM host_devices_domain_locked "
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id,id_domain "
+        ." FROM host_devices_domain_locked "
         ." WHERE id_vm=? AND name=? "
     );
     $sth->execute($id_vm, $name);
-    my ($is_locked) = $sth->fetchrow;
-    $is_locked = 0 if !defined $is_locked;
-    return $is_locked;
+    my $sth_status = $$CONNECTOR->dbh->prepare(
+        "SELECT status FROM domains WHERE id=?"
+    );
+
+    my $sth_unlock = $$CONNECTOR->dbh->prepare(
+        "DELETE FROM host_devices_domain_locked "
+        ." WHERE id=?"
+    );
+    while ( my ($id_lock, $id_domain)= $sth->fetchrow ) {
+        $sth_status->execute($id_domain);
+        my ($status) = $sth_status->fetchrow;
+        return $id_domain if $status && $status ne 'down';
+        $sth_unlock->execute($id_lock);
+    }
+    return 0;
 }
 
 sub list_available_devices($self, $id_vm=$self->id_vm) {

@@ -368,12 +368,14 @@ sub _around_start($orig, $self, @arg) {
         $error = $@;
         last if !$error;
 
-        die "Error: starting ".$self->name." on ".$self->_vm->name." $error"
+        my $vm_name = Ravada::VM::_get_name_by_id($self->_data('id_vm'));
+
+        die "Error: starting ".$self->name." on ".$vm_name." $error"
         if $error =~ /there is no device|Did not find .*device/;
 
         die $error if $error =~ /No DRM render nodes/;
 
-        warn "WARNING: $error ".$self->_vm->name." ".$self->_vm->enabled if $error;
+        warn "WARNING: $error ".$vm_name if $error;
 
         ;# pool has asynchronous jobs running.
         next if $error && ref($error) && $error->code == 1
@@ -480,6 +482,8 @@ sub _start_checks($self, @args) {
         $request = delete $args{request} if exists $args{request};
         $enable_host_devices = delete $args{enable_host_devices};
     }
+    my $id_prev = $self->_data('id_vm');
+
     # If not specific id_manager we go to the last id_vmanager unless it was localhost
     # If the last VManager was localhost it will try to balance here.
     $id_vm = $self->_data('id_vm')
@@ -533,7 +537,8 @@ sub _start_checks($self, @args) {
                     ,'set_base_vm', encode_json($args));
             }
 
-            $self->rsync(request => $request);
+            $self->rsync(request => $request)
+                unless defined $id_prev && $self->_vm->id == $id_prev;
         }
     }
     $self->_check_free_vm_memory();
@@ -5256,27 +5261,26 @@ sub _id_base_in_vm($self, $id_vm) {
     return $sth->fetchrow;
 }
 
-sub _set_base_vm_db($self, $id_vm, $value) {
+sub _set_base_vm_db($self, $id_vm, $value, $id_request=undef) {
     my $is_base;
     $is_base = $self->base_in_vm($id_vm) if $self->is_base;
-
-    return if defined $is_base && $value == $is_base;
 
     my $id_is_base = $self->_id_base_in_vm($id_vm);
     if (!defined $id_is_base) {
         return if !$value && !$self->is_known;
         my $sth = $$CONNECTOR->dbh->prepare(
-            "INSERT INTO bases_vm (id_domain, id_vm, enabled) "
-            ." VALUES(?, ?, ?)"
+            "INSERT INTO bases_vm (id_domain, id_vm, enabled, id_request) "
+            ." VALUES(?, ?, ?, ?)"
         );
-        $sth->execute($self->id, $id_vm, $value);
+        $sth->execute($self->id, $id_vm, $value, $id_request);
         $sth->finish;
     } else {
         my $sth = $$CONNECTOR->dbh->prepare(
-            "UPDATE bases_vm SET enabled=?"
+            "UPDATE bases_vm SET enabled=?, id_request=?"
             ." WHERE id_domain=? AND id_vm=?"
         );
-        $sth->execute($value, $self->id, $id_vm);
+        $value = 0 if !defined $value;
+        $sth->execute($value, $id_request, $self->id, $id_vm);
         $sth->finish;
     }
 }
@@ -5317,13 +5321,23 @@ sub set_base_vm($self, %args) {
     $vm = $node if $node;
     $vm = Ravada::VM->open($id_vm)  if !$vm;
 
+    if ( !$vm || !$vm->is_active || !$vm->vm) {
+        die "Error: VM ".Ravada::VM::_search_name($id_vm)." not available\n" 
+    }
+
     $value = 1 if !defined $value;
+
+    my $id_request;
+    if ($request) {
+        $request->status("working");
+        $id_request = $request->id;
+    }
+    $self->_set_base_vm_db($vm->id, $value, $id_request);
 
     if ($vm->is_local) {
         $self->_set_vm($vm,1); # force set vm on domain
         if (!$value) {
             $request->status("working","Removing base")     if $request;
-            $self->_set_base_vm_db($vm->id, $value);
             $self->remove_base($user);
         } else {
             $self->prepare_base($user) if !$self->is_base();
@@ -5452,17 +5466,27 @@ Returns a list for virtual machine managers where this domain is base
 
 =cut
 
-sub list_vms($self, $check_host_devices=0) {
+sub list_vms($self, $check_host_devices=0, $only_available=0) {
     confess "Domain is not base" if !$self->is_base;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id_vm FROM bases_vm WHERE id_domain=? AND enabled = 1");
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id_vm, id_request "
+        ." FROM bases_vm WHERE id_domain=? AND enabled = 1");
     $sth->execute($self->id);
+    my $sth_req = $$CONNECTOR->dbh->prepare(
+        "SELECT status FROM requests "
+        ." WHERE id=? "
+    );
     my @vms;
-    while (my $id_vm = $sth->fetchrow) {
+    while (my ($id_vm, $id_request) = $sth->fetchrow) {
+        if ($id_request && $only_available) {
+            $sth_req->execute($id_request);
+            my ($status) =$sth_req->fetchrow;
+            next if $status && $status ne 'done';
+        }
         my $vm;
         eval { $vm = Ravada::VM->open($id_vm) };
         warn "id_domain: ".$self->id."\n".$@ if $@;
-        push @vms,($vm) if $vm && !$vm->is_locked();
+        push @vms,($vm) if $vm;
     }
     my $vm_local = $self->_vm->new( host => 'localhost' );
     if ( !grep { $_->name eq $vm_local->name } @vms) {

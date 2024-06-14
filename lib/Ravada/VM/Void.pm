@@ -107,25 +107,25 @@ sub create_domain {
                                            , _vm => $self
                                            ,storage => $storage
     );
-    my ($out, $err) = $self->run_command("/usr/bin/test",
-         "-e ".$domain->_config_file." && echo 1" );
-    chomp $out;
 
-    return $domain if $out && exists $args{config};
-
-    die "Error: Domain $args{name} already exists " if $out;
-
-    $domain->_set_default_info($listen_ip, $network);
-    $domain->_store( autostart => 0 );
-    $domain->_store( is_active => $active );
-    $domain->set_memory($args{memory}) if $args{memory};
+    my $file_exists = $self->file_exists($domain->_config_file);
 
     $domain->_insert_db(name => $args{name} , id_owner => $user->id
         , id => $id
         , id_vm => $self->id
         , id_base => $args{id_base} 
         , description => $description
-    );
+    ) unless $domain->is_known();
+
+    return $domain if $file_exists && exists $args{config};
+
+    die "Error: Domain $args{name} already exists in ".$self->name
+    ." ".$domain->_config_file if $file_exists;
+
+    $domain->_set_default_info($listen_ip, $network);
+    $domain->_store( autostart => 0 );
+    $domain->_store( is_active => $active );
+    $domain->set_memory($args{memory}) if $args{memory};
 
     if ($args{id_base}) {
         my $owner = $user;

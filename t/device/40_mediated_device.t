@@ -73,6 +73,8 @@ sub _check_used_mdev($vm, $hd) {
         $dom_imported = $vm->import_domain($dom->get_name,user_admin)
         unless $dom_imported;
 
+        $dom_imported->_data('status' => 'active');
+
         $dom_imported->add_host_device($hd->id);
         my ($dev) = grep /^$uuid/, $hd->list_devices;
         if (!$dev) {
@@ -134,7 +136,7 @@ sub test_mdev($vm) {
     is($hd->list_available_devices(), $n_devices-1);
     test_config($domain);
 
-    sleep 1;
+    sleep 3;
     _req_shutdown($domain);
     for ( 1 .. 3 ) {
         last if $hd->list_available_devices() >= $n_devices;
@@ -551,8 +553,21 @@ sub test_volatile_clones($vm, $domain, $host_device) {
         sleep 3;
         $clone->shutdown_now(user_admin);
 
+        $exp_avail++;
+
+        for (1 .. 3 ) {
+            $n_device = $host_device->list_available_devices();
+            last if $n_device == $exp_avail;
+            Ravada::Request->force_shutdown(
+                uid => user_admin->id
+                ,id_domain => $clone->id
+            );
+            wait_request;
+        }
+        is($n_device,$exp_avail) or exit;
+
         $n_device = $host_device->list_available_devices();
-        is($n_device,++$exp_avail) or exit;
+        is($n_device,$exp_avail) or exit;
 
         my $clone_gone = rvd_back->search_domain($clone_data->{name});
         ok(!$clone_gone,"Expecting $clone_data->{name} removed on shutdown");
