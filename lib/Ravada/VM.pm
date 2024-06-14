@@ -437,7 +437,6 @@ sub _connect_ssh($self) {
         }
 
         for ( 1 .. 3 ) {
-            warn "try $_ " if $self->host =~ /192.168.122/;
             $ssh = Net::OpenSSH->new($self->host
                     ,timeout => 2
                  ,batch_mode => 1
@@ -1825,14 +1824,11 @@ sub run_command($self, @command) {
     }
     return $self->_run_command_local(@command) if $self->is_local();
 
-    warn "1 ".localtime(time) if $self->_data('hostname') =~ /192.168.122./;
     my $ssh = $self->_ssh or confess "Error: Error connecting to ".$self->host;
-    warn "2 ".localtime(time) if $self->_data('hostname') =~ /192.168.122./;
 
     my ($out, $err) = $ssh->capture2({timeout => 10},join " ",@command);
     chomp $err if $err;
     $err = '' if !defined $err;
-    warn "3 ".localtime(time)." $err" if $self->_data('hostname') =~ /192.168.122./;
 
     confess "Error: Failed remote command on ".$self->host." err='$err'\n"
     ."ssh error: '".$ssh->error."'\n"
