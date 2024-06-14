@@ -6103,7 +6103,6 @@ sub _refresh_active_domains($self, $request=undef) {
 
                 my $now = DateTime->from_epoch( epoch => time()-300 , time_zone => Ravada::Utils::TZ_SYSTEM());
 
-                warn $domain->name.' '.$date->ymd." ".$date->hms." - ".$now->ymd." ".$now->hms." = ".DateTime->compare($date, $now) if $domain->name =~/-f3/;
                 next if DateTime->compare($date, $now) <1;
 
                 $self->_refresh_active_domain($domain, \%active_domain);
