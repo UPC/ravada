@@ -2227,6 +2227,10 @@ sub start_node($node) {
     for my $try ( 1 .. 3) {
         my $is_active;
         for ( 1 .. 90 ) {
+            Ravada::Request::connect_node(uid => user_admin->id
+                ,id_vm => $node->id
+            );
+            wait_request();
             eval {
                 $node->disconnect;
                 $node->clear_netssh();
@@ -2236,7 +2240,7 @@ sub start_node($node) {
             warn $@ if $@;
             last if $is_active;
             sleep 1;
-            diag("Waiting for active node ".$node->name." $_") if !($_ % 10);
+            diag("Waiting for active node ".$node->name." $try - $_") if !($_ % 10);
         }
         last if $is_active;
         if ($try == 1 ) {
