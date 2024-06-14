@@ -4853,11 +4853,6 @@ sub _cmd_clone($self, $request) {
     if $clone && $clone->id_owner != $user->id;
 
     if (!$clone) {
-        my ($clone0) = grep { $_->{id_owner}== $user->id } $domain->clones;
-        $clone = Ravada::Domain->open($clone0->{id})
-        if $clone0->{status} && $clone0->{status} eq 'active';
-    }
-    if (!$clone) {
         my $volatile = $domain->volatile_clones;
         if (defined $args->{volatile}) {
             $volatile = $args->{volatile};
