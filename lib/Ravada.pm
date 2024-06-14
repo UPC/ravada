@@ -6347,7 +6347,7 @@ sub _refresh_volatile_domains($self) {
         eval { $domain = Ravada::Domain->open(id => $id_domain, _force => 1) } ;
         next if $domain && $domain->is_locked;
         if ( !$domain || $domain->status eq 'down' || !$domain->is_active) {
-            if ($domain) {
+            if ($domain && !$domain->is_locked ) {
                 Ravada::Request->shutdown_domain(
                     uid => $USER_DAEMON->id
                     ,id_domain => $id_domain
@@ -6831,6 +6831,7 @@ sub _clean_volatile_machines($self, %args) {
         );
         if ($domain_real) {
             next if $domain_real->domain && $domain_real->is_active;
+            next if $domain_real->is_locked;
             eval { $domain_real->_post_shutdown() };
             warn $@ if $@;
             eval { $domain_real->remove($USER_DAEMON) };
