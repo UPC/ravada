@@ -1101,6 +1101,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
         "SELECT requests.id, command, args, requests.date_changed, requests.status"
             ." ,requests.error, id_domain ,domains.name as domain"
             ." ,domains.alias as domain_alias"
+            ." ,requests.output "
         ." FROM requests left join domains "
         ."  ON requests.id_domain = domains.id"
         ." WHERE "
@@ -1111,9 +1112,9 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
     $sth->execute($time_recent);
     my @reqs;
     my ($id_request, $command, $j_args, $date_changed, $status
-        , $error, $id_domain, $domain, $alias);
+        , $error, $id_domain, $domain, $alias, $output);
     $sth->bind_columns(\($id_request, $command, $j_args, $date_changed, $status
-        , $error, $id_domain, $domain, $alias));
+        , $error, $id_domain, $domain, $alias, $output));
 
     while ( $sth->fetch) {
         my $epoch_date_changed = time;
@@ -1137,6 +1138,8 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'list_network_interfaces'
                 || $command eq 'list_isos'
                 || $command eq 'manage_pools'
+                || $command eq 'list_storage_pools'
+                || $command eq 'list_cpu_models'
                 ;
         next if ( $command eq 'force_shutdown'
                 || $command eq 'force_reboot'
@@ -1166,6 +1169,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
             ,date => $date_changed
             ,message => Encode::decode_utf8($message)
             ,error => Encode::decode_utf8($error)
+            ,output => Encode::decode_utf8($output)
         };
     }
     $sth->finish;

@@ -46,7 +46,7 @@ our $MIN_DISK_MB = 1024 * 1024;
 our $CACHE_TIMEOUT = 60;
 our $FIELD_TIMEOUT = '_data_timeout';
 
-our $TIMEOUT_DOWN_CACHE = 120;
+our $TIMEOUT_DOWN_CACHE = 300;
 
 our %VM; # cache Virtual Manager Connection
 our %SSH;
@@ -207,12 +207,19 @@ sub open {
     } else {
         $args{id} = shift;
     }
+    my $force = delete $args{force};
+
     confess "Error: undefind id in ".Dumper(\%args) if !$args{id};
 
     my $class=ref($proto) || $proto;
 
     my $self = {};
     bless($self, $class);
+
+    if ($force) {
+        _set_by_id($args{id}, 'cached_down' => 0 );
+    }
+
     my $row = $self->_do_select_vm_db( id => $args{id});
     lock_hash(%$row);
     confess "ERROR: I can't find VM id=$args{id}" if !$row || !keys %$row;
@@ -242,7 +249,7 @@ sub open {
         $internal_vm = $vm->vm;
     };
     $VM{$args{id}} = $vm unless $args{readonly} || !$internal_vm;
-    return if $self->is_local && !$internal_vm;
+    return if $vm->is_local && !$internal_vm;
     return $vm;
 
 }
@@ -256,6 +263,14 @@ sub _search_id($name) {
     return $id;
 }
 
+sub _search_name($id) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT name FROM vms WHERE id=?"
+    );
+    $sth->execute($id);
+    my ($name) = $sth->fetchrow;
+    return $name;
+}
 sub _refresh_version($self) {
     my $version = $self->get_library_version();
     return if defined $self->_data('version')
@@ -389,12 +404,12 @@ sub _pre_create_domain {
 
 sub _pre_search_domain($self,@) {
     $self->_connect();
-    die "ERROR: VM ".$self->name." unavailable" if !$self->ping();
+    die "ERROR: VM ".$self->name." unavailable\n" if !$self->ping();
 }
 
 sub _pre_list_domains($self,@) {
     $self->_connect();
-    die "ERROR: VM ".$self->name." unavailable" if !$self->ping();
+    die "ERROR: VM ".$self->name." unavailable\n" if !$self->ping();
 }
 
 sub _connect_ssh($self) {
@@ -411,6 +426,11 @@ sub _connect_ssh($self) {
 
     if (!$ssh || !$ssh->check_master) {
         delete $SSH{$self->host};
+        if ($self->_data('cached_down')
+                && time-$self->_data('cached_down')< $self->timeout_down_cache()) {
+            return;
+        }
+
         for ( 1 .. 3 ) {
             $ssh = Net::OpenSSH->new($self->host
                     ,timeout => 2
@@ -425,6 +445,7 @@ sub _connect_ssh($self) {
         }
         if ( $ssh->error ) {
             $self->_cached_active(0);
+            $self->_data('cached_down' => time);
             warn "Error connecting to ".$self->host." : ".$ssh->error();
             return;
         }
@@ -565,7 +586,7 @@ sub _around_create_domain {
         $domain->_chroot_filesystems();
     }
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
-    $domain->is_volatile(1)     if $user->is_temporary() || $volatile;
+    $domain->is_volatile(1)     if $user->is_temporary() || $volatile || $args_create{volatile};
 
     my @start_args = ( user => $owner );
     push @start_args, (remote_ip => $remote_ip) if $remote_ip;
@@ -1065,9 +1086,27 @@ sub _data($self, $field, $value=undef) {
     return $self->{_data}->{$field};
 }
 
+sub _set_by_id($id, $field, $value) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+    "UPDATE vms set $field=?"
+    ." WHERE id=?"
+    );
+    $sth->execute($value, $id);
+    $sth->finish;
+
+    return $value;
+}
+
 sub _timed_data_cache($self) {
     return if !$self->{$FIELD_TIMEOUT} || time - $self->{$FIELD_TIMEOUT} < $CACHE_TIMEOUT;
     return _clean($self);
+}
+
+sub _get_name_by_id($id) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT name FROM vms WHERE id=?");
+    $sth->execute($id);
+    my ($name) = $sth->fetchrow;
+    return $name;
 }
 
 sub _clean($self) {
@@ -1680,6 +1719,7 @@ sub is_active($self, $force=0) {
 
 sub _do_is_active($self, $force=undef) {
     my $ret = 0;
+    $self->_data('cached_down' => 0);
     if ( $self->is_local ) {
         eval {
         $ret = 1 if $self->vm;
@@ -2063,7 +2103,7 @@ sub balance_vm($self, $uid, $base=undef, $id_domain=undef, $host_devices=undef) 
         confess "Error: base is not an object ".Dumper($base)
         if !ref($base);
 
-        @vms = $base->list_vms($host_devices);
+        @vms = $base->list_vms($host_devices,1);
     } else {
         @vms = $self->list_nodes();
     }
