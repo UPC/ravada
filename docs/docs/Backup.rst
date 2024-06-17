@@ -67,18 +67,33 @@ Migration to another server
 ---------------------------
 
 The backup file can be used to migrate the virtual machine
-to another Ravada server. Just copy the file and call *rvd_back --restore*.
-Be careful: if you want to migrate a clone, the base must be migrated
-first.
+to another Ravada server.
 
-Owner users will be creted in the new virtual machine if they don't
+Follow these steps:
+
+1. Create a new clone
+
+2. Spinoff the clone
+
+3. Perform the backup
+
+.. prompt:: bash server_src$
+
+  sudo rvd_back --backup ubuntu-clone0
+
+4. Copy the result tgz file to the other server
+
+5. Restore
+
+.. prompt:: bash server_dst$
+
+  sudo rvd_back --restore /home/frankie/ubuntu-clone0-2022-04-06.tgz
+
+Owner users will be created in the new virtual machine if they don't
 exist. The users will be assigned regular user permissions. Specially
 granted privileges or administration roles must be set
 up manually after restoring.
 
-.. prompt:: bash $
-
-  sudo rvd_back --restore /home/machine1-2022-04-06.tgz
 
 Backup directory
 ----------------
