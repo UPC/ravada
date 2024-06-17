@@ -73,21 +73,32 @@ Follow these steps:
 
 1. Create a new clone
 
+.. image:: images/copy_machine.png
+
 2. Spinoff the clone
+
+Select the clone you just created in the admin machines page, and in the *base* tab click on spinoff.
+
+.. image:: images/spinoff_button.jpg
 
 3. Perform the backup
 
 .. prompt:: bash server_src$
 
-  sudo rvd_back --backup ubuntu-clone0
+  sudo rvd_back --backup ubuntu-0
 
 4. Copy the result tgz file to the other server
+
+.. prompt:: bash server_src$
+
+  sudo bash
+  rsync -avP /var/lib/libvirt/images/backup/ubuntu-0-2022-04-06.tgz frankie@:server_dst:
 
 5. Restore
 
 .. prompt:: bash server_dst$
 
-  sudo rvd_back --restore /home/frankie/ubuntu-clone0-2022-04-06.tgz
+  sudo rvd_back --restore /home/frankie/ubuntu-0-2022-04-06.tgz
 
 Owner users will be created in the new virtual machine if they don't
 exist. The users will be assigned regular user permissions. Specially
