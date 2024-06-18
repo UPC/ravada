@@ -7334,7 +7334,6 @@ sub list_host_devices_attached($self, $only_locked=0) {
             $row->{is_locked} = 1 if $is_locked;
             push @found,($row) unless $only_locked && !$is_locked;
         }
-        push @found,($row);
     }
 
     return @found;
