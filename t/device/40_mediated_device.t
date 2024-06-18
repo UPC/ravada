@@ -514,6 +514,9 @@ sub test_base($domain) {
 }
 
 sub test_volatile_clones($vm, $domain, $host_device) {
+
+    $Ravada::Domain::TTL_REMOVE_VOLATILE = 1;
+
     my @args = ( uid => user_admin->id ,id_domain => $domain->id);
 
     $domain->shutdown_now(user_admin) if $domain->is_active;
@@ -557,7 +560,8 @@ sub test_volatile_clones($vm, $domain, $host_device) {
 
         for (1 .. 3 ) {
             $n_device = $host_device->list_available_devices();
-            last if $n_device == $exp_avail;
+            my $clone_removed = rvd_back->search_domain($clone->name);
+            last if $n_device == $exp_avail && !$clone_removed;
             Ravada::Request->force_shutdown(
                 uid => user_admin->id
                 ,id_domain => $clone->id
@@ -570,7 +574,7 @@ sub test_volatile_clones($vm, $domain, $host_device) {
         is($n_device,$exp_avail) or exit;
 
         my $clone_gone = rvd_back->search_domain($clone_data->{name});
-        ok(!$clone_gone,"Expecting $clone_data->{name} removed on shutdown");
+        ok(!$clone_gone,"Expecting [$clone_data->{id}] $clone_data->{name} removed on shutdown") or exit;
 
         my $clone_gone2 = $vm->search_domain($clone_data->{name});
         ok(!$clone_gone2,"Expecting $clone_data->{name} removed on shutdown");

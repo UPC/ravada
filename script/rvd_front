@@ -3839,7 +3839,6 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
 sub run_request($c, $request, $anonymous = 0) {
     my $timeout = $SESSION_TIMEOUT;
     $timeout = $SESSION_TIMEOUT_ADMIN    if $USER->is_admin;
-    warn $request->id." ".$request->command;
     return $c->render(template => 'main/run_request', request => $request
         , auto_view => ( $CONFIG_FRONT->{auto_view} or $c->session('auto_view') or 0)
         , anonymous => $anonymous
@@ -4184,12 +4183,17 @@ sub shutdown_machine {
 
     my ($domain, $type) = _search_requested_machine($c);
 
-    my $req;
-    $req = Ravada::Request->force_shutdown_domain(id_domain => $domain->id, uid => $USER->id) if ($c->param('force'));
-    $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id) unless ($c->param('force'));
-
+    my $id_req;
+    if ($domain) {
+        my $req;
+        $req = Ravada::Request->force_shutdown_domain(id_domain => $domain->id, uid => $USER->id)
+            if ($c->param('force'));
+        $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id)
+            unless ($c->param('force'));
+        $id_req = $req->id if $req;
+    }
     return $c->redirect_to('/machines') if $type eq 'html';
-    return $c->render(json => { req => $req->id });
+    return $c->render(json => { req => $id_req });
 }
 
 sub reboot_machine {

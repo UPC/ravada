@@ -46,6 +46,7 @@ our %PROPAGATE_FIELD = map { $_ => 1} qw( run_timeout shutdown_disconnected);
 
 our $TIME_CACHE_NETSTAT = 60; # seconds to cache netstat data output
 our $RETRY_SET_TIME=10;
+our $TTL_REMOVE_VOLATILE = 60;
 
 our $DEBUG_RSYNC = 0;
 
@@ -300,7 +301,10 @@ sub _vm_disconnect {
 sub _around_start($orig, $self, @arg) {
 
     $self->_post_hibernate() if $self->is_hibernated && !$self->_data('post_hibernated');
-    $self->_dettach_host_devices() if !$self->is_active;
+    if ( !$self->is_active ) {
+        $self->_dettach_host_devices();
+        $self->_unlock_host_devices(0);
+    }
 
     $self->_start_preconditions(@arg);
 
@@ -324,7 +328,7 @@ sub _around_start($orig, $self, @arg) {
     $enable_host_devices = 1 if !defined $enable_host_devices;
 
     for (1 .. 5) {
-        eval { $self->_start_checks(@arg, enable_host_devices => $enable_host_devices) };
+        eval { $self->_start_checks(%arg, enable_host_devices => $enable_host_devices) };
         my $error = $@;
         if ($error) {
             if ( $error =~/base file not found/ && !$self->_vm->is_local) {
@@ -366,6 +370,7 @@ sub _around_start($orig, $self, @arg) {
         $self->_vm->_add_instance_db($self->id);
         eval { $self->$orig(%arg) };
         $error = $@;
+        warn $error if $error;
         last if !$error;
 
         my $vm_name = Ravada::VM::_get_name_by_id($self->_data('id_vm'));
@@ -496,7 +501,7 @@ sub _start_checks($self, @args) {
         if ( !$vm->enabled || !$vm->ping ) {
             $vm = $vm_local;
             $id_vm = undef;
-        } elsif ($enable_host_devices && !$self->_available_hds($vm)) {
+        } elsif ($enable_host_devices && !$self->_available_hds($id_vm)) {
             $vm = $vm_local;
             $id_vm = undef;
         }
@@ -504,7 +509,7 @@ sub _start_checks($self, @args) {
 
     # if it is a clone ( it is not a base )
     my $id_base = $self->id_base;
-    if ($id_base) {
+    if ($id_base && !$self->is_volatile) {
         $self->_check_tmp_volumes();
 #        $self->_set_last_vm(1)
         if ( !$self->is_local
@@ -600,14 +605,14 @@ sub _search_already_started($self, $fast = 0) {
     return keys %started;
 }
 
-sub _available_hds($self, $vm) {
+sub _available_hds($self, $id_vm , $host_devices=[$self->list_host_devices]) {
 
-    my @host_devices = $self->list_host_devices();
-    return 1 if !@host_devices;
+    return 1 if !@$host_devices;
 
     my $available=1;
-    for my $hd (@host_devices) {
-        if  (! $hd->list_available_devices($vm->id) ) {
+    for my $hd (@$host_devices) {
+        my @devs_vm=$hd->list_available_devices_cached($id_vm) ;
+        if  (!@devs_vm ) {
             $available=0;
             last;
         }
@@ -639,7 +644,7 @@ sub _filter_vm_available_hd($self, @vms) {
     return @vms_ret;
 }
 
-sub _balance_vm($self, $request=undef, $host_devices=undef) {
+sub _balance_vm($self, $request=undef, $host_devices=1) {
     return if $self->{_migrated};
 
     my $base;
@@ -647,13 +652,17 @@ sub _balance_vm($self, $request=undef, $host_devices=undef) {
 
     my $vm_free;
     for (my $count=0;$count<10;$count++) {
+
+        $self->_data('date_status_change'=>Ravada::Utils::now());
         $vm_free = $self->_vm->balance_vm($self->_data('id_owner'),$base
                                             , $self->id, $host_devices);
         return if !$vm_free;
         next if !$vm_free->vm || !$vm_free->is_active;
 
         last if $vm_free->id == $self->_vm->id;
+        $self->_data('date_status_change'=>Ravada::Utils::now());
         eval { $self->migrate($vm_free, $request) };
+        $self->_data('date_status_change'=>Ravada::Utils::now());
         last if !$@;
         if ($@ && $@ =~ /file not found/i) {
             $base->_set_base_vm_db($vm_free->id,0) unless $vm_free->is_local;
@@ -879,6 +888,7 @@ sub _around_prepare_base($orig, $self, @args) {
         if !scalar (\@base_img);
 
     $self->_prepare_base_db(@base_img);
+    $self->_set_base_vm_db($self->_vm->id, 1);
 
     $self->_post_prepare_base($user, $request);
 }
@@ -2451,6 +2461,7 @@ sub _after_remove_domain($self, $user, $cascade=undef) {
 }
 
 sub _remove_all_volumes($self) {
+    return if $self->_volatile_active;
     my $vm_local = $self->_vm;
     $vm_local = $self->_vm->new( host => 'localhost' ) if !$self->is_local;
     for my $vol (@{$self->{_volumes}}) {
@@ -3206,7 +3217,7 @@ sub _post_shutdown {
         $self->_data(post_shutdown => 1);
     }
 
-    if ($self->is_known && $self->id_base) {
+    if ($self->is_known && $self->id_base && !$self->is_volatile) {
         my @disks = $self->list_disks();
         if (grep /\.SWAP\./,@disks) {
             for ( 1 ..  5 ) {
@@ -4172,17 +4183,7 @@ sub _remove_temporary_machine($self) {
     return if $self->_is_creating();
 
     if ($self->is_known) {
-        warn $self->name." ".$self->_data('date_status_change')." $id_req_locked $command"
-        if $self->name =~ /aztest-/;
-
-        my $date = DateTime::Format::DateParse->parse_datetime( $self->_data('date_changed'));
-
-        my $now = DateTime->from_epoch( epoch => time()-300, time_zone => Ravada::Utils::TZ_SYSTEM());
-
-        warn $date->hms." ".$now->hms." ".DateTime->compare($date, $now)
-        if $self->name =~ /aztest-/;
-
-        return if DateTime->compare($date,$now) <1;
+        return if $self->_volatile_active;
     }
 
     my $owner;
@@ -5209,7 +5210,6 @@ sub _rsync_volumes_back($self, $node, $request=undef) {
         warn "$msg\n" if $DEBUG_RSYNC;
         my $t0 = time;
         $rsync->exec(src => 'root@'.$node->host.":".$file ,dest => $file );
-        warn "Domain::rsync_volumes_back ".(time - $t0)." seconds $file" if $DEBUG_RSYNC;
         if ( $rsync->err ) {
             $request->status("done",join(" ",@{$rsync->err}))   if $request;
             last;
@@ -5237,7 +5237,6 @@ sub _pre_migrate($self, $node, $request = undef) {
 
         return unless $self->_check_all_parents_in_node($node);
 
-        $self->_set_base_vm_db($node->id,0) unless $node->is_local;
     }
     $node->_add_instance_db($self->id);
 }
@@ -5469,33 +5468,42 @@ Returns a list for virtual machine managers where this domain is base
 sub list_vms($self, $check_host_devices=0, $only_available=0) {
     confess "Domain is not base" if !$self->is_base;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id_vm, id_request "
-        ." FROM bases_vm WHERE id_domain=? AND enabled = 1");
+    $check_host_devices = 1 if !defined $check_host_devices;
+
+    my $t0 = time;
+    my $sth = $$CONNECTOR->dbh->prepare(
+        " SELECT b.id_vm, v.name, b.id_request, v.is_active, v.enabled, v.cached_down "
+        ." FROM bases_vm b, vms v "
+        ." WHERE  "
+        ." b.id_vm=v.id "
+        ." AND b.id_domain=? AND b.enabled = 1");
     $sth->execute($self->id);
     my $sth_req = $$CONNECTOR->dbh->prepare(
-        "SELECT status FROM requests "
+        "SELECT command,status FROM requests "
         ." WHERE id=? "
     );
     my @vms;
-    while (my ($id_vm, $id_request) = $sth->fetchrow) {
+    my @host_devices = $self->list_host_devices();
+    while (my ($id_vm, $name_vm, $id_request, $is_active, $enabled, $cached_down) = $sth->fetchrow) {
+        $self->_data('date_status_change'=>Ravada::Utils::now());
+        next if $only_available && ( !$is_active || !$enabled);
+        my $t1 = time;
+        if ($only_available && $cached_down) {
+            next if time-$cached_down < $self->timeout_down_cache();
+        }
         if ($id_request && $only_available) {
             $sth_req->execute($id_request);
-            my ($status) =$sth_req->fetchrow;
+            my ($command,$status) =$sth_req->fetchrow;
             next if $status && $status ne 'done';
         }
+        next if $check_host_devices && !$self->_available_hds($id_vm, \@host_devices);
         my $vm;
         eval { $vm = Ravada::VM->open($id_vm) };
         warn "id_domain: ".$self->id."\n".$@ if $@;
         push @vms,($vm) if $vm;
     }
-    my $vm_local = $self->_vm->new( host => 'localhost' );
-    if ( !grep { $_->name eq $vm_local->name } @vms) {
-        push @vms,($vm_local);
-        $self->set_base_vm(vm => $vm_local, user => Ravada::Utils::user_daemon);
-    }
-    return @vms if !$check_host_devices;
+    return @vms;
 
-    return $self->_filter_vm_available_hd(@vms);
 }
 
 =head2 base_in_vm
@@ -7938,4 +7946,19 @@ sub is_in_bundle($self) {
 
 }
 
+sub _volatile_active($self) {
+    return 0 if !$self->is_known();
+    return 0 if !$self->is_volatile;
+
+    my $date = DateTime::Format::DateParse->parse_datetime( $self->_data('date_status_change'));
+    return 1 if !$date;
+
+    my $now = DateTime->from_epoch( epoch => time()-$TTL_REMOVE_VOLATILE
+        , time_zone => Ravada::Utils::TZ_SYSTEM());
+
+    return 0 if $date && DateTime->compare($date, $now) <0;
+
+    return 1;
+
+}
 1;

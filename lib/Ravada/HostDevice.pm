@@ -163,7 +163,7 @@ sub _device_locked($self, $name, $id_vm=$self->id_vm) {
     while ( my ($id_lock, $id_domain)= $sth->fetchrow ) {
         $sth_status->execute($id_domain);
         my ($status) = $sth_status->fetchrow;
-        return $id_domain if $status && $status ne 'down';
+        return $id_domain if $status && $status ne 'shutdown';
         $sth_unlock->execute($id_lock);
     }
     return 0;
@@ -177,6 +177,29 @@ sub list_available_devices($self, $id_vm=$self->id_vm) {
     }
     return @device;
 }
+
+sub list_available_devices_cached($self, $id_vm=$self->id_vm) {
+    my @device;
+    my $dn = {};
+    my $data_dn = $self->_data('devices_node');
+    if (!$data_dn) {
+        my %data_dn = $self->list_devices_nodes();
+        $dn = \%data_dn;
+    } else {
+        eval { $dn = decode_json($data_dn) };
+        if ($@) {
+            warn "$@ ".($data_dn or '<NULL>');
+            return $self->list_available_devices($id_vm);
+        }
+    }
+    my $dnn = $dn->{$id_vm};
+    for my $dev_entry ( @$dnn ) {
+        next if $self->_device_locked($dev_entry, $id_vm);
+        push @device, ($dev_entry);
+    }
+    return @device;
+}
+
 
 sub remove($self) {
     _init_connector();

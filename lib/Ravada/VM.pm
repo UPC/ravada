@@ -552,15 +552,20 @@ sub _around_create_domain {
 
     return $base->_search_pool_clone($owner) if $from_pool;
 
-    if ($self->is_local && $base && $base->is_base && $args_create{volatile}) {
+    if ($self->is_local && $base && $base->is_base && $args_create{volatile} && !$base->list_host_devices) {
         $request->status("balancing")                       if $request;
-        my $vm = $self->balance_vm($owner->id, $base) or die "Error: No free nodes available.";
+        my $vm = $self->balance_vm($owner->id, $base);
+
+        if (!$vm) {
+            die "Error: No free nodes available.\n";
+        }
         $request->status("creating machine on ".$vm->name)  if $request;
         $self = $vm;
         $args_create{listen_ip} = $self->listen_ip($remote_ip);
     }
 
     my $domain = $self->$orig(%args_create);
+    $domain->_data('date_status_change'=>Ravada::Utils::now());
     $self->_add_instance_db($domain->id);
     $domain->add_volume_swap( size => $swap )   if $swap;
     $domain->_data('is_compacted' => 1);
@@ -593,17 +598,26 @@ sub _around_create_domain {
     }
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
 
-    $domain->is_volatile(1) if $user->is_temporary() || $volatile
-    || $args_create{volatile};
+    $volatile = $volatile || $user->is_temporary || $args_create{volatile};
 
     my @start_args = ( user => $owner );
     push @start_args, (remote_ip => $remote_ip) if $remote_ip;
 
     $domain->_post_start(@start_args) if $domain->is_active;
-    eval {
-           $domain->start(@start_args)      if $active || ($domain->is_volatile && ! $domain->is_active);
-    };
-    die $@ if $@ && $@ !~ /code: 55,/;
+
+    if ( $active || ($volatile && ! $domain->is_active) ) {
+        $domain->_data('date_status_change'=>Ravada::Utils::now());
+        $domain->status('starting');
+
+        $domain->is_volatile($volatile) if $volatile;
+        eval {
+           $domain->start(@start_args);
+        };
+        my $err = $@;
+
+        $domain->_data('date_status_change'=>Ravada::Utils::now());
+        die $err if $err && $err !~ /code: 55,/;
+    }
 
     $domain->info($owner);
     $domain->display($owner)    if $domain->is_active;
@@ -2110,7 +2124,7 @@ Arguments
 
 =cut
 
-sub balance_vm($self, $uid, $base=undef, $id_domain=undef, $host_devices=undef) {
+sub balance_vm($self, $uid, $base=undef, $id_domain=undef, $host_devices=1) {
 
     my @vms;
     if ($base) {
@@ -2134,7 +2148,8 @@ sub balance_vm($self, $uid, $base=undef, $id_domain=undef, $host_devices=undef) 
     }
     my $vm = $self->_balance_free_memory($base, \@vms_active);
     return $vm if $vm;
-    die "Error: No free nodes available.\n" if !$vm;
+    die "Error: No available devices or no free nodes.\n" if $host_devices;
+    die "Error: No free nodes available.\n";
 }
 
 sub _balance_already_started($self, $uid, $id_domain, $vms) {

@@ -4864,7 +4864,6 @@ sub _cmd_clone($self, $request) {
             };
             my $err = $@;
             warn $err if $err;
-            warn "try $try";
             next if $err && $err =~ /No field in .*_data/i;
             die $err if $err;
             last if $clone;
@@ -5127,7 +5126,7 @@ sub _cmd_shutdown_clones {
             my $is_active;
             eval {
                 $domain2 = $self->search_domain_by_id($id);
-                $is_active = $domain2->is_active;
+                $is_active = $domain2->is_active if $domain2;
             };
             warn $@ if $@;
             if ($is_active) {
@@ -6098,12 +6097,7 @@ sub _refresh_active_domains($self, $request=undef) {
                     warn $@;
                 }
                 next if !$domain || $domain->is_locked;
-
-                my $date = DateTime::Format::DateParse->parse_datetime( $domain->_data('date_status_change'));
-
-                my $now = DateTime->from_epoch( epoch => time()-300 , time_zone => Ravada::Utils::TZ_SYSTEM());
-
-                next if DateTime->compare($date, $now) <1;
+                next if $domain->_volatile_active();
 
                 $self->_refresh_active_domain($domain, \%active_domain);
                 $self->_remove_unnecessary_downs($domain) if !$domain->is_active;
@@ -6277,7 +6271,8 @@ sub _refresh_active_domain($self, $domain, $active_domain) {
     $domain->client_status(1);
 
     $domain->_post_shutdown()
-    if $domain->_data('status') eq 'shutdown' && !$domain->_data('post_shutdown');
+    if $domain->_data('status') eq 'shutdown' && !$domain->_data('post_shutdown')
+    && !$domain->_volatile_active;
 }
 
 sub _refresh_hibernated($self, $domain) {
@@ -6445,7 +6440,7 @@ sub _domain_just_started($self, $domain) {
     my $start_time = time - 300;
     $sth->execute($start_time);
     while ( my ($id, $command, $args) = $sth->fetchrow ) {
-        next if $command !~ /create|clone|start|open/i;
+        next if $command !~ /create|clone|start|open|shutdown/i;
         my $args_h = decode_json($args);
         return 1 if exists $args_h->{id_domain} && defined $args_h->{id_domain}
         && $args_h->{id_domain} == $domain->id;
@@ -6833,6 +6828,7 @@ sub _clean_volatile_machines($self, %args) {
         if ($domain_real) {
             next if $domain_real->domain && $domain_real->is_active;
             next if $domain_real->is_locked;
+            next if $domain_real->_volatile_active;
             eval { $domain_real->_post_shutdown() };
             warn $@ if $@;
             eval { $domain_real->remove($USER_DAEMON) };
