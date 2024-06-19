@@ -3207,7 +3207,7 @@ sub _post_shutdown {
     my $is_active = $self->is_active;
 
     if ( $self->is_known && !$self->is_volatile && !$is_active ) {
-        $self->_dettach_host_devices();
+        $self->_dettach_host_devices() if $self->list_host_devices_attached;
         if ($self->is_hibernated) {
             $self->_data(status => 'hibernated');
         } else {

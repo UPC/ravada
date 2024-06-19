@@ -532,10 +532,13 @@ sub test_display_info($vm) {
     is($display_h->[1+$TLS]->{ip}, $display_h->[0]->{ip}) or exit;
     is($display_h->[1+$TLS]->{listen_ip}, $display_h->[0]->{listen_ip});
     is($display_h->[1+$TLS]->{id_domain_port},$exposed_port->{id}); # rdp needs exposed port
-    $domain->shutdown_now(user_admin());
+
+    my $domain2 = Ravada::Domain->open($domain->id);
+
+    $domain2->shutdown_now(user_admin());
 
     $domain_f = Ravada::Front::Domain->open($domain->id);
-    $domain->info(user_admin);
+    $domain2->info(user_admin);
     $info = $domain_f->info(user_admin);
     $display_h = $info->{hardware}->{display};
     is($display_h->[0]->{is_active}, 0);
@@ -2112,7 +2115,6 @@ for my $vm_name ( vm_names() ) {
         test_change_display_settings($vm);
         test_display_drivers($vm,0);
         test_display_drivers($vm,1); #remove after testing display type
-        test_display_info($vm);
         test_display_conflict_next($vm);
 
         test_display_iptables($vm);
