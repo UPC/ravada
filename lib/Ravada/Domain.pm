@@ -302,7 +302,6 @@ sub _around_start($orig, $self, @arg) {
 
     $self->_post_hibernate() if $self->is_hibernated && !$self->_data('post_hibernated');
     if ( !$self->is_active ) {
-        $self->_dettach_host_devices();
         $self->_unlock_host_devices(0);
     }
 
