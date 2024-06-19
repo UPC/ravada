@@ -238,6 +238,8 @@ sub _change_timer($domain) {
     } else {
         die $domain->type;
     }
+
+    $domain->_backup_config_no_hd();
 }
 
 sub _base_timers_void($domain) {
@@ -251,7 +253,8 @@ sub _base_timers_void($domain) {
     for my $timer (@timers) {
         push @$clock ,({timer => $timer });
     }
-    $domain->_store(clock => $clock);
+    $config->{clock} = $clock;
+    $domain->reload_config($config);
 }
 
 sub _change_timer_void($domain) {
@@ -261,7 +264,6 @@ sub _change_timer_void($domain) {
 
     $N_TIMERS = scalar(@$clock);
 
-    $domain->_store(clock => $clock);
 }
 
 sub _change_timer_kvm($domain) {

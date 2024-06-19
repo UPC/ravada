@@ -922,6 +922,7 @@ Prepares the virtual machine as a base:
 
 sub prepare_base($self, $with_cd) {
     my @base_img;
+
     for my $volume ($self->list_volumes_info()) {
         next if !$volume->file;
         my $base_file = $volume->base_filename;
@@ -988,8 +989,6 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
             sleep 1;
         }
     }
-    $self->_dettach_host_devices() if !$self->is_active;
-
     #    $self->_post_remove_base();
     if (!$self->is_local) {
         my $vm_local = Ravada::VM->open( type => $self->vm );

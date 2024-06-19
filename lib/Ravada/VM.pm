@@ -609,15 +609,18 @@ sub _around_create_domain {
         $domain->_data('date_status_change'=>Ravada::Utils::now());
         $domain->status('starting');
 
-        $domain->is_volatile($volatile) if $volatile;
         eval {
            $domain->start(@start_args);
         };
         my $err = $@;
 
         $domain->_data('date_status_change'=>Ravada::Utils::now());
-        die $err if $err && $err !~ /code: 55,/;
+        if ( $err && $err !~ /code: 55,/ ) {
+            $domain->is_volatile($volatile) if defined $volatile;
+            die $err;
+        }
     }
+    $domain->is_volatile($volatile) if defined $volatile;
 
     $domain->info($owner);
     $domain->display($owner)    if $domain->is_active;
