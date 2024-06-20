@@ -2782,7 +2782,8 @@ sub add_host_device($self, %args) {
     eval {
     $sth->execute(map { $info->{$_} } sort keys %$info );
     };
-    confess Dumper([$info,$@]) if $@;
+    die Dumper([$@]) if $@;
+    die Dumper([$info,$@]) if $@;
 
     my $id = Ravada::Request->_last_insert_id( $$CONNECTOR );
 

@@ -578,10 +578,13 @@ get '/machine/host_device/add/(#id_domain)/(#id_hd)' => sub($c) {
 post '/node/host_device/add' => sub($c) {
     my $arg = decode_json($c->req->body);
     my $id_vm = $arg->{id_vm} or die "Error: missing id_vm ".Dumper($arg);
+    my $name = $arg->{name};
+    my @name = ( name => $name) if $name;
+
     my $vm = Ravada::VM->open( readonly => 1
         ,id => $id_vm
     );
-    my $id = $vm->add_host_device(template => $arg->{template});
+    my $id = $vm->add_host_device(template => $arg->{template} , name => $name);
     Ravada::Request->list_host_devices(
         uid => Ravada::Utils::user_daemon->id
         ,id_host_device => $id

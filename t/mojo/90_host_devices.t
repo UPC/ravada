@@ -82,8 +82,10 @@ sub create_hd($vm_name) {
     my ($template) = $templates->[0]->{name};
 
     $t->post_ok("/node/host_device/add",
-        json => { id_vm => $id_vm, template => $template }
+        json => { id_vm => $id_vm, template => $template ,name => new_domain_name() }
     )->status_is(200);
+
+    like($t->tx->res->code(),qr/^(200|302)$/) or die $t->tx->res->body;
 
     my $hd1 = _list_host_devices($id_vm);
 
@@ -124,6 +126,8 @@ sub test_base_hd($vm_name, $hd) {
 #get('/list_host_devices/'.$id_base);
 
     my $id_vm = _id_vm($vm_name);
+
+    confess Dumper($hd) if !exists $hd->{id} || !$hd->{id};
 
     $t->get_ok('/machine/host_device/add/'.$BASE->id
                 ."/".$hd->{id})->status_is(200);
@@ -183,7 +187,7 @@ mojo_login($t,$USERNAME, $PASSWORD);
 
 clean_hds();
 
-for my $vm_name (@{rvd_front->list_vm_types} ) {
+for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
     diag("Testing host devices in $vm_name");
 
     _import_base($vm_name);
