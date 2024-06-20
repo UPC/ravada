@@ -2767,11 +2767,15 @@ sub add_host_device($self, %args) {
     _init_connector();
 
     my $template = delete $args{template} or confess "Error: template required";
+    my $name = delete $args{name};
+
     my $info = Ravada::HostDevice::Templates::template($self->type, $template);
     my $template_list = delete $info->{templates};
     $info->{id_vm} = $self->id;
 
     $info->{name}.= " ".($self->_max_hd($info->{name})+1);
+
+    $info->{name} = $name if $name;
 
     my $query = "INSERT INTO host_devices "
     ."( ".join(", ",sort keys %$info)." ) "
@@ -2782,7 +2786,6 @@ sub add_host_device($self, %args) {
     eval {
     $sth->execute(map { $info->{$_} } sort keys %$info );
     };
-    die Dumper([$@]) if $@;
     die Dumper([$info,$@]) if $@;
 
     my $id = Ravada::Request->_last_insert_id( $$CONNECTOR );

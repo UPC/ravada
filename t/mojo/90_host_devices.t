@@ -193,7 +193,7 @@ for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
     _import_base($vm_name);
 
     my $hd = create_hd($vm_name);
-    test_base_hd($vm_name, $hd);
+    test_base_hd($vm_name, $hd) if $hd;
 
 }
 

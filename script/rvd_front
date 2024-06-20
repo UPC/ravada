@@ -579,19 +579,25 @@ post '/node/host_device/add' => sub($c) {
     my $arg = decode_json($c->req->body);
     my $id_vm = $arg->{id_vm} or die "Error: missing id_vm ".Dumper($arg);
     my $name = $arg->{name};
-    my @name = ( name => $name) if $name;
 
     my $vm = Ravada::VM->open( readonly => 1
         ,id => $id_vm
     );
-    my $id = $vm->add_host_device(template => $arg->{template} , name => $name);
+    my @args = ( template => $arg->{template} );
+    push @args, ( name => $name ) if $name;
+
+    my $id;
+    eval { $id = $vm->add_host_device(@args) };
+    if ($@) {
+        return $c->render( json => { ok => 0, error => ''.$@ } );
+    }
     Ravada::Request->list_host_devices(
         uid => Ravada::Utils::user_daemon->id
         ,id_host_device => $id
         ,_force => 1
-    );
+    ) if $id;
 
-    return $c->render( json => { ok => 1 } );
+    return $c->render( json => { ok => $id } );
 };
 
 post '/node/host_device/update' => sub($c) {
