@@ -24,6 +24,8 @@ my $IP = "10.0.0.1";
 my $NETWORK = $IP;
 $NETWORK =~ s{(.*)\..*}{$1.0/24};
 
+$Ravada::Domain::TTL_REMOVE_VOLATILE = 1;
+
 ################################################################################
 
 sub create_network {
@@ -167,6 +169,7 @@ sub test_volatile {
         my @volumes = $clone->list_volumes();
 
         is($clone->is_active, 1);
+        sleep 1;
         eval { $clone->shutdown_now(user_admin)    if $clone->is_active};
         is(''.$@,'',"[$vm_name] Expecting no error after shutdown");
 

@@ -2459,7 +2459,6 @@ sub _after_remove_domain($self, $user, $cascade=undef) {
 }
 
 sub _remove_all_volumes($self) {
-    return if $self->_volatile_active;
     my $vm_local = $self->_vm;
     $vm_local = $self->_vm->new( host => 'localhost' ) if !$self->is_local;
     for my $vol (@{$self->{_volumes}}) {
@@ -3192,6 +3191,8 @@ sub _post_shutdown {
 
     my %arg = @_;
     my $timeout = delete $arg{timeout};
+    my $force = delete $arg{force};
+
     if (!defined $timeout) {
         $timeout = ( $self->_data('shutdown_timeout') or $TIMEOUT_SHUTDOWN);
     }
@@ -3249,7 +3250,7 @@ sub _post_shutdown {
     }
     $self->_unlock_host_devices() if !$is_active && $self->is_known;
     if ($self->is_volatile) {
-        $self->_remove_temporary_machine();
+        $self->_remove_temporary_machine($force);
         return;
     }
     my $info = $self->_data('info');
@@ -3385,7 +3386,7 @@ sub _around_shutdown_now {
     if ($self->is_active) {
         $self->$orig($user);
     }
-    $self->_post_shutdown(user => $user)    if $self->is_known();
+    $self->_post_shutdown(user => $user, force => 1)    if $self->is_known();
 }
 
 sub _around_reboot_now {
@@ -4167,7 +4168,7 @@ sub _is_creating($self) {
     return $found;
 }
 
-sub _remove_temporary_machine($self) {
+sub _remove_temporary_machine($self, $force=undef) {
 
     return if !$self->is_volatile;
 
@@ -4181,7 +4182,7 @@ sub _remove_temporary_machine($self) {
 
     return if $self->_is_creating();
 
-    if ($self->is_known) {
+    if ($self->is_known && !$force) {
         return if $self->_volatile_active;
     }
 

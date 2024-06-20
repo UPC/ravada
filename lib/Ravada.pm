@@ -5694,7 +5694,13 @@ sub _cmd_refresh_machine($self, $request) {
     $domain->check_status();
     $domain->list_volumes_info();
     my $is_active = $domain->is_active;
-    $self->_remove_unnecessary_downs($domain) if !$is_active;
+    if (!$is_active) {
+        $self->_remove_unnecessary_downs($domain);
+        if ( $domain->is_volatile && !$domain->_volatile_active ) {
+            $domain->remove(Ravada::Utils::user_daemon);
+            return;
+        }
+    }
     $domain->info($user);
     $domain->client_status(1) if $is_active;
     $domain->_check_port_conflicts();
@@ -5703,7 +5709,7 @@ sub _cmd_refresh_machine($self, $request) {
         ,timeout => 60, retry => 10)
     if $is_active && $domain->ip && $domain->list_ports;
 
-    $domain->_dettach_host_devices() if !$is_active;
+    $domain->_unlock_host_devices() if !$is_active;
 }
 
 sub _cmd_refresh_machine_ports($self, $request) {
