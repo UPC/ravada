@@ -5485,7 +5485,6 @@ sub list_vms($self, $check_host_devices=0, $only_available=0) {
     my @vms;
     my @host_devices = $self->list_host_devices();
     while (my ($id_vm, $name_vm, $id_request, $is_active, $enabled, $cached_down) = $sth->fetchrow) {
-        $self->_data('date_status_change'=>Ravada::Utils::now());
         next if $only_available && ( !$is_active || !$enabled);
         my $t1 = time;
         if ($only_available && $cached_down) {

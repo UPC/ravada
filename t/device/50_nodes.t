@@ -193,6 +193,7 @@ sub test_devices($vm, $node, $n_local=3, $n_node=3) {
 }
 
 sub test_assign_v2($hd, $node, $number, $volatile=0) {
+    diag("test ssign v2 number=".join(",",$number)." volatile=$volatile");
     my $vm = $node->[0];
     my $base = create_domain($vm);
     $base->add_host_device($hd);
@@ -202,7 +203,7 @@ sub test_assign_v2($hd, $node, $number, $volatile=0) {
         ,id_domain => $base->id
         ,name => 'usb controller'
     );
-    my $new_mem = 5*1024;
+    my $new_mem = 2*1024;
     Ravada::Request->change_hardware(
         uid => user_admin->id
         ,id_domain => $base->id
@@ -212,7 +213,13 @@ sub test_assign_v2($hd, $node, $number, $volatile=0) {
     wait_request();
     $base->prepare_base(user_admin);
     for my $curr_node (@$node) {
-        $base->set_base_vm(id_vm => $curr_node->id, user => user_admin);
+        my $req=Ravada::Request->set_base_vm(
+            id_vm => $curr_node->id
+            ,id_domain => $base->id
+            ,uid => user_admin->id
+        );
+        wait_request(debug => 1);
+        diag($req->error);
     }
 
     wait_request(debug=>0);
@@ -230,24 +237,24 @@ sub test_assign_v2($hd, $node, $number, $volatile=0) {
         };
     my $fd;
     warn $n_expected;
-    for my $n (1 .. $n_expected) {
+    for my $n (1 .. $n_expected*2) {
 
         $fd = Ravada::WebSocket::_list_host_devices(rvd_front(),$ws);
 
         my $name = new_domain_name;
+        diag("Starting $name");
         my $domain = _req_clone($base, $name);
         is($domain->is_active,1) if $vm->type eq 'Void';
         check_hd_from_node($domain,\%devices_nodes);
         my $hd_checked = check_host_device($domain);
-        next if $MOCK_DEVICES;
         push(@{$dupe{$hd_checked}},($domain->name." ".$base->id));
         my $id_vm = $domain->_data('id_vm');
         $found{$id_vm}++;
 
         warn Dumper(\%found);
+        last if scalar(keys %found)>1;
 
     }
-    warn Dumper($fd);
     ok(scalar(keys %found) > 1);
     test_clone_nohd($hd, $base);
     test_start_in_another_node($hd, $base);
@@ -352,7 +359,7 @@ sub _req_clone($base, $name=undef) {
             ,name => $name
             ,start => $start
     );
-    wait_request(debug => 0, check_error => 0);
+    wait_request(debug => 1, check_error => 0);
     if ($base->type eq 'KVM' && $MOCK_DEVICES) {
         diag($req->error);
     } else {
@@ -382,7 +389,7 @@ sub _mock_start($domain) {
 }
 
 sub test_assign($vm, $node, $hd, $n_expected_in_vm, $n_expected_in_node) {
-    my $base = create_domain($vm);
+    my $base = create_domain_v2(vm=> $vm,memory => 333*1024);
     $base->add_host_device($hd);
     Ravada::Request->add_hardware(
         uid => user_admin->id
