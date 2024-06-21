@@ -134,8 +134,8 @@ sub test_mdev($vm) {
     test_config_no_hd($domain);
     $domain->add_host_device($id);
     _req_start($domain);
-    is($hd->list_available_devices(), $n_devices-1);
     test_config($domain);
+    is($hd->list_available_devices(), $n_devices-1) or exit;
 
     sleep 3;
     _req_shutdown($domain);

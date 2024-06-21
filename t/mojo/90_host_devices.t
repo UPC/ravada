@@ -143,7 +143,6 @@ sub test_base_hd($vm_name, $hd) {
     my $info;
     eval { $info = decode_json($t->tx->res->body) };
     ok($info->{host_devices}) or die $BASE->name;
-    warn Dumper($info->{host_devices});
     is(scalar(@{$info->{host_devices}}),1) or die $BASE->name;
 
 }

@@ -147,7 +147,7 @@ sub is_device($self, $device, $id_vm) {
 
 sub _device_locked($self, $name, $id_vm=$self->id_vm) {
     my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT id,id_domain "
+        "SELECT id,id_domain,time_changed "
         ." FROM host_devices_domain_locked "
         ." WHERE id_vm=? AND name=? "
     );
@@ -160,7 +160,8 @@ sub _device_locked($self, $name, $id_vm=$self->id_vm) {
         "DELETE FROM host_devices_domain_locked "
         ." WHERE id=?"
     );
-    while ( my ($id_lock, $id_domain)= $sth->fetchrow ) {
+    while ( my ($id_lock, $id_domain,$time_changed)= $sth->fetchrow ) {
+        return $id_lock if time - $time_changed<2;
         $sth_status->execute($id_domain);
         my ($status) = $sth_status->fetchrow;
         return $id_domain if $status && $status ne 'shutdown';

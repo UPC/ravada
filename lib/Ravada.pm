@@ -3528,6 +3528,8 @@ sub remove_domain {
     }
 
     my $user = Ravada::Auth::SQL->search_by_id( $arg{uid});
+    die "Error: user id:$arg{uid} removed\n" if !$user;
+
     die "Error: user ".$user->name." can't remove domain $id"
         if !$user->can_remove_machine($id);
 
