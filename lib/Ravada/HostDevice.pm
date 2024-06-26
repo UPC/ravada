@@ -161,7 +161,7 @@ sub _device_locked($self, $name, $id_vm=$self->id_vm) {
         ." WHERE id=?"
     );
     while ( my ($id_lock, $id_domain,$time_changed)= $sth->fetchrow ) {
-        return $id_lock if time - $time_changed<2;
+        return $id_lock if time - $time_changed < 60 ;
         $sth_status->execute($id_domain);
         my ($status) = $sth_status->fetchrow;
         return $id_domain if $status && $status ne 'shutdown';

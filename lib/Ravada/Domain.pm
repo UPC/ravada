@@ -5535,7 +5535,7 @@ sub base_in_vm($self,$id_vm) {
     $sth->finish;
 #    return 1 if !defined $enabled
 #        && $id_vm == $self->_vm->id && $self->_vm->host eq 'localhost';
-    return $enabled;
+    return ( $enabled or 0 );
 
 }
 
