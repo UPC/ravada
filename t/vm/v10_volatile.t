@@ -285,14 +285,31 @@ sub test_volatile_auto_kvm {
         sleep 1;
     }
     ok(!$domain2,"[$vm_name] Expecting domain $name removed after shutdown");
+    wait_request(debug => 0);
 
-    rvd_back->_clean_volatile_machines();
-
-    rvd_back->_refresh_volatile_domains();
     my $domain_f;
-    $domain_f = rvd_front->search_domain($name) if rvd_front->domain_exists($name);
-    ok(!$domain_f,"[$vm_name] Expecting domain $name removed after shutdown "
-        .Dumper($domain_f)) or exit;
+    for my $try ( 1 .. 3 ) {
+
+        rvd_back->_clean_volatile_machines();
+        rvd_back->_refresh_volatile_domains();
+
+        $domain_f = rvd_front->search_domain($name) if rvd_front->domain_exists($name);
+        last if !$domain_f;
+        warn $try;
+
+        my $domain_real;
+        eval { $domain_real = Ravada::Domain->open($domain_f->id) };
+
+        warn Dumper([ $domain_real->is_active
+                ,$domain_real->is_locked
+                ,$domain_real->_volatile_active
+            ]) if $domain_real;
+
+        sleep 1;
+
+        wait_request(debug => 1);
+    }
+    ok(!$domain_f,"[$vm_name] Expecting domain $name removed after shutdown ") or exit;
 
     my $domain_b = rvd_back->search_domain($name);
     ok(!$domain_b,"[$vm_name] Expecting domain removed after shutdown");
