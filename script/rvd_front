@@ -578,17 +578,26 @@ get '/machine/host_device/add/(#id_domain)/(#id_hd)' => sub($c) {
 post '/node/host_device/add' => sub($c) {
     my $arg = decode_json($c->req->body);
     my $id_vm = $arg->{id_vm} or die "Error: missing id_vm ".Dumper($arg);
+    my $name = $arg->{name};
+
     my $vm = Ravada::VM->open( readonly => 1
         ,id => $id_vm
     );
-    my $id = $vm->add_host_device(template => $arg->{template});
+    my @args = ( template => $arg->{template} );
+    push @args, ( name => $name ) if $name;
+
+    my $id;
+    eval { $id = $vm->add_host_device(@args) };
+    if ($@) {
+        return $c->render( json => { ok => 0, error => ''.$@ } );
+    }
     Ravada::Request->list_host_devices(
         uid => Ravada::Utils::user_daemon->id
         ,id_host_device => $id
         ,_force => 1
-    );
+    ) if $id;
 
-    return $c->render( json => { ok => 1 } );
+    return $c->render( json => { ok => $id } );
 };
 
 post '/node/host_device/update' => sub($c) {
@@ -3839,7 +3848,6 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
 sub run_request($c, $request, $anonymous = 0) {
     my $timeout = $SESSION_TIMEOUT;
     $timeout = $SESSION_TIMEOUT_ADMIN    if $USER->is_admin;
-    warn $request->id." ".$request->command;
     return $c->render(template => 'main/run_request', request => $request
         , auto_view => ( $CONFIG_FRONT->{auto_view} or $c->session('auto_view') or 0)
         , anonymous => $anonymous
@@ -4184,12 +4192,17 @@ sub shutdown_machine {
 
     my ($domain, $type) = _search_requested_machine($c);
 
-    my $req;
-    $req = Ravada::Request->force_shutdown_domain(id_domain => $domain->id, uid => $USER->id) if ($c->param('force'));
-    $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id) unless ($c->param('force'));
-
+    my $id_req;
+    if ($domain) {
+        my $req;
+        $req = Ravada::Request->force_shutdown_domain(id_domain => $domain->id, uid => $USER->id)
+            if ($c->param('force'));
+        $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id)
+            unless ($c->param('force'));
+        $id_req = $req->id if $req;
+    }
     return $c->redirect_to('/machines') if $type eq 'html';
-    return $c->render(json => { req => $req->id });
+    return $c->render(json => { req => $id_req });
 }
 
 sub reboot_machine {

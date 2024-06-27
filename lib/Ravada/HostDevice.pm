@@ -146,13 +146,28 @@ sub is_device($self, $device, $id_vm) {
 }
 
 sub _device_locked($self, $name, $id_vm=$self->id_vm) {
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM host_devices_domain_locked "
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id,id_domain,time_changed "
+        ." FROM host_devices_domain_locked "
         ." WHERE id_vm=? AND name=? "
     );
     $sth->execute($id_vm, $name);
-    my ($is_locked) = $sth->fetchrow;
-    $is_locked = 0 if !defined $is_locked;
-    return $is_locked;
+    my $sth_status = $$CONNECTOR->dbh->prepare(
+        "SELECT status FROM domains WHERE id=?"
+    );
+
+    my $sth_unlock = $$CONNECTOR->dbh->prepare(
+        "DELETE FROM host_devices_domain_locked "
+        ." WHERE id=?"
+    );
+    while ( my ($id_lock, $id_domain,$time_changed)= $sth->fetchrow ) {
+        return $id_lock if time - $time_changed < 60 ;
+        $sth_status->execute($id_domain);
+        my ($status) = $sth_status->fetchrow;
+        return $id_domain if $status && $status ne 'shutdown';
+        $sth_unlock->execute($id_lock);
+    }
+    return 0;
 }
 
 sub list_available_devices($self, $id_vm=$self->id_vm) {
@@ -163,6 +178,29 @@ sub list_available_devices($self, $id_vm=$self->id_vm) {
     }
     return @device;
 }
+
+sub list_available_devices_cached($self, $id_vm=$self->id_vm) {
+    my @device;
+    my $dn = {};
+    my $data_dn = $self->_data('devices_node');
+    if (!$data_dn) {
+        my %data_dn = $self->list_devices_nodes();
+        $dn = \%data_dn;
+    } else {
+        eval { $dn = decode_json($data_dn) };
+        if ($@) {
+            warn "$@ ".($data_dn or '<NULL>');
+            return $self->list_available_devices($id_vm);
+        }
+    }
+    my $dnn = $dn->{$id_vm};
+    for my $dev_entry ( @$dnn ) {
+        next if $self->_device_locked($dev_entry, $id_vm);
+        push @device, ($dev_entry);
+    }
+    return @device;
+}
+
 
 sub remove($self) {
     _init_connector();

@@ -1158,10 +1158,8 @@ sub add_config_node($self, $path, $content, $data) {
     for my $item (split m{/}, $path ) {
         next if !$item;
 
-        confess "Error, no $item in ".Dumper($found)
-        if !exists $found->{$item};
-
         $found = $found->{$item};
+        $found = [] if !$found;
     }
     my $old;
     if (ref($found) eq 'ARRAY') {

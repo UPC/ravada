@@ -594,7 +594,7 @@ sub test_bases_node {
 
     $domain->prepare_base(user_admin);
     is($domain->base_in_vm($domain->_vm->id), 1);
-    is($domain->base_in_vm($node->id), undef);
+    is($domain->base_in_vm($node->id), 0);
 
     $domain->migrate($node);
     is($domain->_vm->id, $node->id) or exit;
@@ -654,7 +654,7 @@ sub test_clone_make_base {
     $domain->prepare_base(user_admin);
     is($domain->base_in_vm($domain->_vm->id), 1);
 
-    is($domain->base_in_vm($node->id), undef) or exit;
+    is($domain->base_in_vm($node->id), 0) or exit;
 
     $domain->set_base_vm(vm => $node, user => user_admin);
     is($domain->base_in_vm($node->id), 1);

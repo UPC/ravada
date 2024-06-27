@@ -1269,10 +1269,6 @@ sub _domain_create_from_base {
 
     my $with_cd = delete $args{with_cd};
 
-
-    confess Dumper(\%args) if $args{name} eq 'tst_device_50_nodes_01' 
-    && ( !exists $args{volatile} || !defined $args{volatile});
-
     my $options = delete $args{options};
     my $network = delete $options->{network};
 
@@ -3021,6 +3017,7 @@ sub can_list_cpu_models($self) {
 
 sub list_virtual_networks($self) {
     my @networks;
+    return if !$self->vm;
     for my $net ($self->vm->list_all_networks()) {
         my $doc = XML::LibXML->load_xml(string => $net->get_xml_description);
         my ($ip_doc) = $doc->findnodes("/network/ip");

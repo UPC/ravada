@@ -311,14 +311,15 @@ sub test_host_device_usb($vm) {
     test_kvm_usb_template_args($device, $list_hostdev_c[0]);
 
     _check_hostdev($clone);
-    $clone->start(user_admin);
+    eval { $clone->start(user_admin) };
+    is(''.$@,'') or die $@;
     _check_hostdev($clone, 1);
 
     shutdown_domain_internal($clone);
     _check_hostdev($clone, 1) or exit;
     eval { $clone->start(user_admin) };
-    is(''.$@, '') or exit;
-    _check_hostdev($clone, 1) or exit;
+    is(''.$@, '') or die;
+    _check_hostdev($clone, 1) or die;
 
     #### it will fail in another clone
 
@@ -329,7 +330,7 @@ sub test_host_device_usb($vm) {
         eval { $clone2->start(user_admin) };
         last if $@;
     }
-    like ($@ , qr(No available devices));
+    like ($@ , qr(No available devices)) or exit;
 
     $list_hostdev[0]->remove();
     my @list_hostdev2 = $vm->list_host_devices();

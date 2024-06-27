@@ -437,7 +437,6 @@ sub _connect_ssh($self) {
         }
 
         for ( 1 .. 3 ) {
-            warn "try $_ " if $self->host =~ /192.168.122/;
             $ssh = Net::OpenSSH->new($self->host
                     ,timeout => 2
                  ,batch_mode => 1
@@ -452,7 +451,7 @@ sub _connect_ssh($self) {
         if ( $ssh->error ) {
             $self->_cached_active(0);
             $self->_data('cached_down' => time);
-            warn "Error connecting to ".$self->host." : ".$ssh->error();
+            # warn "Error connecting to ".$self->host." : ".$ssh->error();
             return;
         }
     }
@@ -465,11 +464,8 @@ sub _ssh($self) {
     return if !$ssh;
     return $ssh if $ssh->check_master;
     warn "WARNING: ssh error '".$ssh->error."'" if $ssh->error;
-    warn "_ssh ".localtime(time);
     $self->netssh->disconnect;
-    warn "_ssh ".localtime(time);
     $self->clear_netssh();
-    warn "_ssh ".localtime(time);
     return $self->netssh;
 }
 
@@ -556,15 +552,20 @@ sub _around_create_domain {
 
     return $base->_search_pool_clone($owner) if $from_pool;
 
-    if ($self->is_local && $base && $base->is_base && $args_create{volatile}) {
+    if ($self->is_local && $base && $base->is_base && $args_create{volatile} && !$base->list_host_devices) {
         $request->status("balancing")                       if $request;
-        my $vm = $self->balance_vm($owner->id, $base) or die "Error: No free nodes available.";
+        my $vm = $self->balance_vm($owner->id, $base);
+
+        if (!$vm) {
+            die "Error: No free nodes available.\n";
+        }
         $request->status("creating machine on ".$vm->name)  if $request;
         $self = $vm;
         $args_create{listen_ip} = $self->listen_ip($remote_ip);
     }
 
     my $domain = $self->$orig(%args_create);
+    $domain->_data('date_status_change'=>Ravada::Utils::now());
     $self->_add_instance_db($domain->id);
     $domain->add_volume_swap( size => $swap )   if $swap;
     $domain->_data('is_compacted' => 1);
@@ -597,19 +598,29 @@ sub _around_create_domain {
     }
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
 
-    $domain->is_volatile(1) if $user->is_temporary() || $volatile;
-
-    $domain->is_volatile(1) if $id_base && $base->volatile_clones()
-    && (!defined $volatile || $volatile);
+    $volatile = $volatile || $user->is_temporary || $args_create{volatile};
 
     my @start_args = ( user => $owner );
     push @start_args, (remote_ip => $remote_ip) if $remote_ip;
 
     $domain->_post_start(@start_args) if $domain->is_active;
-    eval {
-           $domain->start(@start_args)      if $active || ($domain->is_volatile && ! $domain->is_active);
-    };
-    die $@ if $@ && $@ !~ /code: 55,/;
+
+    if ( $active || ($volatile && ! $domain->is_active) ) {
+        $domain->_data('date_status_change'=>Ravada::Utils::now());
+        $domain->status('starting');
+
+        eval {
+           $domain->start(@start_args);
+        };
+        my $err = $@;
+
+        $domain->_data('date_status_change'=>Ravada::Utils::now());
+        if ( $err && $err !~ /code: 55,/ ) {
+            $domain->is_volatile($volatile) if defined $volatile;
+            die $err;
+        }
+    }
+    $domain->is_volatile($volatile) if defined $volatile;
 
     $domain->info($owner);
     $domain->display($owner)    if $domain->is_active;
@@ -1117,6 +1128,13 @@ sub _set_by_id($id, $field, $value) {
 sub _timed_data_cache($self) {
     return if !$self->{$FIELD_TIMEOUT} || time - $self->{$FIELD_TIMEOUT} < $CACHE_TIMEOUT;
     return _clean($self);
+}
+
+sub _get_name_by_id($id) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT name FROM vms WHERE id=?");
+    $sth->execute($id);
+    my ($name) = $sth->fetchrow;
+    return $name;
 }
 
 sub _clean($self) {
@@ -1730,6 +1748,7 @@ sub is_active($self, $force=0) {
 
 sub _do_is_active($self, $force=undef) {
     my $ret = 0;
+    $self->_data('cached_down' => 0);
     if ( $self->is_local ) {
         eval {
         $ret = 1 if $self->vm;
@@ -1819,14 +1838,11 @@ sub run_command($self, @command) {
     }
     return $self->_run_command_local(@command) if $self->is_local();
 
-    warn "1 ".localtime(time) if $self->_data('hostname') =~ /192.168.122./;
     my $ssh = $self->_ssh or confess "Error: Error connecting to ".$self->host;
-    warn "2 ".localtime(time) if $self->_data('hostname') =~ /192.168.122./;
 
     my ($out, $err) = $ssh->capture2({timeout => 10},join " ",@command);
     chomp $err if $err;
     $err = '' if !defined $err;
-    warn "3 ".localtime(time)." $err" if $self->_data('hostname') =~ /192.168.122./;
 
     confess "Error: Failed remote command on ".$self->host." err='$err'\n"
     ."ssh error: '".$ssh->error."'\n"
@@ -2111,7 +2127,7 @@ Arguments
 
 =cut
 
-sub balance_vm($self, $uid, $base=undef, $id_domain=undef, $host_devices=undef) {
+sub balance_vm($self, $uid, $base=undef, $id_domain=undef, $host_devices=1) {
 
     my @vms;
     if ($base) {
@@ -2135,7 +2151,8 @@ sub balance_vm($self, $uid, $base=undef, $id_domain=undef, $host_devices=undef) 
     }
     my $vm = $self->_balance_free_memory($base, \@vms_active);
     return $vm if $vm;
-    die "Error: No free nodes available.\n" if !$vm;
+    die "Error: No available devices or no free nodes.\n" if $host_devices;
+    die "Error: No free nodes available.\n";
 }
 
 sub _balance_already_started($self, $uid, $id_domain, $vms) {
@@ -2750,11 +2767,15 @@ sub add_host_device($self, %args) {
     _init_connector();
 
     my $template = delete $args{template} or confess "Error: template required";
+    my $name = delete $args{name};
+
     my $info = Ravada::HostDevice::Templates::template($self->type, $template);
     my $template_list = delete $info->{templates};
     $info->{id_vm} = $self->id;
 
     $info->{name}.= " ".($self->_max_hd($info->{name})+1);
+
+    $info->{name} = $name if $name;
 
     my $query = "INSERT INTO host_devices "
     ."( ".join(", ",sort keys %$info)." ) "
@@ -2765,7 +2786,7 @@ sub add_host_device($self, %args) {
     eval {
     $sth->execute(map { $info->{$_} } sort keys %$info );
     };
-    confess Dumper([$info,$@]) if $@;
+    die Dumper([$info,$@]) if $@;
 
     my $id = Ravada::Request->_last_insert_id( $$CONNECTOR );
 

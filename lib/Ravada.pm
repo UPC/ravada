@@ -3528,6 +3528,8 @@ sub remove_domain {
     }
 
     my $user = Ravada::Auth::SQL->search_by_id( $arg{uid});
+    die "Error: user id:$arg{uid} removed\n" if !$user;
+
     die "Error: user ".$user->name." can't remove domain $id"
         if !$user->can_remove_machine($id);
 
@@ -4854,24 +4856,20 @@ sub _cmd_clone($self, $request) {
     if $clone && $clone->id_owner != $user->id;
 
     if (!$clone) {
-        my ($clone0) = grep { $_->{id_owner}== $user->id } $domain->clones;
-        $clone = Ravada::Domain->open($clone0->{id})
-        if $clone0->{status} && $clone0->{status} eq 'active';
-    }
-    if (!$clone) {
         my $volatile = $domain->volatile_clones;
         if (defined $args->{volatile}) {
             $volatile = $args->{volatile};
         }
-        if ($volatile) {
-            my $extra = Ravada::Utils::random_name();
-            $name .= "-".$extra;
-            $args->{alias} .= "-".$extra;
+        for my $try ( 1 .. 3 ) {
+            eval {
+                $clone = $domain->clone( name => $name ,%$args);
+            };
+            my $err = $@;
+            warn $err if $err;
+            next if $err && $err =~ /No field in .*_data/i;
+            die $err if $err;
+            last if $clone;
         }
-        $clone = $domain->clone(
-            name => $name
-            ,%$args
-        )
     }
 
     $request->id_domain($clone->id) if $clone;
@@ -4882,7 +4880,7 @@ sub _cmd_clone($self, $request) {
         ,id_domain => $clone->id
         ,remote_ip => $request->defined_arg('remote_ip')
         ,after_request => $req_next->id
-    ) if $request->defined_arg('start');
+    ) if $clone && $request->defined_arg('start');
 
 }
 
@@ -5130,7 +5128,7 @@ sub _cmd_shutdown_clones {
             my $is_active;
             eval {
                 $domain2 = $self->search_domain_by_id($id);
-                $is_active = $domain2->is_active;
+                $is_active = $domain2->is_active if $domain2;
             };
             warn $@ if $@;
             if ($is_active) {
@@ -5698,7 +5696,13 @@ sub _cmd_refresh_machine($self, $request) {
     $domain->check_status();
     $domain->list_volumes_info();
     my $is_active = $domain->is_active;
-    $self->_remove_unnecessary_downs($domain) if !$is_active;
+    if (!$is_active) {
+        $self->_remove_unnecessary_downs($domain);
+        if ( $domain->is_volatile && !$domain->_volatile_active ) {
+            $domain->remove(Ravada::Utils::user_daemon);
+            return;
+        }
+    }
     $domain->info($user);
     $domain->client_status(1) if $is_active;
     $domain->_check_port_conflicts();
@@ -5707,7 +5711,7 @@ sub _cmd_refresh_machine($self, $request) {
         ,timeout => 60, retry => 10)
     if $is_active && $domain->ip && $domain->list_ports;
 
-    $domain->_dettach_host_devices() if !$is_active;
+    $domain->_unlock_host_devices() if !$is_active;
 }
 
 sub _cmd_refresh_machine_ports($self, $request) {
@@ -6101,13 +6105,7 @@ sub _refresh_active_domains($self, $request=undef) {
                     warn $@;
                 }
                 next if !$domain || $domain->is_locked;
-
-                my $date = DateTime::Format::DateParse->parse_datetime( $domain->_data('date_status_change'));
-
-                my $now = DateTime->from_epoch( epoch => time()-300 , time_zone => Ravada::Utils::TZ_SYSTEM());
-
-                warn $domain->name.' '.$date->ymd." ".$date->hms." - ".$now->ymd." ".$now->hms." = ".DateTime->compare($date, $now) if $domain->name =~/-f3/;
-                next if DateTime->compare($date, $now) <1;
+                next if $domain->_volatile_active();
 
                 $self->_refresh_active_domain($domain, \%active_domain);
                 $self->_remove_unnecessary_downs($domain) if !$domain->is_active;
@@ -6281,7 +6279,8 @@ sub _refresh_active_domain($self, $domain, $active_domain) {
     $domain->client_status(1);
 
     $domain->_post_shutdown()
-    if $domain->_data('status') eq 'shutdown' && !$domain->_data('post_shutdown');
+    if $domain->_data('status') eq 'shutdown' && !$domain->_data('post_shutdown')
+    && !$domain->_volatile_active;
 }
 
 sub _refresh_hibernated($self, $domain) {
@@ -6352,7 +6351,7 @@ sub _refresh_volatile_domains($self) {
         eval { $domain = Ravada::Domain->open(id => $id_domain, _force => 1) } ;
         next if $domain && $domain->is_locked;
         if ( !$domain || $domain->status eq 'down' || !$domain->is_active) {
-            if ($domain) {
+            if ($domain && !$domain->is_locked ) {
                 Ravada::Request->shutdown_domain(
                     uid => $USER_DAEMON->id
                     ,id_domain => $id_domain
@@ -6449,7 +6448,7 @@ sub _domain_just_started($self, $domain) {
     my $start_time = time - 300;
     $sth->execute($start_time);
     while ( my ($id, $command, $args) = $sth->fetchrow ) {
-        next if $command !~ /create|clone|start|open/i;
+        next if $command !~ /create|clone|start|open|shutdown/i;
         my $args_h = decode_json($args);
         return 1 if exists $args_h->{id_domain} && defined $args_h->{id_domain}
         && $args_h->{id_domain} == $domain->id;
@@ -6836,6 +6835,8 @@ sub _clean_volatile_machines($self, %args) {
         );
         if ($domain_real) {
             next if $domain_real->domain && $domain_real->is_active;
+            next if $domain_real->is_locked;
+            next if $domain_real->_volatile_active;
             eval { $domain_real->_post_shutdown() };
             warn $@ if $@;
             eval { $domain_real->remove($USER_DAEMON) };
