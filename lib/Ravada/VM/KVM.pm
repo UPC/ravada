@@ -3017,6 +3017,7 @@ sub can_list_cpu_models($self) {
 
 sub list_virtual_networks($self) {
     my @networks;
+    return if !$self->vm;
     for my $net ($self->vm->list_all_networks()) {
         my $doc = XML::LibXML->load_xml(string => $net->get_xml_description);
         my ($ip_doc) = $doc->findnodes("/network/ip");

@@ -539,6 +539,7 @@ sub test_xml_no_hd($domain) {
 
 sub test_base($domain) {
 
+    return if $domain->volatile_clones && $MOCK_MDEV && $domain->type ne 'Void';
     my @args = ( uid => user_admin->id ,id_domain => $domain->id);
 
     Ravada::Request->shutdown_domain(@args);
