@@ -566,8 +566,11 @@ sub test_rsync_newer {
 
     # on starting it should sync
     is($domain->_vm->host, $node->host);
-    $domain->start(user => user_admin);
-    is($domain->_vm->host, $node->host);
+    $domain->_data('id_vm' => $vm->id);
+
+    my $domain2 = Ravada::Domain->open($domain->id);
+    $domain2->start(user => user_admin);
+    is($domain2->_vm->host, $node->host);
 
     { # syncs for start, so vols should be equal
     my $vol3 = $vm->search_volume($vol_name);
@@ -707,11 +710,11 @@ sub test_bases_different_storage_pools {
 
     $domain->prepare_base(user_admin);
     is($domain->base_in_vm($domain->_vm->id), 1);
-    is($domain->base_in_vm($node->id), undef);
+    is($domain->base_in_vm($node->id), 0);
 
     eval {$domain->migrate($node) };
     like($@, qr'storage pool.*not found'i);
-    is($domain->base_in_vm($node->id), undef);
+    is($domain->base_in_vm($node->id), 0);
 
     _enable_storage_pools($node);
 

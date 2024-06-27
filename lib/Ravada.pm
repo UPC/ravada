@@ -6021,7 +6021,7 @@ sub _cmd_rsync_back($self, $request) {
     my $id_domain = $request->args('id_domain') or die "ERROR: Missing id_domain";
 
     my $domain = Ravada::Domain->open($id_domain);
-    return if $domain->is_active;
+    return if $domain->is_active || $domain->is_volatile;
 
     my $user = Ravada::Auth::SQL->search_by_id($uid);
     die "Error: user ".$user->name." not allowed to migrate domain ".$domain->name

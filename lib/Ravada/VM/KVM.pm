@@ -898,6 +898,7 @@ sub list_domains {
 }
 
 sub discover($self) {
+    return if !$self->vm;
     my @known = $self->list_domains(read_only => 1);
     my %known = map { $_->name => 1 } @known;
 
