@@ -4261,10 +4261,8 @@ sub _stop_refresh($self) {
     );
     $sth->execute('refresh%');
     while ( my ($id) = $sth->fetchrow ) {
-        warn "stopping $id";
         eval {
             my $req = Ravada::Request->open($id);
-            warn " [$id] ".$req->command." stopping";
             $req->stop;
         };
 

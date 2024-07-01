@@ -380,8 +380,6 @@ sub _around_start($orig, $self, @arg) {
 
         die $error if $error =~ /No DRM render nodes/;
 
-        warn "WARNING: $error ".$vm_name if $error;
-
         ;# pool has asynchronous jobs running.
         next if $error && ref($error) && $error->code == 1
         && $error !~ /internal error.*unexpected address/
