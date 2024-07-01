@@ -5685,13 +5685,31 @@ sub _cmd_check_storage($self, $request) {
     }
 }
 
+sub _remove_inactive_gone($id_domain) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT name,is_volatile "
+        ." FROM domains "
+        ." WHERE id=?"
+    );
+    $sth->execute($id_domain);
+    my ($name,$is_volatile) = $sth->fetchrow;
+    if ($is_volatile) {
+        Ravada::Request->remove_domain(
+            name => $name
+            ,uid => Ravada::Utils::user_daemon->id
+        );
+    }
+}
+
 sub _cmd_refresh_machine($self, $request) {
 
     my $id_domain = $request->args('id_domain');
     my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
 
     # it may have been removed on shutdown when volatile
-    my $domain = Ravada::Domain->open($id_domain) or return;
+    my $domain = Ravada::Domain->open($id_domain);
+
+    return _remove_inactive_gone($id_domain) if !$domain;
 
     $domain->check_status();
     $domain->list_volumes_info();

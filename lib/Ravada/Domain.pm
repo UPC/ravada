@@ -325,6 +325,7 @@ sub _around_start($orig, $self, @arg) {
     my $enable_host_devices;
     $enable_host_devices = $request->defined_arg('enable_host_devices') if $request;
     $enable_host_devices = 1 if !defined $enable_host_devices;
+    my $is_volatile = ($self->is_volatile || $arg{is_volatile});
 
     for (1 .. 5) {
         eval { $self->_start_checks(%arg, enable_host_devices => $enable_host_devices) };
@@ -429,6 +430,7 @@ sub _start_preconditions{
         my $remote_ip = delete $args{remote_ip};
         $request = delete $args{request} if exists $args{request};
         $id_vm = delete $args{id_vm};
+        delete $args{is_volatile};
 
         confess "ERROR: Unknown argument ".join("," , sort keys %args)
             ."\n\tknown: remote_ip, user"   if keys %args;
@@ -478,6 +480,7 @@ sub _start_checks($self, @args) {
     my $vm = $vm_local;
 
     my ($id_vm, $request, $enable_host_devices);
+    my $is_volatile = $self->is_volatile;
     if (!(scalar(@args) % 2)) {
         my %args = @args;
 
@@ -485,6 +488,7 @@ sub _start_checks($self, @args) {
         $id_vm = delete $args{id_vm};
         $request = delete $args{request} if exists $args{request};
         $enable_host_devices = delete $args{enable_host_devices};
+        $is_volatile = ($self->is_volatile || $args{is_volatile});
     }
     my $id_prev = $self->_data('id_vm');
 
@@ -508,7 +512,7 @@ sub _start_checks($self, @args) {
 
     # if it is a clone ( it is not a base )
     my $id_base = $self->id_base;
-    if ($id_base && !$self->is_volatile) {
+    if ($id_base && !$is_volatile) {
         $self->_check_tmp_volumes();
 #        $self->_set_last_vm(1)
         if ( !$self->is_local
@@ -525,9 +529,9 @@ sub _start_checks($self, @args) {
             $self->_set_vm($vm);
         } else {
             $self->_balance_vm($request, $enable_host_devices)
-            if !$self->is_volatile;
+            if !$is_volatile;
         }
-        if ( !$self->is_volatile && !$self->_vm->is_local() ) {
+        if ( !$is_volatile && !$self->_vm->is_local() ) {
             if (!base_in_vm($id_base, $self->_vm->id)) {
                 my $args = {
                     uid => Ravada::Utils::user_daemon->id
@@ -645,7 +649,6 @@ sub _filter_vm_available_hd($self, @vms) {
 
 sub _balance_vm($self, $request=undef, $host_devices=1) {
     return if $self->{_migrated};
-
     my $base;
     $base = Ravada::Domain->open($self->id_base) if $self->id_base;
 
@@ -670,7 +673,7 @@ sub _balance_vm($self, $request=undef, $host_devices=1) {
                 ,id_domain => $base->id
                 ,id_vm => $vm_free->id
             );
-            next;
+            confess $@;
         }
         die $@;
     }
@@ -3012,14 +3015,29 @@ sub clone {
         }
     }
 
-    my $clone = $vm->create_domain(
-        name => $name
-        ,id_base => $self->id
-        ,id_owner => $uid
-        ,@args_copy
-    );
-    $clone->is_pool(1) if $add_to_pool;
-    return $clone;
+    my $clone;
+    eval {
+        $clone = $vm->create_domain(
+            name => $name
+            ,id_base => $self->id
+            ,id_owner => $uid
+            ,@args_copy
+        );
+    };
+    my $err = $@;
+
+    if ($clone) {
+        $clone->is_pool(1) if $add_to_pool;
+
+        if (!defined $clone->{_data}->{is_volatile}) {
+            if (!defined $volatile) {
+                $volatile = $self->volatile_clones() || $user->is_temporary;
+            }
+            $clone->is_volatile($volatile or 0);
+        }
+        return $clone;
+    }
+    die $err if $err;
 }
 
 sub _clone_from_pool($self, %args) {
@@ -5115,7 +5133,7 @@ sub rsync($self, @args) {
     my $request = delete $args{request};
 
     confess "ERROR: Unkown args ".Dumper(\%args)    if keys %args;
-
+    confess if $self->name =~ /aztest-m-/;
     if (!$files ) {
         my @files_base;
         if ($self->is_base) {
@@ -7508,7 +7526,8 @@ sub _clean_old_hd_locks($self) {
 
 }
 
-sub _unlock_host_devices($self, $time_changed=3) {
+sub _unlock_host_devices($self, $time_changed=$TTL_REMOVE_VOLATILE) {
+
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
         ." WHERE id_domain=? AND time_changed<=?"
     );
@@ -7519,7 +7538,7 @@ sub _unlock_host_device($self, $name) {
     my $sth = $$CONNECTOR->dbh->prepare("DELETE FROM host_devices_domain_locked "
         ." WHERE id_domain=? AND name=? AND time_changed<?"
     );
-    $sth->execute($self->id, $name,time-60);
+    $sth->execute($self->id, $name,time-$TTL_REMOVE_VOLATILE);
 }
 
 

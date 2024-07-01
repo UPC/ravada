@@ -610,7 +610,7 @@ sub _around_create_domain {
         $domain->status('starting');
 
         eval {
-           $domain->start(@start_args);
+           $domain->start(@start_args, is_volatile => $volatile);
         };
         my $err = $@;
 

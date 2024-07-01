@@ -145,6 +145,10 @@ sub is_device($self, $device, $id_vm) {
 
 }
 
+sub _ttl_remove_volatile() {
+    return $Ravada::Domain::TTL_REMOVE_VOLATILE;
+}
+
 sub _device_locked($self, $name, $id_vm=$self->id_vm) {
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT id,id_domain,time_changed "
@@ -161,7 +165,7 @@ sub _device_locked($self, $name, $id_vm=$self->id_vm) {
         ." WHERE id=?"
     );
     while ( my ($id_lock, $id_domain,$time_changed)= $sth->fetchrow ) {
-        return $id_lock if time - $time_changed < 60 ;
+        return $id_lock if time - $time_changed < _ttl_remove_volatile() ;
         $sth_status->execute($id_domain);
         my ($status) = $sth_status->fetchrow;
         return $id_domain if $status && $status ne 'shutdown';
@@ -327,6 +331,7 @@ sub _dettach_in_domains($self) {
     for my $id_domain ( $self->list_domains_with_device() ) {
         my $domain = Ravada::Domain->open($id_domain);
         if (!$domain) {
+            warn "unlocking from domain $id_domain";
             my $sth = $$CONNECTOR->dbh->prepare(
                 "DELETE FROM host_devices_domain_locked "
                 ." WHERE id_domain=?"
