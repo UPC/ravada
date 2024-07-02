@@ -372,11 +372,14 @@ sub timeout_down_cache($self) {
 
 sub _around_connect($orig, $self) {
 
+    my $data_active = $self->_data('is_active');
+    my $data_cached_down = $self->_data('cached_down');
     if ($self->_data('cached_down') && time-$self->_data('cached_down')< $self->timeout_down_cache()) {
             return;
     }
     my $result = $self->$orig();
     if ($result) {
+        warn Dumper([$data_active, $data_cached_down]) if $self->id == 4;
         $self->is_active(1);
         $self->_fetch_tls();
         $self->_refresh_version();

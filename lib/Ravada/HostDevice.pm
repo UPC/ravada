@@ -99,7 +99,7 @@ sub list_devices_nodes($self) {
     my %devices;
     for my $ndata (@nodes) {
         if (!$ndata->[2] || !$ndata->[3]) {
-            $devices{$ndata->[1]}=[];
+            $devices{$ndata->[0]}=[];
             next;
         }
         my $node = Ravada::VM->open($ndata->[0]);
@@ -257,7 +257,14 @@ sub _data($self, $field, $value=undef) {
             $value =~ m{["'`$()\[\];]}
             || $value !~ /^(ls|find)/);
 
+        if  ( $field eq 'devices_node' && $value ) {
+            warn Dumper($value);
+            my ($wrong) = grep { $_ !~ /^\d+$/ } keys %$value;
+            confess if $wrong;
+        }
+
         $value = encode_json($value) if ref($value);
+
 
         my $old_value = $self->_data($field);
         return if defined $old_value && $old_value eq $value;

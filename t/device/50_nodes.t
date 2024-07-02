@@ -8,6 +8,7 @@ use IPC::Run3 qw(run3);
 use Mojo::JSON qw(decode_json encode_json);
 use Ravada::HostDevice::Templates;
 use Ravada::WebSocket;
+use Storable qw(dclone);
 use Test::More;
 use YAML qw( Dump );
 
@@ -137,6 +138,36 @@ sub _create_host_devices($node,$number, $type=undef) {
     return $hd;
 }
 
+sub test_node_down($hd,$node, $number) {
+    my %devices_nodes = $hd->list_devices_nodes();
+    my $data_dn = $hd->_data('devices_node');
+    my $dn = decode_json($data_dn);
+
+    my ($vm) = grep { $_->host ne 'localhost' } @$node;
+    ($vm) = @$node if !$vm;
+
+    my $dn0 = dclone($dn->{$vm->id});
+
+    $vm->_data('is_active' ,0);
+    $dn->{$vm->id} = [];
+
+    $hd->_data('devices_node' => $dn);
+    my $data_dn2 = $hd->_data('devices_node');
+    my $dn2 = decode_json($data_dn2);
+    is_deeply($dn2->{$vm->id},[]);
+
+    Ravada::Request->refresh_vms();
+    wait_request();
+    my $vm2 = Ravada::VM->open($vm->id);
+
+    my $data_dn3 = $hd->_data('devices_node');
+    my $dn3 = decode_json($data_dn3);
+    is_deeply($dn3->{$vm->id},$dn0) or exit;
+    warn Dumper($dn3);
+
+
+}
+
 sub test_devices_v2($node, $number, $volatile=0, $type=undef) {
     _clean_devices(@$node);
     my $vm = $node->[0];
@@ -145,6 +176,8 @@ sub test_devices_v2($node, $number, $volatile=0, $type=undef) {
     return if $type && !$hd;
 
     die "Error: no hd found" if !$hd;
+
+    test_node_down($hd, $node, $number);
 
     test_assign_v2($hd,$node,$number, $volatile);
 
