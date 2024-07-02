@@ -238,8 +238,6 @@ sub test_assign_v2($hd, $node, $number, $volatile=0) {
             ,login => user_admin->name
         };
     my $fd;
-    warn $n_expected;
-    warn Dumper(\%devices_nodes);
     for my $n (1 .. $n_expected*2) {
 
         $fd = Ravada::WebSocket::_list_host_devices(rvd_front(),$ws);
@@ -255,7 +253,6 @@ sub test_assign_v2($hd, $node, $number, $volatile=0) {
         my $id_vm = $domain->_data('id_vm');
         $found{$id_vm}++;
 
-        warn Dumper(\%found);
         last if scalar(keys %found)>1;
 
     }

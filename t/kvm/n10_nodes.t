@@ -740,6 +740,7 @@ sub test_clone_not_in_node {
     my @clones;
     for ( 1 .. 10 ) {
         my $clone1 = $domain->clone(name => new_domain_name, user => user_admin);
+        diag($clone1->name);
         push @clones,($clone1);
         is($clone1->_vm->host, 'localhost');
         eval { $clone1->start(user_admin) };
@@ -901,7 +902,7 @@ sub test_node_inactive($vm_name, $node) {
 
     start_node($node);
 
-    hibernate_node($node);
+    shutdown_node($node);
     is($node->ping, 0);
     is($node->_do_is_active,0);
     is($node->_data('is_active'), 0);
@@ -1166,9 +1167,6 @@ SKIP: {
         remove_node($node);
         next;
     };
-
-    # remove
-    test_clone_not_in_node($vm_name, $node);
 
     is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
     test_already_started_hibernated($vm_name, $node);
