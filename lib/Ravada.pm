@@ -5011,7 +5011,12 @@ sub _cmd_start {
     my $domain;
     $domain = $self->search_domain($name)               if $name;
     $domain = Ravada::Domain->open($id_domain)          if $id_domain;
-    die "Unknown domain '".($name or $id_domain)."'" if !$domain;
+
+    if(!$domain) {
+        $self->_remove_inactive_gone($id_domain);
+        die "Unknown machine '".($name or $id_domain)."'\n";
+    }
+
     $domain->status('starting');
 
     my $uid = $request->args('uid');
@@ -5683,7 +5688,7 @@ sub _cmd_check_storage($self, $request) {
     }
 }
 
-sub _remove_inactive_gone($id_domain) {
+sub _remove_inactive_gone($self,$id_domain) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT name,is_volatile "
         ." FROM domains "
@@ -5692,10 +5697,11 @@ sub _remove_inactive_gone($id_domain) {
     $sth->execute($id_domain);
     my ($name,$is_volatile) = $sth->fetchrow;
     if ($is_volatile) {
-        Ravada::Request->remove_domain(
+        my $req = Ravada::Request->remove_domain(
             name => $name
             ,uid => Ravada::Utils::user_daemon->id
         );
+        $self->_cmd_remove($req);
     }
 }
 
@@ -5707,7 +5713,7 @@ sub _cmd_refresh_machine($self, $request) {
     # it may have been removed on shutdown when volatile
     my $domain = Ravada::Domain->open($id_domain);
 
-    return _remove_inactive_gone($id_domain) if !$domain;
+    return $self->_remove_inactive_gone($id_domain) if !$domain;
 
     $domain->check_status();
     $domain->list_volumes_info();

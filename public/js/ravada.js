@@ -1402,6 +1402,9 @@
                 var data = JSON.parse(event.data);
                 $scope.$apply(function () {
                     $scope.request = data;
+                    if (/Unknown (domain|machine)/i.exec($scope.request.error)) {
+                        $scope.domain=undefined;
+                    }
                 });
                 if ( data.id_domain && ! already_subscribed_to_domain ) {
                     already_subscribed_to_domain = true;
