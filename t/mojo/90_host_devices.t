@@ -198,7 +198,6 @@ for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
 
 remove_old_domains_req(0); # 0=do not wait for them
 clean_hds();
-
-end();
+remove_old_users();
 
 done_testing();

@@ -19,6 +19,8 @@ my $BASE;
 my $MOCK_MDEV;
 my $N_TIMERS;
 
+$Ravada::Domain::TTL_REMOVE_VOLATILE=3;
+
 ####################################################################
 
 sub _prepare_dir_mdev() {
