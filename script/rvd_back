@@ -334,6 +334,8 @@ sub start {
         autostart_machines($ravada);
         Ravada::Request->update_iso_urls(uid =>Ravada::Utils::user_daemon->id);
         Ravada::Request->refresh_storage();
+        Ravada::Request->list_host_devices(uid =>Ravada::Utils::user_daemon->id);
+
     }
     clean_old_requests();
     for (;;) {

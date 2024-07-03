@@ -20,6 +20,8 @@ use_ok('Ravada::HostDevice');
 use_ok('Ravada::HostDevice::Templates');
 
 my $N_DEVICE = 0;
+$Ravada::Domain::TTL_REMOVE_VOLATILE=3;
+
 #########################################################
 
 sub _search_unused_device {
@@ -311,14 +313,15 @@ sub test_host_device_usb($vm) {
     test_kvm_usb_template_args($device, $list_hostdev_c[0]);
 
     _check_hostdev($clone);
-    $clone->start(user_admin);
+    eval { $clone->start(user_admin) };
+    is(''.$@,'') or die $@;
     _check_hostdev($clone, 1);
 
     shutdown_domain_internal($clone);
     _check_hostdev($clone, 1) or exit;
     eval { $clone->start(user_admin) };
-    is(''.$@, '') or exit;
-    _check_hostdev($clone, 1) or exit;
+    is(''.$@, '') or die;
+    _check_hostdev($clone, 1) or die;
 
     #### it will fail in another clone
 
@@ -329,7 +332,7 @@ sub test_host_device_usb($vm) {
         eval { $clone2->start(user_admin) };
         last if $@;
     }
-    like ($@ , qr(No available devices));
+    like ($@ , qr(No available devices)) or exit;
 
     $list_hostdev[0]->remove();
     my @list_hostdev2 = $vm->list_host_devices();
@@ -429,9 +432,20 @@ sub test_host_device_usb_mock($vm, $n_hd=1) {
     sleep 1;
     $clones[0]->shutdown_now(user_admin);
     _check_hostdev($clones[0], 0);
-    my @devs_attached = $clones[0]->list_host_devices_attached();
+    my @devs_attached;
+    my $locked=0;
+    for ( 1 .. 3 ) {
+        @devs_attached = $clones[0]->list_host_devices_attached();
+        for (@devs_attached) {
+            $locked++ if $_->{is_locked};
+        }
+        last if !$locked;
+
+        sleep 1;
+        $clones[0]->shutdown_now(user_admin);
+    }
     is(scalar(@devs_attached), $n_hd);
-    is($devs_attached[0]->{is_locked},0) or die Dumper(\@devs_attached);
+    is($locked,0) or die Dumper(\@devs_attached);
 
     for (@list_hostdev) {
         $_->_data('enabled' => 0 );

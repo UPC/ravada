@@ -1026,6 +1026,7 @@ sub search_clone($self, %args) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id,name FROM domains "
         ." WHERE id_base=? AND id_owner=? AND (is_base=0 OR is_base=NULL)"
+        ."   AND is_volatile=0 "
         ." ORDER BY name"
     );
     $sth->execute($id_base, $id_owner);

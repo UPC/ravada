@@ -578,17 +578,26 @@ get '/machine/host_device/add/(#id_domain)/(#id_hd)' => sub($c) {
 post '/node/host_device/add' => sub($c) {
     my $arg = decode_json($c->req->body);
     my $id_vm = $arg->{id_vm} or die "Error: missing id_vm ".Dumper($arg);
+    my $name = $arg->{name};
+
     my $vm = Ravada::VM->open( readonly => 1
         ,id => $id_vm
     );
-    my $id = $vm->add_host_device(template => $arg->{template});
+    my @args = ( template => $arg->{template} );
+    push @args, ( name => $name ) if $name;
+
+    my $id;
+    eval { $id = $vm->add_host_device(@args) };
+    if ($@) {
+        return $c->render( json => { ok => 0, error => ''.$@ } );
+    }
     Ravada::Request->list_host_devices(
         uid => Ravada::Utils::user_daemon->id
         ,id_host_device => $id
         ,_force => 1
-    );
+    ) if $id;
 
-    return $c->render( json => { ok => 1 } );
+    return $c->render( json => { ok => $id } );
 };
 
 post '/node/host_device/update' => sub($c) {
@@ -1178,6 +1187,7 @@ get '/machine/view/(:id).(:type)' => sub {
     my ($domain) = _search_requested_machine($c);
     return access_denied($c)    if !$domain;
 
+    $c->stash(id_base => undef);
     return view_machine($c) if $USER->is_admin
                               || $USER->can_view_all;
 
@@ -3772,6 +3782,12 @@ sub base_id {
 
 sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
 
+    my $enable_host_devices = $c->req->param('enable_host_devices');
+    $enable_host_devices=1 if !defined $enable_host_devices;
+    my @enable_host_devices;
+    @enable_host_devices = ( 'enable_host_devices' => $enable_host_devices );
+
+    my @after_req;
     if ( $RAVADA->domain_exists($name) ) {
         my $domain = $RAVADA->search_domain($name);
         if ( $domain->id_owner == $USER->id
@@ -3794,11 +3810,20 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
             app->log->info($USER->name." start_domain ".$domain->name." from "._remote_ip($c))
             if $CONFIG_FRONT->{log}->{log};
 
-            return Ravada::Request->start_domain(
+            if ($domain->is_volatile && !$domain->is_active) {
+                my $req_remove = Ravada::Request->remove_domain(
+                    uid => Ravada::Utils::user_daemon->id
+                    ,name => $name
+                );
+                @after_req = ( after_request => $req_remove );
+            } else {
+                return Ravada::Request->start_domain(
                 uid => $USER->id
                 , id_domain => $domain->id
                 , remote_ip => _remote_ip($c)
-            )
+                , @enable_host_devices
+                )
+            }
         }
     }
 
@@ -3808,10 +3833,13 @@ sub provision_req($c, $id_base, $name, $ram=0, $disk=0) {
     my @create_args = ( start => 1, remote_ip => _remote_ip($c));
     push @create_args, ( memory => $ram ) if $ram;
     push @create_args, (   disk => $disk) if $disk;
+
     my $req = Ravada::Request->clone(
         id_domain => $id_base
         ,uid => $USER->id
        ,@create_args
+       ,@after_req
+       , @enable_host_devices
     );
     return $req;
 
@@ -4154,6 +4182,7 @@ sub clone_machine($c, $anonymous=0) {
         $c->stash( error => "Unknown base ") if !$c->stash('error');
         return $c->render(template => 'main/fail');
     };
+    $c->stash(id_base => $base->id);
     return quick_start_domain($c, $base->id, $USER->name, $anonymous);
 }
 
@@ -4163,12 +4192,17 @@ sub shutdown_machine {
 
     my ($domain, $type) = _search_requested_machine($c);
 
-    my $req;
-    $req = Ravada::Request->force_shutdown_domain(id_domain => $domain->id, uid => $USER->id) if ($c->param('force'));
-    $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id) unless ($c->param('force'));
-
+    my $id_req;
+    if ($domain) {
+        my $req;
+        $req = Ravada::Request->force_shutdown_domain(id_domain => $domain->id, uid => $USER->id)
+            if ($c->param('force'));
+        $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id)
+            unless ($c->param('force'));
+        $id_req = $req->id if $req;
+    }
     return $c->redirect_to('/machines') if $type eq 'html';
-    return $c->render(json => { req => $req->id });
+    return $c->render(json => { req => $id_req });
 }
 
 sub reboot_machine {

@@ -898,6 +898,7 @@ sub list_domains {
 }
 
 sub discover($self) {
+    return if !$self->vm;
     my @known = $self->list_domains(read_only => 1);
     my %known = map { $_->name => 1 } @known;
 
@@ -1245,22 +1246,30 @@ sub _domain_create_from_base {
     confess "argument id_base or base required ".Dumper(\%args)
         if !$args{id_base} && !$args{base};
 
-    confess "Domain $args{name} already exists in ".$self->name
-        if $self->search_domain($args{name});
-
-    my $base = $args{base};
-    my $with_cd = delete $args{with_cd};
-
     my $vm_local = $self;
     $vm_local = $self->new( host => 'localhost') if !$vm_local->is_local;
+
+    my $base = $args{base};
     $base = $vm_local->_search_domain_by_id($args{id_base}) if $args{id_base};
+
     confess "Unknown base id: $args{id_base}" if !$base;
-
-    confess Dumper(\%args) if $args{name} eq 'tst_device_50_nodes_01' 
-    && ( !exists $args{volatile} || !defined $args{volatile});
-
-    my $volatile = $base->volatile_clones;
+    my $volatile;
+    $volatile = $base->volatile_clones if $base;
     $volatile = delete $args{volatile} if exists $args{volatile} && defined $args{volatile};
+
+    if ( my $dom = $self->search_domain($args{name})) {
+        if (!$self->is_local) {
+            $dom->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner}
+            , id_vm => $self->id
+            ) if !$dom->is_known();
+            return $dom;
+        } else {
+            confess "Domain $args{name} already exists in ".$self->name;
+        }
+    }
+
+    my $with_cd = delete $args{with_cd};
+
     my $options = delete $args{options};
     my $network = delete $options->{network};
 
@@ -3009,6 +3018,7 @@ sub can_list_cpu_models($self) {
 
 sub list_virtual_networks($self) {
     my @networks;
+    return if !$self->vm;
     for my $net ($self->vm->list_all_networks()) {
         my $doc = XML::LibXML->load_xml(string => $net->get_xml_description);
         my ($ip_doc) = $doc->findnodes("/network/ip");
