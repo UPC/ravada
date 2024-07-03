@@ -616,6 +616,7 @@ sub file_exists($self, $file) {
 
 sub _file_exists_remote($self, $file) {
     $file = $self->_follow_link($file) unless $file =~ /which$/;
+    return if !$self->vm;
     for my $pool ($self->vm->list_all_storage_pools ) {
         next if !$pool->is_active;
         $self->_wait_storage( sub { $pool->refresh() } );
@@ -809,6 +810,7 @@ sub search_domain($self, $name, $force=undef) {
     }
 
     my $dom;
+    return if !$self->vm;
     eval { $dom = $self->vm->get_domain_by_name($name); };
     my $error = $@;
     return if $error =~  /error code: 42,/ && !$force;
@@ -1105,7 +1107,7 @@ sub _domain_create_common {
     my %args = @_;
 
     my $id_owner = delete $args{id_owner} or confess "ERROR: The id_owner is mandatory";
-    my $is_volatile = delete $args{is_volatile};
+    my $volatile = delete $args{volatile};
     my $listen_ip = delete $args{listen_ip};
     my $spice_password = delete $args{spice_password};
     my $user = Ravada::Auth::SQL->search_by_id($id_owner)
@@ -1133,7 +1135,7 @@ sub _domain_create_common {
 
     for ( 1 .. 10 ) {
         eval {
-            if ($user->is_temporary || $is_volatile && !$host_devices ) {
+            if ( $volatile) {
                 $dom = $self->vm->create_domain($xml->toString());
             } else {
                 $dom = $self->vm->define_domain($xml->toString());
@@ -1168,7 +1170,7 @@ sub _domain_create_common {
          , domain => $dom
         , storage => $self->storage_pool
        , id_owner => $id_owner
-       , active => ($user->is_temporary || $is_volatile || $host_devices)
+         , active => $volatile
     );
     return ($domain, $spice_password);
 }
@@ -1254,9 +1256,11 @@ sub _domain_create_from_base {
     $base = $vm_local->_search_domain_by_id($args{id_base}) if $args{id_base};
     confess "Unknown base id: $args{id_base}" if !$base;
 
+    confess Dumper(\%args) if $args{name} eq 'tst_device_50_nodes_01' 
+    && ( !exists $args{volatile} || !defined $args{volatile});
+
     my $volatile = $base->volatile_clones;
     $volatile = delete $args{volatile} if exists $args{volatile} && defined $args{volatile};
-
     my $options = delete $args{options};
     my $network = delete $options->{network};
 
@@ -1282,7 +1286,7 @@ sub _domain_create_from_base {
     $self->_xml_set_network($xml, $network) if $network;
 
     my ($domain, $spice_password)
-        = $self->_domain_create_common($xml,%args, is_volatile=>$volatile, base => $base);
+        = $self->_domain_create_common($xml,%args, volatile=>$volatile, base => $base);
     $domain->_insert_db(name=> $args{name}, id_base => $base->id, id_owner => $args{id_owner}
         , id_vm => $self->id
     );
@@ -2993,6 +2997,10 @@ sub copy_file_storage($self, $file, $storage) {
 
 sub get_library_version($self) {
     return $self->vm->get_library_version();
+}
+
+sub get_cpu_model_names($self,$arch='x86_64') {
+    return $self->vm->get_cpu_model_names($arch);
 }
 
 sub can_list_cpu_models($self) {

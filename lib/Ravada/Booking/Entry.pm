@@ -5,6 +5,8 @@ use strict;
 
 use Carp qw(carp croak);
 use Data::Dumper;
+use Mojo::JSON qw( encode_json decode_json );
+
 use Ravada::Utils;
 
 use Moose;
@@ -53,6 +55,9 @@ sub _dbh($self) {
 }
 
 sub _insert_db($self, $field) {
+
+    my $options = $field->{options};
+    $field->{options} = encode_json($options) if $options;
 
     my $query = "INSERT INTO booking_entries "
             ."(" . join(",",sort keys %$field )." )"
@@ -249,6 +254,14 @@ sub _open($self, $id) {
     $sth->execute($id);
     my $row = $sth->fetchrow_hashref;
     confess "Error: Booking entry $id not found " if !keys %$row;
+    eval {
+    $row->{options} = decode_json($row->{options}) if $row->{options};
+    };
+    if ($@) {
+        warn "Error decoding options $row->{options} ".$@;
+        $row->{options} = undef;
+    }
+
     $self->{_data} = $row;
 
     return $self;
@@ -277,6 +290,8 @@ sub change($self, %fields) {
         } elsif ($field eq 'bases') {
             $self->_change_bases($fields{$field});
             next;
+        } elsif ( ref($fields{$field})) {
+            $fields{$field} = encode_json($fields{$field});
         }
         next if !exists $self->{_data}->{$field};
         my $old_value = $self->_data($field);
@@ -435,6 +450,20 @@ sub user_allowed($entry, $user_name) {
     for my $group_name ($entry->local_groups) {
             return 1 if $user->is_member($group_name);
     }
+    return 0;
+}
+
+sub options_allowed($entry, $id_domain, $enable_host_devices=1) {
+    my $options = $entry->_data('options');
+    return 0 if !$options || !ref($options) || !keys %$options;
+
+    my $domain = Ravada::Front::Domain->open($id_domain);
+
+    if ($options->{host_devices}) {
+        return 0 if $enable_host_devices && $domain->list_host_devices();
+        return 1;
+    }
+
     return 0;
 }
 

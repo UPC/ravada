@@ -9,6 +9,7 @@ ravadaApp.directive("solShowMachine", swMach)
         .controller("manage_nodes",manage_nodes)
         .controller("manage_routes",manage_routes)
         .controller("manage_networks",manage_networks)
+        .controller("manage_host_devices",manage_host_devices)
         .controller("settings_network",settings_network)
         .controller("settings_node",settings_node)
         .controller("settings_storage",settings_storage)
@@ -210,11 +211,13 @@ ravadaApp.directive("solShowMachine", swMach)
             && $scope.id_iso.options['machine']) {
             var types = $scope.machine_types[$scope.backend][$scope.id_iso.arch];
             var option = $scope.id_iso.options['machine'];
-            for (var i=0; i<types.length
-            ;i++) {
-                var current = types[i];
-                if (current.substring(0,option.length) == option) {
-                    $scope.machine=current;
+            if (typeof(types) != undefined) {
+                for (var i=0; i<types.length
+                    ;i++) {
+                    var current = types[i];
+                    if (current.substring(0,option.length) == option) {
+                        $scope.machine=current;
+                    }
                 }
             }
         }
@@ -1197,6 +1200,105 @@ ravadaApp.directive("solShowMachine", swMach)
 
     };
 
+   function manage_host_devices($scope, $http, $timeout) {
+        $scope.init=function(id, vm_type, url) {
+            $scope.id_vm= id;
+            $scope.vm_type = vm_type;
+            $scope.vm_type_orig = vm_type;
+            subscribe_list_host_devices(id, url);
+            list_templates(id);
+            list_backends();
+            list_nodes();
+        };
+
+       list_nodes=function() {
+            $http.get('/list_nodes_by_id.json')
+            .then(function(response) {
+                   $scope.nodes = response.data;
+               });
+       };
+
+       list_backends=function() {
+            $http.get('/list_vm_types.json')
+            .then(function(response) {
+                   $scope.vm_types = response.data;
+               });
+       };
+
+        list_templates = function(id) {
+            $http.get('/host_devices/templates/list/'+ id)
+            .then(function(response) {
+                   $scope.templates = response.data;
+               });
+        };
+
+        $scope.add_host_device = function() {
+            $http.post('/node/host_device/add'
+                ,JSON.stringify({ 'template': $scope.new_template.name , 'id_vm': $scope.id_vm}))
+            .then(function(response) {
+            });
+        };
+
+        $scope.update_host_device = function(hdev) {
+            hdev._loading=true;
+            hdev.devices_node=[];
+            hdev._nodes = [];
+            $http.post('/node/host_device/update'
+                ,JSON.stringify(hdev))
+            .then(function(response) {
+                $scope.error = response.data.error;
+            });
+            hdev.devices = undefined;
+        };
+        $scope.remove_host_device = function(id) {
+            $http.get('/node/host_device/remove/'+id).then(function(response) {
+                // TODO: add some reponse
+            });
+        };
+
+
+        subscribe_list_host_devices= function(id, url) {
+            $scope.show_requests = false;
+            $scope.host_devices = [];
+            var ws = new WebSocket(url);
+            ws.onopen    = function (event) { ws.send('list_host_devices/'+id) };
+            ws.onclose = function() {
+                ws = new WebSocket(url);
+            };
+
+            ws.onmessage = function (event) {
+                var data = JSON.parse(event.data);
+                $scope.$apply(function () {
+                    if (Object.keys($scope.host_devices).length != data.length) {
+                        $scope.host_devices.length = data.length;
+                    }
+                    for (var i=0, iLength = data.length; i<iLength; i++){
+                        var hd = data[i];
+                        if (typeof($scope.host_devices[i]) == 'undefined') {
+                            $scope.host_devices[i] = hd;
+                        } else if ( $scope.host_devices[i].id != hd.id
+                            || $scope.host_devices[i].date_changed != hd.date_changed
+                            || $scope.host_devices[i]['loading']
+                        ) {
+                            var keys = Object.keys(hd);
+                            for ( var n_key=0 ; n_key<keys.length ; n_key++) {
+                               var field=keys[n_key];
+                                if (field != 'filter' && $scope.host_devices[i][field] != hd[field]) {
+                                    $scope.host_devices[i][field] = hd[field];
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        };
+        $scope.toggle_show_hdev = function(id) {
+            $scope.show_hdev[id] = ! $scope.show_hdev[id];
+        };
+        $scope.show_hdev = { 1: true};
+
+    };
+
    function settings_route($scope, $http, $timeout) {
         var url_ws;
         $scope.init = function(id_network) {
@@ -1339,7 +1441,9 @@ ravadaApp.directive("solShowMachine", swMach)
                         if (typeof($scope.host_devices[i]) == 'undefined') {
                             $scope.host_devices[i] = hd;
                         } else if ( $scope.host_devices[i].id != hd.id
-                            || $scope.host_devices[i].date_changed != hd.date_changed) {
+                            || $scope.host_devices[i].date_changed != hd.date_changed
+                            || $scope.host_devices[i]['loading']
+                        ) {
                             var keys = Object.keys(hd);
                             for ( var n_key=0 ; n_key<keys.length ; n_key++) {
                                var field=keys[n_key];
@@ -1441,6 +1545,9 @@ ravadaApp.directive("solShowMachine", swMach)
         };
 
         $scope.update_host_device = function(hdev) {
+            hdev._loading=true;
+            hdev.devices_node=[];
+            hdev._nodes = [];
             $http.post('/node/host_device/update'
                 ,JSON.stringify(hdev))
             .then(function(response) {

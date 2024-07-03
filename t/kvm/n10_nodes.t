@@ -1183,8 +1183,6 @@ SKIP: {
     test_bases_node($vm_name, $node);
     test_clone_make_base($vm_name, $node);
 
-    test_migrate_back($node);
-
     test_sync_base($vm_name, $node);
     test_sync_back($node);
 

@@ -2442,13 +2442,21 @@ sub _set_controller_filesystem($self, $number, $data) {
 sub _set_controller_video($self, $number, $data={type => 'qxl'}) {
     $data->{type} = 'qxl' if !exists $data->{type};
     $data->{type} = lc(delete $data->{driver}) if exists $data->{driver};
-    my $pci_slot = $self->_new_pci_slot();
 
     my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
     my ($devices) = $doc->findnodes("/domain/devices");
+
     if (exists $data->{primary} && $data->{primary} =~ /yes/) {
         _remove_all_video_primary($devices);
     }
+
+    if ($data->{type} eq 'none') {
+        _remove_all_video($devices);
+    } else {
+        _remove_all_video($devices,'type'=>'none');
+    }
+    my $pci_slot = $self->_new_pci_slot();
+
     my $video = $devices->addNewChild(undef,'video');
     my $model = $video->addNewChild(undef,'model');
     for my $field (keys %$data) {
@@ -2473,6 +2481,19 @@ sub _remove_all_video_primary($devices) {
     }
 }
 
+sub _remove_all_video($devices, $attribute=undef, $value=undef) {
+    confess "Error: attribute '$attribute' value search must be defined"
+    if defined $attribute && !defined $value;
+
+    for my $video ($devices->findnodes("video")) {
+        my ($model) = $video->findnodes('model');
+        next if defined $attribute
+        && (!$model->getAttribute($attribute)
+            || $model->getAttribute($attribute) ne $value);
+
+        $devices->removeChild($video);
+    }
+}
 sub _set_controller_network($self, $number, $data) {
 
     my $driver = (delete $data->{driver} or 'virtio');
@@ -3650,11 +3671,21 @@ sub _validate_xml($self, $doc) {
     }
 }
 
+sub _fix_uuid($self, $doc) {
+    my ($uuid) = $doc->findnodes("/domain/uuid/text()");
+    confess "I cant'find /domain/uuid in ".$self->name if !$uuid;
+
+    $uuid->setData($self->domain->get_uuid_string);
+
+}
+
 sub reload_config($self, $doc) {
     if (!ref($doc)) {
         $doc = XML::LibXML->load_xml(string => $doc);
     }
     $self->_validate_xml($doc) if $self->_vm->vm->get_major_version >= 4;
+
+    $self->_fix_uuid($doc);
 
     my $new_domain;
 
@@ -3662,7 +3693,7 @@ sub reload_config($self, $doc) {
         $new_domain = $self->_vm->vm->define_domain($doc->toString);
     };
 
-    die ''.$@ if $@;
+    die ''.$@."\n" if$@;
 
     $self->domain($new_domain);
 
@@ -3934,6 +3965,7 @@ sub _xml_equal_hostdev($doc1, $doc2) {
 
     $doc1 =~ s/\n//g;
     $doc2 =~ s/\n//g;
+
     return 1 if $doc1 eq $doc2;
 
     my $parser = XML::LibXML->new() or die $!;

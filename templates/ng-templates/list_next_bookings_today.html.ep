@@ -10,9 +10,12 @@
 
     <table border="1" bordercolor="darkgray" cellpadding="5">
     <tr ng-repeat="booking in bookings_today">
-        <th align="right">
-        {{booking.title}}
-        </th>
+        <td align="right">
+        <b>{{booking.title}}</b>
+        <span ng-show="booking.options.host_devices">
+            (<%=l 'Host Devices' %>)
+        </span>
+        </td>
         <td>
         {{booking.time_start}} - {{booking.time_end}}
         </td>

@@ -1428,11 +1428,19 @@ sub set_base_vm {
     my $self = {};
     bless ($self, $class);
 
-    return $self->_new_request(
+    my $req = $self->_new_request(
             command => 'set_base_vm'
              , args => $args
     );
 
+    my $id_domain = $args->{id_domain};
+    my $domain = Ravada::Front::Domain->open($id_domain);
+    my $id_vm = $args->{id_vm};
+    $id_vm = $args->{id_node} if exists $args->{id_node} && $args->{id_node};
+
+    $domain->_set_base_vm_db($id_vm, $args->{value}, $req->id);
+
+    return $req;
 }
 
 =head2 remove_base_vm
@@ -1703,7 +1711,9 @@ sub done_recently($self, $seconds=60,$command=undef, $args=undef) {
 
         return Ravada::Request->open($id) if !keys %$args_d;
 
-        my $args_found_d = decode_json($args_found);
+        my $args_found_d = {};
+        eval { $args_found_d = decode_json($args_found)};
+        warn "Warning: request $id $@" if $@;
         delete $args_found_d->{uid};
         delete $args_found_d->{at};
 
@@ -1820,6 +1830,59 @@ sub redo($self) {
         ." WHERE id=?"
     );
     $sth->execute($self->id);
+}
+
+=head2 remove
+
+Remove all requests that comply with the conditions
+
+=cut
+
+sub remove($status, %args) {
+    my $sth = _dbh->prepare(
+        "SELECT * FROM requests where status = ? "
+    );
+    $sth->execute($status);
+
+    my $sth_del = _dbh->prepare("DELETE FROM requests where id=?");
+
+    while ( my $row = $sth->fetchrow_hashref ) {
+        my $req_args = {};
+
+        eval {
+        $req_args = decode_json($row->{args}) if $row->{args};
+        };
+        warn "Warning: $@ ".$row->{args}
+        ."\n".Dumper($row) if $@;
+
+        next if $row->{status} ne $status;
+        delete $req_args->{uid};
+        next if scalar(keys%args) != scalar(keys(%$req_args));
+
+        my $found = 1;
+        for my $key (keys %$req_args) {
+
+            next if exists $args{$key}
+            && !defined $args{$key} && !defined $req_args->{$key};
+
+            $found=0 if
+            !exists $args{$key} ||
+            $args{$key} ne $req_args->{$key};
+        }
+        next if !$found;
+
+        for my $key (keys %args) {
+            next if exists $req_args->{$key}
+            && !defined $args{$key} && !defined $req_args->{$key};
+
+            $found=0 if
+            !exists $req_args->{$key} ||
+            $args{$key} ne $req_args->{$key};
+        }
+        next if !$found;
+
+        $sth_del->execute($row->{id});
+    }
 }
 
 sub AUTOLOAD {

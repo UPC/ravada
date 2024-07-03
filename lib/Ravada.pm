@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '2.2.1';
+our $VERSION = '2.3.0';
 
 use utf8;
 
@@ -1640,7 +1640,7 @@ sub _add_indexes_generic($self) {
 
         ,vms=> [
             "unique(hostname, vm_type): hostname_type"
-            ,"UNIQUE (name)"
+            ,"UNIQUE (name,vm_type)"
 
         ]
         ,domain_share => [
@@ -2240,7 +2240,7 @@ sub _sql_create_tables($self) {
                 ,list_command => 'varchar(128) not null'
                 ,list_filter => 'varchar(128) not null'
                 ,template_args => 'varchar(255) not null'
-                ,devices => 'TEXT'
+                ,devices_node => 'TEXT'
                 ,enabled => "integer NOT NULL default 1"
                 ,'date_changed'
                     => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
@@ -2271,6 +2271,7 @@ sub _sql_create_tables($self) {
                 ,id_vm => 'integer NOT NULL references `vms`(`id`) ON DELETE CASCADE'
                 ,id_domain => 'integer NOT NULL references `domains`(`id`) ON DELETE CASCADE'
                 ,name => 'varchar(255)'
+                ,'time_changed' => 'integer'
             }
         ]
         ,[
@@ -2347,6 +2348,7 @@ sub _sql_create_tables($self) {
             ,date_booking => 'date'
             ,visibility => "enum ('private','public') default 'public'"
             ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+            ,options => 'varchar(100)'
         }
         ]
         ,
@@ -2709,7 +2711,7 @@ sub _sql_insert_defaults($self){
             ,{
                 id_parent => $id_backend
                 ,name => 'delay_migrate_back'
-                ,value => 600
+                ,value => 60 * 60 * 24
             }
             ,{
                 id_parent => $id_backend
@@ -2976,6 +2978,7 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('bases_vm','id_vm','int not null references `vms` (`id`) ON DELETE CASCADE');
     $self->_upgrade_table('bases_vm','id_domain','int not null references `domains` (`id`) ON DELETE CASCADE');
+    $self->_upgrade_table('bases_vm','id_request','integer');
 
     $self->_upgrade_table('domain_instances','id_vm','int not null references `vms` (`id`) ON DELETE CASCADE');
 
@@ -3717,9 +3720,16 @@ sub list_domains_data($self, %args ) {
     $where = " WHERE $where " if $where;
     my $query = "SELECT * FROM domains $where ORDER BY name";
     my $sth = $CONNECTOR->dbh->prepare($query);
+
+    my $sth_hd = $CONNECTOR->dbh->prepare(
+        "SELECT count(*) FROM host_devices_domain_locked "
+        ." WHERE id_domain=?"
+    );
     $sth->execute(@values);
     while (my $row = $sth->fetchrow_hashref) {
         $row->{date_changed} = 0 if !defined $row->{date_changed};
+        $sth_hd->execute($row->{id});
+        ($row->{host_devices})=$sth_hd->fetchrow;
         lock_hash(%$row);
         push @domains,($row);
     }
@@ -4562,7 +4572,7 @@ sub _cmd_list_host_devices($self, $request) {
         $id_host_device
     );
 
-    $hd->list_devices;
+    my %list= $hd->list_devices_nodes;
 
 }
 
@@ -5743,8 +5753,8 @@ sub _cmd_connect_node($self, $request) {
     my $node;
 
     if ($id_node) {
-        $node = Ravada::VM->open($id_node);
-        $hostname = $node->host;
+        $node = Ravada::VM->open(id => $id_node, force => 1);
+        $hostname = $node->host if $node;
     } else {
         $node = Ravada::VM->open( type => $backend
             , host => $hostname
@@ -5753,7 +5763,7 @@ sub _cmd_connect_node($self, $request) {
     }
 
     die "I can't ping $hostname\n"
-        if ! $node->ping();
+        if !$node || ! $node->ping();
 
     $request->error("Ping ok. Trying to connect to $hostname");
     my ($out, $err);
@@ -5769,7 +5779,10 @@ sub _cmd_connect_node($self, $request) {
         $err .= "\n";
         die $err if $err;
     }
-    $node->connect() && $request->error("Connection OK");
+    $node->connect() && do {
+        $request->error("Connection OK");
+        $node->_data('cached_down' => 0);
+    };
 }
 
 sub _cmd_list_network_interfaces($self, $request) {
@@ -5832,7 +5845,7 @@ sub _cmd_list_cpu_models($self, $request) {
     my $info = $domain->get_info();
     my $vm = $domain->_vm->vm;
 
-    my @out = $vm->get_cpu_model_names('x86_64');
+    my @out = $domain->_vm->get_cpu_model_names('x86_64');
     $request->output(encode_json(\@out));
 }
 
@@ -5994,7 +6007,7 @@ sub _refresh_active_vms ($self) {
     my %active_vm;
     for my $vm ($self->list_vms) {
         next if !$vm;
-        if ( !$vm->enabled() || !$vm->is_active ) {
+        if ( !$vm->vm || !$vm->enabled() || !$vm->is_active ) {
             $vm->shutdown_domains();
             $active_vm{$vm->id} = 0;
             $vm->disconnect();
@@ -6029,7 +6042,7 @@ sub _refresh_active_domains($self, $request=undef) {
             my $t0 = time;
             for my $domain_data (sort { $b->{date_changed} cmp $a->{date_changed} }
                                 @domains) {
-                $request->error("checking $domain_data->{name}") if $request;
+                $request->output("checking $domain_data->{name}") if $request;
                 next if $active_domain{$domain_data->{id}};
                 my $domain;
                 eval { $domain = Ravada::Domain->open($domain_data->{id}) };
@@ -6193,6 +6206,7 @@ sub _refresh_disabled_nodes($self, $request = undef ) {
 }
 
 sub _refresh_active_domain($self, $domain, $active_domain) {
+    return if $domain->is_locked();
     $domain->check_status();
 
     return $self->_refresh_hibernated($domain) if $domain->is_hibernated();
@@ -6317,6 +6331,18 @@ sub _cmd_set_base_vm {
     my $id_vm = $request->args('id_vm')         or die "ERROR: Missing id_vm";
     my $id_domain = $request->args('id_domain') or die "ERROR: Missing id_domain";
 
+    eval {
+        $self->_do_cmd_set_base_vm($uid, $id_vm, $id_domain, $value, $request);
+    };
+    my $err = $@;
+    if ($err) {
+        my $domain = Ravada::Front::Domain->open($id_domain);
+        $domain->_set_base_vm_db($id_vm, (!$value or 0), 0);
+        die $err;
+    }
+}
+
+sub _do_cmd_set_base_vm($self, $uid, $id_vm, $id_domain, $value, $request) {
     my $user = Ravada::Auth::SQL->search_by_id($uid);
     my $domain = Ravada::Domain->open($id_domain) or confess "Error: Unknown domain id $id_domain";
 
@@ -6644,14 +6670,15 @@ sub _shutdown_bookings($self) {
     my @bookings = Ravada::Booking::bookings();
     return if !scalar(@bookings);
 
-
     my @domains = $self->list_domains_data(status => 'active');
     for my $dom ( @domains ) {
         next if $dom->{autostart};
         next if $self->_user_is_admin($dom->{id_owner});
 
-        if ( Ravada::Booking::user_allowed($dom->{id_owner}, $dom->{id_base}) ) {
-            # warn "\tuser $dom->{id_owner} allowed to start clones from $dom->{id_base}";
+        if ( Ravada::Booking::user_allowed($dom->{id_owner}, $dom->{id_base}, $dom->{host_devices})
+            && Ravada::Booking::user_allowed($dom->{id_owner}, $dom->{id}, $dom->{host_devices})
+        ) {
+            #warn "\tuser $dom->{id_owner} allowed to start clones from $dom->{id_base}";
             next;
         }
 

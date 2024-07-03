@@ -73,6 +73,8 @@ sub _check_used_mdev($vm, $hd) {
         $dom_imported = $vm->import_domain($dom->get_name,user_admin)
         unless $dom_imported;
 
+        $dom_imported->_data('status' => 'active');
+
         $dom_imported->add_host_device($hd->id);
         my ($dev) = grep /^$uuid/, $hd->list_devices;
         if (!$dev) {
@@ -101,6 +103,7 @@ sub _req_shutdown($domain) {
     my $req = Ravada::Request->shutdown_domain(
             uid => user_admin->id
             ,id_domain => $domain->id
+            ,timeout => 1
     );
     wait_request();
 
@@ -134,13 +137,63 @@ sub test_mdev($vm) {
     is($hd->list_available_devices(), $n_devices-1);
     test_config($domain);
 
+    sleep 3;
     _req_shutdown($domain);
+    for ( 1 .. 3 ) {
+        last if $hd->list_available_devices() >= $n_devices;
+        _req_shutdown($domain);
+        sleep 1;
+    }
     #    $domain->_dettach_host_devices();
-    is($hd->list_available_devices(), $n_devices);
+    is($hd->list_available_devices(), $n_devices) or die $domain->name;
+
+    test_change_ram($domain);
 
     test_config_no_hd($domain);
 
     return ($domain, $hd);
+}
+
+sub test_change_ram($domain) {
+    my $info = $domain->info(user_admin);
+    my ($memory, $max_mem) = ($info->{memory}, $info->{max_mem});
+
+    my $new_memory = int(($memory+1) * 1.5)+1;
+    my $new_max_mem= int(($max_mem+1) * 1.6)+2;
+
+    my $req = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,hardware => 'memory'
+        ,id_domain => $domain->id
+        ,data => {
+            memory => $new_memory
+            ,max_mem => $new_max_mem
+        }
+    );
+    wait_request(debug => 0);
+
+    my $info1 = $domain->info(user_admin);
+    my ($memory1, $max_mem1) = ($info1->{memory}, $info1->{max_mem});
+    is($memory1, $new_memory) or die $domain->name;
+    is($max_mem1, $new_max_mem);
+
+    _req_start($domain);
+
+    my $info2 = $domain->info(user_admin);
+    my ($memory2, $max_mem2) = ($info2->{memory}, $info2->{max_mem});
+    is($memory2, $new_memory) or die $domain->name;
+    is($max_mem2, $new_max_mem);
+    Ravada::Request->shutdown_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,timeout => 1
+    );
+    wait_request();
+
+    my $info3 = $domain->info(user_admin);
+    my ($memory3, $max_mem3) = ($info3->{memory}, $info3->{max_mem});
+    is($memory3, $new_memory);
+    is($max_mem3, $new_max_mem);
 }
 
 sub _change_state_on($domain) {
@@ -520,6 +573,7 @@ sub test_volatile_clones($vm, $domain, $host_device) {
 
     my $n=2;
     my $max_n_device = $host_device->list_available_devices();
+    return if $max_n_device<2;
     my $exp_avail = $host_device->list_available_devices()- $n;
 
     Ravada::Request->clone(@args, number => $n, remote_ip => '1.2.3.4');
@@ -542,10 +596,24 @@ sub test_volatile_clones($vm, $domain, $host_device) {
         is($clone->is_active,1) unless $MOCK_MDEV;
         is($clone->is_volatile,1);
         test_config($clone);
+        sleep 3;
         $clone->shutdown_now(user_admin);
 
+        $exp_avail++;
+
+        for (1 .. 3 ) {
+            $n_device = $host_device->list_available_devices();
+            last if $n_device == $exp_avail;
+            Ravada::Request->force_shutdown(
+                uid => user_admin->id
+                ,id_domain => $clone->id
+            );
+            wait_request;
+        }
+        is($n_device,$exp_avail) or exit;
+
         $n_device = $host_device->list_available_devices();
-        is($n_device,++$exp_avail) or exit;
+        is($n_device,$exp_avail) or exit;
 
         my $clone_gone = rvd_back->search_domain($clone_data->{name});
         ok(!$clone_gone,"Expecting $clone_data->{name} removed on shutdown");

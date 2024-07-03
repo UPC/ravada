@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+<div id="wrapper">
+    %= include 'bootstrap/navigation'
+    <div id="page-wrapper"
+                ng-controller="manage_host_devices"
+                ng-init="init('<%= $id_vm %>','<%= $vm_type %>'
+                            ,'<%= url_for("ws_subscribe")->to_abs %>')"
+    >
+
+        <div class="page-header">
+            <div class="card">
+                <div class="card-header">
+                    <div class="row">
+                        <div class="col col-lg-8">
+                            <h2><%=l 'Host Devices' %></h2>
+                        </div>
+                        <div class="col col-lg-4" align="right">
+
+                            <select ng-model="vm_type"
+                                ng-options="name for name in vm_types | orderBy:'name'"
+                                >
+                            </select>
+                            <a type="button" class="btn btn-light border"
+                                             ng-show="vm_type != vm_type_orig"
+                                             href="/admin/hostdev/{{vm_type}}">
+                                <%=l 'apply' %>
+                            </a>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body">
+
+            <select ng-model="new_template"
+                ng-options="template.name for template in templates | orderBy:'name'">
+            </select>
+
+<button ng-disabled="!new_template" class="btn btn-primary"
+    ng-click="add_host_device()"
+><%=l 'Add host device' %></button>
+
+</div>
+
+<hr>
+
+<div ng-repeat="hdev in host_devices" ng-cloak>
+    <a ng-click="toggle_show_hdev(hdev.id)">
+        <span ng-show="show_hdev[hdev.id]">
+            <i class="fa fa-caret-down"></i>
+        </span>
+        <span ng-show="!show_hdev[hdev.id]"><i class="fa fa-caret-right"></i>
+        </span>
+    </a>
+    <span ng-show="!hdev._edit">
+    <b>{{hdev.name}}</b>
+    <i ng-show="show_hdev[hdev.id]" ng-click="hdev._confirm_remove=true" class="far fa-trash-alt"></i>
+    <i ng-show="show_hdev[hdev.id]" ng-click="hdev._edit=true; hdev._name=hdev.name" class="far fa-edit"></i>
+    </span>
+    <div ng-show="hdev._confirm_remove">
+        <div ng-show="hdev._domains.length">
+            This host device is configured in these virtual machines
+            <ul>
+            <li ng-repeat="name in hdev._domains">{{name}}</li>
+            </ul>
+        </div>
+        <%=l ' Are you sure you want to remove this host device ?' %>
+        <button type="button" ng-click="remove_host_device(hdev.id)"><%=l 'Yes' %></button>
+        <button type="button" ng-click="hdev._confirm_remove=false"><%=l 'No' %></button>
+    </div>
+    <span ng-show="hdev._edit">
+        <input type="text" ng-model="hdev.name"/>
+        <button type="button" ng-click="update_host_device(hdev);hdev._edit=false"><%=l 'save' %></button>
+        <button type="button" ng-click="hdev._edit=false;hdev.name=hdev._name"><%=l 'cancel' %></button>
+    </span>
+    <div ng-show = "show_hdev[hdev.id]" class="border rounded border-primary mb-4 p-4">
+        list command: <input type="text" ng-model = "hdev.list_command">
+        filter: <input type="text" ng-model = "hdev.list_filter">
+        <button type="btn" ng-click="update_host_device(hdev)"
+            ng-disabled="hdev._loading"
+                           ><%=l 'apply' %>
+        </button>
+        <div ng-show="hdev._loading"><i class="fa fa-sync-alt fa-spin"></i></div>
+        <ul>
+            <li ng-repeat="node in hdev._nodes" >
+                <span>{{nodes[node]}}</span>
+                <ul>
+                    <li ng-show="hdev.devices_node[node].length==0">
+                        <span class="error"><%=l 'No devices found'%></span>
+                    </li>
+                    <li ng-repeat="dev in hdev.devices_node[node]">
+                    <a ng-class='{
+                        "badge badge-success border": dev.domain.is_locked
+                        ,"badge badge-light border": !dev.domain.is_locked
+                        } '
+                        href="/machine/manage/{{dev.domain.id}}.html#!#v-pills-hostdev"
+                        ng-show="dev.domain">{{dev.domain.name}}</a>
+                    {{dev.name}}
+                    </li>
+                </ul>
+            </li>
+        </ul>
+
+        <div ng-show="hdev._bases.length" class="ml-0">
+            <b>Bases</b>
+            <i ng-click="show_bases[hdev.id]=true" ng-show="!show_bases[hdev.id]"
+                class="fa fa-caret-right"></i>
+            <i ng-click="show_bases[hdev.id]=false" ng-show="show_bases[hdev.id]"
+                class="fa fa-caret-down"></i>
+            <div ng-show="show_bases[hdev.id]">
+                <div class="row ml-0 pl-0" ng-repeat="domain in hdev._bases">
+                    <div class="col col-sm-1 ml-0 pl-0" align="right">
+                    </div>
+                    <div class="col col-sm-10 ml-0 pl-0">
+                    <a href="/machine/manage/{{domain.id}}.html"
+                            class="machine"
+                    >
+                    <span ng-class="disabled">{{domain.name}}</span>
+                    </a>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+
+        <div ng-show="hdev._domains.length" class="ml-0">
+            <b>Machines</b>
+            <i ng-click="show_domains[hdev.id]=true" ng-show="!show_domains[hdev.id]"
+                class="fa fa-caret-right"></i>
+            <i ng-click="show_domains[hdev.id]=false" ng-show="show_domains[hdev.id]"
+                class="fa fa-caret-down"></i>
+            <div ng-show="show_domains[hdev.id]">
+                <div class="row ml-0 pl-0" ng-repeat="domain in hdev._domains">
+                    <div class="col col-md-1 ml-0 pl-0" align="right">
+                    <a ng-show="domain.is_locked"
+                        align="right"
+                        title="<%=l 'locked' %>"
+                    ><i class="fa fa-arrow-right"></i>
+                    </a>
+                    </div>
+                    <div class="col col-md-11 ml-0 pl-0">
+                    <a href="/machine/manage/{{domain.id}}.html"
+                            class="machine"
+                              ng-class="{
+                              machine: domain.is_locked==0
+                              ,active_machine: domain.is_locked>0
+                              }"
+
+                    ><b ng-show="domain.is_locked">{{domain.name}}</b>
+                    <span ng-class="disabled" ng-show="domain.is_locked==0">{{domain.name}}</span>
+                    </a>
+                    <span ng-show="domain.is_locked" class="ml-4"><small>{{domain.device}}</small></span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+
+    </div>
+</div>
+</div>
+</div>
+
+%= include $footer
+%= include 'bootstrap/scripts'
+</body>
+</html>

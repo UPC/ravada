@@ -455,6 +455,30 @@ sub test_removed_base_file_and_swap_remote($vm, $node) {
     $base->remove(user_admin);
 }
 
+sub _check_base_in_vm_db($base, $id_node, $id_req, $value) {
+    my $sth = connector->dbh->prepare(
+        "SELECT * FROM bases_vm "
+        ." WHERE id_domain=? AND id_vm=?"
+    );
+    $sth->execute($base->id, $id_node);
+    my $found = $sth->fetchrow_hashref;
+    ok($found) or exit;
+    is($found->{enabled}, $value);
+    is($found->{id_request}, $id_req) or confess;
+
+    my @vms = $base->list_vms();
+    my @vms_avail = $base->list_vms(undef, 1);
+
+    if ($id_req && $value) {
+        my ($found_vms) = grep { $_->id == $id_node } @vms;
+        my ($found_vms_avail) = grep { $_->id == $id_node } @vms_avail;
+        ok($found_vms,"Expecting ".$base->id." in $id_node ")
+            or die Dumper([[map {$_->id } @vms ],[map {$_->id } @vms_avail]]);
+        ok(!$found_vms_avail);
+    }
+
+}
+
 sub test_set_vm_fail($vm, $node) {
     return if $vm->type ne 'KVM';
     diag("Test set vm fail");
@@ -677,9 +701,18 @@ sub test_volatile_req_clone($vm, $node, $machine='pc-i440fx') {
 
     my $base = create_domain_v2(vm => $vm, options => { machine => $machine });
     $base->prepare_base(user_admin);
-    $base->set_base_vm(user => user_admin, node => $node);
+    my $req = Ravada::Request->set_base_vm(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,id_vm => $node->id
+        ,value => 1
+    );
+    _check_base_in_vm_db($base, $node->id,$req->id, 1);
     $base->volatile_clones(1);
     ok($base->base_in_vm($node->id));
+    _check_base_in_vm_db($base, $node->id,$req->id, 1);
+    wait_request(debug => 1);
+    _check_base_in_vm_db($base, $node->id,undef, 1);
 
     my $clone;
     for ( 1 .. 20 ) {
