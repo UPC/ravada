@@ -17,6 +17,8 @@ use feature qw(signatures);
 
 use_ok('Ravada::HostDevice::Templates');
 
+$Ravada::Domain::TTL_REMOVE_VOLATILE=3;
+
 ####################################################################
 
 sub _set_hd_nvidia($hd) {

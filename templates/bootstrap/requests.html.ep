@@ -64,6 +64,7 @@
     >
     <div ng-repeat="request in requests">
         <span class="badge-pill badge-light">{{request.date}}</span>
+        {{request.id}} - 
         <span class="request">
             <b>{{request.command}}</b>
             {{request.domain}}

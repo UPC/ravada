@@ -99,19 +99,18 @@ sub list_devices_nodes($self) {
     my %devices;
     for my $ndata (@nodes) {
         if (!$ndata->[2] || !$ndata->[3]) {
-            $devices{$ndata->[1]}=[];
+            $devices{$ndata->[0]}=[];
             next;
         }
         my $node = Ravada::VM->open($ndata->[0]);
-        next if !$node || !$node->vm;
         my @current_devs;
         eval {
             @current_devs = $self->list_devices($node->id)
-                if $node->is_active;
+                if $node && $node->is_active;
         };
         warn $@ if $@;
         #        push @devices, @current_devs;
-        $devices{$node->id}=\@current_devs;
+        $devices{$ndata->[0]}=\@current_devs;
     }
 
     $self->_data( devices_node => \%devices );
@@ -146,9 +145,13 @@ sub is_device($self, $device, $id_vm) {
 
 }
 
+sub _ttl_remove_volatile() {
+    return $Ravada::Domain::TTL_REMOVE_VOLATILE;
+}
+
 sub _device_locked($self, $name, $id_vm=$self->id_vm) {
     my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT id,id_domain "
+        "SELECT id,id_domain,time_changed "
         ." FROM host_devices_domain_locked "
         ." WHERE id_vm=? AND name=? "
     );
@@ -161,10 +164,11 @@ sub _device_locked($self, $name, $id_vm=$self->id_vm) {
         "DELETE FROM host_devices_domain_locked "
         ." WHERE id=?"
     );
-    while ( my ($id_lock, $id_domain)= $sth->fetchrow ) {
+    while ( my ($id_lock, $id_domain,$time_changed)= $sth->fetchrow ) {
+        return $id_lock if time - $time_changed < _ttl_remove_volatile() ;
         $sth_status->execute($id_domain);
         my ($status) = $sth_status->fetchrow;
-        return $id_domain if $status && $status ne 'down';
+        return $id_domain if $status && $status ne 'shutdown';
         $sth_unlock->execute($id_lock);
     }
     return 0;
@@ -178,6 +182,29 @@ sub list_available_devices($self, $id_vm=$self->id_vm) {
     }
     return @device;
 }
+
+sub list_available_devices_cached($self, $id_vm=$self->id_vm) {
+    my @device;
+    my $dn = {};
+    my $data_dn = $self->_data('devices_node');
+    if (!$data_dn) {
+        my %data_dn = $self->list_devices_nodes();
+        $dn = \%data_dn;
+    } else {
+        eval { $dn = decode_json($data_dn) };
+        if ($@) {
+            warn "$@ ".($data_dn or '<NULL>');
+            return $self->list_available_devices($id_vm);
+        }
+    }
+    my $dnn = $dn->{$id_vm};
+    for my $dev_entry ( @$dnn ) {
+        next if $self->_device_locked($dev_entry, $id_vm);
+        push @device, ($dev_entry);
+    }
+    return @device;
+}
+
 
 sub remove($self) {
     _init_connector();
@@ -303,6 +330,22 @@ sub list_domains_with_device($self) {
 sub _dettach_in_domains($self) {
     for my $id_domain ( $self->list_domains_with_device() ) {
         my $domain = Ravada::Domain->open($id_domain);
+        if (!$domain) {
+            warn "unlocking from domain $id_domain";
+            my $sth = $$CONNECTOR->dbh->prepare(
+                "DELETE FROM host_devices_domain_locked "
+                ." WHERE id_domain=?"
+            );
+            $sth->execute($id_domain);
+
+            $sth = $$CONNECTOR->dbh->prepare(
+                "DELETE FROM host_devices_domain "
+                ." WHERE id_host_device=?"
+                ."   AND id_domain=?"
+            );
+            $sth->execute($self->id, $id_domain);
+            next;
+        }
         $domain->_dettach_host_device($self) if !$domain->is_active();
     }
 }

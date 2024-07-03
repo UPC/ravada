@@ -209,6 +209,6 @@ for my $vm_name (@{rvd_front->list_vm_types} ) {
 }
 
 remove_old_domains_req(0); # 0=do not wait for them
+remove_old_users();
 
-end();
 done_testing();
