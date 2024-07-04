@@ -440,7 +440,8 @@ sub test_removed_base_file_and_swap_remote($vm, $node) {
     }
     ok(grep { $_->command eq 'set_base_vm' } $base->list_requests)
         or die $vm->type." ".Dumper([$base->list_requests]);
-    is(scalar($base->list_vms),1) or exit;
+    is(scalar($base->list_vms(0,1)),1) #hostdev=0 , only_avail=1
+        or exit;
     wait_request(debug => 0);
     is($base->base_in_vm($node->id),1);
     my $node2 = Ravada::VM->open($node->id);
@@ -660,6 +661,7 @@ sub test_volatile_req($vm, $node) {
         $clone = rvd_back->search_domain($clone_name);
         is($clone->is_active(),1,"[".$vm->type."] expecting clone ".$clone->name
             ." active on node ".$clone->_vm->name);
+        is($clone->is_volatile,1);
         push @clones,($clone);
         last if $clone->_vm->id == $node->id;
     }
@@ -669,7 +671,7 @@ sub test_volatile_req($vm, $node) {
     rvd_back->_cmd_refresh_vms();
     for my $vol ( $clone->list_volumes ) {
         ok(!$vm->file_exists($vol),$vol) or exit;
-        ok(!$node->file_exists($vol),$vol) or exit;
+        ok(!$node->file_exists($vol),$vol." in ".$node->name) or exit;
     }
     _remove_domain($base);
 }
@@ -693,6 +695,7 @@ sub test_domain_gone($vm, $node) {
 }
 
 sub test_volatile_req_clone($vm, $node, $machine='pc-i440fx') {
+    start_node($node);
     if ($vm->type eq 'KVM') {
         my $id_iso = search_id_iso('Alpine%64');
         my $iso = $vm->_search_iso($id_iso);
@@ -1224,6 +1227,8 @@ sub test_fill_memory($vm, $node, $migrate) {
 
 sub test_migrate($vm, $node) {
     diag("Test migrate");
+
+    start_node($node);
     my $domain = create_domain($vm);
 
     $domain->migrate($node);
@@ -1534,6 +1539,7 @@ sub test_display_ip($vm, $node, $set_localhost_dp=0) {
 }
 
 sub test_nat($vm, $node, $set_localhost_natip=0) {
+    start_node($node);
     my $nat_ip_1 = "5.6.7.8";
     $node->nat_ip($nat_ip_1);
 
@@ -1714,6 +1720,8 @@ for my $vm_name (reverse vm_names() ) {
 
         start_node($node);
 
+        test_volatile_req($vm, $node);
+
         test_domain_gone($vm, $node);
 
         if ($vm_name eq 'KVM') {
@@ -1780,7 +1788,6 @@ for my $vm_name (reverse vm_names() ) {
         }
 
         test_clone_remote($vm, $node);
-        test_volatile_req($vm, $node);
         test_volatile_tmp_owner($vm, $node);
 
         test_reuse_vm($node);

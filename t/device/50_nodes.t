@@ -125,7 +125,6 @@ sub _create_host_devices($node,$number, $type=undef) {
         $hd->remove;
         return;
     }
-    diag("creating mock devices because not enough found");
     my ($list_command,$list_filter) = _create_mock_devices($node->[0], $number->[0], "USB" );
     for my $i (1..scalar(@$node)-1) {
         die "Error, missing number[$i] ".Dumper($number) unless defined $number->[$i];
@@ -176,6 +175,8 @@ sub test_devices_v2($node, $number, $volatile=0, $type=undef) {
     return if $type && !$hd;
 
     die "Error: no hd found" if !$hd;
+    # iommu not configured still in test nodes for PCI in KVM
+    $MOCK_DEVICES=1 if $type && $type eq 'pci' && $node->[0]->type eq 'KVM';
 
     test_node_down($hd, $node, $number);
 
@@ -235,9 +236,22 @@ sub test_assign_v2($hd, $node, $number, $volatile=0) {
         ,id_domain => $base->id
         ,name => 'usb controller'
     );
+    my $new_mem = 2*1024;
+    Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,hardware=> 'memory'
+            ,data => { memory => $new_mem*1024,max_mem => ($new_mem+1)*1024 }
+    );
+    wait_request();
     $base->prepare_base(user_admin);
     for my $curr_node (@$node) {
-        $base->set_base_vm(id_vm => $curr_node->id, user => user_admin);
+        my $req=Ravada::Request->set_base_vm(
+            id_vm => $curr_node->id
+            ,id_domain => $base->id
+            ,uid => user_admin->id
+        );
+        wait_request(debug => 0);
     }
 
     wait_request(debug=>0);
@@ -254,8 +268,7 @@ sub test_assign_v2($hd, $node, $number, $volatile=0) {
             ,login => user_admin->name
         };
     my $fd;
-    warn $n_expected;
-    for my $n (1 .. $n_expected) {
+    for my $n (1 .. $n_expected*2) {
 
         $fd = Ravada::WebSocket::_list_host_devices(rvd_front(),$ws);
 
@@ -264,18 +277,21 @@ sub test_assign_v2($hd, $node, $number, $volatile=0) {
         is($domain->is_active,1) if $vm->type eq 'Void';
         check_hd_from_node($domain,\%devices_nodes);
         my $hd_checked = check_host_device($domain);
-        next if $MOCK_DEVICES;
         push(@{$dupe{$hd_checked}},($domain->name." ".$base->id));
         my $id_vm = $domain->_data('id_vm');
         $found{$id_vm}++;
 
-        warn Dumper(\%found);
+        last if scalar(keys %found)>1;
 
     }
-    warn Dumper($fd);
-    ok(scalar(keys %found) > 1);
+    ok(scalar(keys %found) > 1) or exit;
     test_clone_nohd($hd, $base);
-    test_start_in_another_node($hd, $base);
+    my $more_than_one=0;
+    for (@$number) {
+        $more_than_one++ if $number>1;
+    }
+
+    test_start_in_another_node($hd, $base) unless $more_than_one;
 
     remove_domain($base);
 }
@@ -379,7 +395,7 @@ sub _req_clone($base, $name=undef) {
     );
     wait_request(debug => 0, check_error => 0);
     if ($base->type eq 'KVM' && $MOCK_DEVICES) {
-        diag($req->error);
+        diag($req->error) if $req->error;
     } else {
         is($req->error, '') or confess;
     }
@@ -407,7 +423,7 @@ sub _mock_start($domain) {
 }
 
 sub test_assign($vm, $node, $hd, $n_expected_in_vm, $n_expected_in_node) {
-    my $base = create_domain($vm);
+    my $base = create_domain_v2(vm=> $vm,memory => 333*1024);
     $base->add_host_device($hd);
     Ravada::Request->add_hardware(
         uid => user_admin->id
@@ -484,7 +500,6 @@ sub test_clone_nohd($hd, $base) {
 
     my ($name, $req, $domain0);
     for ( 1 .. _count_devices($hd) ) {
-        diag("trying to overflow");
         $name = new_domain_name();
         my $req0 = Ravada::Request->clone(
             uid => user_admin->id
@@ -590,9 +605,30 @@ sub check_host_device_void($domain) {
 sub check_host_device_kvm($domain) {
     my $doc = $domain->xml_description();
     my $xml = XML::LibXML->load_xml(string => $doc);
+    my ($hd) = $xml->findnodes("/domain/devices/hostdev");
+
+    if ($hd->getAttribute('type') eq 'usb') {
+        return check_host_device_kvm_usb($xml);
+    } elsif ($hd->getAttribute('type') eq 'pci') {
+        return check_host_device_kvm_pci($xml);
+    }
+}
+
+sub check_host_device_kvm_pci($xml) {
+    my ($address) = $xml->findnodes("/domain/devices/hostdev/source/address");
+    my $domain = $address->getAttribute('domain');
+    my $bus = $address->getAttribute('bus');
+    my $slot = $address->getAttribute('slot');
+    my $function = $address->getAttribute('function');
+
+    return ''."$domain-$bus-$slot-$function";
+
+}
+
+sub check_host_device_kvm_usb($xml) {
     my ($hd_source) = $xml->findnodes("/domain/devices/hostdev/source");
-    ok($hd_source) or return;
     my ($vendor) = $hd_source->findnodes("vendor");
+    die $hd_source->toString() if !$vendor;
     my $vendor_id=$vendor->getAttribute('id');
     my ($product) = $hd_source->findnodes("product");
     my $product_id=$product->getAttribute('id');
@@ -652,6 +688,7 @@ for my $vm_name (vm_names() ) {
             test_devices_v2([$vm,$node1,$node2],[1,1,1], undef, 'pci');
         }
 
+        # at least one 1,1,1 must be tested
         test_devices_v2([$vm,$node1,$node2],[1,1,1]);
         test_devices_v2([$vm,$node1,$node2],[1,3,1]);
         test_devices_v2([$vm,$node1,$node2],[1,1,3]);

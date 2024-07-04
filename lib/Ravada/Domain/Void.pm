@@ -394,6 +394,7 @@ sub start($self, @args) {
     my $set_password = delete $args{set_password}; # unused
     my $user = delete $args{user};
     delete $args{'id_vm'};
+    delete $args{'is_volatile'};
     confess "Error: unknown args ".Dumper(\%args) if keys %args;
 
     $listen_ip = $self->_vm->listen_ip($remote_ip) if !$listen_ip;
@@ -1158,10 +1159,8 @@ sub add_config_node($self, $path, $content, $data) {
     for my $item (split m{/}, $path ) {
         next if !$item;
 
-        confess "Error, no $item in ".Dumper($found)
-        if !exists $found->{$item};
-
         $found = $found->{$item};
+        $found = [] if !$found;
     }
     my $old;
     if (ref($found) eq 'ARRAY') {

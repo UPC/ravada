@@ -260,7 +260,8 @@ sub test_clone($vm_name, $n=undef) {
         $base->is_public(1);
         $base->volatile_clones(1);
 
-        is($base->_data('id_vm'), $id_vm) or die $base->name;
+        my $base2 = Ravada::Front::Domain->open($base->id);
+        is($base2->_data('id_vm'), $id_vm) or die $base->name;
 
         Ravada::Request->remove_clones(
             uid => user_admin->id
@@ -451,6 +452,17 @@ sub _clean_old_known($vm_name) {
     }
 }
 
+sub _id_vm_local($vm_name) {
+    my $sth = connector->dbh->prepare("SELECT id FROM vms "
+        ." WHERE vm_type=? AND hostname='localhost'"
+    );
+    $sth->execute($vm_name);
+    my ($id) = $sth->fetchrow;
+    die "Error no id in vms for type=$vm_name" if !defined $id;
+    return $id;
+
+}
+
 sub _clean_old_bases($vm_name, $wait=1) {
     my $sth = connector->dbh->prepare("SELECT name FROM domains "
             ." WHERE is_base=1 AND (id_base IS NULL or id_base=0)"
@@ -473,6 +485,13 @@ sub _clean_old_bases($vm_name, $wait=1) {
             next if !$name;
             Ravada::Request->remove_domain(name => $name
                    ,uid => user_admin->id
+           );
+        }
+
+        if ($base->_data('id_vm') != _id_vm_local($vm_name)) {
+            Ravada::Request->remove_domain(
+                name => $base->name
+                ,uid => user_admin->id
            );
         }
     }
@@ -521,6 +540,7 @@ for my $vm_name (@{rvd_front->list_vm_types} ) {
 }
 
 remove_networks_req();
+remove_old_domains_req(0); # 0=do not wait for them
+remove_old_users();
 
-end();
 done_testing();
