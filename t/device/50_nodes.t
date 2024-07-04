@@ -194,7 +194,6 @@ sub test_devices($vm, $node, $n_local=3, $n_node=3) {
 }
 
 sub test_assign_v2($hd, $node, $number, $volatile=0) {
-    diag("test ssign v2 number=".join(",",@$number)." volatile=$volatile");
     my $vm = $node->[0];
     my $base = create_domain($vm);
     $base->add_host_device($hd);
@@ -241,7 +240,6 @@ sub test_assign_v2($hd, $node, $number, $volatile=0) {
         $fd = Ravada::WebSocket::_list_host_devices(rvd_front(),$ws);
 
         my $name = new_domain_name;
-        diag("Starting $name");
         my $domain = _req_clone($base, $name);
         is($domain->is_active,1) if $vm->type eq 'Void';
         check_hd_from_node($domain,\%devices_nodes);

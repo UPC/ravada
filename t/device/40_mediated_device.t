@@ -92,7 +92,6 @@ sub _req_start($domain) {
     if ($MOCK_MDEV) {
         $domain->_attach_host_devices();
     } else {
-                diag("Starting for real ".$domain->name." MOCK_MDEV=".($MOCK_MDEV or 0));
         Ravada::Request->start_domain(
             uid => user_admin->id
             ,id_domain => $domain->id
