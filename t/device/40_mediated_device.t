@@ -120,7 +120,7 @@ sub _req_shutdown($domain) {
 sub test_mdev($vm) {
 
     my $templates = Ravada::HostDevice::Templates::list_templates($vm->id);
-    my ($mdev) = grep { $_->{name} eq "GPU Mediated Device" } @$templates;
+    my ($mdev) = grep { $_->{name} =~ /GPU Mediated Device/ } @$templates;
     ok($mdev,"Expecting PCI template in ".$vm->name) or return;
 
     my $id = $vm->add_host_device(template => $mdev->{name});
@@ -383,7 +383,7 @@ sub _add_template_timer($hd) {
 sub test_mdev_kvm_state($vm) {
 
     my $templates = Ravada::HostDevice::Templates::list_templates($vm->id);
-    my ($mdev) = grep { $_->{name} eq "GPU Mediated Device" } @$templates;
+    my ($mdev) = grep { $_->{name} =~ /GPU Mediated Device/ } @$templates;
     ok($mdev,"Expecting PCI template in ".$vm->name) or return;
 
     my $id = $vm->add_host_device(template => $mdev->{name});
