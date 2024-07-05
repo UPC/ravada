@@ -66,6 +66,7 @@ Add the drive to the Virtual Manager
 You must access the link of your own server. Then access Administration Tools>Storage and select New Storage; 
 Select the name and directory and confirm the changes
 
+
 .. image:: images/Screenshot_pool.jpg
    :alt: acces menu
 
