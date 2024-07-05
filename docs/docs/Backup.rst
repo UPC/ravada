@@ -81,6 +81,23 @@ Select the clone you just created in the admin machines page, and in the *base* 
 
 .. image:: images/spinoff_button.jpg
 
+3. Verify the Storage
+
+The volume files may point to a storage pool that does not match
+in the new server. You can move the volume files to a more standard
+storage pool
+
+Go to the virtual machine settings, click on hardware, then review
+each file storage.
+
+.. image:: images/machine_volumes.png
+
+Select all the storage volumes and check if the storage pool is correct
+for the new server. You may want to change the storage, click on the
+pencil next to the storage pool name to move the volume.
+
+.. image:: images/machine_move_storage.png
+
 3. Perform the backup
 
 .. prompt:: bash server_src$
