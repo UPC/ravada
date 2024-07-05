@@ -63,8 +63,9 @@ rebooting issuing:
 Add the drive to the Virtual Manager
 ------------------------------------
 
-We access Ravada from the url http://puck.upc.edu:8081/. Then we access Administration Tools>Storage and select New Storage; 
-we select the name and directory and confirm the changes
+You must access the link of your own server. Then access Administration Tools>Storage and select New Storage; 
+Select the name and directory and confirm the changes
+
 
 .. image:: images/Screenshot_pool.jpg
    :alt: acces menu
