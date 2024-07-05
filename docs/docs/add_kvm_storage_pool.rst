@@ -66,8 +66,8 @@ Add the drive to the Virtual Manager
 We access Ravada from the url http://puck.upc.edu:8081/. Then we access Administration Tools>Storage and select New Storage; 
 we select the name and directory and confirm the changes
 
-.. image:: image/Captura1.jpg
-   :alt: menú de acceso
+.. image:: image/Screenshot_pool
+   :alt: acces menu
 
 And that's it, now Ravada will use the pool that has more empty space
 the next time it needs to create a volume. If you want to fine tune
