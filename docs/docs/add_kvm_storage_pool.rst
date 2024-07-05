@@ -67,8 +67,6 @@ We access Ravada from the url http://puck.upc.edu:8081/. Then we access Administ
 we select the name and directory and confirm the changes
 
 .. image:: image/Captura1.jpg
-   :height: 100
-   :width: 200
    :alt: menú de acceso
 
 And that's it, now Ravada will use the pool that has more empty space
