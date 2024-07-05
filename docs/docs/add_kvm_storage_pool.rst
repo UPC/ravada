@@ -63,13 +63,13 @@ rebooting issuing:
 Add the drive to the Virtual Manager
 ------------------------------------
 
-.. prompt:: bash $
+We access Ravada from the url http://puck.upc.edu:8081/. Then we access Administration Tools>Storage and select New Storage; 
+we select the name and directory and confirm the changes
 
-    sudo virsh pool-define-as pool2 dir - - - - /var/lib/libvirt/images.2
-    sudo virsh pool-autostart pool2
-    sudo virsh pool-start pool2
-    sudo virsh pool-list
- 
+.. image:: image/Captura1.jpg
+   :height: 100
+   :width: 200
+   :alt: menú de acceso
 
 And that's it, now Ravada will use the pool that has more empty space
 the next time it needs to create a volume. If you want to fine tune
