@@ -379,7 +379,6 @@ sub _around_connect($orig, $self) {
     }
     my $result = $self->$orig();
     if ($result) {
-        warn Dumper([$data_active, $data_cached_down]) if $self->id == 4;
         $self->is_active(1);
         $self->_fetch_tls();
         $self->_refresh_version();
@@ -1092,6 +1091,8 @@ sub _data($self, $field, $value=undef) {
         )
     ) {
         confess if $field eq 'id_vm' && $self->is_base;
+
+        my $old = $self->_do_select_vm_db(id => $self->id);
         $self->{_data}->{$field} = $value;
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE vms set $field=?"
@@ -1100,6 +1101,9 @@ sub _data($self, $field, $value=undef) {
         $sth->execute($value, $self->id);
         $sth->finish;
 
+        if ($field eq 'is_active' && defined $value) {
+            $self->_req_refresh_hds() if $old && !$old->{$field};
+        }
         return $value;
     }
 
@@ -1125,6 +1129,7 @@ sub _set_by_id($id, $field, $value) {
     $sth->execute($value, $id);
     $sth->finish;
 
+    _req_refresh_hds($id) if $field eq 'is_active' && $value;
     return $value;
 }
 
@@ -1750,6 +1755,9 @@ sub is_active($self, $force=0) {
 }
 
 sub _do_is_active($self, $force=undef) {
+
+    my $is_active = $self->_data('is_active');
+
     my $ret = 0;
     $self->_data('cached_down' => 0);
     if ( $self->is_local ) {
@@ -1773,6 +1781,26 @@ sub _do_is_active($self, $force=undef) {
     my $cache_key = "ping_".$self->host;
     $self->_delete_cache($cache_key);
     return $ret;
+}
+
+sub _req_refresh_hds($self) {
+    my $id_vm = $self;
+    if (ref($id_vm)) {
+        $id_vm = $self->id;
+    }
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id FROM host_devices "
+    );
+    $sth->execute();
+
+    while (my($id_hd) = $sth->fetchrow) {
+        my $req = Ravada::Request->list_host_devices(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_node => $id_vm
+            ,id_host_device => $id_hd
+        );
+    }
+
 }
 
 sub _cached_active($self, $value=undef) {

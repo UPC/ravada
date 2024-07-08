@@ -117,6 +117,31 @@ sub list_devices_nodes($self) {
     return %devices;
 }
 
+sub refresh_devices_node($self, $id_vm) {
+    my $data_json = $self->_data('devices_node');
+    my $data = {};
+    if ($data_json) {
+        $data = $data_json;
+        eval {
+        $data = decode_json($data_json) if !ref($data_json);
+        };
+        warn $@ if $@;
+    }
+
+    my $node = Ravada::VM->open($id_vm);
+
+    my @current_devs;
+    eval {
+            @current_devs = $self->list_devices($node->id)
+                if $node && $node->is_active;
+    };
+    warn $@ if $@;
+    $data->{$id_vm}=\@current_devs;
+
+    $self->_data( devices_node => $data );
+
+}
+
 sub list_devices($self, $id_vm=$self->id_vm) {
     my $vm = Ravada::VM->open($id_vm);
     return [] unless $vm->is_active;
@@ -284,14 +309,7 @@ sub _data($self, $field, $value=undef) {
             $value =~ m{["'`$()\[\];]}
             || $value !~ /^(ls|find)/);
 
-        if  ( $field eq 'devices_node' && $value ) {
-            warn Dumper($value);
-            my ($wrong) = grep { $_ !~ /^\d+$/ } keys %$value;
-            confess if $wrong;
-        }
-
         $value = encode_json($value) if ref($value);
-
 
         my $old_value = $self->_data($field);
         return if defined $old_value && $old_value eq $value;

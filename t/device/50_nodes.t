@@ -147,7 +147,9 @@ sub test_node_down($hd,$node, $number) {
 
     my $dn0 = dclone($dn->{$vm->id});
 
-    $vm->_data('is_active' ,0);
+    diag($vm->name." forced down");
+    Ravada::VM::_set_by_id($vm->id,'is_active' => 0);
+    Ravada::VM::_set_by_id($vm->id,'cached_active_time' => 0);
     $dn->{$vm->id} = [];
 
     $hd->_data('devices_node' => $dn);
@@ -155,15 +157,31 @@ sub test_node_down($hd,$node, $number) {
     my $dn2 = decode_json($data_dn2);
     is_deeply($dn2->{$vm->id},[]);
 
+    delete_request('list_host_devices');
     Ravada::Request->refresh_vms();
-    wait_request();
-    my $vm2 = Ravada::VM->open($vm->id);
+    wait_request(debug => 0);
 
-    my $data_dn3 = $hd->_data('devices_node');
+    for my $try ( 1 .. 10 ) {
+        my $vm2 = Ravada::VM->open($vm->id);
+        my $is_active=0;
+        $is_active = $vm2->_data('is_active') if $vm2;
+        last if $vm2 && $vm2->_data('is_active');
+
+        my $hd3 = Ravada::HostDevice->search_by_id($hd->id);
+        my $data_dn3 = $hd3->_data('devices_node');
+        my $dn3 = decode_json($data_dn3);
+        last if scalar(@{$dn3->{$vm->id}});
+
+        delete_request('list_host_devices');
+        rvd_back->_refresh_down_nodes();
+        wait_request( debug => 0);
+
+    }
+
+    my $hd3 = Ravada::HostDevice->search_by_id($hd->id);
+    my $data_dn3 = $hd3->_data('devices_node');
     my $dn3 = decode_json($data_dn3);
     is_deeply($dn3->{$vm->id},$dn0) or exit;
-    warn Dumper($dn3);
-
 
 }
 
@@ -206,7 +224,6 @@ sub test_devices($vm, $node, $n_local=3, $n_node=3) {
     my $node_name = $node->name;
 
     my %devices_nodes = $hd->list_devices_nodes();
-    warn Dumper(\%devices_nodes);
     my %dupe;
     for my $node (keys %devices_nodes) {
         for my $dev (@{$devices_nodes{$node}}) {
@@ -236,7 +253,7 @@ sub test_assign_v2($hd, $node, $number, $volatile=0) {
         ,id_domain => $base->id
         ,name => 'usb controller'
     );
-    my $new_mem = 2*1024;
+    my $new_mem = int(0.8*1024);
     Ravada::Request->change_hardware(
         uid => user_admin->id
         ,id_domain => $base->id
@@ -319,7 +336,6 @@ sub test_start_in_another_node($hd, $base) {
     _req_clone($base);
     _req_shutdown($clone2->{id});
 
-    #_list_locked($clone1->{id});
     _force_wrong_lock($clone1->{id_vm},$clone1->{id});
     _req_start($clone1->{id});
 
@@ -339,14 +355,6 @@ sub _force_wrong_lock($id_vm, $id_domain) {
         ." values (?, ?, ?, 0) "
     );
     $sth->execute($id_vm, $id_domain, 'fake');
-}
-
-sub _list_locked($id_domain) {
-    my $sth = connector->dbh->prepare("SELECT * FROM host_devices_domain_locked WHERE id_domain=?");
-    $sth->execute($id_domain);
-    while ( my $row = $sth->fetchrow_hashref ) {
-        warn Dumper($row);
-    }
 }
 
 sub _req_shutdown($id) {

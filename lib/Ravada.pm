@@ -4580,6 +4580,7 @@ sub _cmd_create{
 
 sub _cmd_list_host_devices($self, $request) {
     my $id_host_device = $request->defined_arg('id_host_device');
+    my $id_node = $request->defined_arg('id_node');
 
     my @id_hd;
 
@@ -4599,8 +4600,13 @@ sub _cmd_list_host_devices($self, $request) {
     for my $id_hd (@id_hd) {
         my $hd = Ravada::HostDevice->search_by_id( $id_hd);
         next if !$hd;
-        eval { $hd->list_devices_nodes };
-        warn $@ if $@;
+        if ($id_node) {
+            eval { $hd->refresh_devices_node($id_node) };
+            warn $@ if $@;
+        } else {
+            eval { $hd->list_devices_nodes };
+            warn $@ if $@;
+        }
     }
 
 }
@@ -6147,7 +6153,9 @@ sub _refresh_down_nodes($self, $request = undef ) {
         my $vm;
         eval { $vm = Ravada::VM->open($id) };
         warn $@ if $@;
-        $vm->is_active() if $vm;
+        if ($vm) {
+            $vm->is_active();
+        }
     }
 }
 
