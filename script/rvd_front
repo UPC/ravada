@@ -292,8 +292,8 @@ any '/login' => sub {
     return login($c);
 };
 
-get '/connect/(:provider)' => sub($c) {
-    my $provider = $c->stash('provider');
+get '/connect' => sub($c) {
+    my $provider = 'custom';
     warn $provider;
     my %get_token = (redirect_uri => $c->url_for('connect')
         ->userinfo(undef)->to_abs);
@@ -301,14 +301,16 @@ get '/connect/(:provider)' => sub($c) {
         return unless my $provider_res = shift;
         $c->session(token => $provider_res->{access_token});
         $c->redirect_to('profile');
-    });
+    })->catch(sub {
+    $c->render('connect', error => shift);
+  });;
 };
 
 get '/profile' => sub($c) {
 
-    state $mocked = $ENV{TEST_MOCKED} && 'mocked';
-    return $c->oauth2->get_token_p($mocked || 'custom' )->then(sub {
+    return $c->oauth2->get_token_p('custom' )->then(sub {
         warn "profile";
+        return $c->render("text" => 'hello');
     });
 };
 
