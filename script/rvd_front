@@ -10,6 +10,7 @@ use Data::Dumper;
 use Digest::SHA qw(sha256_hex);
 use Hash::Util qw(lock_hash);
 use Mojolicious::Lite 'Ravada::I18N';
+use Mojolicious::Plugin::OAuth2::Mock;
 use Mojo::JSON qw(decode_json encode_json);
 use Time::Piece;
 #use Mojolicious::Plugin::I18N;
@@ -230,6 +231,8 @@ hook before_routes => sub {
 
     return if $url =~ m{^/(anonymous_logout|login|logout|requirements|robots.txt|favicon.ico|status\.)};
 
+    return if $url =~ m{^/connect};
+
     my $bases_anonymous = $RAVADA->list_bases_anonymous(_remote_ip($c));
     return access_denied($c) if $url =~ m{^/anonymous} && !@$bases_anonymous;
 
@@ -287,6 +290,26 @@ any '/index.html' => sub {
 any '/login' => sub {
     my $c = shift;
     return login($c);
+};
+
+get '/connect/(:provider)' => sub($c) {
+    my $provider = $c->stash('provider');
+    warn $provider;
+    my %get_token = (redirect_uri => $c->url_for('connect')
+        ->userinfo(undef)->to_abs);
+    return $c->oauth2->get_token_p($provider)->then(sub {
+        return unless my $provider_res = shift;
+        $c->session(token => $provider_res->{access_token});
+        $c->redirect_to('profile');
+    });
+};
+
+get '/profile' => sub($c) {
+
+    state $mocked = $ENV{TEST_MOCKED} && 'mocked';
+    return $c->oauth2->get_token_p($mocked || 'custom' )->then(sub {
+        warn "profile";
+    });
 };
 
 any '/test' => sub {
@@ -3907,6 +3930,16 @@ sub init {
     my $home = Mojo::Home->new();
     $home->detect();
 
+    app->plugin(OAuth2 => {mocked => {key => 42}});
+
+    if ($CONFIG_FRONT->{oauth2}) {
+        warn Dumper($CONFIG_FRONT->{oauth2});
+        app->plugin(OAuth2 =>
+            { providers => $CONFIG_FRONT->{oauth2}
+                ,proxy => 1
+            }
+        );
+    }
     if (exists $ENV{MORBO_VERBOSE}
         || (exists $ENV{MOJO_MODE} && defined $ENV{MOJO_MODE}
                 && $ENV{MOJO_MODE} =~ /devel/i )) {
