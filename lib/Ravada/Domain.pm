@@ -7769,6 +7769,7 @@ sub _restore_owner($self, $data, $file_data_owner) {
         ,delete $data->{owner});
     if ($id_owner) {
         $data->{id_owner} = $id_owner;
+        $self->_data('id_owner' => $id_owner);
         return;
     }
 
@@ -7787,6 +7788,7 @@ sub _restore_owner($self, $data, $file_data_owner) {
         $self->_data('id_owner' => Ravada::Utils::user_daemon->id);
         return;
     }
+    $self->_data('id_owner' => $id);
 
     my $sql = "INSERT INTO users (".join(",",sort keys %$data_owner).")"
     ." VALUES(".join(",",map {'?'} keys %$data_owner)." )";
@@ -7823,6 +7825,7 @@ sub _restore_backup_metadata($self, $data, $file_data_owner) {
     _restore_base_volumes_metadata($self, $data);
 
     for my $field (keys %$data) {
+        next if $field eq 'id_owner';
         next if( !exists $self->{_data}->{$field} || !defined $self->{_data}->{$field})
         && !defined $data->{$field};
 
