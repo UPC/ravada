@@ -7644,7 +7644,7 @@ sub _search_domain_to_restore($data, $file_extra) {
 
     my $id = $data->{id};
     my $name = $data->{name};
-    my $vm = Ravada::VM->open($data->{id_vm});
+    my $vm = Ravada::VM->open(type => $data->{vm});
 
     my $sth = _dbh->prepare("SELECT * FROM domains "
         ."WHERE id=? OR name=?"
@@ -7758,6 +7758,9 @@ sub restore_backup($self, $backup, $interactive, $rvd_back=undef) {
         ,"/$file_data_owner"
     );
 
+    if($self->_data('is_base')) {
+        $self->_set_base_vm_db($self->_vm->id,1);
+    }
     return $self;
 }
 
