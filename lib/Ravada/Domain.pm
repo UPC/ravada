@@ -7782,8 +7782,10 @@ sub _restore_owner($self, $data, $file_data_owner) {
     my $clashed_user = Ravada::Auth::SQL->search_by_id($id);
 
     if ($clashed_user) {
-        die "Error: Owner id $id clashes with user ".$clashed_user->name
-        ." here.";
+        warn "Error: Owner id $id clashes with user ".$clashed_user->name
+        ." here.\n";
+        $self->_data('id_owner' => Ravada::Utils::user_daemon->id);
+        return;
     }
 
     my $sql = "INSERT INTO users (".join(",",sort keys %$data_owner).")"
