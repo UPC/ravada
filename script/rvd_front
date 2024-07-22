@@ -231,7 +231,8 @@ hook before_routes => sub {
 
     return if $url =~ m{^/(anonymous_logout|login|logout|requirements|robots.txt|favicon.ico|status\.)};
 
-    return if $url =~ m{^/connect};
+    return if $url =~ m{^/(connect|profile)};
+    return if $url =~ m{^/protected};
 
     my $bases_anonymous = $RAVADA->list_bases_anonymous(_remote_ip($c));
     return access_denied($c) if $url =~ m{^/anonymous} && !@$bases_anonymous;
@@ -292,25 +293,73 @@ any '/login' => sub {
     return login($c);
 };
 
+any '/protected' => sub($c) {
+    return $c->render("text" => "protected");
+};
+
+any '/protected/redirect_uri' => sub($c) {
+    return $c->render("text" => "protected redirect");
+};
+
+
 get '/connect' => sub($c) {
     my $provider = 'custom';
-    warn $provider;
-    my %get_token = (redirect_uri => $c->url_for('connect')
-        ->userinfo(undef)->to_abs);
-    return $c->oauth2->get_token_p($provider)->then(sub {
+
+    return $c->oauth2->get_token_p($provider =>
+        { authorize_query => {
+                'response_type' => 'code'
+                ,'scope' => 'openid profile email api devel.etsetb-oid'
+                ,'response_mode' => 'query'
+                ,'code_challenge_method' => 'S256'
+                ,state=>'220539a601194bf9805eedd015f84e12'
+                ,'code_challenge'=> 'EspxSQ7smOddi9HFRwlRxHt1UlCKuO1mZMQKsTnUtsc'
+
+            }
+        })->then(sub {
         return unless my $provider_res = shift;
         $c->session(token => $provider_res->{access_token});
+        warn "provider_res=".Dumper(
+            [$provider_res, $provider_res->{access_token}]);
+
+        my $claims;
+         $claims = $c->oauth2->jwt_decode($provider
+                ,sub { my $jwt = shift; warn Dumper($jwt); }
+            ) ;
+        my $error = $@;
+        warn Dumper($claims);
         $c->redirect_to('profile');
     })->catch(sub {
-    $c->render('connect', error => shift);
-  });;
+        my $error = shift;
+        warn "error $error";
+        $c->render('connect', error => $error);
+    });;
+};
+
+get '/logout_oauth' => sub($c) {
+    my %get_token = (
+        redirect_uri => $c->url_for('connect')->userinfo(undef)->to_abs
+        ,authorize_query => { response_type => 'code' }
+    );
+
+    my $url = $c->oauth2->logout_url('custom'=>
+        \%get_token
+    );
+    warn ''.$url;
+    return $c->render(template => '/main/logout_oauth', url => $url);
 };
 
 get '/profile' => sub($c) {
 
-    return $c->oauth2->get_token_p('custom' )->then(sub {
+    return $c->oauth2->get_token_p('custom'
+            ,authorize_query => { response_type => 'code' }
+    )->then(sub {
         warn "profile";
-        return $c->render("text" => 'hello');
+        my $claims;
+        eval { $claims = $c->oauth2->jwt_decode('custom') };
+        my $error = $@;
+        warn Dumper($claims);
+        return $c->render(template => '/main/profile_oauth2'
+        ,error => $error);
     });
 };
 
@@ -2878,6 +2927,10 @@ del '/v1/booking_entry/:id/:mode' => sub($c) {
     die $@ if $@;
 
     my $booking = Ravada::Booking->new( id => $entry->_data('id_booking'));
+    my %get_token = (
+        redirect_uri => $c->url_for('connect')->userinfo(undef)->to_abs
+        ,authorize_query => { response_type => 'code' }
+    );
 
     return error_access_denied_json($c)
     unless $booking->_data('id_owner') == $USER->id
@@ -3931,8 +3984,6 @@ sub init {
     _init_user_group();
     my $home = Mojo::Home->new();
     $home->detect();
-
-    app->plugin(OAuth2 => {mocked => {key => 42}});
 
     if ($CONFIG_FRONT->{oauth2}) {
         warn Dumper($CONFIG_FRONT->{oauth2});
