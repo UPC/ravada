@@ -294,73 +294,17 @@ any '/login' => sub {
 };
 
 any '/protected' => sub($c) {
-    return $c->render("text" => "protected");
+my %header;
+    for my $name (@{$c->req->headers->names}) {
+        $header{$name} = $c->req->headers->header($name);
+    }
+
+    warn Dumper(\%header);
+    return $c->render("text" => "protected\n".Dumper(\%header));
 };
 
 any '/protected/redirect_uri' => sub($c) {
     return $c->render("text" => "protected redirect");
-};
-
-
-get '/connect' => sub($c) {
-    my $provider = 'custom';
-
-    return $c->oauth2->get_token_p($provider =>
-        { authorize_query => {
-                'response_type' => 'code'
-                ,'scope' => 'openid profile email api devel.etsetb-oid'
-                ,'response_mode' => 'query'
-                ,'code_challenge_method' => 'S256'
-                ,state=>'220539a601194bf9805eedd015f84e12'
-                ,'code_challenge'=> 'EspxSQ7smOddi9HFRwlRxHt1UlCKuO1mZMQKsTnUtsc'
-
-            }
-        })->then(sub {
-        return unless my $provider_res = shift;
-        $c->session(token => $provider_res->{access_token});
-        warn "provider_res=".Dumper(
-            [$provider_res, $provider_res->{access_token}]);
-
-        my $claims;
-         $claims = $c->oauth2->jwt_decode($provider
-                ,sub { my $jwt = shift; warn Dumper($jwt); }
-            ) ;
-        my $error = $@;
-        warn Dumper($claims);
-        $c->redirect_to('profile');
-    })->catch(sub {
-        my $error = shift;
-        warn "error $error";
-        $c->render('connect', error => $error);
-    });;
-};
-
-get '/logout_oauth' => sub($c) {
-    my %get_token = (
-        redirect_uri => $c->url_for('connect')->userinfo(undef)->to_abs
-        ,authorize_query => { response_type => 'code' }
-    );
-
-    my $url = $c->oauth2->logout_url('custom'=>
-        \%get_token
-    );
-    warn ''.$url;
-    return $c->render(template => '/main/logout_oauth', url => $url);
-};
-
-get '/profile' => sub($c) {
-
-    return $c->oauth2->get_token_p('custom'
-            ,authorize_query => { response_type => 'code' }
-    )->then(sub {
-        warn "profile";
-        my $claims;
-        eval { $claims = $c->oauth2->jwt_decode('custom') };
-        my $error = $@;
-        warn Dumper($claims);
-        return $c->render(template => '/main/profile_oauth2'
-        ,error => $error);
-    });
 };
 
 any '/test' => sub {
@@ -3985,14 +3929,6 @@ sub init {
     my $home = Mojo::Home->new();
     $home->detect();
 
-    if ($CONFIG_FRONT->{oauth2}) {
-        warn Dumper($CONFIG_FRONT->{oauth2});
-        app->plugin(OAuth2 =>
-            { providers => $CONFIG_FRONT->{oauth2}
-                ,proxy => 1
-            }
-        );
-    }
     if (exists $ENV{MORBO_VERBOSE}
         || (exists $ENV{MOJO_MODE} && defined $ENV{MOJO_MODE}
                 && $ENV{MOJO_MODE} =~ /devel/i )) {
