@@ -28,6 +28,7 @@ no warnings "experimental::signatures";
 use feature qw(signatures);
 
 use Ravada::Auth;
+use Ravada::Auth::OpenID;
 use Ravada::Booking;
 use Ravada::Front;
 use Ravada::Front::Domain;
@@ -280,6 +281,9 @@ any '/robots.txt' => sub {
 
 any '/' => sub {
     my $c = shift;
+
+my %header;
+
     return quick_start($c);
 };
 
@@ -294,12 +298,17 @@ any '/login' => sub {
 };
 
 any '/protected' => sub($c) {
-my %header;
+    my %header;
     for my $name (@{$c->req->headers->names}) {
-        $header{$name} = $c->req->headers->header($name);
+        $header{$name} = $c->req->headers->header($name)
+        if $name =~ /OIDC/;
     }
 
     warn Dumper(\%header);
+    my $auth_ok;
+    warn ''.localtime($header{OIDC_access_token_expires});
+    my $username = $header{OIDC_CLAIM_preferred_username};
+    $auth_ok = Ravada::Auth::OpenID::login_external($username, \%header);
     return $c->render("text" => "protected\n".Dumper(\%header));
 };
 
