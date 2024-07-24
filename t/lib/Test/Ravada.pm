@@ -2192,7 +2192,11 @@ sub shutdown_node($node) {
         }
         sleep 1;
     }
-    $domain_node->shutdown_now(user_admin) if $domain_node->is_active;
+    $domain_node->shutdown_now(user_admin);# if $domain_node->is_active;
+    for my $req ( $domain_node->list_requests) {
+        diag($req->command);
+        $req->_delete();
+    }
     is($node->ping(undef,0),0);
 }
 
@@ -2230,7 +2234,7 @@ sub start_node($node) {
             Ravada::Request->connect_node(uid => user_admin->id
                 ,id_node => $node->id
             );
-            wait_request();
+            wait_request(check_error => 0);
             eval {
                 $node->disconnect;
                 $node->clear_netssh();

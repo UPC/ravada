@@ -19,6 +19,8 @@ my $BASE;
 my $MOCK_MDEV;
 my $N_TIMERS;
 
+$Ravada::Domain::TTL_REMOVE_VOLATILE=3;
+
 ####################################################################
 
 sub _prepare_dir_mdev() {
@@ -90,7 +92,6 @@ sub _req_start($domain) {
     if ($MOCK_MDEV) {
         $domain->_attach_host_devices();
     } else {
-                diag("Starting for real ".$domain->name." MOCK_MDEV=".($MOCK_MDEV or 0));
         Ravada::Request->start_domain(
             uid => user_admin->id
             ,id_domain => $domain->id
@@ -119,7 +120,7 @@ sub _req_shutdown($domain) {
 sub test_mdev($vm) {
 
     my $templates = Ravada::HostDevice::Templates::list_templates($vm->id);
-    my ($mdev) = grep { $_->{name} eq "GPU Mediated Device" } @$templates;
+    my ($mdev) = grep { $_->{name} =~ /GPU Mediated Device/ } @$templates;
     ok($mdev,"Expecting PCI template in ".$vm->name) or return;
 
     my $id = $vm->add_host_device(template => $mdev->{name});
@@ -382,7 +383,7 @@ sub _add_template_timer($hd) {
 sub test_mdev_kvm_state($vm) {
 
     my $templates = Ravada::HostDevice::Templates::list_templates($vm->id);
-    my ($mdev) = grep { $_->{name} eq "GPU Mediated Device" } @$templates;
+    my ($mdev) = grep { $_->{name} =~ /GPU Mediated Device/ } @$templates;
     ok($mdev,"Expecting PCI template in ".$vm->name) or return;
 
     my $id = $vm->add_host_device(template => $mdev->{name});

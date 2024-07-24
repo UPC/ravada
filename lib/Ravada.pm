@@ -4261,10 +4261,8 @@ sub _stop_refresh($self) {
     );
     $sth->execute('refresh%');
     while ( my ($id) = $sth->fetchrow ) {
-        warn "stopping $id";
         eval {
             my $req = Ravada::Request->open($id);
-            warn " [$id] ".$req->command." stopping";
             $req->stop;
         };
 
@@ -5013,7 +5011,12 @@ sub _cmd_start {
     my $domain;
     $domain = $self->search_domain($name)               if $name;
     $domain = Ravada::Domain->open($id_domain)          if $id_domain;
-    die "Unknown domain '".($name or $id_domain)."'" if !$domain;
+
+    if(!$domain) {
+        $self->_remove_inactive_gone($id_domain);
+        die "Unknown machine '".($name or $id_domain)."'\n";
+    }
+
     $domain->status('starting');
 
     my $uid = $request->args('uid');
@@ -5685,13 +5688,32 @@ sub _cmd_check_storage($self, $request) {
     }
 }
 
+sub _remove_inactive_gone($self,$id_domain) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT name,is_volatile "
+        ." FROM domains "
+        ." WHERE id=?"
+    );
+    $sth->execute($id_domain);
+    my ($name,$is_volatile) = $sth->fetchrow;
+    if ($is_volatile) {
+        my $req = Ravada::Request->remove_domain(
+            name => $name
+            ,uid => Ravada::Utils::user_daemon->id
+        );
+        $self->_cmd_remove($req);
+    }
+}
+
 sub _cmd_refresh_machine($self, $request) {
 
     my $id_domain = $request->args('id_domain');
     my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
 
     # it may have been removed on shutdown when volatile
-    my $domain = Ravada::Domain->open($id_domain) or return;
+    my $domain = Ravada::Domain->open($id_domain);
+
+    return $self->_remove_inactive_gone($id_domain) if !$domain;
 
     $domain->check_status();
     $domain->list_volumes_info();
@@ -6021,7 +6043,7 @@ sub _cmd_rsync_back($self, $request) {
     my $id_domain = $request->args('id_domain') or die "ERROR: Missing id_domain";
 
     my $domain = Ravada::Domain->open($id_domain);
-    return if $domain->is_active;
+    return if $domain->is_active || $domain->is_volatile;
 
     my $user = Ravada::Auth::SQL->search_by_id($uid);
     die "Error: user ".$user->name." not allowed to migrate domain ".$domain->name

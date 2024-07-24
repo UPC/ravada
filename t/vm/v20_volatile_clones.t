@@ -208,7 +208,11 @@ sub test_enforce_limits {
 
     for ( 1 .. 3 ) {
         my $clone0_2 = $vm->search_domain($clone_name);
-        last if !$clone0_2;
+
+        my $clone0_f;
+        eval { $clone0_f = rvd_front->search_domain($clone_name) };
+
+        last if !$clone0_2 && !$clone0_f;
         Ravada::Request->refresh_machine(uid => user_admin->id
             ,id_domain =>  $clone->id, _force => 1);
         wait_request(debug => 1);
@@ -231,9 +235,7 @@ sub test_enforce_limits {
     eval { $clone2->remove(user_admin) };
     is(''.$@,'');
 
-    eval { $clone->remove(user_admin) if !$clone->is_removed() };
-    is(''.$@,'');
-    $domain->remove(user_admin);
+    remove_domain($domain);
 
     $user->remove();
 }
@@ -266,8 +268,19 @@ sub test_internal_shutdown {
     }
 
     my $clone0_f;
+    for ( 1 .. 5 ) {
+        my $clone0_2 = $vm->search_domain($clone_name);
+        eval { $clone0_f = rvd_front->search_domain($clone_name) };
+
+        last if !$clone0_2 && !$clone0_f;
+
+        Ravada::Request->refresh_machine(uid => user_admin->id
+            ,id_domain =>  $clone->id, _force => 1);
+        wait_request(debug => 1);
+    }
+
     eval { $clone0_f = rvd_front->search_domain($clone_name) };
-    is($clone0_f, undef);
+    is($clone0_f, undef) or die $clone_name;
 
     my $list_domains = rvd_front->list_domains();
     ($clone0_f) = grep { $_->{name} eq $clone_name } @$list_domains;

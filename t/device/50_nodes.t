@@ -124,7 +124,6 @@ sub _create_host_devices($node,$number, $type=undef) {
         $hd->remove;
         return;
     }
-    diag("creating mock devices because not enough found");
     my ($list_command,$list_filter) = _create_mock_devices($node->[0], $number->[0], "USB" );
     for my $i (1..scalar(@$node)-1) {
         die "Error, missing number[$i] ".Dumper($number) unless defined $number->[$i];
@@ -195,7 +194,6 @@ sub test_devices($vm, $node, $n_local=3, $n_node=3) {
 }
 
 sub test_assign_v2($hd, $node, $number, $volatile=0) {
-    diag("test ssign v2 number=".join(",",@$number)." volatile=$volatile");
     my $vm = $node->[0];
     my $base = create_domain($vm);
     $base->add_host_device($hd);
@@ -221,7 +219,6 @@ sub test_assign_v2($hd, $node, $number, $volatile=0) {
             ,uid => user_admin->id
         );
         wait_request(debug => 0);
-        diag($req->error);
     }
 
     wait_request(debug=>0);
@@ -238,24 +235,19 @@ sub test_assign_v2($hd, $node, $number, $volatile=0) {
             ,login => user_admin->name
         };
     my $fd;
-    warn $n_expected;
-    warn Dumper(\%devices_nodes);
     for my $n (1 .. $n_expected*2) {
 
         $fd = Ravada::WebSocket::_list_host_devices(rvd_front(),$ws);
 
         my $name = new_domain_name;
-        diag("Starting $name");
         my $domain = _req_clone($base, $name);
         is($domain->is_active,1) if $vm->type eq 'Void';
         check_hd_from_node($domain,\%devices_nodes);
         my $hd_checked = check_host_device($domain);
-        warn $hd_checked;
         push(@{$dupe{$hd_checked}},($domain->name." ".$base->id));
         my $id_vm = $domain->_data('id_vm');
         $found{$id_vm}++;
 
-        warn Dumper(\%found);
         last if scalar(keys %found)>1;
 
     }
@@ -370,7 +362,7 @@ sub _req_clone($base, $name=undef) {
     );
     wait_request(debug => 0, check_error => 0);
     if ($base->type eq 'KVM' && $MOCK_DEVICES) {
-        diag($req->error);
+        diag($req->error) if $req->error;
     } else {
         is($req->error, '') or confess;
     }
@@ -475,7 +467,6 @@ sub test_clone_nohd($hd, $base) {
 
     my ($name, $req, $domain0);
     for ( 1 .. _count_devices($hd) ) {
-        diag("trying to overflow");
         $name = new_domain_name();
         my $req0 = Ravada::Request->clone(
             uid => user_admin->id
