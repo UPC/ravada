@@ -117,45 +117,17 @@
         </div>
         % }
         </div>
-
-%=       include "/main/admin_settings_submit"
-
         <div class="row">
-            <div class="col-md-1"></div>
-            <div class="col-md-2" align="right"><%=l 'Widget' %>
-                <a href="https://ravada.readthedocs.io/en/latest/docs/chatwoot.html"><i class="fa fa-info"></i></a>
+            <div class="col-md-3" align="right">
+            <label for="auto_create_users"><%=l 'Auto create users' %></label>
             </div>
             <div class="col-md-6">
-                <input placeholder="/js/custom/widget.js"
-                 type="text" size="40"
-                name="widget" ng-model="settings.frontend.widget.value"/>
-            </div>
-        </div>
+            <input name="auto_create_users" ng-model="settings.frontend.auto_create_users.value"
+                ng-true-value="1" ng-false-value="0"
+                type="checkbox">
 
-        <div class="row">
-            <div class="col-md-3" align="right">Content Security Policy</div>
-            <div class="col-md-4" ng-show="!csp_advanced" >
-                <input name="csp_all" type="text" ng-model="settings.frontend.content_security_policy.all.value"/><br/>
+            <span class="help"><%=l 'Only previously authorized users can log in' %></span>
             </div>
-        </div>
-        <div class="row">
-            <div class="col-md-3"></div>
-            <div class="col-md-5" ng-hide="csp_locked">
-                <input type="checkbox" ng-model="csp_advanced"
-                       name="csp_advanced"/>
-                <label for="csp_advanced"><%=l 'Advanced CSP' %></label>
-            </div>
-        </div>
-        <div ng-show="csp_advanced">
-        % for my $item (sort keys %$csp) {
-        <div class="row">
-            <div class="col-md-1"></div>
-            <div class="col-md-2" align="right"><%= $item %></div>
-            <div class="col-md-4">
-                <input name="csp_<%= $item %>" type="text" ng-model="settings.frontend.content_security_policy['<%= $item %>'].value"/>
-            </div>
-        </div>
-        % }
         </div>
 
 %=       include "/main/admin_settings_submit"

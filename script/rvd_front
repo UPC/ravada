@@ -10,7 +10,6 @@ use Data::Dumper;
 use Digest::SHA qw(sha256_hex);
 use Hash::Util qw(lock_hash);
 use Mojolicious::Lite 'Ravada::I18N';
-use Mojolicious::Plugin::OAuth2::Mock;
 use Mojo::JSON qw(decode_json encode_json);
 use Time::Piece;
 #use Mojolicious::Plugin::I18N;
