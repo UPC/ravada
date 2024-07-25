@@ -17,7 +17,7 @@
                         <span ng-show="!type || type=='sql' || (type=='ldap' && create)">
                             <%=l 'Upload a text file with the user names and passwords separated by a colon :' %>
                         </span>
-                        <span ng-show="type=='sso' || type=='ldap' && !create">
+                        <span ng-show="type=='openid' || type=='sso' || type=='ldap' && !create">
                             <%=l 'Upload a text file with the user names' %>
                         </span>
 
@@ -32,7 +32,8 @@
                             <select name="type" ng-model="type" required>
                                 <option value="sql" selected>plain</option>
                                 <option value="ldap">LDAP</option>
-                                <option value="sso">SSO</option>
+                                <option value="sso">CAS</option>
+                                <option value="openid">OpenID</option>
                             </select>
                         </div>
 
