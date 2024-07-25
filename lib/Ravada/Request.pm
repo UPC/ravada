@@ -713,6 +713,7 @@ sub _duplicated_request($self=undef, $command=undef, $args=undef) {
     confess "Error: missing command " if !$command;
     #    delete $args_d->{uid} unless $command eq 'clone';
     delete $args_d->{uid} if $command =~ /(cleanup|refresh_vms|set_base_vm)/;
+    delete $args_d->{uid} if exists $args_d->{uid} && !defined $args_d->{uid};
     delete $args_d->{at};
     delete $args_d->{status};
     delete $args_d->{timeout};
@@ -720,7 +721,7 @@ sub _duplicated_request($self=undef, $command=undef, $args=undef) {
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT id,args FROM requests WHERE (status <> 'done')"
         ." AND command=?"
-        ." AND ( error = '' OR error is NULL)"
+        ." AND ( error = '' OR error is NULL OR error like '% waiting for process%')"
     );
     $sth->execute($command);
     while (my ($id,$args_found) = $sth->fetchrow) {
