@@ -6367,7 +6367,7 @@ sub _refresh_volatile_domains($self) {
         "SELECT id, name, id_vm, id_owner, vm FROM domains WHERE is_volatile=1 "
         ." AND date_changed < ? "
     );
-    $sth->execute(Ravada::Utils::date_now(-120));
+    $sth->execute(Ravada::Utils::date_now(-$Ravada::Domain::TTL_REMOVE_VOLATILE));
     while ( my ($id_domain, $name, $id_vm, $id_owner, $type) = $sth->fetchrow ) {
         my $domain;
         eval { $domain = Ravada::Domain->open(id => $id_domain, _force => 1) } ;
