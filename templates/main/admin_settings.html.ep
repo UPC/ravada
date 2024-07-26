@@ -126,7 +126,16 @@
                 ng-true-value="1" ng-false-value="0"
                 type="checkbox">
 
-            <span class="help"><%=l 'Only previously authorized users can log in' %></span>
+            <span class="help"><%=l 'Authenticated users are allowed to log in' %></span>
+                <div class="alert alert-warning"
+                     ng-show="!settings.frontend.auto_create_users.value
+                               && <%=  ($_user->can_manage_users || $_user->is_admin || 0 ) %>"
+
+                    >
+                <%=l 'Only previously authorized users can log in.' %>
+                <%=l 'You can grant access to users from the users administration form:'%>
+                <a href="https://local.dev.upc.edu/admin/users/upload.html">upload</a>
+                </div>
             </div>
         </div>
 
