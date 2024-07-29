@@ -3999,7 +3999,7 @@ sub register {
 
        if (grep {lc($_) eq lc($username)} @list_users) {
            push @error,("Username already exists, please choose another one");
-           $c->render(template => 'bootstrap/new_user',error => \@error);
+           return $c->render(template => 'bootstrap/new_user',error => \@error);
        }
        else {
            #username don't exists
