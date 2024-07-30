@@ -214,6 +214,7 @@ qw(
     manage_pools
     screenshot
     prepare_base
+    list_cpu_models
 );
 
 our $TIMEOUT_SHUTDOWN = 120;
@@ -261,7 +262,8 @@ our %COMMAND = (
     ,important=> {
         limit => 20
         ,priority => 1
-        ,commands => ['clone','start','start_clones','shutdown_clones','create','open_iptables','list_network_interfaces','list_isos','ping_backend','refresh_machine']
+        ,commands => ['clone','start','start_clones','shutdown_clones','create','open_iptables','list_network_interfaces','list_isos','ping_backend','refresh_machine'
+        ,'list_cpu_models' ]
     }
 
     ,iptables => {
