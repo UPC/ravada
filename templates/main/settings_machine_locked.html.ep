@@ -1,0 +1,23 @@
+<div class="alert alert-warning" ng-show="showmachine.requests">
+    <div class="panel-heading">
+
+        <%=l 'Virtual Machine locked' %>
+
+        <input type="button"
+            ng-hide="show_lock_details || !domain_requests || domain_requests.length==0"
+            ng-click="show_lock_details=true" value="<%=l 'Show lock details' %>">
+
+
+        <div ng-show="show_lock_details && domain_requests && domain_requests.length"
+            class="border border-dark">
+        <button type="button" class="badge btn-light"
+            ng-click="show_lock_details=false" title="<%=l 'close' %>"/>x</button>
+
+        <ul ng-repeat="request in domain_requests" class="compact">
+        <li class="compact"><small>[{{request.id}}]</small> {{request.command}} {{request.status}}</li>
+        </ul>
+        </div>
+
+    </div>
+
+</div>

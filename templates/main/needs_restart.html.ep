@@ -1,4 +1,4 @@
-    <div class="alert alert-primary" ng-show="showmachine.needs_restart">
+    <div class="alert alert-primary" ng-show="showmachine.needs_restart && !showmachine.requests">
         <div class="panel-heading">
             <%=l 'The changes will apply on next restart' %>
             <button
