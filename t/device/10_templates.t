@@ -896,7 +896,7 @@ sub test_templates($vm) {
         $vm->add_host_device(template => $first->{name});
         @list_hostdev = $vm->list_host_devices();
         is(scalar @list_hostdev , $n+2);
-        like ($list_hostdev[-1]->{name} , qr/[a-zA-Z] \d+$/) or exit;
+        like ($list_hostdev[-1]->{name} , qr/[a-zA-Z\)\(] \d+$/) or exit;
 
         my $host_device = $list_hostdev[-1];
 

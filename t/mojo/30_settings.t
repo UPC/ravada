@@ -464,6 +464,10 @@ sub test_unused_routes() {
 
 sub _fill_href($href) {
     $href=~ s/(.*)\{\{machine.id}}(.*)/${1}$ID_DOMAIN$2/;
+
+    $href =~ s/(.*)\{\{.*vm_type}}(.*)/${1}kvm$2/;
+    $href =~ s/(.*)\{\{showmachine.type}}(.*)/${1}kvm$2/;
+
     return $href;
 }
 

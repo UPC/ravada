@@ -19,6 +19,7 @@ my $BASE_NAME = "zz-test-base-alpine";
 use_ok('Ravada');
 init();
 
+$Ravada::Domain::TTL_REMOVE_VOLATILE=3;
 
 ##################################################################################
 
@@ -668,12 +669,26 @@ sub test_volatile_req($vm, $node) {
     is($clone->_vm->id, $node->id) or exit;
 
     shutdown_domain_internal($clone);
-    rvd_back->_cmd_refresh_vms();
+    _wait_machine_removed($clone);
     for my $vol ( $clone->list_volumes ) {
         ok(!$vm->file_exists($vol),$vol) or exit;
         ok(!$node->file_exists($vol),$vol." in ".$node->name) or exit;
     }
     _remove_domain($base);
+}
+
+sub _wait_machine_removed($clone) {
+    rvd_back->_cmd_refresh_vms();
+    for ( 1 .. 10 ) {
+        my $clone2;
+        eval { $clone2 = Ravada::Front::Domain->open($clone->id) };
+        last if !$clone2;
+
+        rvd_back->_cmd_refresh_vms();
+        wait_request();
+
+    }
+    wait_request();
 }
 
 sub test_domain_gone($vm, $node) {
@@ -742,7 +757,7 @@ sub test_volatile_req_clone($vm, $node, $machine='pc-i440fx') {
         push @vols,($clone2->list_volumes);
         shutdown_domain_internal($clone2);
     }
-    rvd_back->_cmd_refresh_vms();
+     _wait_machine_removed($clone);
     for my $vol ( @vols ) {
         ok(!$vm->file_exists($vol),$vol) or exit;
         ok(!$node->file_exists($vol),$vol) or exit;

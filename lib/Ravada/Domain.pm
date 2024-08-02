@@ -7713,7 +7713,7 @@ sub _search_domain_to_restore($data, $file_extra) {
 
     my $id = $data->{id};
     my $name = $data->{name};
-    my $vm = Ravada::VM->open($data->{id_vm});
+    my $vm = Ravada::VM->open(type => $data->{vm});
 
     my $sth = _dbh->prepare("SELECT * FROM domains "
         ."WHERE id=? OR name=?"
@@ -7827,6 +7827,9 @@ sub restore_backup($self, $backup, $interactive, $rvd_back=undef) {
         ,"/$file_data_owner"
     );
 
+    if($self->_data('is_base')) {
+        $self->_set_base_vm_db($self->_vm->id,1);
+    }
     return $self;
 }
 
@@ -7835,6 +7838,7 @@ sub _restore_owner($self, $data, $file_data_owner) {
         ,delete $data->{owner});
     if ($id_owner) {
         $data->{id_owner} = $id_owner;
+        $self->_data('id_owner' => $id_owner);
         return;
     }
 
@@ -7848,9 +7852,12 @@ sub _restore_owner($self, $data, $file_data_owner) {
     my $clashed_user = Ravada::Auth::SQL->search_by_id($id);
 
     if ($clashed_user) {
-        die "Error: Owner id $id clashes with user ".$clashed_user->name
-        ." here.";
+        warn "Error: Owner id $id clashes with user ".$clashed_user->name
+        ." here.\n";
+        $self->_data('id_owner' => Ravada::Utils::user_daemon->id);
+        return;
     }
+    $self->_data('id_owner' => $id);
 
     my $sql = "INSERT INTO users (".join(",",sort keys %$data_owner).")"
     ." VALUES(".join(",",map {'?'} keys %$data_owner)." )";
@@ -7887,6 +7894,7 @@ sub _restore_backup_metadata($self, $data, $file_data_owner) {
     _restore_base_volumes_metadata($self, $data);
 
     for my $field (keys %$data) {
+        next if $field eq 'id_owner';
         next if( !exists $self->{_data}->{$field} || !defined $self->{_data}->{$field})
         && !defined $data->{$field};
 
