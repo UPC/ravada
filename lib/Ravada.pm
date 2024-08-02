@@ -2689,6 +2689,12 @@ sub _sql_insert_defaults($self){
                 ,value => ''
             }
             ,{
+                id_parent => $id_frontend
+                ,name => 'auto_create_users'
+                ,value => 1
+            }
+
+            ,{
                 id_parent => $id_backend
                 ,name => 'start_limit'
                 ,value => 1

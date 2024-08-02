@@ -54,6 +54,8 @@ sub _check_user_profile {
         return;
     }
 
+    return if ! Ravada::Front::setting(undef,'/frontend/auto_create_users');
+
     Ravada::Auth::SQL::add_user(name => $self->name, is_external => 1, is_temporary => 0
         , external_auth => 'sso');
 }
