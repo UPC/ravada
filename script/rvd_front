@@ -302,6 +302,9 @@ any '/login_openid' => sub($c) {
         if $name =~ /OIDC/;
     }
 
+    return _session_error($c)
+    if _check_session_expired('oidc_claim_at_hash', $header{OIDC_CLAIM_at_hash});
+
     my $auth_ok;
     my $username = $header{OIDC_CLAIM_preferred_username};
     eval {
@@ -316,8 +319,43 @@ any '/login_openid' => sub($c) {
         }
         return access_denied($c);
     }
+    $c->session('logoutURL' => $CONFIG_FRONT->{openid}->{logout_url});
+    $c->session('OIDC_CLAIM_at_hash' => $header{'OIDC_CLAIM_at_hash'});
+
     _login_ok($c, $auth_ok);
 };
+
+sub _set_expired_session($field, $value) {
+
+    die "Error: field name unsecure : '$field'"
+    unless $field =~ /^[a-z0-9_]+$/i;
+
+    my $sth = $RAVADA->_dbh->prepare("INSERT INTO session_logout "
+        ." ( $field ) "
+        ." VALUES(?) "
+    );
+    $sth->execute($value);
+}
+
+sub _check_session_expired($field, $value) {
+    die "Error: field name unsecure : '$field'"
+    unless $field =~ /^[a-z0-9_]+$/i;
+
+    my $sth = $RAVADA->_dbh->prepare("SELECT * FROM session_logout"
+    ." WHERE $field=?");
+
+    $sth->execute($value);
+
+    my $found = $sth->fetchrow_hashref;
+
+    return 0 if !$found || !exists $found->{id} || !$found->{id};
+
+    return $found->{id};
+}
+
+sub _session_error($c) {
+    $c->render("text" => "Session error, please close the web browser and try again");
+}
 
 any '/login_openid/redirect_uri' => sub($c) {
     return $c->render("text" => "protected redirect");
@@ -3399,16 +3437,22 @@ sub _login_ok($c, $auth_ok) {
 sub logout {
     my $c = shift;
 
+    my $oid_at_hash = $c->session('OIDC_CLAIM_at_hash');
+
     $USER = undef;
-    $c->session(expires => 0);
+    $c->session(expires => 1);
     $c->session(login => undef);
     sleep 1;
-    $c->session(expires => 0);
+    $c->session(expires => 1);
     $c->session(login => undef);
     $c->session(ticket => undef);
 
     my $logout_url = $c->session('logoutURL');
     $c->session(logoutURL => undef);
+
+    if ($oid_at_hash) {
+        _set_expired_session('OIDC_CLAIM_at_hash', $oid_at_hash);
+    }
 
     return $logout_url;
 }
