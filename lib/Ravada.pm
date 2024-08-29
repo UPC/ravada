@@ -2701,6 +2701,15 @@ sub _sql_insert_defaults($self){
                 ,name => 'auto_create_users'
                 ,value => 1
             }
+            ,{
+                id_parent => $id_frontend
+                ,name => 'openid'
+            }
+            ,{
+                id_parent => "/frontend/openid"
+                ,name => "logout_url"
+                ,value => ''
+            }
 
             ,{
                 id_parent => $id_backend

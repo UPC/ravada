@@ -139,6 +139,23 @@
             </div>
         </div>
 
+        <div class="row">
+            <div class="col-md-3" align="right">
+                <h3>Auth OpenID</h3>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3" align="right">
+            <label for="auto_create_users"><%=l 'Logout URL' %></label>
+            </div>
+            <div class="col-md-6">
+            <input name="auto_create_users" ng-model="settings.frontend.openid.logout_url.value"
+                ng-true-value="1" ng-false-value="0"
+                type="text"/>
+            </div>
+        </div>
+
+
 %=       include "/main/admin_settings_submit"
 
         <div class="row">
