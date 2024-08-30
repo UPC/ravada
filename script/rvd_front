@@ -188,6 +188,7 @@ hook before_routes => sub {
 
   $USER = undef;
 
+
   $c->stash(version => $RAVADA->version);
   my $url = $c->req->url->to_abs->path;
   my $host = $c->req->url->to_abs->host;
@@ -307,6 +308,14 @@ any '/login_openid' => sub($c) {
 
     my $auth_ok;
     my $username = $header{OIDC_CLAIM_preferred_username};
+    if (!defined $username || !$username) {
+        warn "Error: openid appears unconfigured, check a https://ravada.readthedocs.io/en/latest/docs/auth_openid.html\n";
+        warn Dumper(\%header) if keys %header;
+    }
+    my $logout_url = $RAVADA->setting('/frontend/openid/logout_url');
+    if (!$logout_url) {
+        warn "Warning: logout URL not configured. Check /admin/settings\n";
+    };
     eval {
         $auth_ok = Ravada::Auth::OpenID::login_external($username, \%header)
         if $username;
@@ -319,7 +328,7 @@ any '/login_openid' => sub($c) {
         }
         return access_denied($c);
     }
-    $c->session('logoutURL' => $CONFIG_FRONT->{openid}->{logout_url});
+    $c->session('logoutURL' => $RAVADA->setting('/frontend/openid/logout_url'));
     $c->session('OIDC_CLAIM_at_hash' => $header{'OIDC_CLAIM_at_hash'});
 
     _login_ok($c, $auth_ok);

@@ -146,11 +146,11 @@
         </div>
         <div class="row">
             <div class="col-md-3" align="right">
-            <label for="auto_create_users"><%=l 'Logout URL' %></label>
+            <label for="openid_logout_url"><%=l 'Logout URL' %></label>
             </div>
             <div class="col-md-6">
-            <input name="auto_create_users" ng-model="settings.frontend.openid.logout_url.value"
-                ng-true-value="1" ng-false-value="0"
+            <input name="openid_logout_url" ng-model="settings.frontend.openid.logout_url.value"
+                size="60"
                 type="text"/>
             </div>
         </div>
