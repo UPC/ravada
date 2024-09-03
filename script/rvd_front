@@ -303,13 +303,26 @@ any '/login_openid' => sub($c) {
     }
 
     my $auth_ok;
-    my $username = $header{OIDC_CLAIM_preferred_username};
-    eval {
-        $auth_ok = Ravada::Auth::OpenID::login_external($username, \%header)
-        if $username;
-    };
+    my $username_oidc = $header{OIDC_CLAIM_preferred_username};
+    if ($username_oidc) {
+        $c->session('logoutURL' => $RAVADA->setting('/frontend/openid/logout_url'));
+        my $oidc_at_hash = $header{OIDC_CLAIM_at_hash};
+        if (!$oidc_at_hash) {
+            warn "Error: no OIDC_CLAIM_at_hash in header ".join(" ",%header);
+            return access_denied($c);
+        }
+        if ( _check_expired_session($oidc_at_hash) ) {
+            $c->stash('login' => $username_oidc);
+            return _render_login($c,'Session expired. Please close the web browser and try again', 408);
+        }
+        $c->session('oidc_at_hash' => $oidc_at_hash);
+        eval {
+        $auth_ok = Ravada::Auth::OpenID::login_external($username_oidc, \%header);
+        };
+        warn $@ if $@;
+    }
     my $error = ($@ or '');
-    if (!$username || !$auth_ok) {
+    if (!$username_oidc || !$auth_ok) {
         if ( $CONFIG_FRONT->{log}->{log} ) {
             app->log->error("Access denied with openid from "._remote_ip($c));
             app->log->error("Access denied error: ".($error or 'unknown')._remote_ip($c));
@@ -3345,28 +3358,42 @@ sub login($c, $status=200) {
         }
     }
 
-    my @css_snippets = ["\t.intro {\n\t\tbackground:"
-                    ." url($CONFIG_FRONT->{login_bg_file})"
-                    ." no-repeat bottom center scroll;\n\t}"];
 
     sleep 5 if scalar(@error) && !$ENV{mode} && !$ENV{mode} eq 'development';
-    my @error_status = ( status => $status );
-    @error_status = ( status => 403) if @error;
+    $status = 403 if @error;
 
+    $c->stash('login' => $login);
+    _render_login($c, \@error, $status);
+}
+
+sub _render_login($c, $error, $status=undef) {
+
+    $error = [$error] if !ref($error);
+    $status = 403 if @$error && !$status;
+
+    my @status;
+    @status = ( status => $status ) if $status;
+
+    my $css_snippets = ["\t.intro {\n\t\tbackground:"
+                    ." url($CONFIG_FRONT->{login_bg_file})"
+                    ." no-repeat bottom center scroll;\n\t}"];
     $c->render(
                     template => ($CONFIG_FRONT->{login_custom} or 'main/start')
                         ,css => ['/css/main.css']
-                        ,csssnippets => @css_snippets
-                        ,js => ['/js/main.js?v='.$RAVADA->version]
+                        ,csssnippets => $css_snippets
+                        ,js => [
+                            '/js/main.js?v='.$RAVADA->version
+                            ,'/js/ravada.js?v='.$RAVADA->version
+                        ]
                         ,navbar_custom => 1
-                      ,login => $login
-                      ,error => \@error
+                      ,error => $error
                       ,sso_available => ( $Ravada::Auth::SSO_OK && Ravada::Auth::SSO::init())
+                      ,openid_available => $RAVADA->setting('/frontend/openid/enabled')
                       ,login_header => $CONFIG_FRONT->{login_header}
                       ,login_message => $CONFIG_FRONT->{login_message}
                       ,guide => $CONFIG_FRONT->{guide}
                       ,login_hash => ''
-                      ,@error_status
+                      ,@status
     );
 }
 
@@ -3402,8 +3429,34 @@ sub _login_ok($c, $auth_ok) {
     return $c->redirect_to($url);
 }
 
+sub _check_expired_session($oidc_at_hash) {
+
+    return if !defined $oidc_at_hash;
+
+    my $sth = $RAVADA->_dbh->prepare(
+        "SELECT id FROM session_logout "
+        ." WHERE oidc_at_hash=?"
+    );
+    $sth->execute($oidc_at_hash);
+    my ($id) = $sth->fetchrow;
+    return ($id or 0);
+}
+
+sub _expire_session($c) {
+    my $oidc_at_hash = $c->session('oidc_at_hash');
+    return if !defined $oidc_at_hash;
+    my $sth = $RAVADA->_dbh->prepare(
+        "INSERT INTO session_logout "
+        ." ( oidc_at_hash ) "
+        ." VALUES(?)"
+    );
+    $sth->execute($oidc_at_hash);
+}
+
 sub logout {
     my $c = shift;
+
+    _expire_session($c);
 
     $USER = undef;
     $c->session(expires => 0);
@@ -3415,6 +3468,11 @@ sub logout {
 
     my $logout_url = $c->session('logoutURL');
     $c->session(logoutURL => undef);
+
+    my $c_name= 'mod_auth_openidc_session';
+    my $cookie = $c->req->headers->cookie($c_name);
+
+    $c->cookie($c_name => '', {expires => 1}) if $cookie;
 
     return $logout_url;
 }

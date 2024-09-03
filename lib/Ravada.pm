@@ -1660,6 +1660,9 @@ sub _add_indexes_generic($self) {
             "index(id_domain)"
             ,"unique (id_bundle, id_domain)"
         ]
+        ,session_logout => [
+            "index(oidc_at_hash)"
+        ]
     );
     my $if_not_exists = '';
     $if_not_exists = ' IF NOT EXISTS ' if $CONNECTOR->dbh->{Driver}{Name} =~ /sqlite|mariadb/i;
@@ -2453,6 +2456,14 @@ sub _sql_create_tables($self) {
             }
         ]
 
+        ,[
+            'session_logout'
+            ,{
+                id => 'integer PRIMARY KEY AUTO_INCREMENT',
+                ,'oidc_at_hash' => 'char(32)'
+                ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+            }
+        ]
     );
     for my $new_table (@tables ) {
         my ($table, $contents) = @$new_table;
@@ -2692,6 +2703,20 @@ sub _sql_insert_defaults($self){
                 id_parent => $id_frontend
                 ,name => 'auto_create_users'
                 ,value => 1
+            }
+            ,{
+                id_parent => $id_frontend
+                ,name => 'openid'
+            }
+            ,{
+                id_parent => "/frontend/openid"
+                ,name => "enabled"
+                ,value => 0
+            }
+            ,{
+                id_parent => "/frontend/openid"
+                ,name => "logout_url"
+                ,value => ''
             }
 
             ,{
@@ -6454,6 +6479,12 @@ sub _cmd_cleanup($self, $request) {
         )) {
             $self->_clean_requests($cmd, $request,'done');
     }
+
+    my $sth = $self->_dbh->prepare(
+        "DELETE FROM session_logout WHERE date_changed < ? "
+    );
+    my $date = _date_now(-60*24);
+    $sth->execute($date);
 }
 sub _verify_connection($self, $domain) {
     for ( 1 .. 60 ) {

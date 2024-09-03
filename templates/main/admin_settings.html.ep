@@ -124,7 +124,7 @@
             <div class="col-md-6">
             <input name="auto_create_users" ng-model="settings.frontend.auto_create_users.value"
                 ng-true-value="1" ng-false-value="0"
-                type="checkbox">
+                type="checkbox"/>
 
             <span class="help"><%=l 'Authenticated users are allowed to log in' %></span>
                 <div class="alert alert-warning"
@@ -136,6 +136,32 @@
                 <%=l 'You can grant access to users from the users administration form:'%>
                 <a href="https://local.dev.upc.edu/admin/users/upload.html">upload</a>
                 </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-3" align="right">
+                <h3>Auth OpenID</h3>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3" align="right">
+            <label for="openid"><%=l 'Auth OpenID' %></label>
+            </div>
+            <div class="col-md-6">
+            <input name="openid" ng-model="settings.frontend.openid.enabled.value"
+                ng-true-value="1" ng-false-value="0"
+                type="checkbox"/>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3" align="right">
+            <label for="openid_logout_url"><%=l 'Logout URL' %></label>
+            </div>
+            <div class="col-md-6">
+            <input name="openid_logout_url" ng-model="settings.frontend.openid.logout_url.value"
+                size="60"
+                type="text"/>
             </div>
         </div>
 

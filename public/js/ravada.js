@@ -30,6 +30,7 @@
             .controller("maintenance",maintenanceCtrl)
             .controller("notifCrtl", notifCrtl)
             .controller("run_domain_req",run_domain_req_ctrl)
+            .controller("login",login_ctrl)
 
     function newMachineCtrl($scope, $http) {
 
@@ -1359,6 +1360,9 @@
             get:{isArray:true}
         });
 
+    };
+
+    function login_ctrl($scope, $http, $timeout, request ) {
     };
 
     function run_domain_req_ctrl($scope, $http, $timeout, request ) {
