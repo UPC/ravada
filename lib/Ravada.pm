@@ -1662,6 +1662,7 @@ sub _add_indexes_generic($self) {
         ]
         ,session_logout => [
             "index(oidc_at_hash)"
+            ,"index(date_changed)"
         ]
     );
     my $if_not_exists = '';
@@ -2718,7 +2719,6 @@ sub _sql_insert_defaults($self){
                 ,name => "logout_url"
                 ,value => ''
             }
-
             ,{
                 id_parent => $id_backend
                 ,name => 'start_limit'

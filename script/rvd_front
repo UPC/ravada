@@ -188,6 +188,7 @@ hook before_routes => sub {
 
   $USER = undef;
 
+
   $c->stash(version => $RAVADA->version);
   my $url = $c->req->url->to_abs->path;
   my $host = $c->req->url->to_abs->host;
@@ -329,8 +330,15 @@ any '/login_openid' => sub($c) {
         }
         return access_denied($c);
     }
+    $c->session('logoutURL' => $RAVADA->setting('/frontend/openid/logout_url'));
+    $c->session('OIDC_CLAIM_at_hash' => $header{'OIDC_CLAIM_at_hash'});
+
     _login_ok($c, $auth_ok);
 };
+
+sub _session_error($c) {
+    $c->render("text" => "Session error, please close the web browser and try again");
+}
 
 any '/login_openid/redirect_uri' => sub($c) {
     return $c->render("text" => "protected redirect");
@@ -3459,10 +3467,10 @@ sub logout {
     _expire_session($c);
 
     $USER = undef;
-    $c->session(expires => 0);
+    $c->session(expires => 1);
     $c->session(login => undef);
     sleep 1;
-    $c->session(expires => 0);
+    $c->session(expires => 1);
     $c->session(login => undef);
     $c->session(ticket => undef);
 
