@@ -1660,10 +1660,6 @@ sub _add_indexes_generic($self) {
             "index(id_domain)"
             ,"unique (id_bundle, id_domain)"
         ]
-        ,session_logout => [
-            "index(oidc_at_hash)"
-            ,"index(date_changed)"
-        ]
     );
     my $if_not_exists = '';
     $if_not_exists = ' IF NOT EXISTS ' if $CONNECTOR->dbh->{Driver}{Name} =~ /sqlite|mariadb/i;
@@ -2457,14 +2453,6 @@ sub _sql_create_tables($self) {
             }
         ]
 
-        ,[
-            'session_logout'
-            ,{
-                id => 'integer PRIMARY KEY AUTO_INCREMENT',
-                ,'oidc_at_hash' => 'char(32)'
-                ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
-            }
-        ]
     );
     for my $new_table (@tables ) {
         my ($table, $contents) = @$new_table;

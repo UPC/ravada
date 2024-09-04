@@ -312,10 +312,6 @@ any '/login_openid' => sub($c) {
             warn "Error: no OIDC_CLAIM_at_hash in header ".join(" ",%header);
             return access_denied($c);
         }
-        if ( _check_expired_session($oidc_at_hash) ) {
-            $c->stash('login' => $username_oidc);
-            return _render_login($c,'Session expired. Please close the web browser and try again', 408);
-        }
         $c->session('oidc_at_hash' => $oidc_at_hash);
         eval {
         $auth_ok = Ravada::Auth::OpenID::login_external($username_oidc, \%header);
@@ -3437,34 +3433,8 @@ sub _login_ok($c, $auth_ok) {
     return $c->redirect_to($url);
 }
 
-sub _check_expired_session($oidc_at_hash) {
-
-    return if !defined $oidc_at_hash;
-
-    my $sth = $RAVADA->_dbh->prepare(
-        "SELECT id FROM session_logout "
-        ." WHERE oidc_at_hash=?"
-    );
-    $sth->execute($oidc_at_hash);
-    my ($id) = $sth->fetchrow;
-    return ($id or 0);
-}
-
-sub _expire_session($c) {
-    my $oidc_at_hash = $c->session('oidc_at_hash');
-    return if !defined $oidc_at_hash;
-    my $sth = $RAVADA->_dbh->prepare(
-        "INSERT INTO session_logout "
-        ." ( oidc_at_hash ) "
-        ." VALUES(?)"
-    );
-    $sth->execute($oidc_at_hash);
-}
-
 sub logout {
     my $c = shift;
-
-    _expire_session($c);
 
     $USER = undef;
     $c->session(expires => 1);
@@ -3478,9 +3448,9 @@ sub logout {
     $c->session(logoutURL => undef);
 
     my $c_name= 'mod_auth_openidc_session';
-    my $cookie = $c->req->headers->cookie($c_name);
+    my $cookie_oidc = $c->req->headers->cookie($c_name);
 
-    $c->cookie($c_name => '', {expires => 1}) if $cookie;
+    $c->cookie($c_name => '', {expires => 1}) if $cookie_oidc;
 
     return $logout_url;
 }
