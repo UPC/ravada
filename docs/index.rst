@@ -98,6 +98,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/CLI
    docs/Automatic_daily_operations
    docs/sso_login
+   docs/sso_openid
    docs/apparmor
    docs/status
 

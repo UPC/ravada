@@ -60,9 +60,49 @@ https://github.com/OpenIDC/mod_auth_openidc/wiki
 Login page
 ----------
 
-Configure the login page for your Ravada server so users use this URL to authenticate
+Your Server URL
+~~~~~~~~~~~~~~~
+
+If you want your users to use OpenID by default configure the referer
+login page for your Ravada server so they use this URL to authenticate
 
 ::
 
-  /login_openid
+  https://your.server.name/login_openid
+
+Enable OpenID
+~~~~~~~~~~~~~
+
+Ravada needs to know OpenID login is enabled and the logout page.
+Go to *Admin tools* and choose *Settings*. There enable *OpenID*
+and define a *logout URL*.
+
+.. image:: images/enable_openid.jpg
+
+Configure Custom Login page
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you are using a *custom* login page make sure you have a section
+pointing to the openid login.
+
+First of all enable the *ravada app* in the login template.
+Make sure you have *ng-app* and *ng-controller* configured:
+
+::
+
+    <!DOCTYPE html>
+    <html ng-app="ravada.app">
+    %= include 'bootstrap/header'
+    <body role="document">
+        %= include 'bootstrap/navigation'
+         <header id="page-top" class="intro">
+            <div class="intro-body" ng-controller="login">
+
+Then add a link to the *OpenID login* like this:
+
+::
+
+    <div ng-show="<%= $openid_available or 0 %>">
+    <a type="button" class="btn btn-success" href="/login_openid"><b><%=l 'Login Single Sign On' %></b></a>
+    </div>
 
