@@ -1850,7 +1850,7 @@ any '/admin/users/upload.#req' => sub($c) {
     my $create = ( $c->req->param('create') or 0);
 
     return $c->render(json => { error => "Unknown type $type" })
-            if $type !~ /^(sql|ldap|sso)/;
+            if $type !~ /^(sql|ldap|sso|openid)/;
 
     my $csv = $c->req->upload('users');
     if($csv->headers->content_type !~ m{text/(csv|plain)}) {
