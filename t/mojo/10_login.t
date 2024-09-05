@@ -382,7 +382,7 @@ sub test_login_fail {
     $t->post_ok('/login' => form => {login => "fail", password => 'bigtime'});
     is($t->tx->res->code(),403);
     $t->get_ok("/admin/machines")->status_is(401);
-    like($t->tx->res->dom->at("button#submit")->text,qr'Login') or exit;
+    like($t->tx->res->dom->at("input#submit")->attr('value'),qr'Login') or exit;
 
     login( user_admin->name, "$$ $$");
 
@@ -390,10 +390,10 @@ sub test_login_fail {
     is($t->tx->res->code(),403);
 
     $t->get_ok("/admin/machines")->status_is(401);
-    like($t->tx->res->dom->at("button#submit")->text,qr'Login') or exit;
+    like($t->tx->res->dom->at("input#submit")->attr('value'),qr'Login') or exit;
 
     $t->get_ok("/admin/users")->status_is(401);
-    like($t->tx->res->dom->at("button#submit")->text,qr'Login') or exit;
+    like($t->tx->res->dom->at("input#submit")->attr('value'),qr'Login') or exit;
 
 }
 
