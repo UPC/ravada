@@ -6468,12 +6468,8 @@ sub _cmd_cleanup($self, $request) {
             $self->_clean_requests($cmd, $request,'done');
     }
 
-    my $sth = $self->_dbh->prepare(
-        "DELETE FROM session_logout WHERE date_changed < ? "
-    );
-    my $date = _date_now(-60*24);
-    $sth->execute($date);
 }
+
 sub _verify_connection($self, $domain) {
     for ( 1 .. 60 ) {
         my $status = $domain->client_status(1);
