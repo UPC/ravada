@@ -38,7 +38,7 @@
 
                <input type="hidden" name="url" value="<%= $url %>">
                <!-- <input type="submit" name="submit" value="launch"> -->
-               <input
+               <input id="submit"
                class="btn btn-success btn-lg btn-block" type="submit" name="submit" value="<%=l 'Login' %>"/>
                 </form>
 
