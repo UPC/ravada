@@ -1172,9 +1172,12 @@ sub show_volume($rvd_back) {
     }
 }
 
-sub upload_group_members($file) {
+sub upload_group_members_file($file) {
     if (!$GROUP) {
         ($GROUP) = $file =~ m{.*/(.*)\.};
+        ($GROUP) = $file =~ m{(.*)\.} unless $GROUP;
+
+        die "Error: I can't find a group name from $file\n" unless $GROUP;
     }
     my $ravada = Ravada::Front->new();
 
@@ -1192,14 +1195,43 @@ sub upload_group_members($file) {
 
     my ($found, $count, $error)=$ravada->upload_group_members($GROUP,$users);
 
-    print "Group $GROUP: $found found, $count added.\n";
+    print "Group $GROUP: $found found, $count added.\n" if $VERBOSE;
     if (scalar (@$error)) {
-        print "Errors:\n";
+        print "Errors:\n" if $VERBOSE;
         for (sort @$error) {
+            next if !$VERBOSE && /already a member/;
             print "  - $_\n";
         }
     }
 
+}
+
+sub upload_group_members_dir($dir) {
+
+    die "Error: group name will be taken from filename. Do not supply.\n" if $GROUP;
+
+    my $files_found=0;
+
+    opendir my $ls,$dir or die "$! $dir";
+    while ( my $file = readdir $ls ) {
+        next unless $file =~ /\.txt$/;
+        $files_found++;
+        $GROUP=undef;
+        upload_group_members_file("$dir/$file");
+    }
+    closedir $ls;
+
+    die "Error: no files found in '$dir'\n" unless $files_found;
+}
+
+sub upload_group_members($file) {
+    die "Error: '$file' does not exists\n" unless -e $file;
+
+    if ( -d $file ) {
+        upload_group_members_dir($file);
+    } else {
+        upload_group_members_file($file);
+    }
 }
 
 sub DESTROY {
