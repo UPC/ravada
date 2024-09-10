@@ -773,10 +773,10 @@ sub _update_isos {
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://download.parrot.sh/parrot/iso/5.3.*/'
-            ,file_re => 'Parrot-home-5.*_amd64.iso'
-            ,sha256_url => '$url/signed-hashes.txt'
-            ,min_disk_size => '10'
+            ,url => 'https://download.parrot.sh/parrot/iso/6.*/'
+            ,file_re => 'Parrot-home-6.*_amd64.iso'
+            ,sha256_url => ''
+            ,min_disk_size => '11'
         }
         ,kali_64 => {
             name => "Kali Linux $year"
