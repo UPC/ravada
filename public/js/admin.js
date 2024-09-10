@@ -1591,7 +1591,7 @@ ravadaApp.directive("solShowMachine", swMach)
             $scope.local_groups = [];
             var re = new RegExp($scope.group_filter);
             for (var i=0; i<$scope.local_groups_all.length; i++) {
-                if (re.test($scope.local_groups_all[i])) {
+                if (re.test($scope.local_groups_all[i].name)) {
                     $scope.local_groups.push($scope.local_groups_all[i]);
                 }
             }
