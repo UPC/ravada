@@ -134,7 +134,7 @@
                     >
                 <%=l 'Only previously authorized users can log in.' %>
                 <%=l 'You can grant access to users from the users administration form:'%>
-                <a href="https://local.dev.upc.edu/admin/users/upload.html">upload</a>
+                <a href="/admin/users/upload.html">upload</a>
                 </div>
             </div>
         </div>
