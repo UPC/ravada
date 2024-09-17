@@ -14,11 +14,11 @@ SERVER_KEY=server-key.pem
 
 # creating a key for our ca
 if [ ! -e ca-key.pem ]; then
-    openssl genrsa -aes256 -out ca-key.pem 2048
+    openssl genrsa -des3 -out ca-key.pem 2048
 fi
 # creating a ca
 if [ ! -e ca-cert.pem ]; then
-    openssl req -new -x509 -days 1095 -key ca-key.pem -out ca-cert.pem \
+    openssl req -new -x509 -nodes -sha256 -days 1095 -key ca-key.pem -out ca-cert.pem \
         -subj "${SUBJECT}/CN=my CA"
 fi
 # create server key
@@ -27,11 +27,11 @@ if [ ! -e $SERVER_KEY ]; then
 fi
 # create a certificate signing request (csr)
 if [ ! -e server-key.csr ]; then
-    openssl req -new -key $SERVER_KEY -out server-key.csr -subj "$SUBJECT/CN=$SERVER_IP"
+    openssl req -new -nodes -key $SERVER_KEY -out server-key.csr -subj "$SUBJECT/CN=$SERVER_IP"
 fi
 # signing our server certificate with this ca
 if [ ! -e server-cert.pem ]; then
-    openssl x509 -req -days 1095 -in server-key.csr -CA ca-cert.pem -CAkey ca-key.pem -set_serial 01 -out server-cert.pem
+    openssl x509 -req -days 1095 -in server-key.csr -CA ca-cert.pem -CAkey ca-key.pem -CAcreateset_serial -out server-cert.pem -sha256 -extfile v3.ext
 fi
 
 # now create a key that doesn't require a passphrase
