@@ -59,6 +59,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/INSTALL
    docs/INSTALL_Ubuntu
    docs/INSTALL_Debian
+   docs/Debian_install
    docs/INSTALL_Fedora
    docs/INSTALL_Rocky9
    docs/INSTALL_ubuntu_xenial.rst
@@ -75,6 +76,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/ldap_local
    docs/new_kvm_template
    docs/new_iso_image
+   docs/Localized_ISO_download
    docs/OpenGnsys_import_image.rst
    docs/OpenGnsys_iPXE_support.rst
    docs/operation
@@ -86,6 +88,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/windows_clients
    docs/mac_clients
    docs/macos_spice_client
+   docs/RDP_connection
    docs/change_windows_driver_to_virtio
    docs/Backup
    docs/migrate_manual
@@ -98,9 +101,17 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/CLI
    docs/Automatic_daily_operations
    docs/sso_login
-   docs/sso_openid
+   docs/auth_openid
    docs/apparmor
    docs/status
+   docs/compact
+   docs/install_tpm
+   docs/mount_virtual_volume
+   docs/replace_server
+   docs/report_rrdgraph
+   docs/users_upload
+   docs/volume_difference
+   docs/ROADMAP
 
 .. _feature-docs:
 
@@ -167,6 +178,8 @@ Do you feel like giving us a hand? Here you have all the information you need as
    devel-docs/development_tools
    devel-docs/commit-rules
    devel-docs/database_changes
+   devel-docs/create_grants
+   devel-docs/profiling
    devel-docs/editor-rules
    devel-docs/local_iso_server
    devel-docs/run

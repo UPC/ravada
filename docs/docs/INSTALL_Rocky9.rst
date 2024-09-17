@@ -1,8 +1,8 @@
 Install Ravada on Rocky Linux 9 or RHEL9
-========================
+========================================
 
 Add Pre-Requisite Software
-------------
+--------------------------
 
 .. prompt:: bash $
 
@@ -38,7 +38,7 @@ Grant all permissions on this database to the *rvd_user*:
     sudo mysql -u root -p ravada -e "grant all on ravada.* to rvd_user@'localhost' identified by 'Pword12345*'"
 
 Add Another Pre-Requisite Software
-------------
+----------------------------------
 
 .. prompt:: bash $
 
@@ -113,7 +113,7 @@ The faster the disks, the better. Ravada uses incremental files for the
 disks images, so clones won't require many space.
 
 Make sure you are in root folder
--------------
+--------------------------------
 
 .. prompt:: bash $
 
@@ -121,7 +121,7 @@ Make sure you are in root folder
 
 
 Download Ravada from Git Repo
---------------
+-----------------------------
 
 .. prompt:: bash $
 
@@ -173,7 +173,6 @@ Now, it's time to install rvd_back service
 .. prompt:: bash $
 
     perl /root/ravada/script/rvd_back
-.
 
 Once the rvd_back is installed, we need to add the admin for the web interface:
 Add a new user for the ravada web. Use rvd\_back to create it. It will perform some initialization duties in the database the very first time this script is executed.

@@ -16,7 +16,7 @@ We consider plain users as usernames stored in the SQL database.
 Create a file with names and passwords separated by colon (:)
 and upload it.
 
-.. image:: image/upload_users_plain.png
+.. image:: images/upload_users_plain.png
 
 Delegated login
 ~~~~~~~~~~~~~~~
@@ -36,7 +36,7 @@ From now on only previously authorized users can log in.
 
 Then upload a file with a list of allowed usernames.
 
-.. image:: image/upload_users_openid.png
+.. image:: images/upload_users_openid.png
 
 Groups
 ======
@@ -50,7 +50,7 @@ Uploading with web browser
 Just create a text file with a list of users, one at each line
 and upload from the "Group Administration" page.
 
-.. image:: image/manage_group_members.png
+.. image:: images/manage_group_members.png
 
 CLI
 ~~~
@@ -76,7 +76,7 @@ The group name can be supplied if necessary:
   sudo rvd_back --upload-group-members=members.txt --group=students
 
 Add members to many groups
-------------------------
+--------------------------
 
 If you want to create a large amount of groups, store the files in
 a directory and pass it to the CLI. All the groups will be created

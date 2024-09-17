@@ -15,7 +15,7 @@ Install modules
  sudo a2enmod auth_openidc
 
 Configure module
-~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~
 
 /etc/apache2/mods-available/auth_openidc.conf
 
@@ -77,7 +77,7 @@ Ravada needs to know OpenID login is enabled and the logout page.
 Go to *Admin tools* and choose *Settings*. There enable *OpenID*
 and define a *logout URL*.
 
-.. image:: images/enable_openid.jpg
+.. image:: images/enable_openid.png
 
 Configure Custom Login page
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

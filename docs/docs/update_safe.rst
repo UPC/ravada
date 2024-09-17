@@ -5,7 +5,7 @@ This is the ugprade procedure when you want to keep everything
 just in case you wanted to roll back to the previous version.
 
 Step 1: Shutdown the services
----------------------
+-----------------------------
 
 .. prompt:: bash
 
@@ -14,10 +14,10 @@ Step 1: Shutdown the services
 
 
 Step 2: Keep the package and data
---------------------------------------
+---------------------------------
 
 Step 2.1: Keep the package file
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you installed the package it must be in the server somewhere.
 It is a *deb* file called ravada_x.y.z_system-version_all.deb.
