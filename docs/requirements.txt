@@ -1,3 +1,4 @@
+sphinx>=7.1,<7.2
 breathe
 sphinx-prompt
 sphinx_rtd_theme
