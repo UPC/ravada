@@ -70,3 +70,12 @@ Disable Spice Password
 ----------------------
 
 More information about `removing SPICE password <https://ravada.readthedocs.io/en/latest/docs/Disable_spice_password.html>`_ for all the networks. 
+
+Debug and check TLS connection
+------------------------------
+
+For debug errors you can check connection to YOUR_SERVERNAME and your SPICE port from console.
+
+::
+
+    openssl s_client -connect YOUR_SERVERNAME:SPICE_PORT -tls1_3
