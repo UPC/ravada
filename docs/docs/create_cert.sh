@@ -31,7 +31,7 @@ if [ ! -e server-key.csr ]; then
 fi
 # signing our server certificate with this ca
 if [ ! -e server-cert.pem ]; then
-    openssl x509 -req -days 1095 -in server-key.csr -CA ca-cert.pem -CAkey ca-key.pem -CAcreateset_serial -out server-cert.pem -sha256 -extfile v3.ext
+    openssl x509 -req -days 1095 -in server-key.csr -CA ca-cert.pem -CAkey ca-key.pem -CAcreateserial -out server-cert.pem -sha256 -extfile v3.ext
 fi
 
 # now create a key that doesn't require a passphrase
