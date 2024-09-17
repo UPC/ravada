@@ -1512,9 +1512,9 @@ sub test_display_drivers($vm, $remove) {
                 ,name => 'display'
                 ,index => 0
             );
-            wait_request(debug => 0);
+            wait_request(debug => 1);
             is($req_r->status,'done');
-            like($req_r->error,qr/^$|display.*not found|only \d+ found/);
+            like($req_r->error,qr/^$|display.*not found|only \d+ found/) or die $domain->name;
             $n_displays = scalar(@{$domain->info(user_admin)->{hardware}->{display}});
         }
     }
@@ -2049,6 +2049,122 @@ sub test_already_requested_recent($vm) {
     $domain->remove(user_admin);
 }
 
+sub _check_display_ip($domain, $expected_ip) {
+    my $info = $domain->info(user_admin);
+    for my $display ( @{$info->{hardware}->{display}} ) {
+        is($display->{listen_ip},$expected_ip);
+    }
+
+    _check_display_ip_internal($domain, $expected_ip);
+}
+
+sub _check_display_ip_internal($domain, $expected_ip) {
+    if ($domain->type eq 'Void') {
+        _check_display_ip_internal_void($domain, $expected_ip);
+    } elsif ($domain->type eq 'KVM') {
+        _check_display_ip_internal_kvm($domain, $expected_ip);
+    } else {
+        die "Error: I can't test display ip internal for ".$domain->type;
+    }
+}
+
+sub _check_display_ip_internal_void($domain, $expected_ip) {
+    my $config = $domain->get_config();
+    my $displays = $config->{hardware}->{display};
+    for my $display (@$displays) {
+        is($display->{ip}, $expected_ip);
+    }
+}
+
+sub _check_display_ip_internal_kvm($domain, $expected_ip) {
+    my $doc = XML::LibXML->load_xml(string => $domain->get_config());
+
+    for my $listen ( $doc->findnodes("/domain/graphics/listen") ) {
+        is($listen->getAttribute('address'), $expected_ip);
+    }
+
+    my ($in, $out, $err);
+    my @cmd = ("virsh","domdisplay","--all",$domain->name);
+    run3( \@cmd, \$in, \$out, \$err);
+    die "@cmd\n $err" if $err;
+    my $found = 0;
+    for my $display (split "\n",$out) {
+        next if $display !~ /\w/;
+        my ($ip) = $display =~ /(\d+\.\d+\.\d+\.\d+)/;
+        $found++;
+    }
+    die "Error: no display found in $out" if !$found;
+}
+
+sub test_display_ip($vm, $public_ip=0) {
+
+    diag("test display ip public_ip=$public_ip");
+
+    my $listen_ip = $vm->listen_ip();
+
+    my %ips = $vm->_list_ip_address();
+
+    my $new_ip;
+    for my $ip (keys %ips) {
+        next if $ip eq '127.0.0.1';
+        next if $ip eq $listen_ip;
+        $new_ip = $ip;
+        last if $ips{$ip} !~ /^virbr/;
+    }
+
+    if (!$new_ip) {
+        warn "Error: I can't find a new ip to test default ip";
+        return;
+    }
+    if ($public_ip) {
+        $vm->public_ip($new_ip);
+    } else {
+        $vm->display_ip($new_ip);
+    }
+
+    is($vm->listen_ip(), $new_ip);
+
+    my $base = create_domain($vm);
+    Ravada::Request->start_domain( uid => user_admin->id
+        ,id_domain => $base->id
+        ,remote_ip => '192.0.2.3'
+    );
+    wait_request();
+    _check_display_ip($base, $new_ip);
+
+    $base->shutdown_now(user_admin);
+
+    Ravada::Request->prepare_base(
+        uid => user_admin->id
+        ,id_domain => $base->id
+    );
+    wait_request();
+    my $name = new_domain_name();
+    Ravada::Request->clone(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,name => $name
+    );
+    wait_request();
+    my ($clone0 ) = $base->clones;
+
+    Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $clone0->{id}
+        ,remote_ip => '192.0.2.3'
+    );
+    wait_request();
+    my $clone = Ravada::Domain->open($clone0->{id});
+
+    _check_display_ip($clone, $new_ip);
+
+    if ($public_ip) {
+        $vm->public_ip('');
+    } else {
+        $vm->display_ip('');
+    }
+}
+
 #######################################################################33
 
 for my $db ( 'mysql', 'sqlite' ) {
@@ -2102,6 +2218,9 @@ for my $vm_name ( vm_names() ) {
             $BASE = create_domain($vm);
         }
         flush_rules() if !$<;
+
+        test_display_ip($vm);
+        test_display_ip($vm,1);
 
         test_already_requested($vm);
         test_already_requested_working($vm);

@@ -321,6 +321,7 @@ sub _around_start($orig, $self, @arg) {
 
     my $request = delete $arg{request};
     my $listen_ip = delete $arg{listen_ip};
+
     my $remote_ip = $arg{remote_ip};
     my $enable_host_devices;
     $enable_host_devices = $request->defined_arg('enable_host_devices') if $request;
@@ -4931,7 +4932,11 @@ sub set_driver_id {
 }
 
 sub _listen_ip($self, $remote_ip=undef) {
-    return $self->_vm->listen_ip($remote_ip);
+    return (
+        $self->_vm->public_ip()
+        or
+        $self->_vm->listen_ip($remote_ip)
+    );
 }
 
 sub remote_ip($self) {
@@ -6339,6 +6344,7 @@ sub _around_remove_hardware($orig, $self, $hardware, $index=undef, $options=unde
             $self->remove_expose($port->{internal_port}) if $port;
         }
         $self->_delete_db_display_by_driver($driver);
+        warn Dumper([$display,$index]);
         if ($display->{is_builtin}) {
             if (defined $index) {
                 $orig->($self, $hardware, $index);

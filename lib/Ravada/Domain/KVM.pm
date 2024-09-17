@@ -2706,6 +2706,7 @@ sub _remove_device($self, $index, $device, $attribute_name0=undef, $attribute_va
 }
 
 sub _remove_controller_display($self, $index, $attribute_name=undef, $attribute_value=undef) {
+    warn "$attribute_name = $attribute_value";
     $self->_remove_device($index,'graphics', $attribute_name,$attribute_value );
 }
 

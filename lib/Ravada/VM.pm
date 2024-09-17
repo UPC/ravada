@@ -984,6 +984,7 @@ Arguments: optional remote ip
 sub listen_ip($self, $remote_ip=undef) {
     return Ravada::display_ip() if $self->is_local && Ravada::display_ip();
     return $self->public_ip     if $self->public_ip;
+    return $self->display_ip    if $self->display_ip;
 
     return $self->_interface_ip($remote_ip) if $remote_ip;
 
