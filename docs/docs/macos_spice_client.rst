@@ -2,7 +2,7 @@ SPICE client setup for MacOS
 ============================
 
 Virt-Viewer
-===========
+-----------
 If you don't have brew installed, visit `Homebrew <https://brew.sh/>`_.
 
 Follow this steps:
