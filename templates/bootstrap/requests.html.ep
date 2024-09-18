@@ -64,12 +64,14 @@
     >
     <div ng-repeat="request in requests">
         <span class="badge-pill badge-light">{{request.date}}</span>
+        {{request.id}} - 
         <span class="request">
             <b>{{request.command}}</b>
             {{request.domain}}
             <i>{{request.status}}</i>
         </span>
         <span class="error">{{request.error}}</span>
+        <span class="output">{{request.output}}</span>
     </div>
     </div>
 </div>

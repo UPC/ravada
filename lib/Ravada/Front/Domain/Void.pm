@@ -9,12 +9,11 @@ use feature qw(signatures);
 
 extends 'Ravada::Front::Domain';
 
-my $DIR_TMP = "/var/tmp/rvd_void/".getpwuid($>);
-
 our %GET_CONTROLLER_SUB = (
     'mock' => \&_get_controller_mock
     ,'disk' => \&_get_controller_disk
     ,'display' => \&_get_controller_display
+    ,'network' => \&_get_controller_network
 
 );
 
@@ -57,11 +56,11 @@ sub _value{
 
 sub _config_file {
     my $self = shift;
-    return "$DIR_TMP/".$self->name.".yml";
+    return "/var/tmp/rvd_void/".getpwuid($>)."/".$self->name.".yml";
 }
 
 sub _config_dir {
-    return $DIR_TMP;
+    return "/var/tmp/rvd_void/".getpwuid($>);
 }
 
 sub list_controllers {
@@ -86,6 +85,16 @@ sub _get_controller_disk {
 
 sub _get_controller_display(@args) {
     return Ravada::Front::Domain::_get_controller_display(@args);
+}
+
+sub _get_controller_generic($self, $item) {
+    my $hardware = $self->_value('hardware');
+    return () if !exists $hardware->{$item};
+    return @{$hardware->{$item}};
+}
+
+sub _get_controller_network($self) {
+    return $self->_get_controller_generic('network');
 }
 
 1;

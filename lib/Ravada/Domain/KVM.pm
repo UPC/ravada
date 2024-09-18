@@ -392,7 +392,8 @@ sub _disk_device($self, $with_info=undef, $attribute=undef, $value=undef) {
 
         my ($boot_node) = $disk->findnodes('boot');
         my $info = {};
-        eval { $info = $self->_volume_info($file) if $file && $device eq 'disk' };
+        eval { $info = $self->_volume_info($file)
+            if $file && ( $device eq 'disk' or $device eq 'cdrom') };
         die $@ if $@ && $@ !~ /not found/i;
         $info->{device} = $device;
         if (!$info->{name} ) {
@@ -437,7 +438,7 @@ sub _pool_refresh($pool) {
         eval { $pool->refresh };
         return if !$@;
 
-        return if ref($@) && $@->code == 1;
+        return if ref($@) && ($@->code == 1 || $@->code == 55 );#55: not active;
 
         warn "WARNING: on vol remove , pool refresh $@" if $@;
         sleep 1;
@@ -450,11 +451,16 @@ sub _volume_info($self, $file, $refresh=0) {
     my ($name) = $file =~ m{.*/(.*)};
 
     my $vol;
+    my $storage_pool;
     for my $pool ( $self->_vm->vm->list_storage_pools ) {
         _pool_refresh($pool) if $refresh;
         eval { $vol = $pool->get_volume_by_name($name) };
         warn $@ if $@ && $@ !~ /^libvirt error code: 50,/;
-        last if $vol;
+        if ( $vol ) {
+            next if $vol->get_path ne $file;
+            $storage_pool = $pool->get_name();
+            last;
+        }
     }
     if (!$vol && !$refresh) {
         return $self->_volume_info($file, ++$refresh);
@@ -470,6 +476,7 @@ sub _volume_info($self, $file, $refresh=0) {
     warn "WARNING: $@" if $@ && $@ !~ /^libvirt error code: 50,/;
     $info->{file} = $file;
     $info->{name} = $name;
+    $info->{storage_pool} = $storage_pool;
 
     return $info;
 }
@@ -892,8 +899,6 @@ sub start {
         $self->_detect_disks_driver();
         $self->_set_displays_ip($set_password, $listen_ip);
     }
-
-    $self->status('starting');
 
     my $error;
     for ( 1 .. 60 ) {
@@ -2437,13 +2442,21 @@ sub _set_controller_filesystem($self, $number, $data) {
 sub _set_controller_video($self, $number, $data={type => 'qxl'}) {
     $data->{type} = 'qxl' if !exists $data->{type};
     $data->{type} = lc(delete $data->{driver}) if exists $data->{driver};
-    my $pci_slot = $self->_new_pci_slot();
 
     my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
     my ($devices) = $doc->findnodes("/domain/devices");
+
     if (exists $data->{primary} && $data->{primary} =~ /yes/) {
         _remove_all_video_primary($devices);
     }
+
+    if ($data->{type} eq 'none') {
+        _remove_all_video($devices);
+    } else {
+        _remove_all_video($devices,'type'=>'none');
+    }
+    my $pci_slot = $self->_new_pci_slot();
+
     my $video = $devices->addNewChild(undef,'video');
     my $model = $video->addNewChild(undef,'model');
     for my $field (keys %$data) {
@@ -2468,6 +2481,19 @@ sub _remove_all_video_primary($devices) {
     }
 }
 
+sub _remove_all_video($devices, $attribute=undef, $value=undef) {
+    confess "Error: attribute '$attribute' value search must be defined"
+    if defined $attribute && !defined $value;
+
+    for my $video ($devices->findnodes("video")) {
+        my ($model) = $video->findnodes('model');
+        next if defined $attribute
+        && (!$model->getAttribute($attribute)
+            || $model->getAttribute($attribute) ne $value);
+
+        $devices->removeChild($video);
+    }
+}
 sub _set_controller_network($self, $number, $data) {
 
     my $driver = (delete $data->{driver} or 'virtio');
@@ -3645,8 +3671,21 @@ sub _validate_xml($self, $doc) {
     }
 }
 
+sub _fix_uuid($self, $doc) {
+    my ($uuid) = $doc->findnodes("/domain/uuid/text()");
+    confess "I cant'find /domain/uuid in ".$self->name if !$uuid;
+
+    $uuid->setData($self->domain->get_uuid_string);
+
+}
+
 sub reload_config($self, $doc) {
+    if (!ref($doc)) {
+        $doc = XML::LibXML->load_xml(string => $doc);
+    }
     $self->_validate_xml($doc) if $self->_vm->vm->get_major_version >= 4;
+
+    $self->_fix_uuid($doc);
 
     my $new_domain;
 
@@ -3654,7 +3693,7 @@ sub reload_config($self, $doc) {
         $new_domain = $self->_vm->vm->define_domain($doc->toString);
     };
 
-    cluck ''.$@ if $@;
+    die ''.$@."\n" if$@;
 
     $self->domain($new_domain);
 
@@ -3686,6 +3725,10 @@ sub copy_config($self, $domain) {
 
 sub get_config($self) {
     return XML::LibXML->load_xml( string => $self->xml_description());
+}
+
+sub get_config_txt($self) {
+    return $self->xml_description();
 }
 
 sub _change_xml_address($self, $doc, $address, $bus) {
@@ -3900,6 +3943,8 @@ sub remove_config_node($self, $path, $content, $doc) {
             if ( _xml_equal_hostdev($content, $element_s) ) {
                 $parent->removeChild($element);
             } else {
+=pod
+
                 my @lines_c = split /\n/,$content;
                 my @lines_e = split /\n/,$element_s;
                 warn $element->getName." ".(scalar(@lines_c)." ".scalar(@lines_e));
@@ -3909,6 +3954,7 @@ sub remove_config_node($self, $path, $content, $doc) {
                 }
                 warn $content;
                 die $self->name if $element->getName eq 'hostdev';
+=cut
             }
         }
     }
@@ -3916,6 +3962,12 @@ sub remove_config_node($self, $path, $content, $doc) {
 
 sub _xml_equal_hostdev($doc1, $doc2) {
     return 1 if $doc1 eq $doc2;
+
+    $doc1 =~ s/\n//g;
+    $doc2 =~ s/\n//g;
+
+    return 1 if $doc1 eq $doc2;
+
     my $parser = XML::LibXML->new() or die $!;
     $doc1 =~ s{(</?)\w+:(\w+)}{$1$2}mg;
     my $xml1 = $parser->parse_string($doc1);
@@ -3961,18 +4013,44 @@ sub add_config_node($self, $path, $content, $doc) {
     die "Error: I found ".scalar(@parent)." nodes for $dir, expecting 1"
     unless scalar(@parent)==1;
 
-    my $element;
+    my @element;
     eval {
-    ($element) = $parent[0]->findnodes($entry);
+    (@element) = $parent[0]->findnodes($entry);
     };
     die $@ if $@ && $@ !~ /Undefined namespace prefix/;
-    return if $element && $element->toString eq $content;
+    for my $element (@element) {
+        return if $element && $element->toString eq $content;
+    }
 
     if ($content =~ /<qemu:commandline/) {
         _add_xml_parse($parent[0], $content);
     } else {
         $self->_fix_pci_slot(\$content);
         $parent[0]->appendWellBalancedChunk($content);
+    }
+}
+
+sub set_config_node($self, $path, $content, $doc) {
+
+    my ($dir,$entry) = $path =~ m{(.*)/(.*)};
+    confess "Error: missing entry in '$path'" if !$entry;
+
+    my @parent = $doc->findnodes($dir);
+    if (scalar(@parent)==0) {
+        @parent = $self->_xml_create_path($doc, $dir);
+    }
+
+    die "Error: I found ".scalar(@parent)." nodes for $dir, expecting 1"
+    unless scalar(@parent)==1;
+
+    my $parent = $parent[0];
+
+    for my $child ($parent->findnodes($entry)) {
+        $parent->removeChild($child);
+    }
+
+    for my $curr_entry (@$content) {
+        $parent->appendWellBalancedChunk($curr_entry);
     }
 
 }
@@ -4091,7 +4169,6 @@ sub remove_host_devices($self) {
     my ($dev) = $doc->findnodes("/domain/devices");
     for my $hostdev ( $dev->findnodes("hostdev") ) {
         $dev->removeChild($hostdev);
-        warn $hostdev->toString();
     }
     $self->reload_config($doc);
 }

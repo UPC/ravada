@@ -1,7 +1,8 @@
 % my %tabs_item = (
 %    node => ['options' , 'bases', 'remove' , 'hostdev']
-%   ,network => ['options', 'machines', 'remove']
+%   ,route => ['options', 'machines', 'remove']
 %   ,storage => ['list', 'options', 'purge']
+%   ,network => ['options','remove']
 % );
 % my $tabs = $tabs_item{$item};
 
@@ -12,7 +13,7 @@
 % my $active="active";
 % my $selected="true";
 <div class="col-2">
-<div class="card-body" ng-show="<%= $item %>.id">
+<div class="card-body">
 <div class="nav flex-column nav-pills bg-light" id="v-pills-tab"
     role="tablist" aria-orientation="vertical">
 % for my $current (@$tabs) {
@@ -28,6 +29,7 @@
     }
 %>
 <a class="nav-link <%= $active %>" id="v-pills-<%= $current %>-tab"
+    ng-hide="<%= $item %>._removed"
     href="#v-pills-<%= $current %>" data-toggle="pill" role="tab"
         aria-controls="v-pills-bases" aria-selected="<%= $selected %>"><%=l $current %></a>
 % $active = '';
@@ -52,6 +54,7 @@
     }
 %>
     <div class="tab-pane fade show <%= $active %>"
+    ng-show="<%= $item %>.id"
     id="v-pills-<%= $current %>" role="tabpanel"
     aria-labelledby="v-pills-<%= $current %>-tab">
         %= include "main/${item}_$current"

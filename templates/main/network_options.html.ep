@@ -1,92 +1,97 @@
-<div class="container-fluid" ng-hide="new_saved">
-<form name="formNetwork">
-<div class="row">
-    <div class="col-md-3" align="right"><%=l 'name' %></div>
+<div class="container-fluid" ng-cloak>
+
+<div class="col-md-8 alert alert-warning" ng-show="error">
+{{error}}
+</div>
+
+<i class="fas fa-sync-alt fa-spin" ng-hide="network.id_vm"></i>
+
+<form name="form_network" ng-hide="network._removed || !network.id_vm">
+
+<div class="form-group row">
+    <div class="col-md-3" align="right"><%=l 'Name' %></div>
     <div class="col-md-8">
-        <input type="text" name="name" ng-model="network.name" required
-            ng-change='check_duplicate("name")'
-        >
-        <span ng-show="formNetwork.name.$error.required">
-          <%=l 'Network name is required' %>
-        </span>
-        <span ng-show="network._duplicated_name">
-          <%=l 'This name is duplicated' %>
-        </span>
+        <input type="text" ng-model="network.name" required
+            name="name"
+        ng-disabled="network.id"/>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-3" align="right"><%=l 'address' %></div>
-    <div class="col-md-8" align="left">
-        <input type="text" name="address" ng-model="network.address" required ipaddress
-            ng-change='check_duplicate("address")'
-        >
-        <span ng-show="formNetwork.address.$error.required"><%=l 'Network address is required.' %></span>
-        <span ng-show="formNetwork.$error.ipformat"><%=l 'Invalid IP network address. Expecting a.b.c.d/e' %></span>
-        <span ng-show="network._duplicated_address"><%=l 'This address is duplicated' %></span>
+<div class="form-group row">
+    <div class="col-md-3" align="right"><%=l 'Bridge' %></div>
+    <div class="col-md-8">
+        <input type="text" ng-model="network.bridge" required
+            name="bridge"
+        />
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-3" align="right"><%=l 'password' %></div>
-    <div class="col-md-1" align="left">
-        <input type="checkbox" name="address" ng-model="network.requires_password"
+<div class="form-group row">
+    <div class="col-md-3" align="right"><%=l 'IP address' %></div>
+    <div class="col-md-3">
+        <input type="text" required ng-model="network.ip_address"/>
+    </div>
+</div>
+
+<div class="form-group row">
+    <div class="col-md-3" align="right"><%=l 'Netmask' %></div>
+    <div class="col-md-3">
+        <input type="text" required ng-model="network.ip_netmask"/>
+    </div>
+</div>
+
+<div class="form-group row">
+    <div class="col-md-3" align="right"><%=l 'DHCP start' %></div>
+    <div class="col-md-2">
+        <input type="text" ng-model="network.dhcp_start"/>
+    </div>
+</div>
+
+<div class="form-group row">
+    <div class="col-md-3" align="right"><%=l 'DHCP end' %></div>
+    <div class="col-md-3">
+        <input type="text" ng-model="network.dhcp_end"/>
+    </div>
+</div>
+
+<div class="form-group row">
+    <div class="col-md-3" align="right"><%=l 'Auto Start' %></div>
+    <div class="col-md-3">
+        <input type="checkbox" ng-model="network.autostart"
             ng-true-value="1" ng-false-value="0"
-        >
+        />
     </div>
-    <div class="col-md-8"><%=l 'Requires viewer password when implemented' %></div>
 </div>
 
-<div class="row">
-  <div class="col-md-3" align="right">
-    <%=l 'All machines' %>
-  </div>
-    <div class="col-md-1" align="left">
-        <input type="checkbox" name="address" ng-model="network.all_domains"
+<div class="form-group row">
+    <div class="col-md-3" align="right"><%=l 'Active' %></div>
+    <div class="col-md-3">
+        <input type="checkbox" ng-model="network.is_active"
             ng-true-value="1" ng-false-value="0"
-            ng-change="check_all_domains()"
-        >
+        />
     </div>
-    <div class="col-md-8"><%=l 'Users from this network can run all virtual machines' %></div>
 </div>
 
-<div class="row">
-    <div class="col-md-3" align="right"><%=l 'No machines' %></div>
-    <div class="col-md-1" align="left">
-        <input type="checkbox" name="address" ng-model="network.no_domains"
+<div class="form-group row">
+    <div class="col-md-3" align="right"><%=l 'Public' %></div>
+    <div class="col-md-3">
+        <input type="checkbox" ng-model="network.is_public"
             ng-true-value="1" ng-false-value="0"
-            ng-change="check_no_domains()"
-        >
+        />
     </div>
-    <div class="col-md-8"><%=l 'Users from this network can run no virtual machines' %></div>
 </div>
 
-
-<div class="row">
+<div class="form-group row">
     <div class="col-md-3" align="right"></div>
     <div class="col-md-4" align="left">
         <button ng-show="network.id" class="btn btn-outline-secondary"
-            ng-disabled="formNetwork.$pristine"
-        ng-click="load_network(network.id)"><%=l 'Cancel' %></button>
-        <button
-            class="btn btn-primary"
-            ng-click="update_network()"
-            ng-disabled="!formNetwork.$valid || formNetwork.$pristine
-            || (!network.all_domains && !network.no_domains)
-            || network._duplicated_name
-            || network._duplicated_address
-            "><%=l 'Save' %></button>
-    </div>
-    <div ng-show="!network.all_domains && !network.no_domains">
-        <%=l 'Set either' %> <i><%=l 'all machines' %></i> <%=l 'or' %> <i><%=l 'no machines' %></i> <%=l 'for users in this network' %>
+            ng-click="load_network(network.id)"><%=l 'Cancel' %></button>
+        <button class="btn btn-primary"
+            ng-click="update_network(); form_options.$pristine=true"
+            ><%=l 'Save' %></button>
     </div>
 </div>
 
 </form>
 </div>
 
-<div class="row">
-    <div class="col-md-8 alert alert-info" ng-show="saved && formNetwork.$pristine">
-        <%=l 'Network' %> {{network.name}} <%=l 'saved.' %>
-    </div>
-</div>

@@ -280,7 +280,7 @@ sub search_user {
     } else {
         $args{name} = $_[0];
     }
-    die "Error: LDAP not configured" if !exists $$CONFIG->{ldap};
+    confess "Error: LDAP not configured" if !exists $$CONFIG->{ldap};
 
     my $username = delete $args{name} or confess "Missing user name";
     my $retry = (delete $args{retry} or 0);
@@ -483,6 +483,7 @@ sub search_group {
 =cut
 
 sub search_group_members($cn, $retry = 0) {
+    confess if !exists $$CONFIG->{ldap};
     my $base = ($$CONFIG->{ldap}->{groups_base} or "ou=groups,"._dc_base());
 
     my $ldap = _init_ldap_admin();

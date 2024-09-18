@@ -20,6 +20,7 @@
             .service("listMess", gtListMess)
             .controller("SupportForm", suppFormCtrl)
 	        .controller("AddUserForm",addUserFormCrtl)
+	        .controller("AddGroupForm",addGroupFormCrtl)
 	        .controller("ChangePasswordForm",changePasswordFormCrtl)
 //            .controller("machines", machinesCrtl)
 //            .controller("messages", messagesCrtl)
@@ -67,6 +68,31 @@
 
     };
 
+
+    function addGroupFormCrtl($scope, $http, request){
+        $scope.type = 'local';
+        $scope.group_name = '';
+        $scope.object_class = {
+            'posixGroup': true
+            ,'nsMemberOf': false
+            ,'groupOfUniqueNames': false
+        };
+        $scope.list_object_class=Object.keys($scope.object_class);
+
+        $scope.add_group = function() {
+            $scope.new_group_done = false;
+            $http.post('/group/new'
+                      , JSON.stringify({ 'type': $scope.type
+                          ,'group_name': $scope.group_name
+                          ,'object_class': $scope.object_class
+                      }
+                )
+              ).then(function(response) {
+                  $scope.error = response.data.error;
+                  $scope.new_group_done = $scope.error.length == 0;
+              });
+        };
+    };
 
     function addUserFormCrtl($scope, $http, request){
 
@@ -139,7 +165,6 @@
                 if (typeof(machine.clone) != 'undefined'
                 && machine.clone) {
                     machine.is_active = machine.clone.is_active;
-                    machine.screenshot= machine.clone.screenshot;
                     if (machine.clone.description
                             && machine.clone.description.length) {
                         machine.description2 = machine.clone.description;
@@ -160,7 +185,11 @@
                             if (machine.clone) {
                                 id=machine.clone.id;
                             }
-                            window.location.assign('/machine/view/' + id + '.html');
+                            var url_view = '/machine/view/' + id + '.html';
+                            if ($scope.anonymous) {
+                                url_view = "/anonymous/"+id+".html";
+                            }
+                            window.location.assign(url_view);
                         } else {
                         window.location.assign('/machine/clone/' + machine.id + '.html');
                         }
@@ -254,9 +283,6 @@
                         } else {
                             machine.list_clones[i].is_active = data.list_clones[i].is_active;
                             machine.list_clones[i].screenshot = data.list_clones[i].screenshot;
-                            if (machine.clone.id == machine.list_clones[i].id) {
-                                machine.screenshot = machine.list_clones[i].screenshot;
-                            }
 
                         }
                     }
@@ -320,6 +346,10 @@
             $scope.lock_info = false;
             $scope.topology = false;
             $scope.searching_ldap_attributes = true;
+            $scope.shared_user_found=false;
+            $scope.storage_pools=['default'];
+            $scope.shared_user_count = -1
+            $scope.access_groups=[];
 
             $scope.getUnixTimeFromDate = function(date) {
                 date = (date instanceof Date) ? date : date ? new Date(date) : new Date();
@@ -352,6 +382,9 @@
             };
 
             $scope.topology_changed = function() {
+                if (!$scope.showmachine.hardware['cpu']) {
+                    return;
+                }
                 var cpu = $scope.showmachine.hardware.cpu[0];
                 var item = cpu.cpu.topology;
                 if(typeof(item) == undefined || !item) {
@@ -379,6 +412,12 @@
                     .then(function(response) {
                         $scope.node = response.data;
                     });
+            };
+            list_nodes=function() {
+                $http.get('/list_nodes_by_id.json')
+                .then(function(response) {
+                   $scope.nodes_by_id = response.data;
+                });
             };
 
             var subscribed_extra = false;
@@ -586,34 +625,47 @@
                                     = $scope.showmachine.auto_compact;
                                 load_balance_options();
                                 get_node_info($scope.showmachine.id_vm);
+                                if (is_admin) {
+                                    list_nodes();
+                                }
                                 $http.get('/list_storage_pools/'+$scope.showmachine.type+"?active=1")
                                     .then(function(response) {
                                         $scope.list_storage= response.data;
+
+                                    for (var i = 0; i < response.data.length; i++) {
+                                        $scope.storage_pools[i]=response.data[i].name;
+                                    }
                                 });
+
+                                $scope.list_shares();
                             }
+                            list_interfaces();
                             if (is_admin) {
                                 $scope.init_domain_access();
                                 $scope.init_ldap_access();
                                 $scope.list_ldap_attributes();
-                                list_interfaces();
                                 list_users();
                                 list_host_devices();
-                                list_access_groups();
+                                list_access_groups('ldap');
+                                list_access_groups('local');
                             }
                             $scope.copy_ram = $scope.showmachine.max_mem / 1024 / 1024;
                 });
                 if (is_admin ) {
                     $scope.list_ldap_attributes();
-                    list_ldap_groups();
+                    list_groups();
                 }
                 $scope.list_cpu_models();
           };
 
           var list_interfaces = function() {
             if (! $scope.network_nats) {
-                $http.get('/network/interfaces/'+$scope.showmachine.type+'/nat')
+                $http.get('/v2/vm/list_networks/'+$scope.showmachine.id_vm)
                     .then(function(response) {
-                        $scope.network_nats = response.data;
+                        $scope.network_nats= [];
+                        for (var i=0; i<response.data.length; i++ ) {
+                            $scope.network_nats.push(response.data[i].name);
+                        }
                 });
             }
             if (! $scope.network_bridges ) {
@@ -745,6 +797,7 @@
             $http.get("/machine/public/"+machineId+"/"+value);
           };
           $scope.set_base= function(vmId,machineId, value) {
+            $scope.showmachine.bases[vmId]=value;
             var url = 'set_base_vm';
             if (value == 0 || !value) {
                 url = 'remove_base_vm';
@@ -753,6 +806,16 @@
               .then(function(response) {
               });
           };
+          $scope.move_file_storage = function() {
+              $http.post('/request/move_volume/'
+                      , JSON.stringify({ 'id_domain': $scope.showmachine.id
+                          ,'volume': $scope.sp_move.file
+                          ,'storage': $scope.sp_move.storage_pool
+                      })
+              ).then(function(response) {
+              });
+
+          }
           $scope.copy_machine = function() {
               $scope.copy_request= { 'status': 'requested' };
               $http.post('/machine/copy/'
@@ -849,6 +912,7 @@
                       $scope.searching_ldap_attributes = false;
                       $scope.user_name = response.data.name;
                       $scope.check_access();
+                      list_access_groups('ldap');
                   });
               }
           };
@@ -1050,10 +1114,14 @@
                         }
                     });
             }
-            var list_ldap_groups = function() {
-                $http.get('/list_ldap_groups')
+            var list_groups = function() {
+                $http.get('/group/ldap/list')
                     .then(function(response) {
                         $scope.ldap_groups=response.data;
+                    });
+                $http.get('/group/local/list')
+                    .then(function(response) {
+                        $scope.local_groups=response.data;
                     });
             };
 
@@ -1145,22 +1213,24 @@
                 });
             };
 
-            var list_access_groups = function() {
-                $http.get("/machine/list_access_groups/"+$scope.showmachine.id).then(function(response) {
-                    $scope.access_groups=response.data;
+            var list_access_groups = function(type) {
+                $http.get("/machine/list_access_groups/"+type+"/"+$scope.showmachine.id).then(function(response) {
+                    $scope.access_groups[type]=response.data;
                 });
             };
-            $scope.add_group_access = function(group) {
-                $http.get("/machine/add_access_group/"+$scope.showmachine.id+"/"+group)
-                    .then(function(response) {
-                        list_access_groups();
+            $scope.add_group_access = function(type,group) {
+                $http.post("/machine/add_access_group/"+type+"/"+$scope.showmachine.id
+                    ,JSON.stringify( { 'group': group })
+                ).then(function(response) {
+                        list_access_groups(type);
                 });
             };
 
-            $scope.remove_group_access = function(group) {
-                $http.get("/machine/remove_access_group/"+$scope.showmachine.id+"/"+group)
-                    .then(function(response) {
-                        list_access_groups();
+            $scope.remove_group_access = function(type,group) {
+                $http.post( "/machine/remove_access_group/"+type+"/"+$scope.showmachine.id
+                    ,JSON.stringify( { 'group':group })
+                ).then(function(response) {
+                        list_access_groups(type);
                 });
             };
 
@@ -1171,12 +1241,58 @@
                 });
             };
 
+            $scope.shutdown= function() {
+                $scope.set_edit();
+                $scope.lock_info=false;
+                $http.get("/machine/shutdown/"+$scope.showmachine.id+".json")
+                .then(function(response) {
+                });
+            };
+
+
             $scope.shutdown_start = function() {
                 $scope.set_edit();
                 $scope.lock_info=false;
                 $scope.showmachine.needs_restart = 0;
                 $http.get("/machine/shutdown_start/"+$scope.showmachine.id+".json")
                 .then(function(response) {
+                });
+            };
+
+            $scope.search_shared_user = function() {
+                $scope.searching_shared_user = true;
+                $scope.shared_user_found = '';
+                $http.get("/search_user/"+$scope.user_share)
+                .then(function(response) {
+                    $scope.shared_user_found = response.data.found;
+                    $scope.shared_user_count = response.data.count;
+                    $scope.searching_shared_user=false;
+                    if ($scope.shared_user_count == 1) {
+                        $scope.user_share = response.data.found;
+                    }
+                });
+            };
+
+            $scope.share_machine = function() {
+                $http.get("/machine/share/"+$scope.showmachine.id+"/"
+                    +$scope.shared_user_found)
+                .then(function(response) {
+                    $scope.list_shares();
+                });
+            };
+
+            $scope.remove_share_machine = function(user) {
+                $http.get("/machine/remove_share/"+$scope.showmachine.id+"/"
+                    +user)
+                .then(function(response) {
+                    $scope.list_shares();
+                });
+            };
+
+            $scope.list_shares = function() {
+                $http.get("/machine/list_shares/"+$scope.showmachine.id)
+                .then(function(response) {
+                    $scope.shares = response.data;
                 });
             };
 
@@ -1286,6 +1402,9 @@
                 var data = JSON.parse(event.data);
                 $scope.$apply(function () {
                     $scope.request = data;
+                    if (/Unknown (domain|machine)/i.exec($scope.request.error)) {
+                        $scope.domain=undefined;
+                    }
                 });
                 if ( data.id_domain && ! already_subscribed_to_domain ) {
                     already_subscribed_to_domain = true;
@@ -1488,39 +1607,6 @@
             $scope.maintenance_end = new Date(end);
         };
     };
-
-/*
-  function requestsCrtlSingle($scope, $interval, $http, request){
-    $scope.getReqs= function() {
-      $http.get('/requests.json').then(function(response) {
-          $scope.requests=response.data;
-      });
-                ).then function(response) {
-                    $scope.conflicts = response.data
-            })
-        };
-
-        $http.get('/list_ldap_groups/')
-                    .then(function(response) {
-                        $scope.ldap_groups=response.data;
-        });
-        $http.get('/list_bases.json')
-                    .then(function(response) {
-                         $scope.bases=response.data;
-        });
-
-    };
-/*
-  function requestsCrtlSingle($scope, $interval, $http, request){
-    $scope.getReqs= function() {
-      $http.get('/requests.json').then(function(response) {
-          $scope.requests=response.data;
-      });
-    };
-//    $interval($scope.getReqs,5000);
-    $scope.getReqs();
-  };
-*/
 
 	function nameAvail($timeout, $q) {
     return {

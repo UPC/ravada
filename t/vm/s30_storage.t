@@ -49,7 +49,7 @@ sub _add_fstab($vm) {
 }
 
 sub remove_fstab($vm, $dir) {
-    my $file = "$dir/check_storage";# or die "$!";
+    my $file = "$dir/".base_domain_name()."check_storage";# or die "$!";
     unlink $file or die "$! $file" if -e $file;
     copy("/etc/fstab.tst_rvd_backup","/etc/fstab")
 }
@@ -60,7 +60,7 @@ sub test_storage_pools_fail($vm) {
 
     create_storage_pool($vm, $dir);
 
-    delete_request('cleanup');
+    delete_request('cleanup', 'check_storage');
     my $req = Ravada::Request->check_storage(
         uid => user_admin->id
         ,retry => 2
@@ -70,7 +70,9 @@ sub test_storage_pools_fail($vm) {
     );
     is($req_cleanup->after_request_ok,$req->id);
     wait_request( debug => 0, check_error => 0);
-    is($req->status,'done');
+    wait_request( debug => 0, check_error => 0);
+    wait_request( debug => 0, check_error => 0);
+    is($req->status,'done',"Expecting done ".$req->id);
     like($req->error, qr/not mounted/);
 
     is($req_cleanup->status,'done');
@@ -82,7 +84,7 @@ sub test_storage_pools_fail($vm) {
 
 sub _clean_local {
     my $dir = "$DIR/".base_domain_name();
-    my $file = "$dir/check_storage";# or die "$!";
+    my $file = "$dir/".base_domain_name()."_check_storage";# or die "$!";
     unlink $file or die "$! $file" if -e $file;
 }
 

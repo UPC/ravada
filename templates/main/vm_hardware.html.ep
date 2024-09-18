@@ -61,4 +61,5 @@
         </div>
     </div>
 %= include 'main/vm_hardware_modal_remove'
+%= include '/main/vm_hardware_modal_change_pool'
 </div>

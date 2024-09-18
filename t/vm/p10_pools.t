@@ -18,6 +18,8 @@ use feature qw(signatures);
 my $BASE_NAME = "zz-test-base-alpine";
 my $BASE;
 
+$Ravada::Domain::TTL_REMOVE_VOLATILE=1;
+
 sub test_duplicate_req {
         my $req = Ravada::Request->manage_pools(uid => user_admin->id);
         my $req_dupe = Ravada::Request->manage_pools(uid => user_admin->id);
@@ -413,6 +415,7 @@ sub test_pool_with_nested_bases($vm, $volatile_clones) {
     $base->pool_clones($n);
     $base->pool_start($started);
     my $req = Ravada::Request->manage_pools(uid => user_admin->id
+        ,id_domain => $base->id
         ,_no_duplicate => 1);
     wait_request( debug => 0);
     is($req->status, 'done');
@@ -670,6 +673,7 @@ sub test_create_more_clones_in_pool($base) {
     my @clones = grep { !$_->{is_base} } $base->clones ;
     my $n_clones = scalar(@clones);
     for my $clone ( @clones ) {
+        sleep 1 if $clone->{is_volatile};
         Ravada::Request->shutdown_domain(uid => user_admin->id
             ,id_domain => $clone->{id}
         );

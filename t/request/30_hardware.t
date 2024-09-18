@@ -69,6 +69,7 @@ sub test_add_hardware_request_drivers {
         test_remove_almost_all_hardware($vm, $domain, $hardware);
         for my $driver (@$options) {
             $driver = lc($driver);
+            next if $hardware eq 'video' && $driver eq 'none';
             diag("Testing new $hardware $driver remove=$remove");
 
             my $info0 = $domain->info(user_admin);
@@ -207,6 +208,10 @@ sub _remove_other_video_primary($domain) {
 }
 
 sub test_add_hardware_request($vm, $domain, $hardware, $data={}) {
+
+    return if $hardware eq 'video'
+        && exists $data->{type} && defined $data->{type}
+        && $data->{type} eq 'none';
 
     $domain = Ravada::Domain->open($domain->id);
 
@@ -501,12 +506,34 @@ sub _test_kvm_accel3d($domain,$value) {
 }
 
 sub test_add_video($domain) {
+    test_add_video_none($domain);
     my $data = { type => 'virtio', heads => 1 };
     test_video_vgamem($domain);
     test_video_virtio_3d_change_type($domain);
     test_video_virtio_3d($domain);
     test_add_hardware_request($domain->_vm,$domain,'video',$data);
     test_video_primary($domain);
+}
+
+sub test_add_video_none($domain) {
+    my %args = (
+        uid => user_admin->id
+        ,name => 'video'
+        ,id_domain => $domain->id
+        ,data => {
+            type => 'none'
+        }
+    );
+    my $req = Ravada::Request->add_hardware(%args);
+    wait_request();
+    is($req->error,'');
+
+    $args{data}->{type} = 'cirrus';
+    $req = Ravada::Request->add_hardware(%args);
+    wait_request();
+    is($req->error,'');
+
+
 }
 
 sub test_add_cdrom($domain) {
@@ -758,11 +785,14 @@ sub test_remove_hardware_by_index($vm, $hardware) {
     my $items1 = [];
     $items1 = $info_hw1->{$hardware};
 
+    my $index = 1;
+    $index = 0 if $items1 && scalar(@$items1)<=1;
+
     Ravada::Request->remove_hardware(
         uid => user_admin->id
         ,id_domain => $domain->id
         ,name => $hardware
-        ,index => 1
+        ,index => $index
     );
     wait_request();
     my $info_hw2 = $domain->info(user_admin)->{hardware};
@@ -1104,7 +1134,17 @@ sub test_change_network_bridge($vm, $domain, $index) {
 
     skip("No bridges found in this system",6) if !scalar @bridges;
     my $info = $domain->info(user_admin);
-    is ($info->{hardware}->{network}->[$index]->{type}, 'NAT') or exit;
+    if ($info->{hardware}->{network}->[$index]->{type} eq 'bridge') {
+        my $req = Ravada::Request->change_hardware(
+            id_domain => $domain->id
+            ,hardware => 'network'
+            ,index => $index
+            ,data => { type => 'NAT', network => 'default'}
+            ,uid => user_admin->id
+        );
+        wait_request();
+
+    }
 
     ok(scalar @bridges,"No network bridges defined in this host") or return;
 
@@ -1509,6 +1549,8 @@ sub _remove_usbs($domain, $hardware) {
 
 sub test_change_drivers($domain, $hardware) {
 
+    return if $domain->type eq 'Void' && $hardware eq 'network';
+
     _remove_usbs($domain, $hardware);
 
     my $info = $domain->info(user_admin);
@@ -1566,6 +1608,9 @@ sub test_change_drivers($domain, $hardware) {
 }
 
 sub test_all_drivers($domain, $hardware) {
+
+    return if $domain->type eq 'Void' && $hardware eq 'network';
+
     my $info = $domain->info(user_admin);
     my $options = $info->{drivers}->{$hardware};
     ok(scalar @$options,"No driver options for $hardware") or exit;
@@ -1712,8 +1757,7 @@ for my $vm_name (vm_names()) {
     my %controllers = $domain_b0->list_controllers;
     lock_hash(%controllers);
 
-    for my $hardware ('display', sort keys %controllers ) {
-        next if $hardware eq 'video';
+    for my $hardware ( sort keys %controllers ) {
 	    my $name= new_domain_name();
 	    my $domain_b = $BASE->clone(
             name => $name

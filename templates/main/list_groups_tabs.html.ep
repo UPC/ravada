@@ -1,0 +1,8 @@
+<ul class="nav nav-tabs" ng-show="<%= $FEATURE->{ldap} %>">
+  <li class='nav-item'>
+    <a class='nav-link active' data-toggle='tab' href='#local'>local</a>
+  </li>
+  <li class='nav-item'>
+    <a class='nav-link ' data-toggle='tab' href='#ldap'>ldap</a>
+   </li>
+</ul>

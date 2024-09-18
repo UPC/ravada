@@ -16,11 +16,12 @@ use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use JSON::XS;
 use Moose;
+use Storable qw(dclone);
 use Ravada;
 use Ravada::Auth::LDAP;
 use Ravada::Front::Domain;
 use Ravada::Front::Domain::KVM;
-use Ravada::Network;
+use Ravada::Route;
 
 use feature qw(signatures);
 no warnings "experimental::signatures";
@@ -129,14 +130,14 @@ Returns: listref of machines
 
 sub list_machines_user($self, $user, $access_data={}) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id,name,alias,is_public, description, screenshot, id_owner, is_base, date_changed"
+        "SELECT id,name,alias,is_public, description, screenshot, id_owner, is_base, date_changed, show_clones"
         ." FROM domains "
         ." WHERE ( is_base=1 OR ( id_base IS NULL AND id_owner=?))"
         ." ORDER BY alias"
     );
-    my ($id, $name, $alias, $is_public, $description, $screenshot, $id_owner, $is_base, $date_changed);
+    my ($id, $name, $alias, $is_public, $description, $screenshot, $id_owner, $is_base, $date_changed, $show_clones);
     $sth->execute($user->id);
-    $sth->bind_columns(\($id, $name, $alias, $is_public, $description, $screenshot, $id_owner, $is_base, $date_changed));
+    $sth->bind_columns(\($id, $name, $alias, $is_public, $description, $screenshot, $id_owner, $is_base, $date_changed,$show_clones));
 
     my $bookings_enabled = $self->setting('/backend/bookings');
     my @list;
@@ -150,8 +151,16 @@ sub list_machines_user($self, $user, $access_data={}) {
             id_owner =>$user->id
             ,id_base => $id
         );
+        push @clones,$self->_search_shared($id, $user->id);
+
         my ($clone) = ($clones[0] or undef);
-        next unless $clone || $user->is_admin || ($is_public && $user->allowed_access($id)) || ($id_owner == $user->id);
+
+        next unless
+        $clone && $show_clones && $user->allowed_access_group($id)
+        || $user->is_admin
+        || ($is_public && $user->allowed_access($id))
+        || ($id_owner == $user->id);
+
         $name = $alias if defined $alias;
         my $base = { id => $id, name => Encode::decode_utf8($name)
             , alias => Encode::decode_utf8($alias or $name)
@@ -210,9 +219,9 @@ sub _get_clone_info($user, $base, $clone = Ravada::Front::Domain->open($base->{i
     $c->{is_locked} = $clone->is_locked;
     $c->{description} = ( $clone->_data('description')
             or $base->{description});
-    $c->{can_remove} = 0;
 
     $c->{can_remove} = ( $user->can_remove() && $user->id == $clone->_data('id_owner'));
+    $c->{can_remove} = 0 if !$c->{can_remove};
 
     if ($clone->is_active && !$clone->is_locked
         && $user->can_screenshot) {
@@ -255,12 +264,16 @@ sub _init_available_actions($user, $m) {
   eval { $m->{can_shutdown} = $user->can_shutdown($m->{id}) };
 
         $m->{can_start} = 0;
-        $m->{can_start} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
+        $m->{can_start} = 1 if $m->{id_owner} == $user->id || $user->is_admin
+        || $user->_machine_shared($m->{id})
+        ;
 
         $m->{can_reboot} = $m->{can_shutdown} && $m->{can_start};
 
         $m->{can_view} = 0;
-        $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin;
+        $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin
+        || $user->_machine_shared($m->{id})
+        ;
 
         $m->{can_manage} = ( $user->can_manage_machine($m->{id}) or 0);
         eval {
@@ -315,7 +328,7 @@ sub list_domains($self, %args) {
 
     my $query = "SELECT d.name,d.alias, d.id, id_base, is_base, id_vm, status, is_public "
         ."      ,vms.name as node , is_volatile, client_status, id_owner "
-        ."      ,comment, is_pool"
+        ."      ,comment, is_pool, show_clones"
         ."      ,d.date_changed"
         ." FROM domains d LEFT JOIN vms "
         ."  ON d.id_vm = vms.id ";
@@ -604,6 +617,35 @@ sub list_vms($self, $type=undef) {
     $sth->finish;
     return @list;
 }
+
+=head2 list_nodes_by_id
+
+Returns a list of Nodes by id
+
+=cut
+
+sub list_nodes_by_id($self, $type=undef) {
+
+    my $sql = "SELECT id,name,hostname,is_active, vm_type, enabled FROM vms ";
+
+    my @args = ();
+    if ($type) {
+        $sql .= "WHERE (vm_type=? or vm_type=?)";
+        my $type2 = $type;
+        $type2 = 'qemu' if $type eq 'KVM';
+        @args = ( $type, $type2);
+    }
+    my $sth = $CONNECTOR->dbh->prepare($sql." ORDER BY vm_type,name");
+    $sth->execute(@args);
+
+    my %list;
+    while (my $row = $sth->fetchrow_hashref) {
+        $list{$row->{id}}= $row->{name};
+    }
+    $sth->finish;
+    return \%list;
+}
+
 
 sub _list_bases_vm($self, $id_node) {
     my $sth = $CONNECTOR->dbh->prepare(
@@ -984,6 +1026,7 @@ sub search_clone($self, %args) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id,name FROM domains "
         ." WHERE id_base=? AND id_owner=? AND (is_base=0 OR is_base=NULL)"
+        ."   AND is_volatile=0 "
         ." ORDER BY name"
     );
     $sth->execute($id_base, $id_owner);
@@ -995,6 +1038,25 @@ sub search_clone($self, %args) {
     $sth->finish;
 
     return $clones[0] if !wantarray;
+    return @clones;
+
+}
+
+sub _search_shared($self, $id_base, $id_user) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT d.id, d.name FROM domains d, domain_share ds"
+        ." WHERE id_base=? "
+        ."   AND ds.id_user=? "
+        ."   AND ds.id_domain=d.id "
+    );
+    $sth->execute($id_base, $id_user);
+
+    my @clones;
+    while ( my ($id_domain, $name) = $sth->fetchrow ) {
+        push @clones,($self->search_domain($name));
+    }
+    $sth->finish;
+
     return @clones;
 
 }
@@ -1040,6 +1102,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
         "SELECT requests.id, command, args, requests.date_changed, requests.status"
             ." ,requests.error, id_domain ,domains.name as domain"
             ." ,domains.alias as domain_alias"
+            ." ,requests.output "
         ." FROM requests left join domains "
         ."  ON requests.id_domain = domains.id"
         ." WHERE "
@@ -1050,9 +1113,9 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
     $sth->execute($time_recent);
     my @reqs;
     my ($id_request, $command, $j_args, $date_changed, $status
-        , $error, $id_domain, $domain, $alias);
+        , $error, $id_domain, $domain, $alias, $output);
     $sth->bind_columns(\($id_request, $command, $j_args, $date_changed, $status
-        , $error, $id_domain, $domain, $alias));
+        , $error, $id_domain, $domain, $alias, $output));
 
     while ( $sth->fetch) {
         my $epoch_date_changed = time;
@@ -1076,6 +1139,8 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'list_network_interfaces'
                 || $command eq 'list_isos'
                 || $command eq 'manage_pools'
+                || $command eq 'list_storage_pools'
+                || $command eq 'list_cpu_models'
                 ;
         next if ( $command eq 'force_shutdown'
                 || $command eq 'force_reboot'
@@ -1105,6 +1170,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
             ,date => $date_changed
             ,message => Encode::decode_utf8($message)
             ,error => Encode::decode_utf8($error)
+            ,output => Encode::decode_utf8($output)
         };
     }
     $sth->finish;
@@ -1200,20 +1266,21 @@ sub list_bases_anonymous {
     my $self = shift;
     my $ip = shift or confess "Missing remote IP";
 
-    my $net = Ravada::Network->new(address => $ip);
+    my $net = Ravada::Route->new(address => $ip);
 
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id, name, id_base, is_public, file_screenshot "
+        "SELECT id, alias, name, id_base, is_public, file_screenshot "
         ."FROM domains where is_base=1 "
         ."AND is_public=1");
     $sth->execute();
-    my ($id, $name, $id_base, $is_public, $screenshot);
-    $sth->bind_columns(\($id, $name, $id_base, $is_public, $screenshot));
+    my ($id, $alias, $name, $id_base, $is_public, $screenshot);
+    $sth->bind_columns(\($id, $alias, $name, $id_base, $is_public, $screenshot));
 
     my @bases;
     while ( $sth->fetch) {
         next if !$net->allowed_anonymous($id);
         my %base = ( id => $id, name => Encode::decode_utf8($name)
+            , alias => Encode::decode_utf8($alias or $name)
             , is_public => ($is_public or 0)
             , screenshot => ($screenshot or '')
             , is_active => 0
@@ -1221,8 +1288,9 @@ sub list_bases_anonymous {
             , name_clone => undef
             , is_locked => undef
             , can_hibernate => 0
+
         );
-        $base{screenshot} =~ s{^/var/www}{};
+        $base{list_clones} = [];
         lock_hash(%base);
         push @bases, (\%base);
     }
@@ -1479,6 +1547,19 @@ sub _settings_by_id($self) {
     return $orig_settings;
 }
 
+sub _settings_by_parent($self,$parent) {
+    my $data = $self->_setting_data($parent);
+    my $sth = $self->_dbh->prepare("SELECT name,value FROM settings "
+        ." WHERE id_parent = ? ");
+    $sth->execute($data->{id});
+    my $ret;
+    while (my ($name, $value) = $sth->fetchrow) {
+        $value = '' if !defined $value;
+        $ret->{$name} = $value;
+    }
+    return $ret;
+}
+
 =head2 feature
 
 Returns if a feature is available
@@ -1519,9 +1600,10 @@ sub update_settings_global($self, $arg, $user, $reload, $orig_settings = $self->
         confess Dumper([$field,$arg->{$field}]) if !ref($arg->{$field});
         if ( scalar(keys %{$arg->{$field}})>2 ) {
             confess if !keys %{$arg->{$field}};
-            $self->update_settings_global($arg->{$field}, $user, $reload, $orig_settings);
+            my $field2 = dclone($arg->{$field});
+            $self->update_settings_global($field2, $user, $reload, $orig_settings);
         }
-        confess "Error: invalid field $field" if $field !~ /^\w+$/;
+        confess "Error: invalid field $field" if $field !~ /^\w[\w\-]+$/;
         my ( $value, $id )
                    = ($arg->{$field}->{value}
                     , $arg->{$field}->{id}
@@ -1577,7 +1659,6 @@ Update the host device information, then it requests a list of the current avail
 sub update_host_device($self, $args) {
     my $id = delete $args->{id} or die "Error: missing id ".Dumper($args);
     Ravada::Utils::check_sql_valid_params(keys %$args);
-    $args->{devices} = undef;
     my $query = "UPDATE host_devices SET ".join(" , ", map { "$_=?" } sort keys %$args);
     $query .= " WHERE id=?";
     my $sth = $self->_dbh->prepare($query);
@@ -1680,6 +1761,63 @@ sub list_storage_pools($self, $uid, $id_vm, $active=undef) {
     return _filter_active($pools, $active);
 }
 
+=head2 list_networks
+
+List the virtual networks for a Virtual Machine Manager
+
+Arguments: id vm , id user
+
+Returns: list ref of networks
+
+=cut
+
+sub list_networks($self, $id_vm ,$id_user) {
+    my $query = "SELECT * FROM virtual_networks "
+        ." WHERE id_vm=?";
+
+    my $user = Ravada::Auth::SQL->search_by_id($id_user);
+    my $owned = 0;
+    unless ($user->is_admin || $user->can_manage_all_networks) {
+        $query .= " AND ( id_owner=? or is_public=1) ";
+        $owned = 1;
+    }
+    $query .= " ORDER BY name";
+    my $sth = $CONNECTOR->dbh->prepare($query);
+    if ($owned) {
+        $sth->execute($id_vm, $id_user);
+    } else {
+        $sth->execute($id_vm);
+    }
+    my @networks;
+    my %owner;
+    while ( my $row = $sth->fetchrow_hashref ) {
+        $self->_search_user($row->{id_owner},\%owner);
+        $row->{_owner} = $owner{$row->{id_owner}};
+        $row->{_can_change}=0;
+
+        $row->{_can_change}=1
+        if $user->is_admin || $user->can_manage_all_networks
+        || ($user->can_create_networks && $user->id == $row->{id_owner});
+
+        push @networks,($row);
+    }
+    return \@networks;
+}
+
+sub _search_user($self,$id, $users) {
+    return if $users->{$id};
+
+    my $sth = $self->_dbh->prepare(
+        "SELECT * FROM users WHERE id=?"
+    );
+    $sth->execute($id);
+    my $row = $sth->fetchrow_hashref();
+    for my $field (keys %$row) {
+        delete $row->{$field} if $field =~ /passw/;
+    }
+    $users->{$id}=$row;
+}
+
 sub _filter_active($pools, $active) {
     return $pools if !defined $active;
 
@@ -1690,6 +1828,187 @@ sub _filter_active($pools, $active) {
     }
     return \@pools2;
 
+}
+
+=head2 list_users_share
+
+Returns a list of users to share
+
+=cut
+
+sub list_users_share($self, $name=undef,@skip) {
+    my $users = $self->list_users();
+    my @found = @$users;
+    if ($name) {
+        @found = grep { $_->{name} =~ /$name/ } @$users;
+    }
+    if (@skip) {
+        my %skip = map { $_->id => 1} @skip;
+        my @pre=@found;
+        @found = ();
+        for my $user (@pre) {
+            next if $skip{$user->{id}};
+            push @found,($user);
+        }
+    }
+    return \@found;
+}
+
+=head2 upload_users
+
+Upload a list of users to the database
+
+=head3 Arguments
+
+=over
+
+=item * string with users and passwords in each line
+
+=item * type: it can be SQL, LDAP or SSO
+
+=item * create: optionally create the entries in LDAP
+
+=back
+
+=cut
+
+sub upload_users($self, $users, $type, $create=0) {
+
+    my @external;
+    if ($type ne 'sql') {
+        @external = ( is_external => 1, external_auth => $type );
+    }
+
+    my ($found,$count) = (0,0);
+    my @error;
+    for my $line (split /\n/,$users) {
+        my ($name, $password) = split(/:/,$line);
+        $found++;
+        my $user = Ravada::Auth::SQL->new(name => $name);
+        if ($user && $user->id) {
+            push @error,("User $name already added");
+            next;
+        }
+        if ($type ne 'sql' && $create) {
+            if ($type eq 'ldap') {
+                if (!$password) {
+                    push @error,("Error: user $name , password empty");
+                    next;
+                }
+                eval { $user = Ravada::Auth::LDAP::add_user($name,$password) };
+                push @error, ($@) if $@;
+            } else {
+                push @error,("$type users can't be created from Ravada");
+            }
+        }
+        if ($type eq 'sql' && !$password) {
+            push @error,("Error: user $name requires password");
+            next;
+        }
+        Ravada::Auth::SQL::add_user(name => $name, password => $password
+            ,@external);
+        $count++;
+    }
+    return ($found, $count, \@error);
+}
+
+=head2 create_bundle
+
+Creates a new bundle
+
+Arguments: name
+
+=cut
+
+sub create_bundle($self,$name) {
+    my $sth = $self->_dbh->prepare(
+        "INSERT INTO bundles (name) values (?)"
+    );
+    $sth->execute($name);
+
+    $sth = $self->_dbh->prepare(
+        "SELECT id FROM bundles WHERE name=?"
+    );
+    $sth->execute($name);
+    my ($id)= $sth->fetchrow;
+    return $id;
+}
+
+=head2 bundle_private_network
+
+Sets the bundle network to private
+
+Arguments : id_bundle, value ( defaults 1 )
+
+=cut
+
+sub bundle_private_network($self, $id_bundle, $value=1){
+    my $sth = $self->_dbh->prepare(
+        "UPDATE bundles set private_network=? WHERE id=?");
+    $sth->execute($value, $id_bundle);
+}
+
+=head2 add_to_bundle
+
+Adds a domain to a bundle
+
+Arguments : id_bundle, id_domain
+
+=cut
+
+sub add_to_bundle ($self, $id_bundle, $id_domain){
+    my $sth = $self->_dbh->prepare(
+        "INSERT INTO domains_bundle (id_bundle, id_domain ) VALUES(?,?)"
+    );
+    $sth->execute($id_bundle, $id_domain);
+
+}
+
+=head2 upload_group_members
+
+Upload a list of users to be added to a group
+
+=head3 Arguments
+
+=over
+
+=item * string with users
+
+=item * exclusive: remove all other users not uploaded here
+
+=back
+
+=cut
+
+sub upload_group_members($self, $group_name, $users, $exclusive=0) {
+    my $group = Ravada::Auth::Group->new(name => $group_name);
+    $group = Ravada::Auth::Group::add_group(name => $group_name) if !$group->id;
+    my ($found,$count) = (0,0);
+    my @error;
+    my @external = ( is_external => 1, external_auth => 'sso');
+    my %members;
+    for my $line (split /\n/,$users) {
+        my ($name) = split(/:/,$line);
+        $found++;
+        my $user = Ravada::Auth::SQL->new(name => $name);
+        if (!$user || !$user->id) {
+            $user = Ravada::Auth::SQL::add_user(name => $name,
+            ,@external);
+        }
+        $members{$name}++;
+        if (!$user->is_member($group_name)) {
+            $user->add_to_group($group_name);
+            $count++;
+        } else {
+            push @error,("User $name already a member");
+        }
+    }
+    if ($exclusive) {
+        for my $name ($group->members) {
+            $group->remove_member($name) unless $members{$name};
+        }
+    }
+    return ($found, $count, \@error);
 }
 
 =head2 version
