@@ -2167,3 +2167,33 @@ msgstr "Monitoring"
 
 msgid "Follow these steps for Spice client setup"
 msgstr "Follow these steps for Spice client setup"
+
+msgid "Share"
+msgstr "Share"
+
+msgid "Host Devices"
+msgstr "Host Devices"
+
+msgid "Mange Host Devices"
+msgstr "Mange Host Devices"
+
+msgid "Auto Compact"
+msgstr "Auto Compact"
+
+msgid "Compact data volumes daily."
+msgstr "Compact data volumes daily."
+
+msgid "Clones will inherit this value unless defined in their options."
+msgstr "Clones will inherit this value unless defined in their options."
+
+msgid "This must be enabled in global settings too."
+msgstr "This must be enabled in global settings too."
+
+msgid "Allow users to clone this base"
+msgstr "Allow users to clone this base"
+
+msgid "Show the base when the user already created a clone"
+msgstr "Show the base when the user already created a clone"
+
+msgid "Show Clones"
+msgstr "Show Clones"
