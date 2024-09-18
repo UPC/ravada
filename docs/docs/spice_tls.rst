@@ -79,3 +79,21 @@ For debug errors you can check connection to YOUR_SERVERNAME and your SPICE port
 ::
 
     openssl s_client -connect YOUR_SERVERNAME:SPICE_PORT -tls1_3
+
+Updating the certificate
+------------------------
+
+When you change the certificate in the host server you must restart the libvirt
+daemon. Ravada will pick the changes in a few minutes, you don't need to restart
+it.
+
+.. warning::
+   Older releases of Ravada keep a cache of the certificate and it will not be refreshed when updated. You have to manually clean the cache from the database. It will then be updated without restarting Ravada.
+
+To clean the certificate cache:
+
+::
+
+    sudo mysql ravada
+    mysql> update vms set tls=NULL;
+
