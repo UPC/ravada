@@ -16,6 +16,7 @@ use File::Path;
 use File::Basename;
 
 use Ravada;
+use Ravada::Front;
 use Ravada::Auth::SQL;
 use Ravada::Auth::LDAP;
 use Ravada::Utils;
@@ -35,6 +36,9 @@ my $FILE_CONFIG_DEFAULT = "/etc/ravada.conf";
 my $FILE_CONFIG;
 
 my $ADD_USER_LDAP;
+my $ADD_USER_FILE;
+my $UPLOAD_GROUP_MEMBERS;
+my $GROUP;
 my $ADD_GROUP_LDAP;
 my $RM_GROUP_LDAP;
 my $ADD_USER_GROUP;
@@ -77,8 +81,12 @@ my $BACKUP;
 my $RESTORE;
 my $TIME_CONNECTION = 10;
 
+my $TYPE;
+my $CREATE;
+
 my $USAGE = "$0 "
         ." [--debug] [--config=$FILE_CONFIG_DEFAULT] [--add-user=name] [--add-user-ldap=name]"
+        ." [--add-user-file=filename]"
         ." [--change-password] [--make-admin=username] [--import-vbox=image_file.vdi]"
         ." [--test-ldap] "
         ." [-X] [start|stop|status]"
@@ -89,7 +97,9 @@ my $USAGE = "$0 "
         ."\n"
         ." --add-user : adds a new db user\n"
         ." --add-user-ldap : adds a new LDAP user\n"
+        ." --add-user-file: adds new users from a file\n"
         ." --remove-user : removes a db user\n"
+        ." --upload-group-members: adds new members to a group\n"
         ." --add-group-ldap : creates a new LDAP group\n"
         ." --remove-group-ldap : removes a LDAP group\n"
         ." --add-user-group : adds user to a LDAP group\n"
@@ -125,6 +135,10 @@ my $USAGE = "$0 "
         ." --log: saves STDOUT and STDERR app traces to the specified filename\n"
         ." --list-unused-volumes\n"
         ." --show-volume\n"
+        ."Create users modifiers\n"
+        ." --type : plain, ldap or sso. Defaults to plain\n"
+        ." --create : only valid for LDAP users, creates the entries.\n"
+        ." --group: add user as member of this group.\n"
         ."\n"
     ;
 
@@ -153,9 +167,12 @@ GetOptions (       help => \$help
       ,'remove-admin=s' => \$REMOVE_ADMIN_USER
       ,'change-password'=> \$CHANGE_PASSWORD
       ,'add-user-ldap=s'=> \$ADD_USER_LDAP
+      ,'add-user-file=s'=> \$ADD_USER_FILE
      ,'add-group-ldap=s'=> \$ADD_GROUP_LDAP
   ,'remove-group-ldap=s'=> \$RM_GROUP_LDAP
      ,'add-user-group=s'=> \$ADD_USER_GROUP
+  ,'upload-group-members=s'=> \$UPLOAD_GROUP_MEMBERS
+                ,'group=s' => \$GROUP
 
       ,'import-domain=s' => \$IMPORT_DOMAIN
       ,'import-vbox=s' => \$IMPORT_VBOX
@@ -177,6 +194,8 @@ GetOptions (       help => \$help
         ,"purge-nodes"      => \$PURGE_NODES
 
         ,"time-connection=s" => \$TIME_CONNECTION
+        ,"type=s" => \$TYPE
+        ,"create" => \$CREATE
 ) or exit;
 
 $START = 1 if $DEBUG || $FILE_CONFIG || $NOFORK;
@@ -261,9 +280,12 @@ sub do_start {
 
         if ( time - $t_refresh > 60 ) {
             Ravada::Request->cleanup();
-            Ravada::Request->refresh_vms()      if rand(5)<3;
-            Ravada::Request->enforce_limits()   if rand(5)<2;
-            Ravada::Request->manage_pools()     if rand(5)<2;
+            next if rand(5)>2;
+
+            Ravada::Request->refresh_vms();
+            Ravada::Request->enforce_limits();
+            Ravada::Request->manage_pools();
+
             $t_refresh = time;
         }
         sleep 1 if time - $t0 <1;
@@ -315,6 +337,8 @@ sub start {
         autostart_machines($ravada);
         Ravada::Request->update_iso_urls(uid =>Ravada::Utils::user_daemon->id);
         Ravada::Request->refresh_storage();
+        Ravada::Request->list_host_devices(uid =>Ravada::Utils::user_daemon->id);
+
     }
     clean_old_requests();
     for (;;) {
@@ -339,9 +363,30 @@ sub add_user {
     $is_admin = 1 if $is_admin_q =~ /y/i;
 
 
-    Ravada::Auth::SQL::add_user(      name => $login
+    my $user = Ravada::Auth::SQL::add_user(      name => $login
                                 , password => $password
                                 , is_admin => $is_admin);
+    $user->add_to_group($GROUP) if $GROUP;
+}
+
+sub add_user_file($ADD_USER_FILE) {
+    my $ravada = Ravada::Front->new();
+    die "Error: File $ADD_USER_FILE does not exist\n"
+    if !-e $ADD_USER_FILE;
+
+    open my $in,"<",$ADD_USER_FILE or die "$! $ADD_USER_FILE\n";
+    my $users = join("",<$in>);
+    close $in;
+
+    my ($found, $count, $error)=$ravada->upload_users($users, ($TYPE or 'sql'), $CREATE);
+
+    print "$found found, $count added.\n";
+    if (scalar (@$error)) {
+        print "Errors:\n";
+        for (sort @$error) {
+            print "  - $_\n";
+        }
+    }
 }
 
 sub add_user_ldap {
@@ -1127,6 +1172,68 @@ sub show_volume($rvd_back) {
     }
 }
 
+sub upload_group_members_file($file) {
+    if (!$GROUP) {
+        ($GROUP) = $file =~ m{.*/(.*)\.};
+        ($GROUP) = $file =~ m{(.*)\.} unless $GROUP;
+
+        die "Error: I can't find a group name from $file\n" unless $GROUP;
+    }
+    my $ravada = Ravada::Front->new();
+
+    if (my ($user,$path)= $file =~ /^~(.*)\/(.*)/) {
+        $user = 'root' if !$user;
+        my @data = getpwnam($user);
+        $file = $data[7]."/".$path;
+    }
+    die "Error: File $file does not exist\n"
+    if !-e $file;
+
+    open my $in,"<",$file or die "$! $file\n";
+    my $users = join("",<$in>);
+    close $in;
+
+    my ($found, $count, $error)=$ravada->upload_group_members($GROUP,$users);
+
+    print "Group $GROUP: $found found, $count added.\n" if $VERBOSE;
+    if (scalar (@$error)) {
+        print "Errors:\n" if $VERBOSE;
+        for (sort @$error) {
+            next if !$VERBOSE && /already a member/;
+            print "  - $_\n";
+        }
+    }
+
+}
+
+sub upload_group_members_dir($dir) {
+
+    die "Error: group name will be taken from filename. Do not supply.\n" if $GROUP;
+
+    my $files_found=0;
+
+    opendir my $ls,$dir or die "$! $dir";
+    while ( my $file = readdir $ls ) {
+        next unless $file =~ /\.txt$/;
+        $files_found++;
+        $GROUP=undef;
+        upload_group_members_file("$dir/$file");
+    }
+    closedir $ls;
+
+    die "Error: no files found in '$dir'\n" unless $files_found;
+}
+
+sub upload_group_members($file) {
+    die "Error: '$file' does not exists\n" unless -e $file;
+
+    if ( -d $file ) {
+        upload_group_members_dir($file);
+    } else {
+        upload_group_members_file($file);
+    }
+}
+
 sub DESTROY {
 }
 
@@ -1144,6 +1251,8 @@ if $HIBERNATE_DOMAIN || $SHUTDOWN_DOMAIN;
 
 add_user($ADD_USER)                 if $ADD_USER;
 add_user_ldap($ADD_USER_LDAP)       if $ADD_USER_LDAP;
+add_user_file($ADD_USER_FILE)       if $ADD_USER_FILE;
+upload_group_members($UPLOAD_GROUP_MEMBERS) if $UPLOAD_GROUP_MEMBERS;
 add_group_ldap($ADD_GROUP_LDAP)     if $ADD_GROUP_LDAP;
 remove_group_ldap($RM_GROUP_LDAP)   if $RM_GROUP_LDAP;
 add_user_group($rvd_back, $ADD_USER_GROUP)     if $ADD_USER_GROUP;

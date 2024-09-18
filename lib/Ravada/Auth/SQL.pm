@@ -141,7 +141,7 @@ sub add_user {
             ." VALUES(?,?,?,?,?,?)");
     };
     confess $@ if $@;
-    if ($password) {
+    if ($password && !$external_auth) {
         $password = sha1_hex($password);
     } else {
         $password = '*LK* no pss';
@@ -327,7 +327,7 @@ Sets or gets the external auth value of an user.
 
 sub external_auth($self, $value=undef) {
     if (!defined $value) {
-        return $self->{_data}->{external_auth};
+        return ($self->{_data}->{external_auth} or '');
     }
     my $sth = $$CON->dbh->prepare(
         "UPDATE users set external_auth=? WHERE id=?"
@@ -378,6 +378,7 @@ sub is_operator {
             || $self->can_view_groups()
             || $self->can_manage_groups()
             || $self->can_view_all()
+            || $self->can_create_networks()
     ;
     return 0;
 }
@@ -632,12 +633,33 @@ Removes the user
 =cut
 
 sub remove($self) {
+    return if !$self->id;
+
+    die "Error: user ".$self->name." can not be removed.\n"
+    if $self->id == Ravada::Utils::user_daemon->id;
+
     my $sth = $$CON->dbh->prepare("DELETE FROM grants_user where id_user=?");
     $sth->execute($self->id);
+
+    $self->_remove_networks();
 
     $sth = $$CON->dbh->prepare("DELETE FROM users where id=?");
     $sth->execute($self->id);
     $sth->finish;
+
+}
+
+sub _remove_networks($self) {
+    my $sth = $$CON->dbh->prepare("SELECT id,id_vm,name FROM virtual_networks WHERE id_owner=?");
+    $sth->execute($self->id);
+    while (my ($id, $id_vm, $name) = $sth->fetchrow) {
+        Ravada::Request->remove_network(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_vm => $id_vm
+            ,id => $id
+            ,name => $name
+        );
+    }
 }
 
 =head2 can_do
@@ -682,10 +704,16 @@ sub can_do_domain($self, $grant, $domain) {
     my %valid_grant = map { $_ => 1 } qw(change_settings shutdown reboot rename expose_ports);
     confess "Invalid grant here '$grant'"   if !$valid_grant{$grant};
 
+    return 1 if ( $grant eq 'shutdown' || $grant eq 'reboot' )
+    && $self->can_shutdown_machine($domain);
+
     return 0 if !$self->can_do($grant) && !$self->_domain_id_base($domain);
 
     return 1 if $self->can_do("${grant}_all");
     return 1 if $self->_domain_id_owner($domain) == $self->id && $self->can_do($grant);
+
+    return 1 if $grant eq 'change_settings'
+    && $self->_machine_shared($domain);
 
     if ($self->can_do("${grant}_clones") && $self->_domain_id_base($domain)) {
         my $base;
@@ -1050,6 +1078,7 @@ sub can_manage_machine($self, $domain) {
 
     return 1 if $self->can_clone_all
                 || $self->can_change_settings($domain)
+                || $self->_machine_shared($domain)
                 || $self->can_rename_all
                 || $self->can_remove_all
                 || ($self->can_remove_clone_all && $domain->id_base)
@@ -1082,7 +1111,7 @@ sub can_remove_clones($self, $id_domain=undef) {
     return $self->can_do('remove_clones') if !$id_domain;
 
     my $domain = Ravada::Front::Domain->open($id_domain);
-    confess "ERROR: domain is not a base "  if !$domain->id_base;
+    confess "ERROR: domain ".$domain->name." is not a base "  if !$domain->id_base;
 
     return 1 if $self->can_remove_clone_all();
 
@@ -1143,6 +1172,8 @@ sub can_shutdown_machine($self, $domain) {
 
     return 1 if $self->id == $domain->id_owner;
 
+    return 1 if $self->_machine_shared($domain->id);
+
     if ($domain->id_base && $self->can_shutdown_clone()) {
         my $base = Ravada::Front::Domain->open($domain->id_base);
         return 1 if $base->id_owner == $self->id;
@@ -1150,6 +1181,54 @@ sub can_shutdown_machine($self, $domain) {
 
     return 0;
 }
+
+=head2 can_start_machine
+
+Return true if the user can shutdown this machine
+
+Arguments:
+
+=over
+
+=item * domain
+
+=back
+
+=cut
+
+sub can_start_machine($self, $domain) {
+
+    return 1 if $self->can_view_all();
+
+    $domain = Ravada::Front::Domain->open($domain)   if !ref $domain;
+
+    return 1 if $self->id == $domain->id_owner;
+
+=pod
+    #TODO missing can_start_clones
+    if ($domain->id_base && $self->can_start_clone()) {
+        my $base = Ravada::Front::Domain->open($domain->id_base);
+        return 1 if $base->id_owner == $self->id;
+    }
+=cut
+
+    return 1 if $self->_machine_shared($domain->id);
+
+    return 0;
+}
+
+sub _machine_shared($self, $id_domain) {
+    $id_domain = $id_domain->id if ref($id_domain);
+    my $sth = $$CON->dbh->prepare(
+        "SELECT id FROM domain_share "
+        ." WHERE id_domain=? AND id_user=?"
+    );
+    $sth->execute($id_domain, $self->id);
+    my ($id) = $sth->fetchrow;
+    return 1 if $id;
+    return 0;
+}
+
 
 =head2 grants
 
@@ -1213,6 +1292,26 @@ sub groups($self) {
 
 }
 
+=head2 groups_local
+
+Returns a list of the local groups this user belogs to
+
+=cut
+
+sub groups_local($self) {
+    my $sth = $$CON->dbh->prepare("SELECT g.name FROM groups_local g,users_group ug "
+        ." WHERE g.id = ug.id_group "
+        ."   AND ug.id_user = ?"
+        ." ORDER BY g.name "
+    );
+    $sth->execute($self->id);
+    my @groups;
+    while (my ($name) = $sth->fetchrow) {
+        push @groups,($name);
+    }
+    return @groups;
+}
+
 =head2 disk_used
 
 Returns the amount of disk space used by this user in MB
@@ -1234,6 +1333,101 @@ sub disk_used($self) {
     }
     return $used;
 }
+
+=head2 add_to_group
+
+Adds the user to a group or list of groups
+
+Arguments: list of group names
+
+=cut
+
+sub add_to_group($self, @group) {
+    my $sth = $$CON->dbh->prepare(
+        "INSERT INTO users_group (id_group, id_user) "
+        ." VALUES (?,?)"
+    );
+    for my $group (@group) {
+        if (!ref($group)) {
+            if ($group =~ /^\d+$/) {
+                $group = Ravada::Auth::Group->open($group);
+            } else {
+                $group = Ravada::Auth::Group->new(name => $group);
+            }
+        }
+        confess "Error: unknown group ".$group->name
+        if !$group->id;
+
+        $sth->execute($group->id,$self->id);
+    }
+}
+
+=head2 remove_from_group
+
+Removes the user from a group or list of groups
+
+Arguments: list of group names
+
+=cut
+
+
+sub remove_from_group($self, @group) {
+
+    my $sth = $$CON->dbh->prepare(
+        "DELETE FROM users_group WHERE id_group=? AND id_user=? "
+    );
+    for my $group (@group) {
+        if (!ref($group)) {
+            if ($group =~ /^\d+$/) {
+                $sth->execute($group,$self->id);
+                next;
+            }
+            $group = Ravada::Auth::Group->new(name => $group);
+        }
+        $sth->execute($group->id,$self->id);
+    }
+}
+
+
+sub _load_network($network) {
+    confess "Error: undefined network"
+    if !defined $network;
+
+    my $sth = $$CON->dbh->prepare(
+        "SELECT * FROM virtual_networks where name=?"
+    );
+    $sth->execute($network);
+    my $row = $sth->fetchrow_hashref;
+
+    die "Error: network '$network' not found"
+    if !$row->{id};
+
+    lock_hash(%$row);
+    return $row;
+}
+
+=head2  can_change_hardware_network
+
+Returns true if the user can change the network in a virtual machine,
+false elsewhere
+
+=cut
+
+sub can_change_hardware_network($user, $domain, $data) {
+    return 1 if $user->is_admin;
+    return 1 if $user->can_manage_all_networks()
+                && $domain->id_owner == $user->id;
+
+    confess "Error: undefined network ".Dumper($data)
+    if !exists $data->{network} || !defined $data->{network};
+
+    my $net = _load_network($data->{network});
+
+    return 1 if $user->id == $domain->id_owner
+        && ( $net->{is_public} || $user->id == $net->{id_owner});
+    return 0;
+}
+
 
 sub AUTOLOAD($self, $domain=undef) {
 

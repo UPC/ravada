@@ -13,7 +13,7 @@ no warnings "experimental::signatures";
 use feature qw(signatures);
 
 use_ok('Ravada');
-use_ok('Ravada::Network');
+use_ok('Ravada::Route');
 
 use lib 't/lib';
 use Test::Ravada;
@@ -22,7 +22,9 @@ init();
 
 my $IP = "10.0.0.1";
 my $NETWORK = $IP;
-$NETWORK =~ s{(.*\.).*}{$1.0/24};
+$NETWORK =~ s{(.*)\..*}{$1.0/24};
+
+$Ravada::Domain::TTL_REMOVE_VOLATILE = 1;
 
 ################################################################################
 
@@ -143,11 +145,14 @@ sub test_volatile {
         is($user->is_temporary,1);
         $user_id = $user->id;
 
-        my $clone = $base->clone(
-            user => $user
+        my $req = Ravada::Request->clone(
+            uid => $user->id
+            , id_domain => $base->id
             , name => $name
+            ,remote_ip => '192.0.9.1/32'
         );
-        $clone->start($user)                if !$clone->is_active;
+        wait_request(debug => 0);
+        my $clone = $vm->search_domain($name);
         is($clone->is_active,1,"[$vm_name] Expecting clone active");
 
         like($clone->spice_password,qr{..+},"[$vm_name] ".$clone->name)
@@ -164,6 +169,7 @@ sub test_volatile {
         my @volumes = $clone->list_volumes();
 
         is($clone->is_active, 1);
+        sleep 1;
         eval { $clone->shutdown_now(user_admin)    if $clone->is_active};
         is(''.$@,'',"[$vm_name] Expecting no error after shutdown");
 
@@ -279,14 +285,31 @@ sub test_volatile_auto_kvm {
         sleep 1;
     }
     ok(!$domain2,"[$vm_name] Expecting domain $name removed after shutdown");
+    wait_request(debug => 0);
 
-    rvd_back->_clean_volatile_machines();
-
-    rvd_back->_refresh_volatile_domains();
     my $domain_f;
-    $domain_f = rvd_front->search_domain($name) if rvd_front->domain_exists($name);
-    ok(!$domain_f,"[$vm_name] Expecting domain $name removed after shutdown "
-        .Dumper($domain_f)) or exit;
+    for my $try ( 1 .. 3 ) {
+
+        rvd_back->_clean_volatile_machines();
+        rvd_back->_refresh_volatile_domains();
+
+        $domain_f = rvd_front->search_domain($name) if rvd_front->domain_exists($name);
+        last if !$domain_f;
+        warn $try;
+
+        my $domain_real;
+        eval { $domain_real = Ravada::Domain->open($domain_f->id) };
+
+        warn Dumper([ $domain_real->is_active
+                ,$domain_real->is_locked
+                ,$domain_real->_volatile_active
+            ]) if $domain_real;
+
+        sleep 1;
+
+        wait_request(debug => 1);
+    }
+    ok(!$domain_f,"[$vm_name] Expecting domain $name removed after shutdown ") or exit;
 
     my $domain_b = rvd_back->search_domain($name);
     ok(!$domain_b,"[$vm_name] Expecting domain removed after shutdown");

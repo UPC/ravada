@@ -36,10 +36,14 @@ sub BUILD($self, $args) {
     my $day_of_week = delete $args->{day_of_week};
 
     my %entry;
-    my @fields_entry = qw ( bases ldap_groups users time_start time_end );
+    my @fields_entry = qw ( bases ldap_groups local_groups users time_start time_end options);
     for (@fields_entry) {
         $entry{$_} = delete $args->{$_};
     }
+
+    my %fields = map { $_ => 1 } keys %$args;
+    delete @fields{'title','id_owner','description','date_created','local_groups','options'};
+    die "Error: unknown arguments ".(join("," , keys %fields)) if keys %fields;
 
     $self->_insert_db(%$args
         , date_start => $date->ymd
@@ -321,7 +325,7 @@ sub _search_user_name($id_user) {
     return $name;
 }
 
-sub user_allowed($user,$id_base) {
+sub user_allowed($user,$id_base, $enable_host_devices=1) {
     my $user_name = $user;
     if ( ref($user) ) {
         $user_name = $user->name;
@@ -343,7 +347,9 @@ sub user_allowed($user,$id_base) {
         $allowed = 0;
         next unless !scalar($entry->bases_id) || grep { $_ == $id_base } $entry->bases_id;
         # look no further if user is allowed
+
         return 1 if $entry->user_allowed($user_name);
+        return 1 if $entry->options_allowed($id_base, $enable_host_devices);
     }
     if (!$allowed && !ref($user)) {
         my $user0 = Ravada::Auth::SQL->new(name => $user_name);
@@ -386,7 +392,7 @@ sub bookings_range(%args) {
     $date_start = DateTime::Format::DateParse->parse_datetime($date_start) if !ref($date_start);
     $date_start->set( hour => 0, minute => 0, second => 0);
 
-    my $date_end = ( delete $args{date_end} or _today ) ;
+    my $date_end = ( delete $args{date_end} or $date_start->clone) ;
     $date_end = DateTime::Format::DateParse->parse_datetime($date_end) if !ref($date_end);
     $date_end->set( hour => 0, minute => 0, second => 0);
 
@@ -401,7 +407,7 @@ sub bookings_range(%args) {
     my %day_of_week = map { $_ => 1 } split //,$day_of_week;
 
     #todo check date_end > date_start
-    die "Error end must be after start ".$date_start." ".$date_end
+    confess "Error end must be after start ".$date_start." ".$date_end
     if DateTime->compare( $date_start, $date_end) > 0;
 
     my $show_user_allowed = delete $args{show_user_allowed};

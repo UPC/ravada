@@ -6,7 +6,8 @@
     %= include 'bootstrap/navigation'
 <div id="page-wrapper"
                 ng-controller="settings_global"
-                ng-init="init('<%= url_for('ws_subscribe')->to_abs %>')"
+                ng-init="init('<%= url_for('ws_subscribe')->to_abs %>'
+                         ,<%= ($csp_advanced or 0 ) %>)"
 >
     <div class="page-header">
         <div class="card">
@@ -45,8 +46,7 @@
             </div>
         </div>
         <div class="row">
-            <div class="col-md-1"></div>
-            <div class="col-md-2">
+            <div class="col-md-3" align="right">
             <label for="maintenance"><%=l 'Maintenance' %></label>
             </div>
             <div class="col-md-6">
@@ -71,7 +71,7 @@
 
         <div class="row" ng-show="settings.frontend.maintenance.value == 1">
             <div class="col-md-1"></div>
-            <div class="col-md-2">
+            <div class="col-md-2" align="right">
             <label for="maintenance_end"><%=l 'Maintenance End' %></label>
             </div>
             <div class="col-md-4">
@@ -79,6 +79,87 @@
                 type="datetime-local">
             </div>
         </div>
+
+        <div class="row">
+            <div class="col-md-1"></div>
+            <div class="col-md-2" align="right"><%=l 'Widget' %>
+                <a href="https://ravada.readthedocs.io/en/latest/docs/chatwoot.html"><i class="fa fa-info"></i></a>
+            </div>
+            <div class="col-md-6">
+                <input placeholder="/js/custom/widget.js"
+                 type="text" size="40"
+                name="widget" ng-model="settings.frontend.widget.value"/>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-3" align="right">Content Security Policy</div>
+            <div class="col-md-4" ng-show="!csp_advanced" >
+                <input name="csp_all" type="text" ng-model="settings.frontend.content_security_policy.all.value"/><br/>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3"></div>
+            <div class="col-md-5" ng-hide="csp_locked">
+                <input type="checkbox" ng-model="csp_advanced"
+                       name="csp_advanced"/>
+                <label for="csp_advanced"><%=l 'Advanced CSP' %></label>
+            </div>
+        </div>
+        <div ng-show="csp_advanced">
+        % for my $item (sort keys %$csp) {
+        <div class="row">
+            <div class="col-md-1"></div>
+            <div class="col-md-2" align="right"><%= $item %></div>
+            <div class="col-md-4">
+                <input name="csp_<%= $item %>" type="text" ng-model="settings.frontend.content_security_policy['<%= $item %>'].value"/>
+            </div>
+        </div>
+        % }
+        </div>
+
+%=       include "/main/admin_settings_submit"
+
+        <div class="row">
+            <div class="col-md-1"></div>
+            <div class="col-md-2" align="right"><%=l 'Widget' %>
+                <a href="https://ravada.readthedocs.io/en/latest/docs/chatwoot.html"><i class="fa fa-info"></i></a>
+            </div>
+            <div class="col-md-6">
+                <input placeholder="/js/custom/widget.js"
+                 type="text" size="40"
+                name="widget" ng-model="settings.frontend.widget.value"/>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-3" align="right">Content Security Policy</div>
+            <div class="col-md-4" ng-show="!csp_advanced" >
+                <input name="csp_all" type="text" ng-model="settings.frontend.content_security_policy.all.value"/><br/>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3"></div>
+            <div class="col-md-5" ng-hide="csp_locked">
+                <input type="checkbox" ng-model="csp_advanced"
+                       name="csp_advanced"/>
+                <label for="csp_advanced"><%=l 'Advanced CSP' %></label>
+            </div>
+        </div>
+        <div ng-show="csp_advanced">
+        % for my $item (sort keys %$csp) {
+        <div class="row">
+            <div class="col-md-1"></div>
+            <div class="col-md-2" align="right"><%= $item %></div>
+            <div class="col-md-4">
+                <input name="csp_<%= $item %>" type="text" ng-model="settings.frontend.content_security_policy['<%= $item %>'].value"/>
+            </div>
+        </div>
+        % }
+        </div>
+
+%=       include "/main/admin_settings_submit"
+
         <div class="row">
             <div class="col-md-1"></div>
             <div class="col-md-6">
@@ -144,7 +225,7 @@
                 >
             </div>
             <div class="col-md-6">
-                <%=l 'Bookings require LDAP authentication.' %> <a href="https://ravada.readthedocs.io/en/latest/docs/auth_ldap.html"><i class="fa fa-info"></i></a>
+                <%=l 'Enables schedule server bookings for exclusive use' %>
             </div>
         </div>
 
@@ -211,21 +292,7 @@
             </div>
         </div>
 
-        <hr>
-
-        <div class="row">
-            <div class="col-md-6">
-                <button ng-click="update_settings()"
-                    ng-disabled="!formSettings.$valid || formSettings.$pristine">
-                   <%=l 'Save' %>
-                </button>
-                <button ng-click="load_settings()"
-                        ng-disabled="formSettings.$pristine">
-                  <%=l 'Cancel' %>
-                </button>
-            </div>
-        </div>
-
+%=      include "/main/admin_settings_submit"
 
         </form>
     </div>

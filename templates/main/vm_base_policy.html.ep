@@ -1,8 +1,8 @@
 <div class="row" ng-show="showmachine.is_base && nodes.length && balance_options.length">
-    <div class="col-md-1">
+    <div class="col-md-2" align="right">
             <label><b><%=l 'Balance' %></b></label>
     </div>
-    <div class="col-md-11">
+    <div class="col-md-10">
 
         <select ng-model="new_balance_policy"
             ng-change="set_value('balance_policy',new_balance_policy)"

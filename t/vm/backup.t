@@ -54,6 +54,35 @@ sub _remove_iso($domain) {
     wait_request(debug => 0);
 }
 
+sub backup_different_id_vm($vm) {
+    my $user = create_user();
+    user_admin->make_admin($user->id);
+    my $domain = create_domain_v2(vm => $vm, swap => 1, data => 1
+        ,user => $user
+    );
+    _remove_iso($domain);
+
+    $domain->backup();
+    my ($backup) = $domain->list_backups();
+
+    $domain->remove(user_admin);
+
+    my $vm_type = $vm->type;
+    my $id_vm_old = $vm->id;
+    $vm->remove();
+
+    my $vm2 = rvd_back->search_vm($vm_type);
+
+    my $file = $backup->{file};
+
+    rvd_back->restore_backup($file,0);
+
+    my $sth = connector->dbh->prepare("UPDATE domains set id_vm=? "
+        ." WHERE id_vm=?"
+    );
+    $sth->execute($vm2->id, $id_vm_old);
+}
+
 sub backup($vm,$remove_user=undef) {
     my $user = create_user();
     user_admin->make_admin($user->id);
@@ -259,10 +288,17 @@ sub backup_clone_and_base($vm) {
     is_deeply([$base_restored->list_files_base(1)], \@vols_base)
         or die Dumper([$base_restored->list_files_base()], \@vols_base);
 
+    is($base_restored->base_in_vm($vm->id),1);
+
     my $clone_restored = rvd_back->search_domain($clone_name);
     ok($clone_restored);
     is($clone_restored->id, $clone_id);
     is($clone_restored->_data('id_base'), $base_id);
+
+    Ravada::Request->start_domain( uid => user_admin->id
+        ,id_domain => $clone_restored->id
+    );
+    wait_request();
 
     $clone_restored->remove(user_admin) if $clone_restored;
     $base_restored->remove(user_admin)  if $base_restored;
@@ -341,6 +377,9 @@ for my $vm_name ( vm_names() ) {
         backup($vm,"remove_user");
 
         backup_clash_user($vm);
+
+        backup_different_id_vm($vm);
+
     }
 }
 

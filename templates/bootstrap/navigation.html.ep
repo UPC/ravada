@@ -5,7 +5,11 @@ navbar-custom \
 % }
 navbar-dark bg-dark fixed-top navbar-expand-lg navbar-inverse">
             <!-- Brand and toggle get grouped for better mobile display -->
-            <a class="navbar-brand" href="/index.html">RAVADA VDI</a>
+%           if ($_user && $_anonymous ) {
+                <a class="navbar-brand" href="/anonymous">Ravada VDI</a>
+%           } else {
+                <a class="navbar-brand" href="/index.html">Ravada VDI</a>
+%           }
             <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -20,7 +24,7 @@ navbar-dark bg-dark fixed-top navbar-expand-lg navbar-inverse">
                         <a class="nav-link" href="/"><i class="fa fa-fw fa-desktop"></i><%=l 'Available Machines' %></a>
                     </li>
 % }
-% if ($bookings && defined $_user && $FEATURE->{ldap} ) {
+% if ($bookings && defined $_user) {
     <li class="nav-item dropdown">
         <a class="nav-link" href="/booking/">
             <i class="fa fa-wrench"></i>&nbsp;<%=l 'Schedule' %></a>
@@ -41,8 +45,13 @@ navbar-dark bg-dark fixed-top navbar-expand-lg navbar-inverse">
 % }
 % if ($_user->is_admin) {
                             <a class="dropdown-item" href="/admin/nodes"><i class="fa fa-server" aria-hidden="true"></i>&nbsp;<%=l 'Nodes' %></a>
-                            <a class="dropdown-item" href="/admin/networks"><i class="fa fa-sitemap" aria-hidden="true"></i>&nbsp;<%=l 'Networks' %></a>
+                            <a class="dropdown-item" href="/admin/routes"><i class="fa fa-globe" aria-hidden="true"></i>&nbsp;<%=l 'Routes' %></a>
                             <a class="dropdown-item" href="/admin/storage"><i class="fa fa-hdd" aria-hidden="true"></i>&nbsp;<%=l 'Storage' %></a>
+                            <a class="dropdown-item" href="/admin/hostdev"><i class="fa fa-rocket" aria-hidden="true"></i>&nbsp;<%=l 'Host Devices' %></a>
+% }
+
+% if ($_user->can_create_networks) {
+                            <a class="dropdown-item" href="/admin/networks"><i class="fa fa-sitemap" aria-hidden="true"></i>&nbsp;<%=l 'Networks' %></a>
 % }
                             <a class="dropdown-item" href="/admin/messages"><i class="fa fa-envelope" aria-hidden="true"></i>&nbsp;<%=l 'Messages' %></a>
 % if ($monitoring) {

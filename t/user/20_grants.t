@@ -957,11 +957,11 @@ sub test_view_all($vm) {
     wait_request( check_error => 0, debug => 0);
     for my $req ($req_prepare, $req_remove_base, $req_shutdown) {
         is($req->status,'done');
-        like($req->error,qr'User.* (can.t |not allowed)', $req->command);
+        like($req->error,qr'User.* (can.t |not allowed)', $req->command)
+            or exit;
     }
     for my $req ( $req_start_admin, $req_prepare_admin, $req_start
     ,$req_refresh, $req_refresh_ports) {
-        diag($req->command);
         is($req->status,'done');
         next if $req->command =~ /refresh_machine_ports/i;
         is($req->error,'', $req->command) or exit;
