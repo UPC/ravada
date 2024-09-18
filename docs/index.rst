@@ -110,7 +110,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/replace_server
    docs/report_rrdgraph
    docs/users_upload
-   docs/volume_difference
+   docs/volume_differences
    docs/ROADMAP
 
 .. _feature-docs:
