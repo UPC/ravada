@@ -27,6 +27,7 @@ no warnings "experimental::signatures";
 use feature qw(signatures);
 
 use Ravada::Auth;
+use Ravada::Auth::OpenID;
 use Ravada::Booking;
 use Ravada::Front;
 use Ravada::Front::Domain;
@@ -187,6 +188,7 @@ hook before_routes => sub {
 
   $USER = undef;
 
+
   $c->stash(version => $RAVADA->version);
   my $url = $c->req->url->to_abs->path;
   my $host = $c->req->url->to_abs->host;
@@ -229,6 +231,8 @@ hook before_routes => sub {
        ;
 
     return if $url =~ m{^/(anonymous_logout|login|logout|requirements|robots.txt|favicon.ico|status\.)};
+
+    return if $url =~ m{^/(connect|profile)};
 
     my $bases_anonymous = $RAVADA->list_bases_anonymous(_remote_ip($c));
     return access_denied($c) if $url =~ m{^/anonymous} && !@$bases_anonymous;
@@ -276,6 +280,9 @@ any '/robots.txt' => sub {
 
 any '/' => sub {
     my $c = shift;
+
+my %header;
+
     return quick_start($c);
 };
 
@@ -287,6 +294,50 @@ any '/index.html' => sub {
 any '/login' => sub {
     my $c = shift;
     return login($c);
+};
+
+any '/login_openid' => sub($c) {
+    my %header;
+    for my $name (@{$c->req->headers->names}) {
+        $header{$name} = $c->req->headers->header($name)
+        if $name =~ /OIDC/;
+    }
+
+    my $auth_ok;
+    my $username_oidc = $header{OIDC_CLAIM_preferred_username};
+    if ($username_oidc) {
+        $c->session('logoutURL' => $RAVADA->setting('/frontend/openid/logout_url'));
+        my $oidc_at_hash = $header{OIDC_CLAIM_at_hash};
+        if (!$oidc_at_hash) {
+            warn "Error: no OIDC_CLAIM_at_hash in header ".join(" ",%header);
+            return access_denied($c);
+        }
+        $c->session('oidc_at_hash' => $oidc_at_hash);
+        eval {
+        $auth_ok = Ravada::Auth::OpenID::login_external($username_oidc, \%header);
+        };
+        warn $@ if $@;
+    }
+    my $error = ($@ or '');
+    if (!$username_oidc || !$auth_ok) {
+        if ( $CONFIG_FRONT->{log}->{log} ) {
+            app->log->error("Access denied with openid from "._remote_ip($c));
+            app->log->error("Access denied error: ".($error or 'unknown')._remote_ip($c));
+        }
+        return access_denied($c);
+    }
+    $c->session('logoutURL' => $RAVADA->setting('/frontend/openid/logout_url'));
+    $c->session('OIDC_CLAIM_at_hash' => $header{'OIDC_CLAIM_at_hash'});
+
+    _login_ok($c, $auth_ok);
+};
+
+sub _session_error($c) {
+    $c->render("text" => "Session error, please close the web browser and try again");
+}
+
+any '/login_openid/redirect_uri' => sub($c) {
+    return $c->render("text" => "protected redirect");
 };
 
 any '/test' => sub {
@@ -1799,7 +1850,7 @@ any '/admin/users/upload.#req' => sub($c) {
     my $create = ( $c->req->param('create') or 0);
 
     return $c->render(json => { error => "Unknown type $type" })
-            if $type !~ /^(sql|ldap|sso)/;
+            if $type !~ /^(sql|ldap|sso|openid)/;
 
     my $csv = $c->req->upload('users');
     if($csv->headers->content_type !~ m{text/(csv|plain)}) {
@@ -2859,6 +2910,10 @@ del '/v1/booking_entry/:id/:mode' => sub($c) {
     die $@ if $@;
 
     my $booking = Ravada::Booking->new( id => $entry->_data('id_booking'));
+    my %get_token = (
+        redirect_uri => $c->url_for('connect')->userinfo(undef)->to_abs
+        ,authorize_query => { response_type => 'code' }
+    );
 
     return error_access_denied_json($c)
     unless $booking->_data('id_owner') == $USER->id
@@ -3277,8 +3332,6 @@ sub login($c, $status=200) {
     my $login = $c->param('login');
     my $password = $c->param('password');
     my $ticket = $c->param('ticket');
-    my $url = ($c->param('url') or $c->req->url->to_abs->path);
-    $url = '/' if $url =~ m{^/login};
 
     my @error =();
 
@@ -3301,72 +3354,103 @@ sub login($c, $status=200) {
         }
 
         if ( $auth_ok && !$@) {
-            $c->session('login' => $login);
-            my $expiration = $SESSION_TIMEOUT;
-            $expiration = $SESSION_TIMEOUT_ADMIN    if $auth_ok->is_admin;
-            Ravada::Request->post_login(
-                user => $auth_ok->name
-                , locale => [_detect_languages($c)]
-            );
-
-            $auth_ok = Ravada::Auth::SQL->new(name => $auth_ok->name);
-            if ( $RAVADA->is_in_maintenance() ) {
-                return maintenance($c) unless $auth_ok->is_operator;
-                $auth_ok->send_message('Warning: Server under maintenance. <a href="/admin/settings">Settings</a>');
-            }
-
-            my $machines = $RAVADA->list_machines_user($auth_ok);
-
-            $url = "/machine/clone/". $machines->[0]->{id}.".html" if scalar(@$machines) == 1 && !($auth_ok->is_admin);
-            my $auto_view = 1;
-
-            $c->session(auto_view => $auto_view, expiration => $expiration);
-            app->log->info("Access granted to $login from "._remote_ip($c)) if $CONFIG_FRONT->{log}->{log};
-            return $c->redirect_to($url);
+            _login_ok($c, $auth_ok);
+            return;
         } elsif (defined $c->param('submit') || $login || $password) {
             app->log->error("Access denied to $login from "._remote_ip($c)) if $CONFIG_FRONT->{log}->{log};
             push @error,("Access denied");
         }
     }
 
-    my @css_snippets = ["\t.intro {\n\t\tbackground:"
-                    ." url($CONFIG_FRONT->{login_bg_file})"
-                    ." no-repeat bottom center scroll;\n\t}"];
 
     sleep 5 if scalar(@error) && !$ENV{mode} && !$ENV{mode} eq 'development';
-    my @error_status = ( status => $status );
-    @error_status = ( status => 403) if @error;
+    $status = 403 if @error;
 
+    $c->stash('login' => $login);
+    _render_login($c, \@error, $status);
+}
+
+sub _render_login($c, $error, $status=undef) {
+
+    $error = [$error] if !ref($error);
+    $status = 403 if @$error && !$status;
+
+    my @status;
+    @status = ( status => $status ) if $status;
+
+    my $css_snippets = ["\t.intro {\n\t\tbackground:"
+                    ." url($CONFIG_FRONT->{login_bg_file})"
+                    ." no-repeat bottom center scroll;\n\t}"];
     $c->render(
                     template => ($CONFIG_FRONT->{login_custom} or 'main/start')
                         ,css => ['/css/main.css']
-                        ,csssnippets => @css_snippets
-                        ,js => ['/js/main.js?v='.$RAVADA->version]
+                        ,csssnippets => $css_snippets
+                        ,js => [
+                            '/js/main.js?v='.$RAVADA->version
+                            ,'/js/ravada.js?v='.$RAVADA->version
+                        ]
                         ,navbar_custom => 1
-                      ,login => $login
-                      ,error => \@error
+                      ,error => $error
                       ,sso_available => ( $Ravada::Auth::SSO_OK && Ravada::Auth::SSO::init())
+                      ,openid_available => $RAVADA->setting('/frontend/openid/enabled')
                       ,login_header => $CONFIG_FRONT->{login_header}
                       ,login_message => $CONFIG_FRONT->{login_message}
                       ,guide => $CONFIG_FRONT->{guide}
                       ,login_hash => ''
-                      ,@error_status
+                      ,@status
     );
+}
+
+sub _login_ok($c, $auth_ok) {
+
+    my $login = $auth_ok->name;
+
+    my $url = ($c->param('url') or $c->req->url->to_abs->path);
+    $url = '/' if $url =~ m{^/login};
+
+    $c->session('login' => $login);
+    my $expiration = $SESSION_TIMEOUT;
+    $expiration = $SESSION_TIMEOUT_ADMIN    if $auth_ok->is_admin;
+    Ravada::Request->post_login(
+        user => $auth_ok->name
+        , locale => [_detect_languages($c)]
+    );
+
+    $auth_ok = Ravada::Auth::SQL->new(name => $auth_ok->name);
+    if ( $RAVADA->is_in_maintenance() ) {
+        return maintenance($c) unless $auth_ok->is_operator;
+        $auth_ok->send_message('Warning: Server under maintenance. <a href="/admin/settings">Settings</a>');
+    }
+
+    my $machines = $RAVADA->list_machines_user($auth_ok);
+
+    $url = "/machine/clone/". $machines->[0]->{id}.".html" if scalar(@$machines) == 1 && !($auth_ok->is_admin);
+    my $auto_view = 1;
+
+    $c->session(auto_view => $auto_view, expiration => $expiration);
+    app->log->info("Access granted to $login from "._remote_ip($c)) if $CONFIG_FRONT->{log}->{log};
+
+    return $c->redirect_to($url);
 }
 
 sub logout {
     my $c = shift;
 
     $USER = undef;
-    $c->session(expires => 0);
+    $c->session(expires => 1);
     $c->session(login => undef);
     sleep 1;
-    $c->session(expires => 0);
+    $c->session(expires => 1);
     $c->session(login => undef);
     $c->session(ticket => undef);
 
     my $logout_url = $c->session('logoutURL');
     $c->session(logoutURL => undef);
+
+    my $c_name= 'mod_auth_openidc_session';
+    my $cookie_oidc = $c->req->headers->cookie($c_name);
+
+    $c->cookie($c_name => '', {expires => 1}) if $cookie_oidc;
 
     return $logout_url;
 }

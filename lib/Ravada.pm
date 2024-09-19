@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '2.3.0';
+our $VERSION = '2.3.1-beta3';
 
 use utf8;
 
@@ -2686,6 +2686,25 @@ sub _sql_insert_defaults($self){
             ,{
                 id_parent => "/frontend/content_security_policy"
                 ,name => "media-src"
+                ,value => ''
+            }
+            ,{
+                id_parent => $id_frontend
+                ,name => 'auto_create_users'
+                ,value => 1
+            }
+            ,{
+                id_parent => $id_frontend
+                ,name => 'openid'
+            }
+            ,{
+                id_parent => "/frontend/openid"
+                ,name => "enabled"
+                ,value => 0
+            }
+            ,{
+                id_parent => "/frontend/openid"
+                ,name => "logout_url"
                 ,value => ''
             }
             ,{
@@ -6448,7 +6467,9 @@ sub _cmd_cleanup($self, $request) {
         )) {
             $self->_clean_requests($cmd, $request,'done');
     }
+
 }
+
 sub _verify_connection($self, $domain) {
     for ( 1 .. 60 ) {
         my $status = $domain->client_status(1);
