@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2024-04-26 15:07+0000\n"
+"PO-Revision-Date: 2024-09-19 17:40+0000\n"
 "Last-Translator: Oğuz Ersen <oguz@ersen.moe>\n"
 "Language-Team: Turkish <https://hosted.weblate.org/projects/ravada/"
 "translation/tr/>\n"
@@ -16,7 +16,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n > 1;\n"
-"X-Generator: Weblate 5.5.1\n"
+"X-Generator: Weblate 5.8-dev\n"
 
 msgid "Ravada broker"
 msgstr "Ravada Aracı"
@@ -1412,7 +1412,7 @@ msgid "No machines found"
 msgstr "Makine bulunamadı"
 
 msgid "Warning: anonymous machines won't show up unless you set them public."
-msgstr "Uyarı: Anonim cihazları herkese açık yapmazsanız görünmezler."
+msgstr "Uyarı: Anonim makineler herkese açık yapmazsanız görünmezler."
 
 msgid "New network"
 msgstr "Yeni ağ"
@@ -1703,7 +1703,7 @@ msgid "Clones created from this machine will be removed on shutdown."
 msgstr "Bu makineden oluşturulan klonlar kapanma sonrası kaldırılacak."
 
 msgid "Virtual Machine will start on host start."
-msgstr "Sanal cihaz ana makine başladığında açılacak."
+msgstr "Sanal makine ana makine başladığında açılacak."
 
 msgid "Shutdown disconnected"
 msgstr "Bağlı olmayanları kapat"
@@ -1761,7 +1761,7 @@ msgid "Warning"
 msgstr "Uyarı"
 
 msgid "Changing the base of a virtual machine is potentially dangerous and can't be undone."
-msgstr "Bir sanal cihazın tabanını taşımak tehlikelidir ve geri alınamaz."
+msgstr "Bir sanal makinenin tabanını taşımak tehlikelidir ve geri alınamaz."
 
 msgid "No, cancel"
 msgstr "Hayır, iptal et"
@@ -1773,13 +1773,13 @@ msgid "Rebase"
 msgstr "Taşı"
 
 msgid "Remove the base prepared from this machine"
-msgstr "Bu cihazda hazırlanan tabanı sil"
+msgstr "Bu makineden hazırlanan tabanı sil"
 
 msgid "Remove Clones"
 msgstr "Klonları sil"
 
 msgid "This virtual machine has clones that are bases and won't be removed"
-msgstr "Bu sanal cihaz tabanlı klonlara sahip ve kaldırılmayacak"
+msgstr "Bu sanal makine tabanlı klonlara sahip ve kaldırılmayacak"
 
 msgid "This machine is hibernated and can't be renamed."
 msgstr "Bu makine uykuda olduğu için yeniden adlandırılamaz."
@@ -1864,7 +1864,9 @@ msgid "added"
 msgstr "eklendi"
 
 msgid "The source machine is not a base. It must be prepared before it can be copied. This process may take some minutes."
-msgstr "Bu kaynak cihaz taban değil. Kopyalama öncesi hazırlığa ihtiyaç duyar. Bu işlem birkaç dakika sürebilir."
+msgstr ""
+"Bu kaynak makine taban değil. Kopyalama öncesi hazırlığa ihtiyaç duyar. Bu "
+"işlem birkaç dakika sürebilir."
 
 msgid "Choose the virtualization type of the Virtual Machine."
 msgstr "Sanal makinenin görüntülenme tipini seçin."
@@ -2065,7 +2067,9 @@ msgid "There are no LDAP groups defined."
 msgstr "LDAP grupları tanımlı değil."
 
 msgid "Only users from these groups will be allowed to execute this machine"
-msgstr "Bu gruplardaki kullanıcılar bu cihazı çalıştırabilir"
+msgstr ""
+"Yalnızca bu gruplardaki kullanıcıların bu makineyi çalıştırmasına izin "
+"verilecek"
 
 msgid "Event properties"
 msgstr "Olay özellikleri"
@@ -2110,7 +2114,7 @@ msgid "remove"
 msgstr "kaldır"
 
 msgid "can change the settings of any virtual machine cloned from one base owned by the user."
-msgstr "Kullanıcıya ait tabanlardan klonlanan sanal cihazları değiştirebilir."
+msgstr "Kullanıcıya ait tabanlardan klonlanan sanal makineleri değiştirebilir."
 
 msgid "Balance"
 msgstr "Denge"
@@ -2167,7 +2171,7 @@ msgid "This feature requires a LDAP server configured."
 msgstr "Bu özellik yapılandırılmış bir LDAP sunucusu gerektirir."
 
 msgid "Source Machine"
-msgstr "Kaynak cihaz"
+msgstr "Kaynak Makine"
 
 msgid "Monitoring"
 msgstr "İzleniyor"
@@ -2186,3 +2190,33 @@ msgstr "Tüm klonları kapat"
 
 msgid "Follow these steps for Spice client setup"
 msgstr "Spice istemci kurulumu için şu adımları izleyin"
+
+msgid "Share"
+msgstr "Paylaş"
+
+msgid "Host Devices"
+msgstr "Ana Makineler"
+
+msgid "Mange Host Devices"
+msgstr "Ana Makineleri Yönet"
+
+msgid "Auto Compact"
+msgstr "Otomatik Sıkıştır"
+
+msgid "Compact data volumes daily."
+msgstr "Veri birimlerini günlük olarak sıkıştır."
+
+msgid "Clones will inherit this value unless defined in their options."
+msgstr "Klonlar, seçeneklerinde tanımlanmadığı sürece bu değeri alacaklardır."
+
+msgid "This must be enabled in global settings too."
+msgstr "Bu, genel ayarlarda da etkinleştirilmelidir."
+
+msgid "Show the base when the user already created a clone"
+msgstr "Kullanıcı zaten bir klon oluşturduğunda tabanı göster"
+
+msgid "Show Clones"
+msgstr "Klonları Göster"
+
+msgid "Allow users to clone this base"
+msgstr "Kullanıcıların bu tabanı klonlamasına izin ver"
