@@ -62,6 +62,7 @@ Download and modify your servername in `v3.ext <https://raw.githubusercontent.co
 
 .. prompt:: bash
 
+   chmod +x create_cert.sh
    sudo ./create_cert.sh server.ip.address
    sudo systemctl restart libvirtd
 
