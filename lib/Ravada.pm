@@ -6906,11 +6906,14 @@ sub _check_tls_date($self, $user) {
         if($date) {
             my $duration = $date-DateTime->now;
             my ($years, $months, $days) = $duration->in_units('years','months','days');
-            if (!$years && !$months) {
-                if ($days<30) {
-                    $user->send_message("Warning: TLS certificate for $name has only $days days left. $not_after");
-                } elsif ($days<7) {
+            if ($years<1 && $months<1) {
+                if ($years<0 || $months<0 || $days<=0 ) {
+                    $not_after =~ s/(.*) \d+:\d+:\d+(.*)/$1$2/;
+                    $user->send_message("Critical: TLS certificate for $name expired on $not_after");
+                }elsif ($days<7) {
                     $user->send_message("Critical: TLS certificate for $name has only $days days left. $not_after");
+                } elsif ($days<30) {
+                    $user->send_message("Warning: TLS certificate for $name has only $days days left. $not_after");
                 }
             }
         }
