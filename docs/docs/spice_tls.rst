@@ -60,7 +60,7 @@ Create self signed certificate
 Download and modify your servername in `v3.ext <https://raw.githubusercontent.com/UPC/ravada/gh-pages/docs/docs/v3.ext>`__ file, then run the
 `create_cert.sh <https://raw.githubusercontent.com/UPC/ravada/gh-pages/docs/docs/create_cert.sh>`__ script.
 
-.. include:: create_cert.sh
+.. literalinclude:: create_cert.sh
    :code: bash
 
 .. warning::
