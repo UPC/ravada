@@ -60,8 +60,10 @@ Create self signed certificate
 Download and modify your servername in `v3.ext <https://raw.githubusercontent.com/UPC/ravada/gh-pages/docs/docs/v3.ext>`__ file, then run the
 `create_cert.sh <https://raw.githubusercontent.com/UPC/ravada/gh-pages/docs/docs/create_cert.sh>`__ script.
 
-.. literalinclude:: create_cert.sh
-   :code: bash
+.. prompt:: bash
+
+   sudo ./create_cert.sh server.ip.address
+   sudo systemctl restart libvirtd
 
 .. warning::
     Whatever method you use to generate the certificate and key files, the Common Name value used for the server and client certificates/keys must each differ from the Common Name value used for the CA certificate. Otherwise, the certificate and key files will not work for servers compiled using OpenSSL.
@@ -86,6 +88,13 @@ Updating the certificate
 When you change the certificate in the host server you must restart the libvirt
 daemon. Ravada will pick the changes in a few minutes, you don't need to restart
 it.
+
+Running virtual machines that use the old certificate must be shut down and
+start again:
+
+.. prompt:: bash
+
+    sudo rvd_back --shutdown --active
 
 .. warning::
    Older releases of Ravada keep a cache of the certificate and it will not be refreshed when updated. You have to manually clean the cache from the database. It will then be updated without restarting Ravada.
