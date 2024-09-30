@@ -1923,8 +1923,44 @@ sub upload_users_json($self, $data_json, $type='openid') {
     push @error,($@) if $@;
     warn $@ if $@;
 
-    for my $u0 (@{$data->{users}}) {
+    my $result = {
+        users_found => 0
+        ,users_added => 0
+        ,groups_found => 0
+        ,groups_added => 0
+    };
+    for my $g0 (@{$data->{groups}}) {
+        $result->{groups_found}++;
+        my $g = $g0;
+        if (!ref($g)) {
+            $g = { name => $g0 };
+        }
         $found++;
+        my $group = Ravada::Auth::Group->new(name => $g->{name});
+        my $members = delete $g->{members};
+        if (!$group || !$group->id) {
+            $result->{groups_added}++;
+            Ravada::Auth::Group::add_group(%$g);
+        }
+        $self->_add_users($members, $type, $result, \@error);
+        $group->remove_all_members() if $data->{options}->{flush};
+
+        for my $m (@$members) {
+            my $user = Ravada::Auth::SQL->new(name => $m);
+            $user->add_to_group($g->{name}) unless $user->is_member($g->{name});
+        }
+        $group->remove() if $data->{options}->{remove_empty} && !$group->members;
+    }
+
+    $self->_add_users($data->{users}, $type, $result, \@error)
+    if $data->{users};
+
+    return ($result, \@error);
+}
+
+sub _add_users($self,$users, $type, $result, $error) {
+    for my $u0 (@$users) {
+        $result->{users_found}++;
         my $u = $u0;
         $u = dclone($u0) if ref($u0);
         if (!ref($u)) {
@@ -1938,29 +1974,12 @@ sub upload_users_json($self, $data_json, $type='openid') {
         }
         my $user = Ravada::Auth::SQL->new(name => $u->{name});
         if ($user && $user->id) {
-                push @error,("User $u->{name} already added");
+                push @$error,("User $u->{name} already added");
                 next;
         }
         Ravada::Auth::SQL::add_user(%$u);
-        $count++;
+        $result->{users_added}++;
     }
-
-    for my $g0 (@{$data->{groups}}) {
-        my $g = $g0;
-        if (!ref($g)) {
-            $g = { name => $g0 };
-        }
-        $found++;
-        my $group = Ravada::Auth::Group->new(name => $g->{name});
-        if ($group && $group->id) {
-                push @error,("Group $g->{name} already added");
-                next;
-        }
-        Ravada::Auth::Group::add_group(%$g);
-        $count++;
-    }
-
-    return ($found, $count, \@error);
 }
 
 =head2 create_bundle

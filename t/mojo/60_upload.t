@@ -264,15 +264,34 @@ sub test_upload_group($mojo=0) {
 
 sub test_upload_json() {
 
+    test_upload_json_members();
+    test_upload_json_members(1);
+
+    test_upload_json_members_flush();
+    test_upload_json_members_remove_empty();
+
     test_upload_json_users_groups();
     test_upload_json_users_groups2();
     test_upload_json_users_admin();
     test_upload_json_users_pass();
     test_upload_json_users();
+    test_upload_json_users(1);
 }
 
-sub _do_upload_users_json($data, $mojo=0, $type='openid') {
+sub _do_upload_users_json($data, $exp_result=undef, $mojo=0, $type='openid') {
+
     my $data_h = decode_json($data);
+    if (!defined $exp_result) {
+        $exp_result= { groups_found => 0, groups_added => 0, users_found=>0, users_added => 0};
+        if ($data_h->{groups}) {
+            $exp_result->{groups_found} = scalar(@{$data_h->{groups}});
+            $exp_result->{groups_added} = scalar(@{$data_h->{groups}});
+        }
+        if ($data_h->{users}) {
+            $exp_result->{users_found} = scalar(@{$data_h->{users}});
+            $exp_result->{users_added} = scalar(@{$data_h->{users}});
+        };
+    }
     my $users = $data_h->{users};
     if ($users) {
         for my $user (@$users) {
@@ -283,18 +302,32 @@ sub _do_upload_users_json($data, $mojo=0, $type='openid') {
         }
     }
     if (!$mojo) {
-        rvd_front->upload_users_json($data, $type);
+        my ($result, $error)=rvd_front->upload_users_json($data, $type);
+        is_deeply($result, $exp_result);
+        is_deeply($error,[]);
+    } else {
+        $t->post_ok('/admin/users/upload.json' => form => {
+                type => $type
+                ,create => 0
+                ,users => { content => $data, filename => 'data.json'
+                    , 'Content-Type' => 'application/json' },
+            })->status_is(200);
+        die $t->tx->res->body if $t->tx->res->code != 200;
+
+        my $response = $t->tx->res->json();
+        warn Dumper($response->{output});
+        is_deeply($response->{error},[]);
     }
 
 }
 
-sub test_upload_json_users() {
+sub test_upload_json_users($mojo=0) {
     my @users = ( new_domain_name(), new_domain_name() );
     my $data = {
         users => \@users
     };
 
-    _do_upload_users_json( encode_json( { users => \@users }) );
+    _do_upload_users_json( encode_json( { users => \@users }),undef,$mojo );
 
     for my $name ( @users ) {
         my $user = Ravada::Auth::SQL->new(name => $name);
@@ -324,7 +357,7 @@ sub test_upload_json_users_groups() {
         ,groups => \@groups
     };
 
-    _do_upload_users_json( encode_json( $data ) );
+    _do_upload_users_json( encode_json( $data ), { groups_found => 2, groups_added => 2, users_found => 2, users_added => 2} );
     for my $u ( @users ) {
         my $user = Ravada::Auth::SQL->new(name => $u->{name});
         ok($user->id, "Expecting user $u->{name} created");
@@ -362,6 +395,198 @@ sub test_upload_json_users_groups2() {
 
 }
 
+sub test_upload_json_members() {
+    my @users_g0 = (
+         new_domain_name()
+         ,new_domain_name()
+    );
+
+    my @groups = (
+         {name => new_domain_name()
+             ,members => \@users_g0 }
+        ,{name => new_domain_name() }
+    );
+    my $data = {
+        groups => \@groups
+    };
+
+    _do_upload_users_json( encode_json( $data ),{ groups_found => 2,groups_added => 2, users_found => 2, users_added => 2} );
+    for my $u ( @users_g0 ) {
+        my $user = Ravada::Auth::SQL->new(name => $u );
+        ok($user->id, "Expecting user $u created");
+    }
+    for my $g ( @groups) {
+        my $group = Ravada::Auth::Group->new(name => $g->{name});
+        ok($group->id, "Expecting group $g->{name} created");
+    }
+
+    my $g0 = Ravada::Auth::Group->new(name => $groups[0]->{name});
+    ok($g0->members,"Expecting members in ".$g0->name);
+
+    for my $m (@{$groups[0]->{members}}) {
+        my ($found) = grep (/^$m$/ , $g0->members);
+        ok($found,"Expecting $m member");
+    }
+
+    my $g1 = Ravada::Auth::Group->new(name => $groups[1]->{name});
+    ok(!$g1->members,"Expecting no members in ".$g1->name);
+
+    # add more users
+    my @users_g0b = (
+         new_domain_name()
+         ,new_domain_name()
+         ,$users_g0[0]
+    );
+
+    $groups[0]->{members} = \@users_g0b;
+
+    _do_upload_users_json( encode_json( {groups => \@groups}),{ groups_found => 2,groups_added => 0, users_found => 3, users_added => 2} );
+
+    for my $name ( @users_g0 , @users_g0b ) {
+
+        my $user = Ravada::Auth::SQL->new(name => $name );
+        ok($user->id, "Expecting user $name created");
+
+        my $g0 = Ravada::Auth::Group->new(name => $groups[0]->{name});
+        my ($found) = grep (/^$name$/ , $g0->members);
+        ok($found,"Expecting $name member");
+    }
+}
+
+sub test_upload_json_members_flush() {
+    my @users_g0 = (
+         new_domain_name()
+         ,new_domain_name()
+    );
+
+    my @groups = (
+         {name => new_domain_name()
+             ,members => \@users_g0 }
+        ,{name => new_domain_name() }
+    );
+    my $data = {
+        groups => \@groups
+    };
+
+    _do_upload_users_json( encode_json( $data ),{ groups_found => 2,groups_added => 2, users_found => 2, users_added => 2} );
+    for my $u ( @users_g0 ) {
+        my $user = Ravada::Auth::SQL->new(name => $u );
+        ok($user->id, "Expecting user $u created");
+    }
+    for my $g ( @groups) {
+        my $group = Ravada::Auth::Group->new(name => $g->{name});
+        ok($group->id, "Expecting group $g->{name} created");
+    }
+
+    my $g0 = Ravada::Auth::Group->new(name => $groups[0]->{name});
+    ok($g0->members,"Expecting members in ".$g0->name);
+
+    for my $m (@{$groups[0]->{members}}) {
+        my ($found) = grep (/^$m$/ , $g0->members);
+        ok($found,"Expecting $m member");
+    }
+
+    my $g1 = Ravada::Auth::Group->new(name => $groups[1]->{name});
+    ok(!$g1->members,"Expecting no members in ".$g1->name);
+
+    # add more users
+    my @users_g0b = (
+         new_domain_name()
+         ,new_domain_name()
+         ,$users_g0[0]
+    );
+
+    $groups[0]->{members} = \@users_g0b;
+
+    _do_upload_users_json( encode_json( {groups => \@groups, options => {'flush' => 1}}),{ groups_found => 2,groups_added => 0, users_found => 3, users_added => 2} );
+
+    for my $name ( $users_g0[1] ) {
+
+        my $user = Ravada::Auth::SQL->new(name => $name );
+        ok($user->id, "Expecting user $name created");
+
+        my $g0 = Ravada::Auth::Group->new(name => $groups[0]->{name});
+        my ($found) = grep (/^$name$/ , $g0->members);
+        ok(!$found,"Expecting no $name member") or exit;
+    }
+
+    for my $name ( @users_g0b ) {
+
+        my $user = Ravada::Auth::SQL->new(name => $name );
+        ok($user->id, "Expecting user $name created");
+
+        my $g0 = Ravada::Auth::Group->new(name => $groups[0]->{name});
+        my ($found) = grep (/^$name$/ , $g0->members);
+        ok($found,"Expecting $name member");
+    }
+
+}
+
+sub test_upload_json_members_remove_empty() {
+    my @users_g0 = (
+         new_domain_name()
+         ,new_domain_name()
+    );
+
+    my @groups = (
+         {name => new_domain_name()
+             ,members => \@users_g0 }
+        ,{name => new_domain_name() }
+    );
+    my $data = {
+        groups => \@groups
+    };
+
+    _do_upload_users_json( encode_json( $data ),{ groups_found => 2,groups_added => 2, users_found => 2, users_added => 2} );
+    for my $u ( @users_g0 ) {
+        my $user = Ravada::Auth::SQL->new(name => $u );
+        ok($user->id, "Expecting user $u created");
+    }
+    for my $g ( @groups) {
+        my $group = Ravada::Auth::Group->new(name => $g->{name});
+        ok($group->id, "Expecting group $g->{name} created");
+    }
+
+    my $g0 = Ravada::Auth::Group->new(name => $groups[0]->{name});
+    ok($g0->members,"Expecting members in ".$g0->name);
+
+    for my $m (@{$groups[0]->{members}}) {
+        my ($found) = grep (/^$m$/ , $g0->members);
+        ok($found,"Expecting $m member");
+    }
+
+    my $g1 = Ravada::Auth::Group->new(name => $groups[1]->{name});
+    ok(!$g1->members,"Expecting no members in ".$g1->name);
+
+    # add more users
+    my @users_g0b = (
+         new_domain_name()
+         ,new_domain_name()
+         ,$users_g0[0]
+    );
+
+    $groups[1]->{members} = \@users_g0b;
+    $groups[0]->{members} = [];
+
+    _do_upload_users_json( encode_json( {groups => \@groups, options => {'flush'=>1,'remove_empty'=>1}}),{ groups_found => 2,groups_added => 0, users_found => 3, users_added => 2} );
+
+    for my $name ( @users_g0b ) {
+
+        my $user = Ravada::Auth::SQL->new(name => $name );
+        ok($user->id, "Expecting user $name created");
+
+        my $g1 = Ravada::Auth::Group->new(name => $groups[1]->{name});
+        ok($g1 && $g1->id) or exit;
+        my ($found) = grep (/^$name$/ , $g0->members);
+        ok(!$found,"Expecting $name member") or exit;
+    }
+
+    $g0 = Ravada::Auth::Group->new(name => $groups[0]->{name});
+    ok(!$g0->id,"Expecting $groups[0]->{name} removed");
+
+}
+
+
 
 
 sub test_upload_json_users_admin() {
@@ -395,11 +620,8 @@ sub test_upload_json_users_pass() {
          {name => new_domain_name(), password => $p1 }
        , {name => new_domain_name(), password => $p2 }
    );
-    my $data = {
-        users => \@users
-    };
 
-    _do_upload_users_json( encode_json( { users => \@users }), 0, 'sql' );
+    _do_upload_users_json( encode_json( { users => \@users }),undef, 0, 'sql' );
 
     for my $u ( @users ) {
         my ($name, $password) = ($u->{name} , $u->{password});
@@ -415,7 +637,6 @@ sub test_upload_json_users_pass() {
         ok($user,"Expecting $name/$password") or exit;
     }
 }
-
 
 ################################################################################
 
