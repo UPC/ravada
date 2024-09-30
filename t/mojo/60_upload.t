@@ -6,7 +6,7 @@ use Data::Dumper;
 use Test::More;
 use Test::Mojo;
 use Mojo::File 'path';
-use Mojo::JSON qw(decode_json);
+use Mojo::JSON qw(encode_json decode_json);
 
 use lib 't/lib';
 use Test::Ravada;
@@ -262,6 +262,160 @@ sub test_upload_group($mojo=0) {
 
 }
 
+sub test_upload_json() {
+
+    test_upload_json_users_groups();
+    test_upload_json_users_groups2();
+    test_upload_json_users_admin();
+    test_upload_json_users_pass();
+    test_upload_json_users();
+}
+
+sub _do_upload_users_json($data, $mojo=0, $type='openid') {
+    my $data_h = decode_json($data);
+    my $users = $data_h->{users};
+    if ($users) {
+        for my $user (@$users) {
+            my $name = $user;
+            $name = $user->{name} if ref($user);
+            next if !$name;
+            remove_old_user($name);
+        }
+    }
+    if (!$mojo) {
+        rvd_front->upload_users_json($data, $type);
+    }
+
+}
+
+sub test_upload_json_users() {
+    my @users = ( new_domain_name(), new_domain_name() );
+    my $data = {
+        users => \@users
+    };
+
+    _do_upload_users_json( encode_json( { users => \@users }) );
+
+    for my $name ( @users ) {
+        my $user = Ravada::Auth::SQL->new(name => $name);
+        ok($user->id, "Expecting user $name created");
+        is($user->external_auth, 'openid');
+
+        $user = undef;
+        eval {
+        $user = Ravada::Auth->login( $name , '');
+        };
+        like($@,qr/login failed/i);
+        ok(!$user) or warn $user->name;
+    }
+}
+
+sub test_upload_json_users_groups() {
+    my @users = (
+         {name => new_domain_name() }
+       , {name => new_domain_name(), is_admin => 1 }
+    );
+    my @groups = (
+        new_domain_name()
+        ,new_domain_name()
+    );
+    my $data = {
+        users => \@users
+        ,groups => \@groups
+    };
+
+    _do_upload_users_json( encode_json( $data ) );
+    for my $u ( @users ) {
+        my $user = Ravada::Auth::SQL->new(name => $u->{name});
+        ok($user->id, "Expecting user $u->{name} created");
+    }
+    for my $g ( @groups) {
+        my $group = Ravada::Auth::Group->new(name => $g);
+        ok($group->id, "Expecting group $g created");
+    }
+
+}
+
+sub test_upload_json_users_groups2() {
+    my @users = (
+         {name => new_domain_name() }
+       , {name => new_domain_name(), is_admin => 1 }
+    );
+    my @groups = (
+         {name => new_domain_name() }
+        ,{name => new_domain_name() }
+    );
+    my $data = {
+        users => \@users
+        ,groups => \@groups
+    };
+
+    _do_upload_users_json( encode_json( $data ) );
+    for my $u ( @users ) {
+        my $user = Ravada::Auth::SQL->new(name => $u->{name});
+        ok($user->id, "Expecting user $u->{name} created");
+    }
+    for my $g ( @groups) {
+        my $group = Ravada::Auth::Group->new(name => $g->{name});
+        ok($group->id, "Expecting group $g->{name} created");
+    }
+
+}
+
+
+
+sub test_upload_json_users_admin() {
+    my @users = (
+         {name => new_domain_name() }
+       , {name => new_domain_name(), is_admin => 0 }
+       , {name => new_domain_name(), is_admin => 1 }
+   );
+    my $data = {
+        users => \@users
+    };
+
+    _do_upload_users_json( encode_json( $data ) );
+
+    for my $u ( @users ) {
+        my ($name, $password) = ($u->{name} , $u->{password});
+        my $user = Ravada::Auth::SQL->new(name => $name);
+        ok($user->id, "Expecting user $name created");
+        is($user->external_auth, 'openid') or exit;
+        $u->{is_admin}=0 if !exists $u->{is_admin};
+        is($user->is_admin, $u->{is_admin});
+    }
+
+
+}
+
+sub test_upload_json_users_pass() {
+    my $p1='a';
+    my $p2 = 'b';
+    my @users = (
+         {name => new_domain_name(), password => $p1 }
+       , {name => new_domain_name(), password => $p2 }
+   );
+    my $data = {
+        users => \@users
+    };
+
+    _do_upload_users_json( encode_json( { users => \@users }), 0, 'sql' );
+
+    for my $u ( @users ) {
+        my ($name, $password) = ($u->{name} , $u->{password});
+        my $user = Ravada::Auth::SQL->new(name => $name);
+        ok($user->id, "Expecting user $name created");
+        is($user->external_auth, '') or exit;
+
+        $user = undef;
+        eval {
+        $user = Ravada::Auth::login( $name , $password);
+        };
+        is($@,'');
+        ok($user,"Expecting $name/$password") or exit;
+    }
+}
+
 
 ################################################################################
 
@@ -277,6 +431,8 @@ $t->ua->connect_timeout(60);
 test_upload_no_admin($t);
 
 _login($t);
+
+test_upload_json();
 
 test_upload_group();
 test_upload_group(1); # mojo

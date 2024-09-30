@@ -1912,6 +1912,57 @@ sub upload_users($self, $users, $type, $create=0) {
     return ($found, $count, \@error);
 }
 
+
+sub upload_users_json($self, $data_json, $type='openid') {
+
+    my ($found, $count, @error);
+    my $data;
+    eval {
+        $data= decode_json($data_json);
+    };
+    push @error,($@) if $@;
+    warn $@ if $@;
+
+    for my $u0 (@{$data->{users}}) {
+        $found++;
+        my $u = $u0;
+        $u = dclone($u0) if ref($u0);
+        if (!ref($u)) {
+            $u = { name => $u0 };
+        }
+        if (!exists $u->{is_external}) {
+            if ($type ne 'sql') {
+                $u->{is_external} = 1;
+                $u->{external_auth} = $type ;
+            }
+        }
+        my $user = Ravada::Auth::SQL->new(name => $u->{name});
+        if ($user && $user->id) {
+                push @error,("User $u->{name} already added");
+                next;
+        }
+        Ravada::Auth::SQL::add_user(%$u);
+        $count++;
+    }
+
+    for my $g0 (@{$data->{groups}}) {
+        my $g = $g0;
+        if (!ref($g)) {
+            $g = { name => $g0 };
+        }
+        $found++;
+        my $group = Ravada::Auth::Group->new(name => $g->{name});
+        if ($group && $group->id) {
+                push @error,("Group $g->{name} already added");
+                next;
+        }
+        Ravada::Auth::Group::add_group(%$g);
+        $count++;
+    }
+
+    return ($found, $count, \@error);
+}
+
 =head2 create_bundle
 
 Creates a new bundle
