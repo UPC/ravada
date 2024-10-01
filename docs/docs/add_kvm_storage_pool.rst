@@ -46,12 +46,12 @@ Add this new partition to the filesystem table:
 
 .. prompt:: bash $
 
-    sudo mkdir /var/lib/libvirt/images.2
+    sudo mkdir /var/lib/libvirt/images_2
     sudo vim /etc/fstab
 
 ::
 
-    UUID=e5ff57d7-cde6-4117-ac5d-1b14ac5b218f  /var/lib/libvirt/images.2 ext4  auto    0   3
+    UUID=e5ff57d7-cde6-4117-ac5d-1b14ac5b218f  /var/lib/libvirt/images_2 ext4  rw,relatime    0   0
 
 It will mount it next time you boot, but it can be used without
 rebooting issuing:
@@ -74,3 +74,19 @@ And that's it, now Ravada will use the pool that has more empty space
 the next time it needs to create a volume. If you want to fine tune
 what storage pool is used by default follow the
 `advanced settings documentation <advanced_settings.html>`__ .
+
+Using the storage pool
+----------------------
+
+When adding disk volumes to a virtual machine, you can select on what
+storage will be saved.
+
+.. image:: images/storage_pool_select.png
+   :alt: select storage
+
+Once the virtual machine is created, the volume can be moved to another
+storage pool.
+
+.. image:: images/storage_pool_change.png
+   :alt: change storage
+
