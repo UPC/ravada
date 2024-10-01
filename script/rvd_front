@@ -1852,14 +1852,37 @@ any '/admin/users/upload.#req' => sub($c) {
     return $c->render(json => { error => "Unknown type $type" })
             if $type !~ /^(sql|ldap|sso|openid)/;
 
-    my $csv = $c->req->upload('users');
-    if($csv->headers->content_type !~ m{text/(csv|plain)}) {
-        return $c->render(status => 400
-            ,text => "Wrong content type ".$csv->headers->content_type
-                    ." , it should be text/csv or plain"
-        );
-    }
+    my $file = $c->req->upload('users');
 
+    if($file->headers->content_type =~ m{text/(csv|plain)}) {
+        _upload_users_csv($c, $file, $type, $create);
+    } elsif ( $file->headers->content_type =~ m{application/json}) {
+        _upload_users_json($c, $file, $type, $create);
+    } else {
+        return $c->render(status => 400
+            ,text => "Wrong content type ".$file->headers->content_type
+                    ." , it should be text/csv , application/json or plain"
+        );
+
+    }
+};
+
+sub _upload_users_json($c, $file, $type, $create) {
+
+    my ($result, $error)=$RAVADA->upload_users_json($file->slurp, $type);
+
+    if ($create) {
+        push @$error,("Warning: create not implemented with json upload");
+    }
+    return $c->render(json =>
+        {
+            output => $result
+        ,error => $error
+        }
+    );
+}
+
+sub _upload_users_csv($c, $csv, $type, $create) {
     my ($found, $count, $error) = $RAVADA->upload_users(
         $csv->slurp, $type, $create
     );
@@ -1875,7 +1898,7 @@ any '/admin/users/upload.#req' => sub($c) {
         ,error => $error
         ,done => 1
     );
-};
+}
 
 get '/admin/user/remove/#id' => sub($c) {
     return access_denied($c) unless $USER->is_admin;

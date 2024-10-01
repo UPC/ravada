@@ -1921,7 +1921,6 @@ sub upload_users_json($self, $data_json, $type='openid') {
         $data= decode_json($data_json);
     };
     push @error,($@) if $@;
-    warn $@ if $@;
 
     my $result = {
         users_found => 0

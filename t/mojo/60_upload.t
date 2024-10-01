@@ -262,10 +262,36 @@ sub test_upload_group($mojo=0) {
 
 }
 
+sub test_upload_json_fail() {
+
+    _do_upload_users_fail(0);
+    _do_upload_users_fail(1);
+}
+
+sub _do_upload_users_fail($mojo, $type='openid') {
+    my ($result, $error);
+    if (!$mojo) {
+        ($result, $error)=rvd_front->upload_users_json("wrong", $type);
+    } else {
+        $t->post_ok('/admin/users/upload.json' => form => {
+                type => $type
+                ,create => 0
+                ,users => { content => "wrong", filename => 'data.json'
+                    , 'Content-Type' => 'application/json' },
+            })->status_is(200);
+        die $t->tx->res->body if $t->tx->res->code != 200;
+
+        my $response = $t->tx->res->json();
+        $result = $response->{output};
+        $error = $response->{error};
+    }
+    like($error->[0],qr/malformed JSON/);
+    is_deeply($result, { groups_found => 0 , groups_added => 0, users_found => 0, users_added => 0});
+}
+
 sub test_upload_json() {
 
     test_upload_json_members();
-    test_upload_json_members(1);
 
     test_upload_json_members_flush();
     test_upload_json_members_remove_empty();
@@ -275,12 +301,19 @@ sub test_upload_json() {
     test_upload_json_users_admin();
     test_upload_json_users_pass();
     test_upload_json_users();
-    test_upload_json_users(1);
 }
 
-sub _do_upload_users_json($data, $exp_result=undef, $mojo=0, $type='openid') {
+sub _do_upload_users_json($data, $mojo, $exp_result=undef, $type='openid') {
 
-    my $data_h = decode_json($data);
+    confess if ref($mojo);
+    confess if defined $exp_result && !ref($exp_result);
+
+    my $data_h = $data;
+    if (ref($data)) {
+        $data = encode_json($data);
+    } else {
+        $data_h = decode_json($data);
+    }
     if (!defined $exp_result) {
         $exp_result= { groups_found => 0, groups_added => 0, users_found=>0, users_added => 0};
         if ($data_h->{groups}) {
@@ -301,10 +334,9 @@ sub _do_upload_users_json($data, $exp_result=undef, $mojo=0, $type='openid') {
             remove_old_user($name);
         }
     }
+    my ($result, $error);
     if (!$mojo) {
-        my ($result, $error)=rvd_front->upload_users_json($data, $type);
-        is_deeply($result, $exp_result);
-        is_deeply($error,[]);
+        ($result, $error)=rvd_front->upload_users_json($data, $type);
     } else {
         $t->post_ok('/admin/users/upload.json' => form => {
                 type => $type
@@ -315,19 +347,29 @@ sub _do_upload_users_json($data, $exp_result=undef, $mojo=0, $type='openid') {
         die $t->tx->res->body if $t->tx->res->code != 200;
 
         my $response = $t->tx->res->json();
-        warn Dumper($response->{output});
-        is_deeply($response->{error},[]);
+        $result = $response->{output};
+        $error = $response->{error};
     }
 
+    is_deeply($result, $exp_result) or die Dumper([$result, $exp_result]);
+
+    for my $err (@$error) {
+        ok(0,$err) unless $err =~ /already added/;
+    }
 }
 
-sub test_upload_json_users($mojo=0) {
+sub test_upload_json_users() {
+    _do_test_upload_json_users(0);
+    _do_test_upload_json_users(1);
+}
+
+sub _do_test_upload_json_users($mojo) {
     my @users = ( new_domain_name(), new_domain_name() );
     my $data = {
         users => \@users
     };
 
-    _do_upload_users_json( encode_json( { users => \@users }),undef,$mojo );
+    _do_upload_users_json( { users => \@users },$mojo );
 
     for my $name ( @users ) {
         my $user = Ravada::Auth::SQL->new(name => $name);
@@ -344,6 +386,12 @@ sub test_upload_json_users($mojo=0) {
 }
 
 sub test_upload_json_users_groups() {
+
+    _do_test_upload_json_users_groups(0);
+    _do_test_upload_json_users_groups(1);
+}
+
+sub _do_test_upload_json_users_groups($mojo) {
     my @users = (
          {name => new_domain_name() }
        , {name => new_domain_name(), is_admin => 1 }
@@ -357,7 +405,7 @@ sub test_upload_json_users_groups() {
         ,groups => \@groups
     };
 
-    _do_upload_users_json( encode_json( $data ), { groups_found => 2, groups_added => 2, users_found => 2, users_added => 2} );
+    _do_upload_users_json( encode_json( $data ), $mojo, { groups_found => 2, groups_added => 2, users_found => 2, users_added => 2} );
     for my $u ( @users ) {
         my $user = Ravada::Auth::SQL->new(name => $u->{name});
         ok($user->id, "Expecting user $u->{name} created");
@@ -370,6 +418,11 @@ sub test_upload_json_users_groups() {
 }
 
 sub test_upload_json_users_groups2() {
+    _do_test_upload_json_users_groups2(0);
+    _do_test_upload_json_users_groups2(1);
+}
+
+sub _do_test_upload_json_users_groups2($mojo) {
     my @users = (
          {name => new_domain_name() }
        , {name => new_domain_name(), is_admin => 1 }
@@ -383,7 +436,7 @@ sub test_upload_json_users_groups2() {
         ,groups => \@groups
     };
 
-    _do_upload_users_json( encode_json( $data ) );
+    _do_upload_users_json( $data, $mojo );
     for my $u ( @users ) {
         my $user = Ravada::Auth::SQL->new(name => $u->{name});
         ok($user->id, "Expecting user $u->{name} created");
@@ -396,6 +449,11 @@ sub test_upload_json_users_groups2() {
 }
 
 sub test_upload_json_members() {
+    _do_test_upload_json_members(0);
+    _do_test_upload_json_members(1);
+}
+
+sub _do_test_upload_json_members($mojo=0) {
     my @users_g0 = (
          new_domain_name()
          ,new_domain_name()
@@ -410,7 +468,7 @@ sub test_upload_json_members() {
         groups => \@groups
     };
 
-    _do_upload_users_json( encode_json( $data ),{ groups_found => 2,groups_added => 2, users_found => 2, users_added => 2} );
+    _do_upload_users_json( encode_json( $data ),$mojo,{ groups_found => 2,groups_added => 2, users_found => 2, users_added => 2} );
     for my $u ( @users_g0 ) {
         my $user = Ravada::Auth::SQL->new(name => $u );
         ok($user->id, "Expecting user $u created");
@@ -440,12 +498,12 @@ sub test_upload_json_members() {
 
     $groups[0]->{members} = \@users_g0b;
 
-    _do_upload_users_json( encode_json( {groups => \@groups}),{ groups_found => 2,groups_added => 0, users_found => 3, users_added => 2} );
+    _do_upload_users_json( encode_json( {groups => \@groups}),$mojo, { groups_found => 2,groups_added => 0, users_found => 3, users_added => 2} );
 
     for my $name ( @users_g0 , @users_g0b ) {
 
         my $user = Ravada::Auth::SQL->new(name => $name );
-        ok($user->id, "Expecting user $name created");
+        ok($user->id, "Expecting user $name created mojo=$mojo") or exit;
 
         my $g0 = Ravada::Auth::Group->new(name => $groups[0]->{name});
         my ($found) = grep (/^$name$/ , $g0->members);
@@ -454,6 +512,11 @@ sub test_upload_json_members() {
 }
 
 sub test_upload_json_members_flush() {
+    _do_test_upload_json_members_flush(0);
+    _do_test_upload_json_members_flush(1);
+}
+
+sub _do_test_upload_json_members_flush($mojo) {
     my @users_g0 = (
          new_domain_name()
          ,new_domain_name()
@@ -468,7 +531,7 @@ sub test_upload_json_members_flush() {
         groups => \@groups
     };
 
-    _do_upload_users_json( encode_json( $data ),{ groups_found => 2,groups_added => 2, users_found => 2, users_added => 2} );
+    _do_upload_users_json( encode_json( $data ),$mojo,{ groups_found => 2,groups_added => 2, users_found => 2, users_added => 2} );
     for my $u ( @users_g0 ) {
         my $user = Ravada::Auth::SQL->new(name => $u );
         ok($user->id, "Expecting user $u created");
@@ -498,7 +561,7 @@ sub test_upload_json_members_flush() {
 
     $groups[0]->{members} = \@users_g0b;
 
-    _do_upload_users_json( encode_json( {groups => \@groups, options => {'flush' => 1}}),{ groups_found => 2,groups_added => 0, users_found => 3, users_added => 2} );
+    _do_upload_users_json( encode_json( {groups => \@groups, options => {'flush' => 1}}),$mojo, { groups_found => 2,groups_added => 0, users_found => 3, users_added => 2} );
 
     for my $name ( $users_g0[1] ) {
 
@@ -523,6 +586,11 @@ sub test_upload_json_members_flush() {
 }
 
 sub test_upload_json_members_remove_empty() {
+    _do_test_upload_json_members_remove_empty(0);
+    _do_test_upload_json_members_remove_empty(1);
+}
+
+sub _do_test_upload_json_members_remove_empty($mojo) {
     my @users_g0 = (
          new_domain_name()
          ,new_domain_name()
@@ -537,7 +605,7 @@ sub test_upload_json_members_remove_empty() {
         groups => \@groups
     };
 
-    _do_upload_users_json( encode_json( $data ),{ groups_found => 2,groups_added => 2, users_found => 2, users_added => 2} );
+    _do_upload_users_json( encode_json( $data ), $mojo, { groups_found => 2,groups_added => 2, users_found => 2, users_added => 2} );
     for my $u ( @users_g0 ) {
         my $user = Ravada::Auth::SQL->new(name => $u );
         ok($user->id, "Expecting user $u created");
@@ -568,7 +636,7 @@ sub test_upload_json_members_remove_empty() {
     $groups[1]->{members} = \@users_g0b;
     $groups[0]->{members} = [];
 
-    _do_upload_users_json( encode_json( {groups => \@groups, options => {'flush'=>1,'remove_empty'=>1}}),{ groups_found => 2,groups_added => 0, users_found => 3, users_added => 2} );
+    _do_upload_users_json( encode_json( {groups => \@groups, options => {'flush'=>1,'remove_empty'=>1}}), $mojo, { groups_found => 2,groups_added => 0, users_found => 3, users_added => 2} );
 
     for my $name ( @users_g0b ) {
 
@@ -590,6 +658,11 @@ sub test_upload_json_members_remove_empty() {
 
 
 sub test_upload_json_users_admin() {
+    _do_test_upload_json_users_admin(0);
+    _do_test_upload_json_users_admin(1);
+}
+
+sub _do_test_upload_json_users_admin($mojo) {
     my @users = (
          {name => new_domain_name() }
        , {name => new_domain_name(), is_admin => 0 }
@@ -599,7 +672,7 @@ sub test_upload_json_users_admin() {
         users => \@users
     };
 
-    _do_upload_users_json( encode_json( $data ) );
+    _do_upload_users_json( $data, $mojo  );
 
     for my $u ( @users ) {
         my ($name, $password) = ($u->{name} , $u->{password});
@@ -614,6 +687,11 @@ sub test_upload_json_users_admin() {
 }
 
 sub test_upload_json_users_pass() {
+    _do_test_upload_json_users_pass(0);
+    _do_test_upload_json_users_pass(1);
+}
+
+sub _do_test_upload_json_users_pass($mojo) {
     my $p1='a';
     my $p2 = 'b';
     my @users = (
@@ -621,7 +699,7 @@ sub test_upload_json_users_pass() {
        , {name => new_domain_name(), password => $p2 }
    );
 
-    _do_upload_users_json( encode_json( { users => \@users }),undef, 0, 'sql' );
+    _do_upload_users_json( encode_json( { users => \@users }), $mojo, undef, 'sql' );
 
     for my $u ( @users ) {
         my ($name, $password) = ($u->{name} , $u->{password});
@@ -652,6 +730,8 @@ $t->ua->connect_timeout(60);
 test_upload_no_admin($t);
 
 _login($t);
+
+test_upload_json_fail();
 
 test_upload_json();
 
