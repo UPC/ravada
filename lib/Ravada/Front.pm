@@ -1946,8 +1946,10 @@ sub upload_users_json($self, $data_json, $type='openid') {
         my $group = Ravada::Auth::Group->new(name => $g->{name});
         my $members = delete $g->{members};
         if (!$group || !$group->id) {
-            $result->{groups_added}++;
-            Ravada::Auth::Group::add_group(%$g);
+            unless (!scalar(@$members) && $data->{options}->{flush} && $data->{options}->{remove_empty}) {
+                $result->{groups_added}++;
+                Ravada::Auth::Group::add_group(%$g);
+            }
         } else {
             push @error,("Group $g->{name} already added");
         }
@@ -1958,7 +1960,11 @@ sub upload_users_json($self, $data_json, $type='openid') {
             my $user = Ravada::Auth::SQL->new(name => $m);
             $user->add_to_group($g->{name}) unless $user->is_member($g->{name});
         }
-        $group->remove() if $data->{options}->{remove_empty} && !$group->members;
+        if ( $data->{options}->{remove_empty} && $group->id && !$group->members ) {
+            $group->remove();
+            $result->{groups_removed}++;
+            push @error,("Group ".$group->name." empty removed");
+        }
     }
 
     $self->_add_users($data->{users}, $type, $result, \@error)

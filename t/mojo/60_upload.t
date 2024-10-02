@@ -642,7 +642,7 @@ sub _do_test_upload_json_members_remove_empty($mojo) {
     $groups[1]->{members} = \@users_g0b;
     $groups[0]->{members} = [];
 
-    _do_upload_users_json( encode_json( {groups => \@groups, options => {'flush'=>1,'remove_empty'=>1}}), $mojo, { groups_found => 2,groups_added => 0, users_found => 3, users_added => 2} );
+    _do_upload_users_json( encode_json( {groups => \@groups, options => {'flush'=>1,'remove_empty'=>1}}), $mojo, { groups_found => 2,groups_added => 0, users_found => 3, users_added => 2, groups_removed => 1} );
 
     for my $name ( @users_g0b ) {
 

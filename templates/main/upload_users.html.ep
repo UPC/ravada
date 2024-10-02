@@ -66,6 +66,9 @@
 <%= $output->{groups_found} %> <%=l 'groups found in uploaded file' %>,
 <%= $output->{groups_added} %> <%=l 'created' %>.
 % }
+% if (exists $output->{groups_removed}) {
+<%= $output->{groups_removed} %> <%= l 'groups removed'%>.
+% }
 
                         <div ng-show="<%= scalar(@$error) %>">
                             <%=l 'Errors found' %>: <%= scalar(@$error) %>

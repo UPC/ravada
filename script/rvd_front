@@ -1845,7 +1845,9 @@ any '/admin/users/upload.#req' => sub($c) {
 
     my $type = $c->req->param('type');
 
-    return $c->render(template => "/main/upload_users", done => 0, count => 0, found => 0, type => 'sql') if !$type;
+    return $c->render(template => "/main/upload_users", done => 0, output => {}
+        ,error => []
+        ,type => 'sql') if !$type;
 
     my $create = ( $c->req->param('create') or 0);
 
