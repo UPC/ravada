@@ -1948,6 +1948,8 @@ sub upload_users_json($self, $data_json, $type='openid') {
         if (!$group || !$group->id) {
             $result->{groups_added}++;
             Ravada::Auth::Group::add_group(%$g);
+        } else {
+            push @error,("Group $g->{name} already added");
         }
         $self->_add_users($members, $type, $result, \@error);
         $group->remove_all_members() if $data->{options}->{flush};

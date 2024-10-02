@@ -68,7 +68,7 @@ sub test_upload_users_nopassword( $type, $mojo=0 ) {
         die $t->tx->res->body if $t->tx->res->code != 200;
 
         my $response = $t->tx->res->json();
-        like($response->{output}, qr/2 users added/);
+        is($response->{output}->{users_added} ,2);
         is_deeply($response->{error},[]);
     } else {
         rvd_front->upload_users($users, $type);
@@ -99,7 +99,7 @@ sub test_upload_users( $type, $create=0, $mojo=0 ) {
         die $t->tx->res->body if $t->tx->res->code != 200;
 
         my $response = $t->tx->res->json();
-        like($response->{output}, qr/2 users added/);
+        is($response->{output}->{users_added} ,2);
         is_deeply($response->{error},[]);
     } else {
         rvd_front->upload_users($users, $type, $create);
@@ -123,7 +123,7 @@ sub test_upload_users( $type, $create=0, $mojo=0 ) {
     die $t->tx->res->body if $t->tx->res->code != 200;
 
     my $response = $t->tx->res->json();
-    like($response->{output}, qr/0 users added/);
+    is($response->{output}->{users_added},0);
     is(scalar(@{$response->{error}}),2);
 
     test_users_added($type, $user1, $user2);

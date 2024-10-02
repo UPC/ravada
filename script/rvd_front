@@ -1879,6 +1879,12 @@ sub _upload_users_json($c, $file, $type, $create) {
             output => $result
         ,error => $error
         }
+    ) if $c->stash('req') eq 'json';
+
+    return $c->render(template => "/main/upload_users"
+        ,output => $result
+        ,error => $error
+        ,done => 1
     );
 }
 
@@ -1886,15 +1892,18 @@ sub _upload_users_csv($c, $csv, $type, $create) {
     my ($found, $count, $error) = $RAVADA->upload_users(
         $csv->slurp, $type, $create
     );
+    my $output = {
+        users_found => $found
+        ,users_added => $count
+    };
 
     return $c->render(json =>
-        { output => "$count users added"
+        { output => $output
         ,error => $error
+        ,done => 1
     }) if $c->stash('req') eq 'json';
 
     return $c->render(template => "/main/upload_users"
-        ,count => $count
-        ,found => $found
         ,error => $error
         ,done => 1
     );
