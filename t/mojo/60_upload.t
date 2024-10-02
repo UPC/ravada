@@ -319,10 +319,16 @@ sub _do_upload_users_json($data, $mojo, $exp_result=undef, $type='openid') {
         if ($data_h->{groups}) {
             $exp_result->{groups_found} = scalar(@{$data_h->{groups}});
             $exp_result->{groups_added} = scalar(@{$data_h->{groups}});
+            confess"not array groups\n".Dumper($data_h) if ref($data_h->{groups}) ne 'ARRAY';
+            for my $g ($data_h->{groups}) {
+                next if !ref($g) || ref($g) ne 'HASH' || !exists $g->{members};
+                $exp_result->{users_found} += scalar(@{$g->{members}});
+                $exp_result->{users_added} += scalar(@{$g->{members}});
+            }
         }
         if ($data_h->{users}) {
-            $exp_result->{users_found} = scalar(@{$data_h->{users}});
-            $exp_result->{users_added} = scalar(@{$data_h->{users}});
+            $exp_result->{users_found} += scalar(@{$data_h->{users}});
+            $exp_result->{users_added} += scalar(@{$data_h->{users}});
         };
     }
     my $users = $data_h->{users};
@@ -351,11 +357,11 @@ sub _do_upload_users_json($data, $mojo, $exp_result=undef, $type='openid') {
         $error = $response->{error};
     }
 
-    is_deeply($result, $exp_result) or die Dumper([$result, $exp_result]);
-
     for my $err (@$error) {
         ok(0,$err) unless $err =~ /already added/;
     }
+    is_deeply($result, $exp_result) or die Dumper(["mojo=$mojo",$data,$error,$result, $exp_result]);
+
 }
 
 sub test_upload_json_users() {

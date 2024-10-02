@@ -1920,7 +1920,10 @@ sub upload_users_json($self, $data_json, $type='openid') {
     eval {
         $data= decode_json($data_json);
     };
-    push @error,($@) if $@;
+    if ( $@ ) {
+        push @error,($@);
+        $data={}
+    }
 
     my $result = {
         users_found => 0
@@ -1928,6 +1931,11 @@ sub upload_users_json($self, $data_json, $type='openid') {
         ,groups_found => 0
         ,groups_added => 0
     };
+    if (exists $data->{groups} &&
+        (!ref($data->{groups}) || ref($data->{groups}) ne 'ARRAY')) {
+        die "Expecting groups as an array , got ".ref($data->{groups});
+    }
+    $data->{groups} = [] if !exists $data->{groups};
     for my $g0 (@{$data->{groups}}) {
         $result->{groups_found}++;
         my $g = $g0;
