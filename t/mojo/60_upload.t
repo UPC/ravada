@@ -344,7 +344,8 @@ sub _do_upload_users_json($data, $mojo, $exp_result=undef, $type='openid') {
     if (!$mojo) {
         ($result, $error)=rvd_front->upload_users_json($data, $type);
     } else {
-        $t->post_ok('/admin/users/upload.json' => form => {
+        my $url='/admin/users/upload.json';
+        $t->post_ok( $url => form => {
                 type => $type
                 ,create => 0
                 ,users => { content => $data, filename => 'data.json'
@@ -358,7 +359,7 @@ sub _do_upload_users_json($data, $mojo, $exp_result=undef, $type='openid') {
     }
 
     for my $err (@$error) {
-        ok(0,$err) unless $err =~ /already added/;
+        ok(0,$err) unless $err =~ /already added|empty removed/;
     }
     is_deeply($result, $exp_result) or die Dumper(["mojo=$mojo",$data,$error,$result, $exp_result]);
 
