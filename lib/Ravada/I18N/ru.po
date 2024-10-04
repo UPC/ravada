@@ -12,7 +12,7 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
 "n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
-"X-Generator: Weblate 5.7-dev\n"
+"X-Generator: Weblate 5.8-dev\n"
 
 msgid "Ravada broker"
 msgstr "Брокер Ravada"
@@ -2102,6 +2102,7 @@ msgstr "Обновить порты"
 msgid "Client headers"
 msgstr "Заголовки клиента"
 
+#, fuzzy
 msgid ""
 "This server has reservations for today. Machines from users out of\n"
 "    the booking list will be shutdown."
