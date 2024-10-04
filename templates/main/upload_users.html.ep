@@ -60,16 +60,15 @@
                         </div>
                     </form>
 %                   } else {
-<%= $output->{users_found} %> <%=l 'users found in uploaded file' %>,
-<%= $output->{users_added} %> <%=l 'created' %>.
-% if (exists $output->{groups_found}) {
-<%= $output->{groups_found} %> <%=l 'groups found in uploaded file' %>,
-<%= $output->{groups_added} %> <%=l 'created' %>.
-% }
-% if (exists $output->{groups_removed}) {
-<%= $output->{groups_removed} %> <%= l 'groups removed'%>.
-% }
-
+                        <%= $output->{users_found} %> <%=l 'users found in uploaded file' %>,
+                        <%= $output->{users_added} %> <%=l 'created' %>.
+%                       if (exists $output->{groups_found}) {
+                            <%= $output->{groups_found} %> <%=l 'groups found in uploaded file' %>,
+                            <%= $output->{groups_added} %> <%=l 'created' %>.
+%                       }
+%                       if (exists $output->{groups_removed}) {
+                            <%= $output->{groups_removed} %> <%= l 'groups removed'%>.
+%                       }
                         <div ng-show="<%= scalar(@$error) %>">
                             <%=l 'Errors found' %>: <%= scalar(@$error) %>
                             <ul>
