@@ -1597,6 +1597,7 @@ sub _qemu_storage_pool {
 sub remove_void_networks($vm=undef) {
     if (!defined $vm) {
         eval { $vm = rvd_back->search_vm('Void') };
+        die $@ if $@;
     }
     my $dir_net = $vm->dir_img()."/networks";
     return if ! -e $dir_net;
