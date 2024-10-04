@@ -615,7 +615,12 @@ sub _clean_old_users() {
 }
 
 sub _clean_old_groups() {
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM groups_local WHERE name like ? ");
+    my $sth = $CONNECTOR->dbh->table_info('%',undef,'groups_local','TABLE');
+    my $info = $sth->fetchrow_hashref();
+    $sth->finish;
+    return if !keys %$info;
+
+    $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM groups_local WHERE name like ? ");
     $sth->execute(base_domain_name().'%');
     while ( my ($id,$name) = $sth->fetchrow ) {
         my $g = Ravada::Auth::Group->open($id);
