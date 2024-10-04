@@ -85,3 +85,153 @@ using the filenames as names for each group.
 ::
 
   sudo rvd_back --upload-group-members=/var/lib/groups/
+
+File Formats
+============
+
+There are two file formats for uploading users and groups. You can
+either use text or json.
+
+Text Files
+~~~~~~~~~~
+
+Text files should have the *.txt* extension. The files must contain
+one entry in each line.
+
+Example: local users with password:
+---------------------------------
+
+Choose *plain* type from the uploading page. users.txt
+::
+
+  alice:lkjdfljg
+  bob:lkj¡klñkdgf
+  charles:kkhofgo
+
+Example: local group
+--------------------
+
+Create a file with the name of the group, ie: accounting.txt
+
+::
+
+  alice
+  bob
+  daniel
+
+
+JSON Files
+~~~~~~~~~~
+
+Using *JSON*, administrators can upload simple or complex list of
+users, groups and members.
+
+Example: json users
+-------------------
+
+This is a list of users, they will be uploaded as
+external auth, because the password is not declared.
+
+::
+
+  { "users": ["alice","bob","charlie"]}
+
+Example: json groups
+--------------------
+
+This is a list of groups.
+
+::
+
+  { "groups": ["accounting","it","marketing"]}
+
+Example: json groups and users
+--------------------------------
+
+Both users and groups can be uploaded in the same *JSON* file.
+
+::
+
+  { "users": ["alice","bob","charlie"]
+  , "groups": ["accounting","it","marketing"]}
+
+Example: json group members
+---------------------------
+
+This is an extended form of group and users creation. Inside the
+groups listing you have to specify the name and a list of members.
+The users
+do not need to be listed separately, they will be created
+from the members list.
+
+::
+
+  {
+      "groups": [
+          {"name":"accounting"
+              ,"members": ["alice","bob"]
+          }
+          ,{"name":"it"
+              ,"members": ["alice","charlie"]
+          }
+          ,{"name": "marketing"
+              ,"members": ["daniel","ethan"]
+          }
+      ]
+  }
+
+
+Example: flushing group members
+-------------------------------
+
+When uploading group members, by default they will be added to the group.
+If you need to remove old members, you can add an option to flush it.
+
+If you run the previous example, then this one, the user "alice" will
+be removed from the accounting group.
+
+::
+
+  {
+      "options": { "flush": "1" }
+      ,"groups": [
+          {"name":"accounting"
+              ,"members": ["bob"]
+          }
+          ,{"name":"it"
+              ,"members": ["alice","charlie"]
+          }
+          ,{"name": "marketing"
+              ,"members": ["daniel","ethan"]
+          }
+      ]
+  }
+
+Example: removing empty groups
+------------------------------
+
+You can add an option to also remove empty groups. It is important
+to follow these rules:
+
+# Add both "flush" and "remove_empty" options with value "1".
+# Add a list of empty members
+
+After uploading this file, the group accounting will be removed.
+
+::
+
+  {
+      "options": { "flush": "1", "remove_empty": "1" }
+      ,"groups": [
+          {"name":"accounting"
+              ,"members": []
+          }
+          ,{"name":"it"
+              ,"members": ["alice","charlie"]
+          }
+          ,{"name": "marketing"
+              ,"members": ["daniel","ethan"]
+          }
+      ]
+  }
+
