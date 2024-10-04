@@ -375,6 +375,11 @@ sub add_user_file($ADD_USER_FILE) {
     die "Error: File $ADD_USER_FILE does not exist\n"
     if !-e $ADD_USER_FILE;
 
+    if ($ADD_USER_FILE =~ /json$/) {
+        return upload_group_members_json($ADD_USER_FILE);
+    }
+
+
     open my $in,"<",$ADD_USER_FILE or die "$! $ADD_USER_FILE\n";
     my $users = join("",<$in>);
     close $in;
@@ -1173,7 +1178,29 @@ sub show_volume($rvd_back) {
     }
 }
 
+sub upload_group_members_json($file) {
+    open my $in,"<",$file or die "$! $file\n";
+    my $users = join("",<$in>);
+    close $in;
+
+    my $ravada = Ravada::Front->new();
+
+    my ($result, $error)=$ravada->upload_users_json($users);
+    print Dumper($result)."\n" if $VERBOSE;
+    if (scalar (@$error)) {
+        print "Errors:\n" if $VERBOSE;
+        for (sort @$error) {
+            next if !$VERBOSE && /already a member/;
+            print "  - $_\n";
+        }
+    }
+
+}
+
 sub upload_group_members_file($file) {
+    if ($file =~ /json$/) {
+        return upload_group_members_json($file);
+    }
     if (!$GROUP) {
         ($GROUP) = $file =~ m{.*/(.*)\.};
         ($GROUP) = $file =~ m{(.*)\.} unless $GROUP;
