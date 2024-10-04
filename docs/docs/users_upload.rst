@@ -213,8 +213,9 @@ Example: removing empty groups
 You can add an option to also remove empty groups. It is important
 to follow these rules:
 
-# Add both "flush" and "remove_empty" options with value "1".
-# Add a list of empty members
+1. Add both "flush" and "remove_empty" options with value "1".
+
+2. Add a list of empty members
 
 After uploading this file, the group accounting will be removed.
 
