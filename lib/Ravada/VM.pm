@@ -1401,7 +1401,6 @@ sub is_locked($self) {
         next if defined $at && $at < time + 2;
         next if !$args;
         my $args_d = decode_json($args);
-        warn Dumper($args_d) if $args_d->{id_vm} && $args_d->{id_vm} eq 'KVM';
         if ( exists $args_d->{id_vm} && $args_d->{id_vm} == $self->id ) {
             warn "locked by $command\n";
             return 1;
@@ -2403,9 +2402,22 @@ sub copy_file_storage($self, $file, $storage) {
 }
 
 sub _fetch_tls_host_subject($self) {
+
     return '' if !$self->dir_cert();
 
-    return $self->_fetch_tls_cached('host_subject')
+    my $key = 'subject';
+    my $subject = $self->_fetch_tls_cached($key);
+    return $subject if $self->readonly || $subject;
+
+    return $self->_do_fetch_tls_host_subject();
+
+}
+
+sub _do_fetch_tls_host_subject($self) {
+    return '' if !$self->dir_cert();
+
+    my $key = 'subject';
+    return $self->_fetch_tls_cached($key)
     if $self->readonly;
 
     my @cmd= qw(/usr/bin/openssl x509 -noout -text -in );
@@ -2423,12 +2435,13 @@ sub _fetch_tls_host_subject($self) {
         $subject =~ s/, /,/g;
         last;
     }
-    $self->_store_tls( subject => $subject );
+    $self->_store_tls( $key => $subject );
     return $subject;
 }
 
 sub _fetch_tls_cached($self, $field) {
     my $tls_json = $self->_data('tls');
+    return if !$tls_json;
     my $tls = {};
     eval {
         $tls = decode_json($tls_json) if length($tls);
@@ -2451,13 +2464,30 @@ sub _store_tls($self, $field, $value ) {
 }
 
 sub _fetch_tls_ca($self) {
-    return $self->_fetch_tls_cached('ca') if $self->readonly;
+    my $ca = $self->_fetch_tls_cached('ca');
+    return $ca if $self->readonly || $ca;
+
+    return $self->_do_fetch_tls_ca();
+}
+
+sub _do_fetch_tls_ca($self) {
     my ($out, $err) = $self->run_command("/bin/cat", $self->dir_cert."/ca-cert.pem");
 
     my $ca = join('\n', (split /\n/,$out) );
     $self->_store_tls( ca => $ca );
 
     return $ca;
+}
+
+sub _fetch_tls_dates($self) {
+    return if $self->readonly;
+    my ($out, $err) = $self->run_command("openssl","x509","-in", $self->dir_cert."/ca-cert.pem"
+    ,"-dates","-noout");
+    for my $line (split /\n/,$out) {
+        my ($field,$value) = $line =~ m{(.*?)=(.*)};
+        next if !$field || !$value;
+        $self->_store_tls( $field => $value );
+    }
 }
 
 sub _fetch_tls($self) {
@@ -2472,7 +2502,10 @@ sub _fetch_tls($self) {
     for (keys %$tls_hash) {
         delete $tls_hash->{$_} if !$tls_hash->{$_};
     }
+    my $time = $tls_hash->{time};
     if (!defined $tls || !$tls
+        || !$time
+        || ( time-$time > 300  &&  rand(10)<2)
         || !$tls_hash || !ref($tls_hash) || !keys(%$tls_hash)) {
         $self->_do_fetch_tls();
     }
@@ -2480,8 +2513,10 @@ sub _fetch_tls($self) {
 }
 
 sub _do_fetch_tls($self) {
-    $self->_fetch_tls_host_subject();
-    $self->_fetch_tls_ca();
+    $self->_store_tls( time => time );
+    $self->_do_fetch_tls_host_subject();
+    $self->_do_fetch_tls_ca();
+    $self->_fetch_tls_dates();
 }
 
 sub _store_mac_address($self, $force=0 ) {

@@ -1992,6 +1992,7 @@ msgstr "Cosa vuoi fare ora?"
 msgid "Shutdown Timeout"
 msgstr "Timeout spegnimento"
 
+#, fuzzy
 msgid ""
 "This server has reservations for today. Machines from users out of\n"
 "    the booking list will be shutdown."

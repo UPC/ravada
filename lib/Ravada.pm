@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '2.3.0';
+our $VERSION = '2.3.1-beta3';
 
 use utf8;
 
@@ -180,6 +180,11 @@ sub _set_first_time_run($self) {
     } else {
         print "Installing " if $0 !~ /\.t$/;
     }
+}
+
+sub _clean_tls($self) {
+    my $sth = $CONNECTOR->dbh->prepare("UPDATE vms set tls=NULL");
+    $sth->execute();
 }
 
 sub _install($self) {
@@ -2686,6 +2691,25 @@ sub _sql_insert_defaults($self){
             ,{
                 id_parent => "/frontend/content_security_policy"
                 ,name => "media-src"
+                ,value => ''
+            }
+            ,{
+                id_parent => $id_frontend
+                ,name => 'auto_create_users'
+                ,value => 1
+            }
+            ,{
+                id_parent => $id_frontend
+                ,name => 'openid'
+            }
+            ,{
+                id_parent => "/frontend/openid"
+                ,name => "enabled"
+                ,value => 0
+            }
+            ,{
+                id_parent => "/frontend/openid"
+                ,name => "logout_url"
                 ,value => ''
             }
             ,{
@@ -6448,7 +6472,9 @@ sub _cmd_cleanup($self, $request) {
         )) {
             $self->_clean_requests($cmd, $request,'done');
     }
+
 }
+
 sub _verify_connection($self, $domain) {
     for ( 1 .. 60 ) {
         my $status = $domain->client_status(1);
@@ -6878,6 +6904,42 @@ sub _cmd_post_login($self, $request) {
     my $user = Ravada::Auth::SQL->new(name => $request->args('user'));
     $user->unshown_messages();
     $self->_post_login_locale($request);
+    $self->_check_tls_date($user) if $user->is_admin;
+}
+
+sub _check_tls_date($self, $user) {
+    return if !$user->is_admin;
+    my $sth = $CONNECTOR->dbh->prepare("SELECT name,tls FROM vms");
+    $sth->execute();
+    while (my ($name,$tls) = $sth->fetchrow ) {
+        next if !$tls;
+        my $tls_h = {};
+        eval {
+            $tls_h = decode_json($tls);
+        };
+        warn "Warning: error decoding tls for $name '$tls' $@" if $@;
+        next if !keys %$tls_h;
+        my $not_after = $tls_h->{notAfter};
+        next if !$not_after;
+        my $date;
+        eval { $date = DateTime::Format::DateParse->parse_datetime($not_after) };
+
+        if($date) {
+            my $duration = $date-DateTime->now;
+            my ($years, $months, $days) = $duration->in_units('years','months','days');
+            if ($years<1 && $months<1) {
+                if ($years<0 || $months<0 || $days<=0 ) {
+                    $not_after =~ s/(.*) \d+:\d+:\d+(.*)/$1$2/;
+                    $user->send_message("Critical: TLS certificate for $name expired on $not_after");
+                }elsif ($days<7) {
+                    $user->send_message("Critical: TLS certificate for $name has only $days days left. $not_after");
+                } elsif ($days<30) {
+                    $user->send_message("Warning: TLS certificate for $name has only $days days left. $not_after");
+                }
+            }
+        }
+
+    }
 }
 
 sub _post_login_locale($self, $request) {

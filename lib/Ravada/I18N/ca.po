@@ -2240,6 +2240,7 @@ msgstr "Guardar canvis"
 msgid "This booking overlaps already scheduled reservations"
 msgstr "Aquesta reserva es superposa a les reserves ja programades"
 
+#, fuzzy
 msgid ""
 "This server has reservations for today. Machines from users out of\n"
 "    the booking list will be shutdown."
