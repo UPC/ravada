@@ -599,7 +599,31 @@ sub init($config=undef, $sqlite = 1 , $flush=0) {
     $Ravada::VM::KVM::VERIFY_ISO = 0;
     $Ravada::VM::MIN_DISK_MB = 1;
 
+    _clean_old_users();
+    _clean_old_groups();
 }
+
+sub _clean_old_users() {
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM users WHERE name like ? ");
+    $sth->execute(base_domain_name().'%');
+    while ( my ($id,$name) = $sth->fetchrow ) {
+        next if $USER_ADMIN && $name eq $USER_ADMIN->name;
+        my $user = Ravada::Auth::SQL->search_by_id($id);
+        next if !$user;
+        $user->remove();
+    }
+}
+
+sub _clean_old_groups() {
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM groups_local WHERE name like ? ");
+    $sth->execute(base_domain_name().'%');
+    while ( my ($id,$name) = $sth->fetchrow ) {
+        my $g = Ravada::Auth::Group->open($id);
+        next if !$g;
+        $g->remove();
+    }
+}
+
 
 sub _load_remote_config() {
     return {} if ! -e $FILE_CONFIG_REMOTE;
@@ -1573,6 +1597,7 @@ sub _qemu_storage_pool {
 sub remove_void_networks($vm=undef) {
     if (!defined $vm) {
         eval { $vm = rvd_back->search_vm('Void') };
+        die $@ if $@;
     }
     my $dir_net = $vm->dir_img()."/networks";
     return if ! -e $dir_net;

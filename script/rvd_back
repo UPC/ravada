@@ -334,6 +334,7 @@ sub start {
         $Ravada::CONNECTOR->dbh;
 		$ravada->set_debug_value();
         $ravada->_wait_pids();
+        $ravada->_clean_tls();
         autostart_machines($ravada);
         Ravada::Request->update_iso_urls(uid =>Ravada::Utils::user_daemon->id);
         Ravada::Request->refresh_storage();

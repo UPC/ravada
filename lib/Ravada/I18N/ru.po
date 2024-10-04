@@ -2,8 +2,8 @@
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl)
 msgid ""
 msgstr ""
-"PO-Revision-Date: 2024-09-21 06:40+0000\n"
-"Last-Translator: fv3rdugo <fv3rdugo@gmail.com>\n"
+"PO-Revision-Date: 2024-07-17 22:09+0000\n"
+"Last-Translator: Elena Mishina <lepata@basealt.ru>\n"
 "Language-Team: Russian <https://hosted.weblate.org/projects/ravada/"
 "translation/ru/>\n"
 "Language: ru\n"

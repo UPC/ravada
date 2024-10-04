@@ -17,7 +17,7 @@
                         <span ng-show="!type || type=='sql' || (type=='ldap' && create)">
                             <%=l 'Upload a text file with the user names and passwords separated by a colon :' %>
                         </span>
-                        <span ng-show="type=='sso' || type=='ldap' && !create">
+                        <span ng-show="type=='openid' || type=='sso' || type=='ldap' && !create">
                             <%=l 'Upload a text file with the user names' %>
                         </span>
 
@@ -32,13 +32,14 @@
                             <select name="type" ng-model="type" required>
                                 <option value="sql" selected>plain</option>
                                 <option value="ldap">LDAP</option>
-                                <option value="sso">SSO</option>
+                                <option value="sso">CAS</option>
+                                <option value="openid">OpenID</option>
                             </select>
                         </div>
 
                         <div class="form-group">
                             <label for="users"><%=l 'Users' %></label>
-                            <input type="file" accept="text/csv, text/plain" name="users"
+                            <input type="file" accept="text/csv, text/plain, application/json" name="users"
                                 ng-model="users"
                                 onchange="users_changed=true"
                             >
@@ -59,8 +60,15 @@
                         </div>
                     </form>
 %                   } else {
-                        <%= $found %> <%=l 'users found in uploaded file' %>,
-                        <%= $count %> <%=l 'created' %>.
+                        <%= $output->{users_found} %> <%=l 'users found in uploaded file' %>,
+                        <%= $output->{users_added} %> <%=l 'created' %>.
+%                       if (exists $output->{groups_found}) {
+                            <%= $output->{groups_found} %> <%=l 'groups found in uploaded file' %>,
+                            <%= $output->{groups_added} %> <%=l 'created' %>.
+%                       }
+%                       if (exists $output->{groups_removed}) {
+                            <%= $output->{groups_removed} %> <%= l 'groups removed'%>.
+%                       }
                         <div ng-show="<%= scalar(@$error) %>">
                             <%=l 'Errors found' %>: <%= scalar(@$error) %>
                             <ul>
