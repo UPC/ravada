@@ -14,7 +14,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
-"X-Generator: Weblate 5.4-dev\n"
+"X-Generator: Weblate 5.8-dev\n"
 
 msgid "Ravada broker"
 msgstr "Ravada broker"
@@ -2304,6 +2304,7 @@ msgstr ""
 msgid "Prepare Base"
 msgstr "Siapkan base"
 
+#, fuzzy
 msgid ""
 "This server has reservations for today. Machines from users out of\n"
 "    the booking list will be shutdown."
