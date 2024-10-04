@@ -1912,6 +1912,108 @@ sub upload_users($self, $users, $type, $create=0) {
     return ($found, $count, \@error);
 }
 
+=head2 upload_users_json
+
+Upload a list of users to the database
+
+=head3 Arguments
+
+=over
+
+=item * string with users and passwords in each line
+
+=item * type: it can be SQL, LDAP or SSO
+
+=back
+
+=cut
+
+
+sub upload_users_json($self, $data_json, $type='openid') {
+
+    my ($found, $count, @error);
+    my $data;
+    eval {
+        $data= decode_json($data_json);
+    };
+    if ( $@ ) {
+        push @error,($@);
+        $data={}
+    }
+
+    my $result = {
+        users_found => 0
+        ,users_added => 0
+        ,groups_found => 0
+        ,groups_added => 0
+    };
+    if (exists $data->{groups} &&
+        (!ref($data->{groups}) || ref($data->{groups}) ne 'ARRAY')) {
+        die "Expecting groups as an array , got ".ref($data->{groups});
+    }
+    $data->{groups} = [] if !exists $data->{groups};
+    for my $g0 (@{$data->{groups}}) {
+        $result->{groups_found}++;
+        my $g = $g0;
+        if (!ref($g)) {
+            $g = { name => $g0 };
+        }
+        $found++;
+        my $group = Ravada::Auth::Group->new(name => $g->{name});
+        my $members = delete $g->{members};
+        if (!$group || !$group->id) {
+            unless (defined $members && !scalar(@$members) && $data->{options}->{flush} && $data->{options}->{remove_empty}) {
+                $result->{groups_added}++;
+                Ravada::Auth::Group::add_group(%$g);
+            }
+        } else {
+            push @error,("Group $g->{name} already added");
+        }
+        $self->_add_users($members, $type, $result, \@error, 1);
+        $group->remove_other_members($members) if $data->{options}->{flush};
+
+        for my $m (@$members) {
+            my $user = Ravada::Auth::SQL->new(name => $m);
+            $user->add_to_group($g->{name}) unless $user->is_member($g->{name});
+        }
+        if ( $data->{options}->{remove_empty} && $group->id && !$group->members ) {
+            $group->remove();
+            $result->{groups_removed}++;
+            push @error,("Group ".$group->name." empty removed");
+        }
+    }
+
+    $self->_add_users($data->{users}, $type, $result, \@error)
+    if $data->{users};
+
+    return ($result, \@error);
+}
+
+sub _add_users($self,$users, $type, $result, $error, $ignore_already=0) {
+    for my $u0 (@$users) {
+        $result->{users_found}++;
+        my $u = $u0;
+        $u = dclone($u0) if ref($u0);
+        if (!ref($u)) {
+            $u = { name => $u0 };
+        }
+        if (!exists $u->{is_external}) {
+            if ($type ne 'sql') {
+                $u->{is_external} = 1;
+                $u->{external_auth} = $type ;
+            }
+        }
+        my $user = Ravada::Auth::SQL->new(name => $u->{name});
+        if ($user && $user->id) {
+            push @$error,("User $u->{name} already added")
+                unless $ignore_already;
+            next;
+        }
+        Ravada::Auth::SQL::add_user(%$u);
+        $result->{users_added}++;
+    }
+}
+
 =head2 create_bundle
 
 Creates a new bundle

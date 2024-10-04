@@ -121,6 +121,15 @@ sub remove_member($self, $name) {
     $sth->execute($id_user);
 }
 
+sub remove_other_members($self, $members) {
+    my %members = map { $_ => 1 } @$members;
+
+    for my $name ($self->members ) {
+        $self->remove_member($name) if !$members{$name};
+    }
+
+}
+
 sub _remove_all_members($self) {
     my $sth = $$CON->dbh->prepare("DELETE FROM users_group "
         ." WHERE id_group=?"
