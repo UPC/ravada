@@ -1912,6 +1912,22 @@ sub upload_users($self, $users, $type, $create=0) {
     return ($found, $count, \@error);
 }
 
+=head2 upload_users_json
+
+Upload a list of users to the database
+
+=head3 Arguments
+
+=over
+
+=item * string with users and passwords in each line
+
+=item * type: it can be SQL, LDAP or SSO
+
+=back
+
+=cut
+
 
 sub upload_users_json($self, $data_json, $type='openid') {
 
