@@ -39,7 +39,7 @@
 
                         <div class="form-group">
                             <label for="users"><%=l 'Users' %></label>
-                            <input type="file" accept="text/csv, text/plain" name="users"
+                            <input type="file" accept="text/csv, text/plain, application/json" name="users"
                                 ng-model="users"
                                 onchange="users_changed=true"
                             >

@@ -1953,8 +1953,8 @@ sub upload_users_json($self, $data_json, $type='openid') {
         } else {
             push @error,("Group $g->{name} already added");
         }
-        $self->_add_users($members, $type, $result, \@error);
-        $group->remove_all_members() if $data->{options}->{flush};
+        $self->_add_users($members, $type, $result, \@error, 1);
+        $group->remove_other_members($members) if $data->{options}->{flush};
 
         for my $m (@$members) {
             my $user = Ravada::Auth::SQL->new(name => $m);
@@ -1973,7 +1973,7 @@ sub upload_users_json($self, $data_json, $type='openid') {
     return ($result, \@error);
 }
 
-sub _add_users($self,$users, $type, $result, $error) {
+sub _add_users($self,$users, $type, $result, $error, $ignore_already=0) {
     for my $u0 (@$users) {
         $result->{users_found}++;
         my $u = $u0;
@@ -1989,8 +1989,9 @@ sub _add_users($self,$users, $type, $result, $error) {
         }
         my $user = Ravada::Auth::SQL->new(name => $u->{name});
         if ($user && $user->id) {
-                push @$error,("User $u->{name} already added");
-                next;
+            push @$error,("User $u->{name} already added")
+                unless $ignore_already;
+            next;
         }
         Ravada::Auth::SQL::add_user(%$u);
         $result->{users_added}++;

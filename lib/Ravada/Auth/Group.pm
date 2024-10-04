@@ -121,8 +121,13 @@ sub remove_member($self, $name) {
     $sth->execute($id_user);
 }
 
-sub remove_all_members($self) {
-    $self->_remove_all_members();
+sub remove_other_members($self, $members) {
+    my %members = map { $_ => 1 } @$members;
+
+    for my $name ($self->members ) {
+        $self->remove_member($name) if !$members{$name};
+    }
+
 }
 
 sub _remove_all_members($self) {
