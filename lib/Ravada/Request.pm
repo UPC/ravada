@@ -255,6 +255,7 @@ our %COMMAND = (
         ,commands => ['shutdown','shutdown_now', 'enforce_limits', 'set_time'
             ,'remove_domain', 'remove', 'refresh_machine_ports'
             ,'connect_node','start_node','shutdown_node'
+            ,'post_login'
         ]
     }
 
