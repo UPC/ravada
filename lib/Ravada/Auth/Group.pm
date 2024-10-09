@@ -194,4 +194,85 @@ sub exists_id($id) {
     return $found;
 }
 
+#common to users
+=head2 can_do
+
+Returns if the group is allowed to perform a privileged action
+
+    if ($group->can_do("remove")) { 
+        ...
+
+=cut
+
+sub can_do($self, $grant) {
+    $self->_load_grants();
+
+    confess "Permission '$grant' invalid\n".Dumper($self->{_grant_alias})
+        if $grant !~ /^[a-z_]+$/;
+
+    $grant = $self->_grant_alias($grant);
+
+    confess "Wrong grant '$grant'\n".Dumper($self->{_grant_alias})
+        if $grant !~ /^[a-z_]+$/;
+
+    return $self->{_grant}->{$grant} if defined $self->{_grant}->{$grant};
+    confess "Unknown permission '$grant'. Maybe you are using an old release.\n"
+            ."Try removing the table grant_types and start rvd_back again:\n"
+            ."mysql> drop table grant_types;\n"
+            .Dumper($self->{_grant}, $self->{_grant_alias})
+        if !exists $self->{_grant}->{$grant};
+    return $self->{_grant}->{$grant};
+}
+
+sub _load_grants($self) {
+    $self->_load_aliases();
+    return if exists $self->{_grant};
+
+    _init_connector();
+
+    my $sth;
+    eval { $sth= $$CON->dbh->prepare(
+        "SELECT gt.name, gg.allowed, gt.enabled, gt.is_int"
+        ." FROM grant_types gt LEFT JOIN grants_group gg "
+        ."      ON gt.id = gg.id_grant "
+        ."      AND gg.id_group=?"
+    );
+    $sth->execute($self->id);
+    };
+    confess $@ if $@;
+    my ($name, $allowed, $enabled, $is_int);
+    $sth->bind_columns(\($name, $allowed, $enabled, $is_int));
+
+    while ($sth->fetch) {
+        my $grant_alias = $self->_grant_alias($name);
+        $self->{_grant}->{$grant_alias} = $allowed     if $enabled;
+        $self->{_grant_disabled}->{$grant_alias} = !$enabled;
+        $self->{_grant_type}->{$grant_alias} = 'boolean';
+        $self->{_grant_type}->{$grant_alias} = 'int' if $is_int;
+    }
+    $sth->finish;
+}
+
+#common to users
+sub _load_aliases($self) {
+    return if exists $self->{_grant_alias};
+
+    my $sth = $$CON->dbh->prepare("SELECT name,alias FROM grant_types_alias");
+    $sth->execute;
+    while (my $row = $sth->fetchrow_hashref) {
+        $self->{_grant_alias}->{$row->{name}} = $row->{alias};
+    }
+
+}
+
+#common to users
+sub _grant_alias($self, $name) {
+    my $alias = $name;
+    return $self->{_grant_alias}->{$name} if exists $self->{_grant_alias}->{$name};
+    return $name;# if exists $self->{_grant}->{$name};
+
+}
+
+
+
 1;

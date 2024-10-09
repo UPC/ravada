@@ -774,6 +774,34 @@ sub _load_grants($self) {
         $self->{_grant_type}->{$grant_alias} = 'int' if $is_int;
     }
     $sth->finish;
+
+    $self->_load_group_grants();
+}
+
+sub _load_group_grants($self) {
+    for my $group ($self->groups_local(1)) {
+        my $sth;
+        eval { $sth= $$CON->dbh->prepare(
+                "SELECT gt.name, gg.allowed"
+                ." FROM grant_types gt LEFT JOIN grants_group gg "
+                ."      ON gt.id = gg.id_grant "
+                ."      AND gg.id_group =?"
+                ." WHERE gt.enabled=1"
+            );
+            $sth->execute($group->{id});
+        };
+        confess $@ if $@;
+        my ($name, $allowed);
+        $sth->bind_columns(\($name, $allowed));
+
+        while ($sth->fetch) {
+            my $grant_alias = $self->_grant_alias($name);
+            next if !defined $allowed;
+            next if $self->{_grant}->{$grant_alias};
+            $self->{_grant}->{$grant_alias} = $allowed;
+        }
+        $sth->finish;
+    }
 }
 
 sub _reload_grants($self) {
@@ -950,6 +978,62 @@ sub grant($self,$user,$permission,$value=1) {
         if $user->can_do($permission) ne $value;
     return $value;
 }
+
+sub grant_group($self,$group,$permission,$value=1) {
+
+    confess "Error: undefined user" if !defined $group;
+
+    confess "ERROR: permission '$permission' disabled "
+        if $self->{_grant_disabled}->{$permission};
+
+    if ( !$self->can_grant() && $self->name ne Ravada::Utils::user_daemon->name ) {
+        my @perms = $self->list_permissions();
+        confess "ERROR: ".$self->name." can't grant permissions for ".$group->name."\n"
+            .Dumper(\@perms);
+    }
+
+    if ( $self->grant_type($permission) eq 'boolean' ) {
+        if ($value eq 'false' || !$value ) {
+            $value = 0;
+        } else {
+            $value = 1;
+        }
+    }
+
+    return 0 if !$value && !$group->can_do($permission);
+
+    my $value_sql = $group->can_do($permission);
+
+    return 0 if !$value && !$value_sql;
+    return $value if defined $value_sql && $value_sql eq $value;
+
+    $permission = $self->_grant_alias($permission);
+    my $id_grant = $self->_search_id_grant($permission);
+    if (! defined $value_sql) {
+        my $sth = $$CON->dbh->prepare(
+            "INSERT INTO grants_group"
+            ." (id_grant, id_group, allowed)"
+            ." VALUES(?,?,?) "
+        );
+        eval { $sth->execute($id_grant, $group->id, $value); };
+        confess $@ if $@;
+        $sth->finish;
+    } else {
+        my $sth = $$CON->dbh->prepare(
+            "UPDATE grants_group "
+            ." set allowed=?"
+            ." WHERE id_grant = ? AND id_group=?"
+        );
+        $sth->execute($value, $id_grant, $group->id);
+        $sth->finish;
+    }
+    $group->{_grant}->{$permission} = $value;
+    confess "Unable to grant $permission for ".$group->name ." expecting=$value "
+            ." got= ".$group->can_do($permission)
+        if $group->can_do($permission) ne $value;
+    return $value;
+}
+
 
 =head2 revoke
 
@@ -1298,16 +1382,20 @@ Returns a list of the local groups this user belogs to
 
 =cut
 
-sub groups_local($self) {
-    my $sth = $$CON->dbh->prepare("SELECT g.name FROM groups_local g,users_group ug "
+sub groups_local($self, $info=0) {
+    my $sth = $$CON->dbh->prepare("SELECT g.id,g.name FROM groups_local g,users_group ug "
         ." WHERE g.id = ug.id_group "
         ."   AND ug.id_user = ?"
         ." ORDER BY g.name "
     );
     $sth->execute($self->id);
     my @groups;
-    while (my ($name) = $sth->fetchrow) {
-        push @groups,($name);
+    while (my ($id,$name) = $sth->fetchrow) {
+        if ($info) {
+            push @groups,({ id => $id, name => $name });
+        } else {
+            push @groups,($name);
+        }
     }
     return @groups;
 }

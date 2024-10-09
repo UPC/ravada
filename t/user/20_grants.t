@@ -92,7 +92,7 @@ sub test_admin {
     $user->remove();
 }
 
-sub test_grant {
+sub test_grant() {
     my $user = create_user("bar$$","bar",1);
     ok($user->is_admin);
     for my $perm ($user->list_all_permissions) {
@@ -233,8 +233,7 @@ sub test_view_clones {
     $user->remove();
 }
 
-sub test_shutdown_clone {
-    my $vm_name = shift;
+sub test_shutdown_clone($vm_name, $grant_group=0) {
 
     my $user = create_user("oper$$","bar");
     ok(!$user->is_operator);
@@ -259,8 +258,14 @@ sub test_shutdown_clone {
     is($clone->is_active,1);
 
     is($clone->is_active,1) or return;
-
-    $usera->grant($user,'shutdown_clones');
+    my $group = create_group();
+    if ($grant_group) {
+        $user->add_to_group($group);
+        user_admin->grant_group($group,'shutdown_clones');
+        $user->_reload_grants();
+    } else {
+        $usera->grant($user,'shutdown_clones');
+    }
     is($user->can_shutdown_clones,1);
 
     eval { $clone->shutdown_now($user); };
@@ -286,6 +291,7 @@ sub test_shutdown_clone {
 
     $user->remove();
     $usera->remove();
+    $group->remove();
 }
 
 sub test_remove {
@@ -326,8 +332,7 @@ sub test_remove {
     $user->remove();
 }
 
-sub test_shutdown_all {
-    my $vm_name = shift;
+sub test_shutdown_all($vm_name, $grant_group=0) {
 
     my $user = create_user("oper_sa$$","bar");
     is($user->can_shutdown_all,undef) or return;
@@ -343,7 +348,14 @@ sub test_shutdown_all {
     like($@,qr'.');
     is($domain->is_active,1)    or return;
 
-    $usera->grant($user,'shutdown_all');
+    my $group = create_group();
+        $user->add_to_group($group);
+    if ($grant_group) {
+        $usera->grant_group($group,'shutdown_all');
+        $user->_reload_grants();
+    } else {
+        $usera->grant($user,'shutdown_all');
+    }
     is($user->can_shutdown_all,1) or return;
 
     eval { $domain->shutdown_now($user)};
@@ -363,6 +375,7 @@ sub test_shutdown_all {
     $domain->remove($usera);
     $user->remove();
     $usera->remove();
+    $group->remove();
 }
 
 sub test_remove_clone_all {
@@ -896,7 +909,7 @@ sub test_start_many_upgrade{
     $usera->remove();
 }
 
-sub test_view_all($vm) {
+sub test_view_all($vm, $grant_group=0) {
     my $domain;
     if ($vm->type eq 'KVM') {
         my $base = import_domain($vm);
@@ -906,7 +919,15 @@ sub test_view_all($vm) {
     }
     $domain->expose(22);
     my $user = create_user();
-    user_admin->grant($user,'view_all');
+    my $group = create_group();
+    $user->add_to_group($group);
+    if ($grant_group) {
+        user_admin->grant_group($group,'view_all');
+    } else {
+        user_admin->grant($user,'view_all');
+    }
+    $user->_reload_grants();
+    is($user->can_view_all,1,"expecting 1 grant_group=$grant_group") or exit;
     my $req_start = Ravada::Request->start_domain(
         uid => $user->id
         ,id_domain => $domain->id
@@ -967,6 +988,8 @@ sub test_view_all($vm) {
         is($req->error,'', $req->command) or exit;
     }
 
+    $user->remove();
+    $group->remove();
     $domain->remove(user_admin);
 }
 
@@ -1000,11 +1023,14 @@ for my $vm_name (vm_names()) {
 
     diag("Testing VM $vm_name");
     test_view_all($vm);
+    test_view_all($vm,1);
     test_expose_ports($vm_name);
     test_change_settings($vm_name);
 
     test_shutdown_clone($vm_name);
+    test_shutdown_clone($vm_name,1);
     test_shutdown_all($vm_name);
+    test_shutdown_all($vm_name,1);
 
     test_remove($vm_name);
     test_remove_clone($vm_name);

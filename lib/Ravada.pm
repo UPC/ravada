@@ -1581,6 +1581,11 @@ sub _add_indexes_generic($self) {
             ,'unique(id_grant,id_user):id_grant'
             ,"index(id_user)"
         ]
+        ,grants_group => [
+            "index(id_group,id_grant)"
+            ,'unique(id_grant,id_group):id_grant'
+            ,"index(id_group)"
+        ]
         ,iptables => [
             "index(id_domain,time_deleted,time_req)"
         ]
@@ -2457,7 +2462,15 @@ sub _sql_create_tables($self) {
                 ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
             }
         ]
+        ,
+        [grants_group => {
+                id => 'integer PRIMARY KEY AUTO_INCREMENT'
+                ,id_grant => 'integer NOT NULL'
+                ,id_group=> 'integer NOT NULL'
+                ,allowed => 'integer not null default 0'
 
+            }
+        ]
     );
     for my $new_table (@tables ) {
         my ($table, $contents) = @$new_table;

@@ -1226,8 +1226,8 @@ sub _access_denied_error($self,$user) {
     };
     my $err = $@;
 
-    confess "User ".$user->name." [".$user->id."] not allowed to access ".$self->name
-        ." owned by ".($owner_name or '<UNDEF>')." [".($id_owner or '<UNDEF>')."]"
+    die "User ".$user->name." [".$user->id."] not allowed to access ".$self->name
+        ." owned by ".($owner_name or '<UNDEF>')." [".($id_owner or '<UNDEF>')."]\n"
             unless (defined $id_owner && $id_owner == $user->id )
                 || $user->can_start_machine($self);
 
