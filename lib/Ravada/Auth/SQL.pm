@@ -981,7 +981,13 @@ sub grant($self,$user,$permission,$value=1) {
 
 sub grant_group($self,$group,$permission,$value=1) {
 
-    confess "Error: undefined user" if !defined $group;
+    confess "Error: undefined group" if !defined $group;
+
+    if (!ref($group)) {
+        $group = Ravada::Auth::Group->new(name => $group);
+        die "Error: unknown group '$group'" if !$group || !$group->id;
+    }
+    confess "Error: ".ref($group)." not a group" if ref($group) !~ /Ravada::Auth::Group/;
 
     confess "ERROR: permission '$permission' disabled "
         if $self->{_grant_disabled}->{$permission};

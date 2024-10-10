@@ -152,13 +152,19 @@ sub test_operator {
     $usera->remove();
 }
 
-sub test_remove_clone {
-    my $vm_name = shift;
+sub test_remove_clone($vm_name,$grant_group=0) {
 
     my $user = create_user("oper_rm$$","bar");
+    my $group = create_group();
+    $user->add_to_group($group);
     my $usera = create_user("admin_rm$$","bar",'is admin');
 
-    $usera->grant($user, 'create_machine');
+    if ($grant_group) {
+        $usera->grant_group($group,'create_machine');
+        $user->_reload_grants();
+    } else {
+        $usera->grant($user, 'create_machine');
+    }
     my $domain = create_domain($vm_name, $user);
     $domain->prepare_base($usera);
     ok($domain->is_base) or return;
@@ -171,7 +177,12 @@ sub test_remove_clone {
     eval { $clone2 = rvd_back->search_domain($clone->name) };
     ok($clone2, "Expecting ".$clone->name." not removed");
 
-    $usera->grant($user,'remove_clones');
+    if ($grant_group) {
+        $usera->grant_group($group,'remove_clones');
+        $user->_reload_grants();
+    } else {
+        $usera->grant($user,'remove_clones');
+    }
     is($user->can_remove_clones, 1);
     eval { $clone->remove($user); };
     is($@,'');
@@ -196,6 +207,7 @@ sub test_remove_clone {
         $clone3->remove($usera);
     }
 
+    $group->remove();
     $user->remove();
     $usera->remove();
 }
@@ -294,15 +306,21 @@ sub test_shutdown_clone($vm_name, $grant_group=0) {
     $group->remove();
 }
 
-sub test_remove {
-    my $vm_name = shift;
+sub test_remove($vm_name, $grant_group=0) {
 
     my $user = create_user("oper_r$$.$vm_name","bar");
+    my $group = create_group();
+    $user->add_to_group($group);
     ok(!$user->is_operator);
     ok(!$user->is_admin);
 
     user_admin()->revoke($user,'remove');
-    user_admin()->grant($user,'create_machine');
+    if ($grant_group) {
+        user_admin()->grant_group($group,'create_machine');
+        $user->_reload_grants();
+    } else {
+        user_admin()->grant($user,'create_machine');
+    }
 
     is($user->can_remove,0) or return;
 
@@ -317,7 +335,12 @@ sub test_remove {
     like($@,qr'.');
 
     # user is granted remove
-    user_admin()->grant($user,'remove');
+    if ($grant_group) {
+        user_admin()->grant_group($group,'remove');
+        $user->_reload_grants();
+    } else {
+        user_admin()->grant($user,'remove');
+    }
     eval { $domain->remove($user)};
     is($@,'');
 
@@ -329,6 +352,7 @@ sub test_remove {
     eval { $domain2->remove(user_admin())};
     is($@,'');
 
+    $group->remove();
     $user->remove();
 }
 
@@ -502,10 +526,11 @@ sub test_prepare_base($vm_name, $grant_group=0) {
 
 }
 
-sub test_frontend {
-    my $vm_name = shift;
+sub test_frontend($vm_name, $grant_group=0) {
 
     my $user = create_user("oper_pb$$","bar");
+    my $group = create_group();
+    $user->add_to_group($group);
     my $usera = create_user("admin_pb$$","bar",1);
 
     my $domain = create_domain($vm_name, $usera );
@@ -536,8 +561,14 @@ sub test_frontend {
     is($user->can_list_machines, 0);
     is($user->can_list_own_machines, 0);
 
-    $usera->grant($user, 'create_machine');
+    if ($grant_group) {
+        $usera->grant_group($group,'create_machine');
+        $user->_reload_grants();
+    } else {
+        $usera->grant($user, 'create_machine');
+    }
     is($user->can_list_machines, 0);
+    is($user->can_create_machine, 1) or die $grant_group;
     is($user->can_list_own_machines, 1);
 
     $list_machines = rvd_front->list_domains( id_owner => $user->id );
@@ -551,19 +582,19 @@ sub test_frontend {
     $domain->remove( $usera );
     $domain_other->remove( $usera );
 
+    $group->remove();
     $usera->remove;
     $user->remove;
 }
 
-sub test_create_domain {
-    my $vm_name = shift;
-
-    diag("test create domain");
+sub test_create_domain($vm_name, $grant_group=0) {
 
     my $vm = rvd_back->search_vm($vm_name);
 
     my $user = create_user("oper_cr$$","bar");
     my $usera = create_user("admin_cr$$","bar",1);
+    my $group = create_group();
+    $user->add_to_group($group);
 
     my $base = create_domain($vm_name);
     $base->prepare_base($usera);
@@ -601,7 +632,12 @@ sub test_create_domain {
     eval { $clone->remove($usera)    if $clone };
     is($@,'');
 
-    $usera->grant($user,'create_machine');
+    if ($grant_group) {
+        $usera->grant_group($group,'create_machine');
+        $user->_reload_grants();
+    } else {
+        $usera->grant($user,'create_machine');
+    }
     is($user->can_create_machine,1) or return;
 
     $domain_name = new_domain_name();
@@ -630,9 +666,9 @@ sub test_create_domain {
     $clone->remove(user_admin) if !$clone->is_removed;
     $domain->remove(user_admin) if !$domain->is_removed;
 
+    $group->remove();
     $user->remove();
     $usera->remove();
-    diag("done  test create");
 }
 
 sub test_grant_clone {
@@ -681,13 +717,14 @@ sub test_grant_clone {
     $usera->remove();
 }
 
-sub test_create_domain2 {
-    my $vm_name = shift;
+sub test_create_domain2($vm_name, $grant_group=0) {
 
     my $vm = rvd_back->search_vm($vm_name);
 
     my $user = create_user("oper_c$$","bar");
     my $usera = create_user("admin_c$$","bar",1);
+    my $group = create_group();
+    $user->add_to_group($group);
 
     is($user->can_create_machine, undef) or return;
 
@@ -701,7 +738,12 @@ sub test_create_domain2 {
     ok(!$domain2);
     $domain2->remove($usera)    if $domain2;
 
-    $usera->grant($user, 'create_machine');
+    if ($grant_group) {
+        $usera->grant_group($group, 'create_machine');
+        $user->_reload_grants();
+    } else {
+        $usera->grant($user, 'create_machine');
+    }
     is($user->can_create_machine,1) or return;
 
     $domain_name = new_domain_name();
@@ -718,6 +760,7 @@ sub test_create_domain2 {
 
     $user->remove();
     $usera->remove();
+    $group->remove();
 }
 
 sub test_expose_ports($vm_name) {
@@ -835,8 +878,36 @@ sub test_grant_grant {
     $usero->remove();
 }
 
-sub test_clone_all {
-    diag("TODO test clone all");
+sub test_clone_all($vm_name, $grant_group=0) {
+    my $user = create_user();
+    my $group = create_group();
+    user_admin->add_to_group($user, $group);
+
+    if ($grant_group) {
+        user_admin->grant_group($group,"clone_all");
+        $user->_reload_grants();
+    } else {
+        user_admin->grant($user,"clone_all");
+    }
+    my $domain = create_domain($vm_name);
+    $domain->prepare_base(user_admin);
+
+    my $name = new_domain_name();
+
+    my $req = Ravada::Request->clone(
+        uid => $user->id
+        ,id_domain => $domain->id
+        ,name => $name
+    );
+    wait_request();
+
+    my $clone = rvd_back->search_domain($name);
+    ok($clone);
+    is($clone->_data('id_owner'), $user->id);
+
+    remove_domain($domain);
+    $user->remove();
+    $group->remove();
 }
 
 sub test_start_many{
@@ -1006,8 +1077,22 @@ sub test_view_all($vm, $grant_group=0) {
     $domain->remove(user_admin);
 }
 
+sub test_grant_group_wrong() {
+    my $user = create_user();
+    eval {
+        user_admin->grant_group($user,'view_all');
+    };
+    like($@,qr/not a group/i);
+
+    eval {
+        user_admin->grant_group('fail','view_all');
+    };
+    like($@,qr/unknown group/i);
+}
+
 ##########################################################
 
+test_grant_group_wrong();
 test_start_many();
 test_start_limit_upgrade();
 test_start_many_upgrade();
@@ -1046,7 +1131,9 @@ for my $vm_name (vm_names()) {
     test_shutdown_all($vm_name,1);
 
     test_remove($vm_name);
+    test_remove($vm_name,1);
     test_remove_clone($vm_name);
+    test_remove_clone($vm_name,1);
     #test_remove_all($vm_name);
 
     test_remove_clone_all($vm_name);
@@ -1055,15 +1142,15 @@ for my $vm_name (vm_names()) {
     test_prepare_base($vm_name);
     test_prepare_base($vm_name,1);
     test_frontend($vm_name);
+    test_frontend($vm_name,1);
     test_create_domain($vm_name);
+    test_create_domain($vm_name,1);
     test_create_domain2($vm_name);
+    test_create_domain2($vm_name,1);
     test_view_clones($vm_name);
 
-    test_frontend($vm_name);
-    test_create_domain($vm_name);
-    test_create_domain2($vm_name);
-    test_view_clones($vm_name);
     test_clone_all($vm_name);
+    test_clone_all($vm_name,1);
 
 }
 end();
