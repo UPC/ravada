@@ -349,7 +349,7 @@ sub test_shutdown_all($vm_name, $grant_group=0) {
     is($domain->is_active,1)    or return;
 
     my $group = create_group();
-        $user->add_to_group($group);
+    $user->add_to_group($group);
     if ($grant_group) {
         $usera->grant_group($group,'shutdown_all');
         $user->_reload_grants();
@@ -378,9 +378,11 @@ sub test_shutdown_all($vm_name, $grant_group=0) {
     $group->remove();
 }
 
-sub test_remove_clone_all {
-    my $vm_name = shift;
+sub test_remove_clone_all($vm_name, $grant_group=0) {
     my $user = create_user("oper_rca$$","bar");
+    my $group = create_group();
+    $user->add_to_group($group);
+
     is($user->can_remove_clone_all(),undef) or return;
     is($user->is_operator, 0);
 
@@ -398,8 +400,13 @@ sub test_remove_clone_all {
     my $clone2 = rvd_back->search_domain($clone_name);
     ok($clone2,"[$vm_name] domain $clone_name shouldn't be removed") or return;
 
-    $usera->grant($user,'remove_clone_all');
-    is($user->can_remove_clone_all(),1);
+    if ($grant_group) {
+        $usera->grant_group($group,'remove_clone_all');
+        $user->_reload_grants();
+    } else {
+        $usera->grant($user,'remove_clone_all');
+    }
+    is($user->can_remove_clone_all(),1) or confess;
     is($user->is_operator,1);
 
     eval { $clone->remove($user); };
@@ -440,10 +447,11 @@ sub test_remove_clone_all {
     $usera->remove();
 }
 
-sub test_prepare_base {
-    my $vm_name = shift;
+sub test_prepare_base($vm_name, $grant_group=0) {
 
     my $user = create_user("oper_pb$$","bar");
+    my $group = create_group();
+    $user->add_to_group($group);
     my $usera = create_user("admin_pb$$","bar",1);
 
     $usera->grant($user, 'create_machine');
@@ -458,7 +466,12 @@ sub test_prepare_base {
 
     $domain = create_domain($vm_name, $user);
 
-    $usera->grant($user,'create_base');
+    if ($grant_group) {
+        $usera->grant_group($group,'create_base');
+        $user->_reload_grants();
+    } else {
+        $usera->grant($user,'create_base');
+    }
 
     is($user->is_operator, 1);
     is($user->can_list_own_machines, 1);
@@ -1037,14 +1050,15 @@ for my $vm_name (vm_names()) {
     #test_remove_all($vm_name);
 
     test_remove_clone_all($vm_name);
+    test_remove_clone_all($vm_name,1);
 
     test_prepare_base($vm_name);
+    test_prepare_base($vm_name,1);
     test_frontend($vm_name);
     test_create_domain($vm_name);
     test_create_domain2($vm_name);
     test_view_clones($vm_name);
 
-    test_prepare_base($vm_name);
     test_frontend($vm_name);
     test_create_domain($vm_name);
     test_create_domain2($vm_name);
