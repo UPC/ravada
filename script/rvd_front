@@ -1900,12 +1900,14 @@ sub _upload_users_csv($c, $csv, $type, $create) {
     };
 
     return $c->render(json =>
-        { output => $output
+        {
+        output => $output
         ,error => $error
         ,done => 1
     }) if $c->stash('req') eq 'json';
 
     return $c->render(template => "/main/upload_users"
+        ,output => $output
         ,error => $error
         ,done => 1
     );
