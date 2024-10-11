@@ -1650,7 +1650,7 @@ ravadaApp.directive("solShowMachine", swMach)
                 $scope.removed = true;
             });
         };
-
+        $scope.removed=false;
     }
 
     function settings_global_ctrl($scope, $http) {

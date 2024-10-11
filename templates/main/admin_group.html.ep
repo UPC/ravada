@@ -37,17 +37,51 @@ LDAP
             </li>
 
             <li class="nav-item">
-                <a class="nav-link" href="#remove" role="tab" data-toggle="tab" aria-controls="grants"><%=l 'Remove' %></a>
+                <a class="nav-link" href="#remove" role="tab" data-toggle="tab" aria-controls="remove"><%=l 'Remove' %></a>
             </li>
 
             </ul>
 
+            <div class="alert alert-warning" ng-show="removed">
+                <%=l 'This group has been removed.'%>
+                <a href="/admin/groups"><%=l 'Groups' %></a>
+            </div>
+
             <div class="tab-content" id="myTabContent"
                     ng-show="<%= $_user->can_manage_groups %> && !removed">
 
+
                 <div class="tab-pane fade show active" id="members" role="tabpanel" aria-labelledby="members-tab">
-                members
+                    <div class="card">
+                    <div class="card-body">
+%=                  include '/main/admin_group_new_member'
+%=                  include '/main/admin_group_members'
+                    </div>
+                    </div>
                 </div>
+
+                <div class="tab-pane fade" id="upload" role="tabpanel" aria-labelledby="upload-tab">
+                    <div class="card">
+                    <div class="card-body">
+%=                  include '/main/admin_group_upload'
+                    </div>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="grants" role="tabpanel" aria-labelledby="grants-tab">
+                    <div class="card">
+                    <div class="card-body">
+%=                  include '/main/admin_group_grants'
+                    </div>
+                    </div>
+                </div>
+                <div class="tab-pane fade" id="remove" role="tabpanel" aria-labelledby="remove-tab">
+                    <div class="card">
+                    <div class="card-body">
+%=                  include '/main/admin_group_remove'
+                    </div>
+                    </div>
+                </div>
+
             </div>
             </div>
         </div>
