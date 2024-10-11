@@ -1,0 +1,20 @@
+<b><%=l 'New group member' %></b>
+                    <input type="text" ng-model="username_filter"
+                                       ng-change="list_users('<%= $type %>')"
+                                       placeholder="<%=l 'Search' %>"
+                    />
+                    <span ng-show="loading_users"><i class="fas fa-sync-alt fa-spin"></i></span>
+                    <select
+                        ng-show="users && users.length"
+                        ng-model="new_member"
+                        ng-options="user.name for user in users"
+                    >
+                    </select>
+                    <span class="error" ng-show="username_filter && !loading_users && users && !users.length">
+                        <%=l 'No users found' %>
+                    </span>
+    <button ng-show="new_member && new_member.name"
+                            ng-click="add_member(new_member.id, new_member.name)">
+                      <%=l 'Add' %>
+    </button>
+

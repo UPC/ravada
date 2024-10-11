@@ -1,0 +1,9 @@
+<b><%=l 'Batch upload' %></b>
+<form method="post" enctype="multipart/form-data" name="form_upload"
+                        role="form"
+                        action="<%= $url %>"
+                        novalidate
+                        ><%= $url%>
+                    <input name="members" type="file" required>
+                    <input type="submit" value="<%=l 'upload members' %>"/>
+</form>

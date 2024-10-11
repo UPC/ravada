@@ -1,0 +1,18 @@
+<div class="alert alert-warning" ng-show="removed"><%=l 'This group has been removed.'%></div>
+
+                <input type="button" class="btn btn-outline-secondary"
+                                     ng-show="group_members && group_members.length==0
+                                               && !removed && !confirm_remove"
+                                     ng-click="confirm_remove=true"
+                                     value="<%=l 'Remove group' %>"/>
+                <div ng-show="confirm_remove" class="card">
+                <div ng-show="confirm_remove" class="card-body">
+                    <span><%=l 'Are you sure you want to remove this group ?'%></span><br/>
+                    <input type="button" class="btn btn-primary" value="<%=l 'Yes' %>"
+                    ng-click="remove_group()"/>
+                    <input type="button" class="btn btn-danger" value="<%=l 'No' %>"
+                    ng-click="confirm_remove=false"/>
+
+                </div>
+</div>
+

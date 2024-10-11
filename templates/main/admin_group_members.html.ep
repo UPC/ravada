@@ -1,0 +1,24 @@
+                <div class="alert alert-danger" ng-show="error">{{error}}</div>
+                <div class="alert alert-warning"
+                     ng-show="!error && group_members.length==0">
+                  <%=l 'No members found' %>
+                </div>
+
+                <table class="table table-striped" ng-show="group_members.length>0" border="1">
+                    <thead>
+                        <tr>
+                            <th><%=l 'Name' %></th>
+                        </tr>
+                    </thead>
+                        <tbody>
+                                <tr ng-repeat="user in group_members">
+                                    <td>
+                                        <button ng-click="remove_member(user)"
+                                            ng-show="<%= $_user->can_manage_groups %>"
+                                            class="badge badge-light text-blue">x</button>
+                                        <a ng-bind-html="user.name" href="/admin/user/{{user.id}}.html?origin=ldap">{{user.name}}</a>
+                                    </td>
+                                </tr>
+                    </tbody>
+                </table>
+

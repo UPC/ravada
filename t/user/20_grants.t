@@ -899,10 +899,11 @@ sub test_clone_all($vm_name, $grant_group=0) {
         ,id_domain => $domain->id
         ,name => $name
     );
-    wait_request();
+    wait_request(debug => 1);
+    diag$grant_group;
 
     my $clone = rvd_back->search_domain($name);
-    ok($clone);
+    ok($clone) or die "Expecting clone $name";
     is($clone->_data('id_owner'), $user->id);
 
     remove_domain($domain);

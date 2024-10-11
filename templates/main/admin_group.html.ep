@@ -23,83 +23,32 @@ LDAP
               </div>
             </div>
             <div class="card-body" ng-cloak="1">
-                <div class="border border-secondary mb-4 p-4"
+
+            <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" href="#members" role="tab" data-toggle="tab" aria-controls="members" aria-selected="true"><%=l 'Members' %></a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#upload" role="tab" data-toggle="tab" aria-controls="upload"><%=l 'Upload' %></a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link" href="#grants" role="tab" data-toggle="tab" aria-controls="grants"><%=l 'Grants' %></a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link" href="#remove" role="tab" data-toggle="tab" aria-controls="grants"><%=l 'Remove' %></a>
+            </li>
+
+            </ul>
+
+            <div class="tab-content" id="myTabContent"
                     ng-show="<%= $_user->can_manage_groups %> && !removed">
-                <div >
-                    <b><%=l 'New group member' %></b>
-                    <input type="text" ng-model="username_filter"
-                                       ng-change="list_users('<%= $type %>')"
-                                       placeholder="<%=l 'Search' %>"
-                    />
-                    <span ng-show="loading_users"><i class="fas fa-sync-alt fa-spin"></i></span>
-                    <select
-                        ng-show="users && users.length"
-                        ng-model="new_member"
-                        ng-options="user.name for user in users"
-                    >
-                    </select>
-                    <span class="error" ng-show="username_filter && !loading_users && users && !users.length">
-                        <%=l 'No users found' %>
-                    </span>
-                    <button ng-show="new_member && new_member.name"
-                            ng-click="add_member(new_member.id, new_member.name)">
-                      <%=l 'Add' %>
-                    </button>
-                </div>
-                    <hr>
-                    <b><%=l 'Batch upload' %></b>
-                    <form method="post" enctype="multipart/form-data" name="form_upload"
-                        role="form"
-                        action="<%= $url %>"
-                        novalidate
-                        ><%= $url%>
-                    <input name="members" type="file" required>
-                    <input type="submit" value="<%=l 'upload members' %>"/>
-                    </form>
-                </div>
 
-                <div ng-show="!removed">
-                <div class="alert alert-danger" ng-show="error">{{error}}</div>
-                <div class="alert alert-warning"
-                     ng-show="!error && group_members.length==0">
-                  <%=l 'No members found' %>
+                <div class="tab-pane fade show active" id="members" role="tabpanel" aria-labelledby="members-tab">
+                members
                 </div>
-                </div>
-
-                <table class="table table-striped" ng-show="group_members.length>0" border="1">
-                    <thead>
-                        <tr>
-                            <th><%=l 'Name' %></th>
-                        </tr>
-                    </thead>
-                        <tbody>
-                                <tr ng-repeat="user in group_members">
-                                    <td>
-                                        <button ng-click="remove_member(user)"
-                                            ng-show="<%= $_user->can_manage_groups %>"
-                                            class="badge badge-light text-blue">x</button>
-                                        <a ng-bind-html="user.name" href="/admin/user/{{user.id}}.html?origin=ldap">{{user.name}}</a>
-                                    </td>
-                                </tr>
-                    </tbody>
-                </table>
-               <div class="alert alert-warning" ng-show="removed"><%=l 'This group has been removed.'%></div>
-
-                <input type="button" class="btn btn-outline-secondary"
-                                     ng-show="group_members && group_members.length==0
-                                               && !removed && !confirm_remove"
-                                     ng-click="confirm_remove=true"
-                                     value="<%=l 'Remove group' %>"/>
-                <div ng-show="confirm_remove" class="card">
-                <div ng-show="confirm_remove" class="card-body">
-                    <span><%=l 'Are you sure you want to remove this group ?'%></span><br/>
-                    <input type="button" class="btn btn-primary" value="<%=l 'Yes' %>"
-                    ng-click="remove_group()"/>
-                    <input type="button" class="btn btn-danger" value="<%=l 'No' %>"
-                    ng-click="confirm_remove=false"/>
-
-                </div>
-                </div>
+            </div>
             </div>
         </div>
     </div>
