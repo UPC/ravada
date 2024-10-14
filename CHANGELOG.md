@@ -2,13 +2,16 @@
 
 **Implemented enhancements:**
 
-- Users can share virtual machines [\#2021]
-- Virtual networks management [\#1984]
-- GPU Mediated devices [\#1955]
-- Allow remove users via GUI [\#2023]
+- Feat: oauth2 apache [\#2077]
+- Turkish, Catalan, Spanish, Persian translation improved [\#2100]
+- Upload json users and groups [\#2099]
+- Upload group members from a directory [\#2080]
+
 
 **Bugfixes**
 
-- Node Option Not Available [\#2032]
+- Fix tls expired [\#2098]
+- Search by group name [\#2082]
+- Fix backup id different [\#2075]
 
 **Refactors**
