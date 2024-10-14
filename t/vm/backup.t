@@ -113,10 +113,11 @@ sub backup_auto_start($vm) {
     is($domain2->autostart,1);
     is($domain2->_data('autostart'),1);
     if ($vm->type eq 'KVM') {
-        is($domain->domain->get_autostart(),1);
+        is($domain2->domain->get_autostart(),1);
     }
+    is($domain2->_internal_autostart(),1);
+
     $domain2->remove(user_admin);
-    exit;
 
 }
 
