@@ -5758,6 +5758,10 @@ sub _cmd_refresh_machine($self, $request) {
     if $is_active && $domain->ip && $domain->list_ports;
 
     $domain->_unlock_host_devices() if !$is_active;
+
+    if ($domain->autostart() ne $domain->_data('autostart')) {
+        $domain->_data('autostart' => $domain->autostart());
+    }
 }
 
 sub _cmd_refresh_machine_ports($self, $request) {

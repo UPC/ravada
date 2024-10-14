@@ -7830,6 +7830,9 @@ sub restore_backup($self, $backup, $interactive, $rvd_back=undef) {
     if($self->_data('is_base')) {
         $self->_set_base_vm_db($self->_vm->id,1);
     }
+    if($data->{autostart}) {
+        $self->autostart(1, Ravada::Utils::user_daemon());
+    }
     return $self;
 }
 
