@@ -624,6 +624,9 @@
                                 $scope.new_balance_policy=$scope.showmachine.balance_policy;
                                 $scope.new_auto_compact
                                     = $scope.showmachine.auto_compact;
+                                $scope.new_shutdown_grace_time
+                                    = $scope.showmachine.shutdown_grace_time;
+
                                 load_balance_options();
                                 get_node_info($scope.showmachine.id_vm);
                                 if (is_admin) {
