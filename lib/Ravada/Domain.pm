@@ -3291,6 +3291,7 @@ sub _post_shutdown {
     $self->needs_restart(0) if $self->is_known()
                                 && $self->needs_restart()
                                 && !$is_active;
+    $self->clean_status('disconnected');
 }
 
 sub _schedule_compact($self) {
@@ -5818,7 +5819,41 @@ sub client_status($self, $force=0) {
     $self->_data('client_status', $status);
     $self->_data('client_status_time_checked', time );
 
+    if ($self->_data('shutdown_grace_time')) {
+        if ($status eq 'disconnected') {
+            $self->log_status($status);
+        } else {
+            $self->clean_status('disconnected');
+        }
+    }
+
     return $status;
+}
+sub clean_status($self, $type) {
+    my $json_status = $self->_data('log_status');
+    my $h_status = {};
+    if ($json_status) {
+        eval { $h_status = decode_json($json_status) };
+        $h_status = {} if $@;
+    }
+    $h_status->{disconnected} = [];
+    $self->_data('log_status', encode_json($h_status));
+}
+
+sub log_status($self, $type) {
+    my $json_status = $self->_data('log_status');
+    my $h_status = {};
+    if ($json_status) {
+        eval { $h_status = decode_json($json_status) };
+        $h_status = {} if $@;
+    }
+    my $time = time();
+    for my $old ( @{$h_status->{$type}} ) {
+        return if $old >= $time-60;
+    }
+    push @{$h_status->{$type}},(time());
+
+    $self->_data('log_status', encode_json($h_status));
 }
 
 sub _run_netstat($self, $force=undef) {
@@ -8002,4 +8037,27 @@ sub _volatile_active($self) {
     return 1;
 
 }
+
+sub check_grace($self,$type) {
+    return 1 if !$self->_data('shutdown_grace_time');
+    my $log_status = $self->_data('log_status');
+    return if !$log_status;
+    my $hash_status;
+    eval {
+        $hash_status= decode_json($log_status);
+    };
+    if ($@) {
+        warn "$@ : '$log_status'";
+        return;
+    }
+    my $log = $hash_status->{$type};
+    return if !$log;
+    my $old;
+    for my $current (@$log) {
+        $old = $current if !defined $old || $current<$old;
+    }
+    return 1 if time-$old >= 60*$self->_data('shutdown_grace_time');
+    return 0;
+}
+
 1;
