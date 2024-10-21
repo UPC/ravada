@@ -6528,6 +6528,8 @@ sub _shutdown_disconnected($self) {
                 ,at => time + 120
                 ,check => 'disconnected'
             );
+            my $user = Ravada::Auth::SQL->search_by_id($domain->id_owner);
+            $user->send_message("The virtual machine has been disconnected for too long. Shutting down ".$dom->{name});
         } elsif ($req_shutdown) {
             $req_shutdown->status('done','Canceled') if $req_shutdown;
         }

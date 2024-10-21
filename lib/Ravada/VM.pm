@@ -577,6 +577,7 @@ sub _around_create_domain {
         $domain->run_timeout($base->run_timeout)
             if defined $base->run_timeout();
         $domain->_data(shutdown_disconnected => $base->_data('shutdown_disconnected'));
+        $domain->_data(shutdown_grace_time => $base->_data('shutdown_grace_time'));
         for my $port ( $base->list_ports ) {
             my %port = %$port;
             delete @port{'id','id_domain','public_port','id_vm', 'is_secondary'};
