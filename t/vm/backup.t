@@ -83,6 +83,44 @@ sub backup_different_id_vm($vm) {
     $sth->execute($vm2->id, $id_vm_old);
 }
 
+sub backup_auto_start($vm) {
+    my $domain = create_domain_v2(vm => $vm, swap => 1, data => 1
+    );
+    _remove_iso($domain);
+
+    my $req = Ravada::Request->domain_autostart(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request();
+
+    is($domain->autostart,1);
+
+    $domain->backup();
+    my ($backup) = $domain->list_backups();
+
+    my $name = $domain->name;
+    my $id = $domain->id;
+    $domain->remove(user_admin);
+
+    rvd_back->restore_backup($backup->{file},0);
+
+    my $domain_f = Ravada::Front::Domain->open($id);
+    is($domain_f->_data('autostart'),1);
+
+    my $domain2 = rvd_back->search_domain($name);
+    ok($domain2);
+    is($domain2->autostart,1);
+    is($domain2->_data('autostart'),1);
+    if ($vm->type eq 'KVM') {
+        is($domain2->domain->get_autostart(),1);
+    }
+    is($domain2->_internal_autostart(),1);
+
+    $domain2->remove(user_admin);
+
+}
+
 sub backup($vm,$remove_user=undef) {
     my $user = create_user();
     user_admin->make_admin($user->id);
@@ -363,6 +401,8 @@ for my $vm_name ( vm_names() ) {
 
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
+
+        backup_auto_start($vm);
 
         backup_clone_and_base($vm);
         backup_clone_base_different($vm);
