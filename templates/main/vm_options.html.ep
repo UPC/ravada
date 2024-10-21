@@ -5,7 +5,7 @@
     <form ng-show="showmachine" class="form" action="<%= $action %>" method="post">
         <div class="form-group">
             <div class="row" ng-show="showmachine.ip">
-                <div class="col-lg-3 mt-2">
+                <div class="col-lg-3 mt-2" align="right">
                     <label class="control-label" for="ram"><%=l 'Internal IP' %></label>
                 </div>
                 <div class="col-lg-3">
@@ -20,7 +20,7 @@
             </div>
 
             <div class="row" ng-show="!showmachine.is_base && nodes.length>1">
-                <div class="col-lg-3 mt-2">
+                <div class="col-lg-3 mt-2" align="right">
                     <%=l 'Node' %>
                 </div>
                 <div class="col-lg-3 mt-2">
@@ -68,8 +68,8 @@
             </div>
 
             <div class="row">
-                <div class="col-lg-3 mt-2">
-                    <label class="control-label" for="ram"><%=l 'Max memory (MB)' %></label>
+                <div class="col-lg-3 mt-2" align="right">
+                    <label class="small" for="ram"><%=l 'Max memory (MB)' %></label>
                 </div>
                 <div class="col-lg-2">
                     <input class="form-control" type="text" name="ram" size="5"
@@ -86,8 +86,8 @@
                 </div>
             </div>
            <div class="row">
-                <div class="col-lg-3 mt-2">
-                    <label class="control-label" for="cram"><%=l 'Current memory (MB)' %></label>
+                <div class="col-lg-3 mt-2" align="right">
+                    <label class="small" for="cram"><%=l 'Current memory (MB)' %></label>
                 </div>
                 <div class="col-lg-2">
                     <input class="form-control" type="text" name="cram" size="5"
@@ -100,8 +100,8 @@
                 </div>
            </div>
            <div class="row">
-                <div class="col-lg-3 mt-2">
-                    <label class="control-label" for="max_cpus"><%=l 'Max CPUs' %></label>
+                <div class="col-lg-3 mt-2" align="right">
+                    <label class="small" for="max_cpus"><%=l 'Max CPUs' %></label>
                 </div>
                 <div class="col-lg-2">
                     <input class="form-control" type="number" name="max_cpus" size="5"
@@ -123,8 +123,8 @@
            </div>
 
            <div class="row" ng-show="showmachine.is_active">
-                <div class="col-lg-3 mt-2">
-                    <label class="control-label" for="cpus"><%=l 'Current CPUs' %></label>
+                <div class="col-lg-3 mt-2" align="right">
+                    <label class="small" for="cpus"><%=l 'Current CPUs' %></label>
                 </div>
                 <div class="col-lg-2">
                     <input class="form-control" type="number" name="cpus" size="5"
@@ -141,8 +141,8 @@
 
 %   if ($USER->can_change_settings){
             <div class="row">
-                <div class="col-lg-3 mt-2">
-                    <label class="control-label" for="timeout"><%=l 'Run Timeout' %></label>
+                <div class="col-lg-3 mt-0" align="right">
+                    <label class="small" for="timeout"><%=l 'Run Timeout' %></label>
                 </div>
                 <div class="col-lg-2">
                     <input type="text" size="5" name="timeout"
@@ -154,8 +154,8 @@
                 <div class="col-lg-6"><small class="text-secondary"><%=l 'The machine will shutdown after these minutes' %></small></div>
             </div>
             <div class="row">
-                <div class="col-lg-3 mt-2">
-                    <label class="control-label" for="shutdown_timeout"><%=l 'Shutdown Timeout' %></label>
+                <div class="col-lg-3 mt-0" align="right">
+                    <label class="small" for="shutdown_timeout"><%=l 'Shutdown Timeout' %></label>
                 </div>
                 <div class="col-lg-2">
                     <input type="text" size="5" name="shutdown_timeout"
@@ -168,8 +168,8 @@
 %   }
 %   if ($USER->can_change_settings && $USER->is_admin){
             <div class="row" ng-show="showmachine.is_base">
-                <div class="col-lg-3 mt-2">
-                    <label class="control-label" for="volatile_clones"><%=l 'Volatile Clones' %></label>
+                <div class="col-lg-3 mt-0" align="right">
+                    <label class="small" for="volatile_clones"><%=l 'Volatile Clones' %></label>
                 </div>
                 <div class="col-lg-2">
                     <input type="checkbox" ng-model="new_volatile_clones"
@@ -183,8 +183,8 @@
                 </div>
             </div>
             <div class="row" ng-hide="showmachine.is_base">
-                <div class="col-lg-3 mt-2">
-                    <label class="control-label" for="autostart"><%=l 'Autostart' %></label>
+                <div class="col-lg-3 mt-0" align="right">
+                    <label class="small" for="autostart"><%=l 'Autostart' %></label>
                 </div>
                 <div class="col-lg-2">
                     <input type="checkbox" ng-model="new_autostart" name="autostart"
@@ -201,8 +201,8 @@
                 </div>
             </div>
             <div class="row">
-                <div class="col-lg-3 mt-2">
-                    <label class="control-label" for="shutdown_disconnected"><%=l 'Shutdown disconnected' %></label>
+                <div class="col-lg-3 mt-0" align="right">
+                    <label class="small" for="shutdown_disconnected"><%=l 'Shutdown disconnected' %></label>
                 </div>
                 <div class="col-lg-2">
                     <input type="checkbox" ng-model="new_shutdown_disconnected" name="shutdown_disconnected"
@@ -216,12 +216,14 @@
                 </div>
             </div>
             <div class="row">
-                <div class="col-lg-3 mt-2">
-                    <label class="control-label" for="shutdown_grace_time"><%=l 'Shutdown grace minutes' %></label>
+                <div class="col-lg-3 mt-0" align="right">
+                    <label class="small" for="shutdown_grace_time"><%=l 'Shutdown grace time' %></label>
                 </div>
                 <div class="col-lg-2">
-                    <input type="text" ng-model="new_shutdown_disconnected_grace" name="shutdown_grace_time"
-                    ng-change="set_bool('shutdown_disconnected_grace',new_shutdown_disconnected_grace)"
+                    <input type="text" size="5" name="shutdown_grace_time"
+                    ng-disabled="<%= (!$USER->is_admin or 0) %> || !new_shutdown_disconnected"
+                    ng-change="set_value('shutdown_grace_time',new_shutdown_grace_time)"
+                    ng-model="new_shutdown_grace_time"
                     >
                 </div>
                 <div class="col-md-7"><small class="text-secondary">
@@ -230,8 +232,8 @@
 
             </div>
             <div class="row">
-                <div class="col-lg-3 mt-2">
-                    <label class="control-label" for="auto_compact"><%=l 'Auto Compact' %></label>
+                <div class="col-lg-3 mt-0" align="right">
+                    <label class="small" for="auto_compact"><%=l 'Auto Compact' %></label>
                 </div>
                 <div class="col-lg-2">
                     <input type="checkbox" ng-model="new_auto_compact" name="auto_compact"
@@ -262,8 +264,8 @@
 %   }
 %   if ($USER->is_admin){
             <div class="row">
-                <div class="col-lg-2 mt-2">
-                     <label class="control-label" for="new_owner"><%=l 'Owner' %></label>
+                <div class="col-lg-3 mt-0" align="right">
+                     <label class="small" for="new_owner"><%=l 'Owner' %></label>
                 </div>
                 <div class="col-lg-4">
                     <select class="form-control" ng-model="new_owner" name="id_owner"

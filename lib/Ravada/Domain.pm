@@ -2170,6 +2170,7 @@ sub info($self, $user) {
         ,auto_compact => $self->auto_compact
         ,date_changed => $self->_data('date_changed')
         ,is_volatile => $self->_data('is_volatile')
+        ,shutdown_grace_time => $self->_data('shutdown_grace_time')
     };
 
     $info->{alias} = ( $self->_data('alias') or $info->{name} );
