@@ -217,6 +217,20 @@
             </div>
             <div class="row">
                 <div class="col-lg-3 mt-2">
+                    <label class="control-label" for="shutdown_grace_time"><%=l 'Shutdown grace minutes' %></label>
+                </div>
+                <div class="col-lg-2">
+                    <input type="text" ng-model="new_shutdown_disconnected_grace" name="shutdown_grace_time"
+                    ng-change="set_bool('shutdown_disconnected_grace',new_shutdown_disconnected_grace)"
+                    >
+                </div>
+                <div class="col-md-7"><small class="text-secondary">
+                    <%=l 'Minutes of grace time before shutdown.' %></small>
+                </div>
+
+            </div>
+            <div class="row">
+                <div class="col-lg-3 mt-2">
                     <label class="control-label" for="auto_compact"><%=l 'Auto Compact' %></label>
                 </div>
                 <div class="col-lg-2">
