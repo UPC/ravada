@@ -42,7 +42,7 @@ our $CONNECTOR;
 our $MIN_FREE_MEMORY = 1024*1024;
 our $IPTABLES_CHAIN = 'RAVADA';
 
-our %PROPAGATE_FIELD = map { $_ => 1} qw( run_timeout shutdown_disconnected);
+our %PROPAGATE_FIELD = map { $_ => 1} qw( run_timeout shutdown_disconnected shutdown_grace_time);
 
 our $TIME_CACHE_NETSTAT = 60; # seconds to cache netstat data output
 our $RETRY_SET_TIME=10;
@@ -2170,11 +2170,10 @@ sub info($self, $user) {
         ,auto_compact => $self->auto_compact
         ,date_changed => $self->_data('date_changed')
         ,is_volatile => $self->_data('is_volatile')
-        ,shutdown_grace_time => $self->_data('shutdown_grace_time')
     };
 
     $info->{alias} = ( $self->_data('alias') or $info->{name} );
-    for (qw(comment screenshot id_owner shutdown_disconnected is_compacted has_backups balance_policy)) {
+    for (qw(comment screenshot id_owner shutdown_disconnected is_compacted has_backups balance_policy shutdown_grace_time)) {
         $info->{$_} = $self->_data($_);
     }
     if ($self->is_known() ) {
