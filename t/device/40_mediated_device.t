@@ -559,8 +559,20 @@ sub test_base($domain) {
         my $clone = Ravada::Domain->open($clone_data->{id});
         $clone->_attach_host_devices();
         test_config($clone);
+
+        test_clone_clone($clone_data->{id});
         $clone->remove(user_admin);
     }
+}
+
+sub test_clone_clone($id_clone) {
+    my $req = Ravada::Request->clone(
+        uid => user_admin->id
+        ,id_domain => $id_clone
+    );
+    wait_request(debug => 0);
+
+    is($req->error,'') or exit;
 }
 
 sub test_volatile_clones($vm, $domain, $host_device) {

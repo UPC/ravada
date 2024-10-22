@@ -7276,7 +7276,12 @@ sub add_host_device($self, $host_device) {
     my $id_hd = $host_device;
     $id_hd = $host_device->id if ref($host_device);
 
-    confess if !$id_hd;
+    my $sth0 = $$CONNECTOR->dbh->prepare("SELECT id FROM host_devices_domain "
+        ." WHERE id_host_device=? AND id_domain=?"
+    );
+    $sth0->execute($id_hd, $self->id);
+    my ($found) = $sth0->fetchrow;
+    return if $found;
 
     my $sth = $$CONNECTOR->dbh->prepare("INSERT INTO host_devices_domain "
         ."(id_host_device, id_domain) "
