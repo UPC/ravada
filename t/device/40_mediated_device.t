@@ -117,8 +117,8 @@ sub _req_shutdown($domain) {
 
 }
 
-sub test_mdev($vm) {
 
+sub _create_mdev($vm) {
     my $templates = Ravada::HostDevice::Templates::list_templates($vm->id);
     my ($mdev) = grep { $_->{name} =~ /GPU Mediated Device/ } @$templates;
     ok($mdev,"Expecting PCI template in ".$vm->name) or return;
@@ -126,6 +126,12 @@ sub test_mdev($vm) {
     my $id = $vm->add_host_device(template => $mdev->{name});
     my $hd = Ravada::HostDevice->search_by_id($id);
 
+    return $hd;
+}
+
+sub test_mdev($vm) {
+
+    my $hd = _create_mdev($vm);
     my $n_devices = _check_mdev($vm, $hd);
     is( $hd->list_available_devices() , $n_devices);
 
@@ -134,7 +140,7 @@ sub test_mdev($vm) {
         ,user => user_admin
     );
     test_config_no_hd($domain);
-    $domain->add_host_device($id);
+    $domain->add_host_device($hd->id);
     _req_start($domain);
     test_config($domain);
     is($hd->list_available_devices(), $n_devices-1) or exit;
@@ -539,6 +545,61 @@ sub test_xml_no_hd($domain) {
 }
 
 
+sub test_change_hd_in_clone($domain) {
+
+    if (!$domain->is_base) {
+        my @args = ( uid => user_admin->id ,id_domain => $domain->id);
+
+        Ravada::Request->shutdown_domain(@args);
+        Ravada::Request->prepare_base(@args);
+    }
+    my ($hd0) = $domain->list_host_devices();
+
+    my $hd1 = _create_mdev($domain->_vm);
+    isnt($hd1->id, $hd0->id);
+
+    my $name = new_domain_name;
+    my @args = ( uid => user_admin->id ,id_domain => $domain->id);
+    Ravada::Request->clone(@args, name => $name);
+    wait_request();
+
+    my $clone = rvd_back->search_domain($name);
+    my @clone_hd = $clone->list_host_devices;
+    is($clone_hd[0]->id,$hd0->id);
+
+    my $req = Ravada::Request->remove_host_device(
+        uid => user_admin->id
+        ,id_domain => $clone->id
+        ,id_host_device => $hd0->id
+    );
+    wait_request();
+    is($req->error,'');
+
+    $clone->add_host_device($hd1->id);
+
+    {
+    my $clone2 = Ravada::Domain->open($clone->id);
+
+    my @clone_hd2 = $clone2->list_host_devices;
+    is($clone_hd2[0]->id,$hd1->id);
+    }
+
+    Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $clone->id
+    );
+    wait_request();
+
+    {
+    my $clone2 = Ravada::Domain->open($clone->id);
+
+    my @clone_hd2 = $clone2->list_host_devices;
+    is($clone_hd2[0]->id,$hd1->id);
+    }
+
+    exit;
+}
+
 sub test_base($domain) {
 
     return if $domain->volatile_clones && $MOCK_MDEV && $domain->type ne 'Void';
@@ -679,6 +740,7 @@ for my $vm_name ('KVM', 'Void' ) {
         my ($domain, $host_device) = test_mdev($vm);
         test_volatile_clones($vm, $domain, $host_device);
         test_base($domain);
+        test_change_hd_in_clone($domain);
 
     }
 }
