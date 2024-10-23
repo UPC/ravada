@@ -126,6 +126,8 @@ sub _create_mdev($vm) {
     my $id = $vm->add_host_device(template => $mdev->{name});
     my $hd = Ravada::HostDevice->search_by_id($id);
 
+    _check_mdev($vm, $hd);
+
     return $hd;
 }
 
@@ -577,18 +579,7 @@ sub test_change_hd_in_clone($domain) {
 
     $clone->add_host_device($hd1->id);
 
-    {
-    my $clone2 = Ravada::Domain->open($clone->id);
-
-    my @clone_hd2 = $clone2->list_host_devices;
-    is($clone_hd2[0]->id,$hd1->id);
-    }
-
-    Ravada::Request->start_domain(
-        uid => user_admin->id
-        ,id_domain => $clone->id
-    );
-    wait_request();
+    rvd_back->_cmd_refresh_vms();
 
     {
     my $clone2 = Ravada::Domain->open($clone->id);
@@ -597,7 +588,21 @@ sub test_change_hd_in_clone($domain) {
     is($clone_hd2[0]->id,$hd1->id);
     }
 
-    exit;
+    _req_start($clone);
+
+    rvd_back->_cmd_refresh_vms();
+
+    {
+    my $clone2 = Ravada::Domain->open($clone->id);
+
+    my @clone_hd2 = $clone2->list_host_devices;
+    is($clone_hd2[0]->id,$hd1->id);
+    }
+
+    _req_shutdown($clone);
+
+    remove_domain($clone);
+
 }
 
 sub test_base($domain) {
