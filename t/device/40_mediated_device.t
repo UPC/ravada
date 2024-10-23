@@ -88,15 +88,21 @@ sub _check_used_mdev($vm, $hd) {
     return $hd->list_available_devices();
 }
 
-sub _req_start($domain) {
-    if ($MOCK_MDEV) {
-        $domain->_attach_host_devices();
-    } else {
-        Ravada::Request->start_domain(
-            uid => user_admin->id
-            ,id_domain => $domain->id
-        );
-        wait_request();
+sub _req_start(@domain) {
+    for my $domain0 ( @domain ) {
+        my $domain = $domain0;
+        if (ref($domain) !~ /^Ravada/) {
+            $domain = Ravada::Domain->open($domain0->{id});
+        }
+        if ($MOCK_MDEV) {
+            $domain->_attach_host_devices();
+        } else {
+            Ravada::Request->start_domain(
+                uid => user_admin->id
+                ,id_domain => $domain->id
+            );
+            wait_request();
+        }
     }
 }
 
@@ -555,17 +561,32 @@ sub test_change_hd_in_clone($domain) {
         Ravada::Request->shutdown_domain(@args);
         Ravada::Request->prepare_base(@args);
     }
+    remove_domain($domain->clones);
+
     my ($hd0) = $domain->list_host_devices();
 
     my $hd1 = _create_mdev($domain->_vm);
     isnt($hd1->id, $hd0->id);
 
-    my $name = new_domain_name;
-    my @args = ( uid => user_admin->id ,id_domain => $domain->id);
-    Ravada::Request->clone(@args, name => $name);
-    wait_request();
+    warn "devices##########\n".Dumper([$hd1->list_devices]);
 
-    my $clone = rvd_back->search_domain($name);
+    my @args = ( uid => user_admin->id ,id_domain => $domain->id);
+    Ravada::Request->clone(@args, number => scalar($hd0->list_devices));
+    wait_request(debug => 1);
+
+    warn Dumper([map { $_->{name} } $domain->clones]);
+    _req_start($domain->clones);
+
+    my @clones = $domain->clones();
+    my $clone = Ravada::Domain->open($clones[0]->{id});
+    _req_shutdown($clone);
+
+    my $name = new_domain_name();
+    Ravada::Request->clone(@args, name => $name);
+    wait_request(debug => 0);
+    my $clone_new = rvd_back->search_domain($name);
+    _req_start($clone_new);
+
     my @clone_hd = $clone->list_host_devices;
     is($clone_hd[0]->id,$hd0->id);
 
@@ -582,10 +603,10 @@ sub test_change_hd_in_clone($domain) {
     rvd_back->_cmd_refresh_vms();
 
     {
-    my $clone2 = Ravada::Domain->open($clone->id);
+    my $cloneb = Ravada::Domain->open($clone->id);
 
-    my @clone_hd2 = $clone2->list_host_devices;
-    is($clone_hd2[0]->id,$hd1->id);
+    my @cloneb_hd = $cloneb->list_host_devices;
+    is($cloneb_hd[0]->id,$hd1->id);
     }
 
     _req_start($clone);
@@ -593,15 +614,16 @@ sub test_change_hd_in_clone($domain) {
     rvd_back->_cmd_refresh_vms();
 
     {
-    my $clone2 = Ravada::Domain->open($clone->id);
+    my $cloneb = Ravada::Domain->open($clone->id);
 
-    my @clone_hd2 = $clone2->list_host_devices;
-    is($clone_hd2[0]->id,$hd1->id);
+    my @cloneb_hd = $cloneb->list_host_devices;
+    is($cloneb_hd[0]->id,$hd1->id);
     }
 
     _req_shutdown($clone);
 
     remove_domain($clone);
+    exit;
 
 }
 

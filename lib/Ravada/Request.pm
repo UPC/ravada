@@ -9,7 +9,7 @@ Ravada::Request - Requests library for Ravada
 
 =cut
 
-use Carp qw(confess cluck);
+use Carp qw(carp confess cluck);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
 use JSON::XS;
@@ -1895,6 +1895,7 @@ sub AUTOLOAD {
     $name =~ s/.*://;
 
     if(!ref($self) && $VALID_ARG{$name} ) {
+        carp if $name eq 'list_host_devices';
         return _new_request($self
             , command => $name
             , args => _check_args($name, @_)
