@@ -1843,8 +1843,8 @@ sub _clean_remote_nodes {
     }
 }
 
-sub clean_remote_node {
-    my $node = shift;
+sub clean_remote_node($node) {
+    return if !$node;
 
     start_node($node) if !$node->is_local();
     _remove_old_domains_vm($node);

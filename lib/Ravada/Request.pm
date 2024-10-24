@@ -1895,7 +1895,6 @@ sub AUTOLOAD {
     $name =~ s/.*://;
 
     if(!ref($self) && $VALID_ARG{$name} ) {
-        carp if $name eq 'list_host_devices';
         return _new_request($self
             , command => $name
             , args => _check_args($name, @_)

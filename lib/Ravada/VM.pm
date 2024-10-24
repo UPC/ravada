@@ -2136,7 +2136,6 @@ sub balance_vm($self, $uid, $base=undef, $id_domain=undef, $host_devices=1) {
         if ($id_domain) {
             my @vms_all = $base->list_vms(0,1);
             @vms = $self->_filter_host_devices($id_domain, @vms_all) if $host_devices;
-            warn Dumper([[ map { $_->name } @vms_all],[ map { $_->name } @vms ]]);
         } else {
             @vms= $base->list_vms($host_devices,1);
         }
@@ -2166,15 +2165,13 @@ sub _filter_host_devices($self, $id_domain, @vms_all) {
 
     my @host_devices = $domain->list_host_devices();
 
-    warn Dumper([ map { $_->name } @host_devices ]);
-
     my @vms;
     for my $vm (@vms_all) {
         next if !$domain->_available_hds($vm->id, \@host_devices);
         push @vms, ($vm);
     }
 
-    die "Error: no available devices in ".join(" , ",map { $_->name } @host_devices)
+    die "Error: No available devices in ".join(" , ",map { $_->name } @host_devices)."\n"
     if !scalar(@vms);
 
     return @vms;

@@ -552,6 +552,36 @@ sub test_xml_no_hd($domain) {
     ok(!$kvm,"Expecting no $kvm_path in ".$domain->name) or confess;
 }
 
+sub _filter_hds($hd0, $hd1) {
+    my @devices = $hd0->list_devices();
+    my @devices2 = $hd1->list_devices();
+    return if _is_different(\@devices, \@devices2);
+
+    for my $n ( 0 .. scalar(@devices)-1 ) {
+        my ($word0) = $devices[$n] =~ / ID .*? (\w+)/;
+        $hd0->_data('list_filter' => $word0);
+        @devices = $hd0->list_devices();
+        last if @devices;
+    }
+    FOUND: for my $n ( 1 .. scalar(@devices2)-1 ) {
+        my @words = split(/\s+/,$devices2[$n]);
+        for ( 0 .. 4 ) {shift @words }
+        for my $word0 ( @words ) {
+            warn $word0;
+            $hd1->_data('list_filter' => $word0);
+            @devices2 = $hd1->list_devices();
+            last FOUND if @devices2 && _is_different(\@devices,\@devices2);
+        }
+    }
+}
+
+sub _is_different($list1, $list2) {
+    return 1 if scalar(@$list1) != scalar(@$list2);
+    for my $n (0 .. scalar (@$list1)-1) {
+        return 1 if $list1->[$n] ne $list2->[$n];
+    }
+    return 0;
+}
 
 sub test_change_hd_in_clone($domain) {
 
@@ -568,13 +598,12 @@ sub test_change_hd_in_clone($domain) {
     my $hd1 = _create_mdev($domain->_vm);
     isnt($hd1->id, $hd0->id);
 
-    warn "devices##########\n".Dumper([$hd1->list_devices]);
+    _filter_hds($hd0, $hd1);
 
     my @args = ( uid => user_admin->id ,id_domain => $domain->id);
     Ravada::Request->clone(@args, number => scalar($hd0->list_devices));
     wait_request(debug => 1);
 
-    warn Dumper([map { $_->{name} } $domain->clones]);
     _req_start($domain->clones);
 
     my @clones = $domain->clones();
@@ -622,8 +651,9 @@ sub test_change_hd_in_clone($domain) {
 
     _req_shutdown($clone);
 
-    remove_domain($clone);
-    exit;
+    remove_domain(@clones, $clone_new);
+    $hd0->_data('list_filter' => '');
+    $hd1->remove();
 
 }
 
@@ -763,12 +793,14 @@ for my $vm_name ('KVM', 'Void' ) {
         } else {
             $BASE = import_domain($vm);
         }
-        test_mdev_kvm_state($vm);
         my ($domain, $host_device) = test_mdev($vm);
         test_volatile_clones($vm, $domain, $host_device);
+        test_change_hd_in_clone($domain);
+
         test_base($domain);
         test_change_hd_in_clone($domain);
 
+        test_mdev_kvm_state($vm);
     }
 }
 
