@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target="fixed-top" role="document">
+<div id="wrapper">
+    %= include 'bootstrap/navigation'
+<div id="page-wrapper">
+        <!--BASES AND DOMAINS LIST-->
+    <div class="page-header">
+        <div class="card"
+             ng-controller="settings_route"
+             ng-init="init()"
+        >
+        <div class="card-header">
+            <h2><%=l 'New Route' %></h2>
+        </div>
+        <div class="card-body">
+%=          include '/main/route_options'
+        </div>
+        <div class="col-md-8 alert alert-info" ng-show="error && formNetwork.$pristine">
+            {{error}}
+        </div>
+        </div><!-- card -->
+    </div> <!-- page-header -->
+
+</div><!-- page-wrapper -->
+</div><!-- wrapper -->
+%= include $footer
+%= include 'bootstrap/scripts'
+</body>
+</html>

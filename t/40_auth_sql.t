@@ -10,6 +10,7 @@ use Test::Ravada;
 use_ok('Ravada');
 use_ok('Ravada::Auth::SQL');
 
+init();
 my $RAVADA = rvd_back();
 
 Ravada::Auth::SQL::add_user(name => 'test',password => $$);

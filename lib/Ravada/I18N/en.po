@@ -6,8 +6,8 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2021-10-13 10:44+0000\n"
-"Last-Translator: Ravada <ravada@telecos.upc.edu>\n"
+"PO-Revision-Date: 2024-09-21 06:40+0000\n"
+"Last-Translator: fv3rdugo <fv3rdugo@gmail.com>\n"
 "Language-Team: English <https://hosted.weblate.org/projects/ravada/"
 "translation/en/>\n"
 "Language: en\n"
@@ -15,7 +15,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 4.9-dev\n"
+"X-Generator: Weblate 5.8-dev\n"
 
 msgid "Ravada broker"
 msgstr "Ravada broker"
@@ -303,9 +303,6 @@ msgstr "Welcome"
 msgid "A viewer is required to run the virtual machines."
 msgstr "A viewer is required to run the virtual machines."
 
-msgid "It is required a viewer to run the virtual machines."
-msgstr "It is required a viewer to run the virtual machines."
-
 msgid "Virtual Machines"
 msgstr "Virtual Machines"
 
@@ -331,7 +328,7 @@ msgid "can change the settings of any virtual machine."
 msgstr "can change the settings of any virtual machine."
 
 msgid "can change the settings of any virtual machine "
-msgstr "can change the settings of any virtual machine "
+msgstr "can change the settings of any virtual machine"
 
 msgid "cloned from one base owned by the user."
 msgstr "cloned from one base owned by the user."
@@ -1246,7 +1243,6 @@ msgstr "Check"
 msgid "Ravada Apache documentation"
 msgstr "Ravada Apache documentation"
 
-
 msgid "Client"
 msgstr "Client"
 
@@ -1255,7 +1251,6 @@ msgstr "LDAP"
 
 msgid "Display URL :"
 msgstr "Display URL :"
-
 
 msgid "Display IP :"
 msgstr "Display IP :"
@@ -1832,7 +1827,7 @@ msgid ""
 "    the booking list will be shutdown."
 msgstr ""
 "This server has reservations for today. Machines from users out of\n"
-"    the booking list will be shutdown."
+"         the booking list will be shutdown."
 
 msgid "allowed"
 msgstr "allowed"
@@ -2170,5 +2165,35 @@ msgstr "Source Machine"
 msgid "Monitoring"
 msgstr "Monitoring"
 
-msgid "For Spice client setup follow this "
-msgstr "For Spice client setup follow this "
+msgid "Follow these steps for Spice client setup"
+msgstr "Follow these steps for Spice client setup"
+
+msgid "Share"
+msgstr "Share"
+
+msgid "Host Devices"
+msgstr "Host Devices"
+
+msgid "Mange Host Devices"
+msgstr "Mange Host Devices"
+
+msgid "Auto Compact"
+msgstr "Auto Compact"
+
+msgid "Compact data volumes daily."
+msgstr "Compact data volumes daily."
+
+msgid "Clones will inherit this value unless defined in their options."
+msgstr "Clones will inherit this value unless defined in their options."
+
+msgid "This must be enabled in global settings too."
+msgstr "This must be enabled in global settings too."
+
+msgid "Allow users to clone this base"
+msgstr "Allow users to clone this base"
+
+msgid "Show the base when the user already created a clone"
+msgstr "Show the base when the user already created a clone"
+
+msgid "Show Clones"
+msgstr "Show Clones"

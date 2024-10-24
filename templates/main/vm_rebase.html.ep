@@ -1,10 +1,10 @@
 <div ng-show="(showmachine.is_base && showmachine.has_clones>0 ) || showmachine.id_base">
 
     <div ng-show="bases" class="row">
-        <div class="col-md-1">
-            <label><%=l 'Base' %></label>
+        <div class="col-md-2" align="right">
+            <label><b><%=l 'Base' %></b></label>
         </div>
-        <div class="col-md-11">
+        <div class="col-md-10">
             <select ng-model="new_base"
                 ng-disabled="rebase_request && rebase_request.status != 'done'"
                 ng-options="item.name for item in bases | orderBy :'name'">
@@ -19,12 +19,16 @@
             ><%=l 'Cancel' %></button>
         </div>
     </div>
-    <div ng-show="bases" class="row">
-        <div class="col-md-1">
+    <div ng-show="bases" class="row mb-4">
+        <div class="col-md-2">
         </div>
-        <div class="col-md-11">
-            <p ng-show="showmachine.is_base"><%=l 'Rebase all the clones to a new base' %></p>
-            <p ng-show="showmachine.id_base && !showmachine.has_clones"><%=l 'Rebase this machine to another virtual machine' %></p>
+        <div class="col-md-10">
+            <div ng-show="showmachine.is_base">
+                <span class="info"><%=l 'Rebase all the clones to a new base' %></span>
+            </div>
+            <div ng-show="showmachine.id_base && !showmachine.has_clones">
+                <span class="info"><%=l 'Rebase this machine to another virtual machine' %></span>
+            </div>
         </div>
     </div>
     <div ng-show="bases" class="row">

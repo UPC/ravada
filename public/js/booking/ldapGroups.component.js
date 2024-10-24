@@ -43,6 +43,8 @@ function grpCtrl(apiLDAP, $scope, $timeout) {
         }
         self.onAdd({ group: self.group_selected})
         self.group_selected = null;
+        // issue a bogus remove so the form is not pristine
+        self.remove_ldap_group('*UNDEF*');
     };
     self.remove_ldap_group =  group => {
         self.selected_groups = remove_array_element(self.selected_groups,group)

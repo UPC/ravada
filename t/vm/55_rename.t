@@ -75,9 +75,55 @@ sub test_rename_domain {
     return $new_domain_name;
 }
 
+sub _change_hardware_ram($domain) {
+    Ravada::Request->shutdown_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,timeout => 1
+    );
+    wait_request();
+
+    my $max_mem = $domain->info(user_admin)->{max_mem};
+    my $mem = $domain->info(user_admin)->{memory};
+
+    my $new_max_mem = int($max_mem * 1.7 ) + 1;
+    my $new_mem = int($mem * 1.6 ) + 1;
+
+    Ravada::Request->change_hardware (
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,hardware => 'memory'
+        ,data => { max_mem => $new_max_mem , memory => $new_mem }
+    );
+    wait_request(debug => 0);
+    my $domain2 = Ravada::Front::Domain->open($domain->id);
+    like($domain2->_data('config_no_hd'),qr/./) or die $domain->name;
+}
+
+sub _add_hardware_disk($domain) {
+    diag("add disk");
+    Ravada::Request->shutdown_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,timeout => 1
+    );
+    wait_request();
+
+    Ravada::Request->add_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,name => 'disk'
+        ,data => { size => 1*1024*1024, type => 'data' }
+    );
+    wait_request();
+    my $domain2 = Ravada::Front::Domain->open($domain->id);
+    diag($domain2->_data('config_no_hd'));
+}
+
 sub test_req_rename_domain {
-    my ($vm_name, $domain_name, $dont_fork) = @_;
+    my ($vm_name, $domain_name, $dont_fork, $change_hardware) = @_;
     my $debug = 0;
+    $change_hardware = 0 if !defined $change_hardware;
 
     my $domain_id;
     {
@@ -86,7 +132,11 @@ sub test_req_rename_domain {
         my $domain = $vm->search_domain($domain_name);
         ok($domain,"[$vm_name-req] Expecting found $domain_name") or return;
         $domain_id = $domain->id;
-        $domain->shutdown_now($USER);
+        if ($change_hardware == 1 ) {
+            _add_hardware_disk($domain);
+        } elsif($change_hardware == 2) {
+            _change_hardware_ram($domain);
+        }
     }
     my $new_domain_name = new_domain_name();
     {
@@ -120,6 +170,18 @@ sub test_req_rename_domain {
                         ."$new_domain_name") or return;
 
     }
+    my $req = Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $domain_id
+    );
+    wait_request(debug => 0);
+    Ravada::Request->force_shutdown_domain(
+        uid => user_admin->id
+        ,id_domain => $domain_id
+    );
+    wait_request();
+
+    return $new_domain_name;
 }
 
 sub test_clone_domain {
@@ -399,7 +461,13 @@ for my $vm_name ( vm_names()) {
         test_create_domain($vm_name, $domain_name);
     
         $domain_name = test_create_domain($vm_name);
-        test_req_rename_domain($vm_name, $domain_name) or next;
+
+        my $name2=test_req_rename_domain($vm_name, $domain_name);
+        next if !$name2;
+        my $name3 = test_req_rename_domain($vm_name, $name2, undef, 1);
+        next if !$name3;
+        my $name4 = test_req_rename_domain($vm_name, $name3, undef, 2);
+        next if !$name4;
         test_create_domain($vm_name, $domain_name);
     
         test_rename_clone($vm_name);

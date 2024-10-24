@@ -89,6 +89,9 @@ sub test_bases($t, $bases) {
     my $n_bases = 0;
     my $n_machines = scalar(@$bases);
     for my $base ( @$bases ) {
+
+        mojo_request($t, "force_shutdown", { id_domain => $base->id });
+
         my $url = "/machine/prepare/".$base->id.".json";
         $t->get_ok($url)->status_is(200);
         wait_mojo_request($t, $url);
@@ -159,6 +162,10 @@ sub test_list_machines_non_admin($t, $bases) {
     my @list_machines = list_machines($t);
     is(scalar(@list_machines),0) or die Dumper([map {[$_->{id_base},$_->{name}]} @list_machines]);
 
+    Ravada::Request->force_shutdown(
+        uid => user_admin->id
+        ,id_domain => $clone->{id}
+    );
     my $req = Ravada::Request->prepare_base(
         uid => user_admin->id
         ,id_domain => $clone->{id}
@@ -339,6 +346,36 @@ sub test_remove_booking_entry_non_admin($t, $id) {
 
 }
 
+sub test_node_info($vm_name) {
+    my $sth = connector->dbh->prepare("SELECT * FROM vms WHERE vm_type=?");
+    $sth->execute($vm_name);
+
+    my $user = create_user(new_domain_name(), $$);
+
+    while ( my $node = $sth->fetchrow_hashref) {
+        my $ws_args = {
+            channel => '/'.$node->{id}
+            ,login => user_admin->name
+        };
+
+        my $node_info = Ravada::WebSocket::_get_node_info
+                            (rvd_front(), $ws_args);
+        if ($node->{hostname} =~ /localhost|127.0.0.1/) {
+            is($node_info->{is_local},1);
+        } else {
+            is($node_info->{is_local},0);
+        }
+
+        $ws_args->{login} = $user->name;
+
+        $node_info = Ravada::WebSocket::_get_node_info
+                            (rvd_front(), $ws_args);
+
+        is_deeply($node_info,{});
+    }
+
+}
+
 ########################################################################################
 
 init('/etc/ravada.conf',0);
@@ -371,6 +408,8 @@ my $t = mojo_init();
 for my $vm_name ( @{rvd_front->list_vm_types} ) {
 
     diag("Testing Web Services in $vm_name");
+
+    test_node_info($vm_name);
 
     mojo_login($t, $USERNAME, $PASSWORD);
     test_bookings($t);

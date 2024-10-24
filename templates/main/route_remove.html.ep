@@ -1,0 +1,8 @@
+<div ng-show="route && route.id">
+    <%=l 'Are you sure you want to remove the' %> <%= $item %> {{route.name}}
+
+    <button ng-click="remove_route(route.id)"><%=l 'Yes' %></button>
+    <button onclick="location='/admin/routes'"><%=l 'Cancel' %></button>
+</div>
+
+<div ng-show="message">{{message}}</div>

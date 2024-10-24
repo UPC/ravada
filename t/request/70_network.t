@@ -44,6 +44,7 @@ sub test_list_nats($vm) {
 }
 
 sub _remove_qemu_bridges($vm, $bridges) {
+    return @$bridges if $vm->type eq 'Void';
     my @nat = $vm->list_network_interfaces('nat');
 
     my %bridges = map { $_ => 1 } @$bridges;

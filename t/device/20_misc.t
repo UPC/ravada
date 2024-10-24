@@ -216,6 +216,10 @@ EOT
 
     my $domain = create_domain($vm);
     my $xml_config = XML::LibXML->load_xml(string => $config);
+
+    my ($name) = $xml_config->findnodes("/domain/name/text()");
+
+    $name->setData($domain->name);
     $domain->reload_config($xml_config);
 
     $domain->remove_config_node("/domain/devices/hostdev", $content, $xml_config);
@@ -230,10 +234,11 @@ clean();
 for my $vm_name ( 'KVM' ) {
 
     SKIP: {
-        my $vm = rvd_back->search_vm($vm_name);
+        my $vm;
+        $vm = rvd_back->search_vm($vm_name) if !$>;
 
         my $msg = "SKIPPED test: No $vm_name VM found ";
-        if ($vm && $>) {
+        if ($vm_name eq 'KVM' && $>) {
               $msg = "SKIPPED: Test must run as root";
               $vm = undef;
         }

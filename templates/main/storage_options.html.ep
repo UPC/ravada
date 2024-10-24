@@ -1,5 +1,6 @@
 <div class="container-fluid">
-<form name="form_options">
+<i class="fas fa-sync-alt fa-spin" ng-hide="node && node.id"></i>
+<form name="form_options" ng-show="node && node.id">
 
 <div class="form-group row">
     <div class="col-md-3" align="right"><%=l 'base storage' %></div>

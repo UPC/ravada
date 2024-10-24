@@ -4,7 +4,8 @@
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
 <div id="wrapper">
     %= include 'bootstrap/navigation'
-    <div id="page-wrapper" ng-controller="manage_networks">
+    <div id="page-wrapper" ng-controller='manage_networks'
+        ng-init="init('<%= $id_vm %>')">
     <div id="admin-content">
         <div class="row">
             <div class="col-md-8"><h2><%=l 'Networks' %></h2></div>
@@ -15,36 +16,66 @@
                   </h2>
             </div>
         </div>
+
         <div class="row">
-            <div class="col-md-4"></div>
-            <!-- <div class="col-md-2">enabled</div> -->
-            <div class="col-md-2">
-                <%=l 'requires password' %>
+            <div class="col-md-2"><b><%=l 'Name' %></b></div>
+            <div class="col-md-1"
+                 ng-show="<%= ( $_user->is_admin or $_user->can_manage_all_networks or 0 ) %>"
+                ><b><%=l 'Public' %></b></div>
+
+            <div class="col-md-2"
+                 ng-show="<%= ( $_user->is_admin or $_user->can_manage_all_networks or 0 ) %>"
+                ><b><%=l 'Owner' %></b></div>
+            <div class="col-md-2"><b><%=l 'Bridge' %></b></div>
+            <div class="col-md-2"><b><%=l 'Address' %></b></div>
+            <div class="col-md-1"><b><%=l 'Active' %></b></div>
+            <div class="col-md-2"><b><%=l 'Auto Start' %></b></div>
+        </div>
+
+        <div class="row" ng-show="loaded_networks && networks.length==0">
+            <div class="col-md-12">
+                <div class="alert alert-warning">
+                <%=l 'No networks found' %>
+                </div>
             </div>
         </div>
-        <div ng-repeat="network in networks | orderObjectBy:'n_order'"
-            class="row"
+
+        <div ng-repeat="network in networks | orderObjectBy:'name'"
+             class="row" ng-cloak
         >
             <div class="col-md-2">
-                <a href="/network/settings/{{network.id}}.html">{{network.name}}</a>
+                <a href="/network/settings/{{network.id}}.html"
+                    ng-show="network._can_change">{{network.name}}</a>
+                <span ng-show="!network._can_change">{{network.name}}</span>
             </div>
-            <div class="col-md-2">{{network.address}}</div>
-            <!--
-            <div class="col-md-2">
-                <input type="checkbox" ng-model="network.no_domains"
-                    ng-true-value="0" ng-false-value="1"
-                    ng-change
-                    ="update_network(network.id,'no_domains')"
+            <div class="col-md-1"
+                 ng-show="<%= ( $_user->is_admin or $_user->can_manage_all_networks or 0 ) %>"
                 >
+
+                <span ng-show="network.is_public"
+                      >&#10004;</span>
+                <span ng-show="!network.is_public"
+                      >&#10005;</span>
             </div>
-            -->
+
+            <div class="col-md-2"
+                 ng-show="<%= ( $_user->is_admin or $_user->can_manage_all_networks or 0 ) %>"
+                >{{network._owner.name}}</div>
+            <div class="col-md-2">{{network.bridge}}</div>
+            <div class="col-md-2">{{network.ip_address}}</div>
+            <div class="col-md-1">
+                <span ng-show="network.is_active"
+                      >&#10004;</span>
+                <span ng-show="!network.is_active"
+                      >&#10005;</span>
+            </div>
             <div class="col-md-2">
-                <input type="checkbox" ng-model="network.requires_password"
-                    ng-true-value="1" ng-false-value="0"
-                    ng-change
-                    ="update_network(network.id,'requires_password')"
-                >
+                <span ng-show="network.autostart"
+                      >&#10004;</span>
+                <span ng-show="!network.autostart"
+                      >&#10005;</span>
             </div>
+
         </div>
     </div>
     </div>

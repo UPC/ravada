@@ -1,0 +1,20 @@
+<div class='tab-pane container fade in show active' id='local'>
+    <table class="table table-striped" ng-show="local_groups.length">
+        <thead>
+            <tr>
+                <th><%=l 'Name' %></th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr ng-repeat="group in local_groups">
+                <td><a href="/admin/group/local/{{group.id}}">{{group.name}}</a></td>
+            </tr>
+        </tbody>
+    </table>
+    <div ng-show="!local_groups || local_groups.length == 0">
+        <i class="fas fa-sync-alt fa-spin" ng-show="!local_groups"></i>
+        <div ng-show="local_groups && !local_groups.length" class="alert alert-warning">
+        <%=l 'No groups found' %>
+        </div>
+    </div>
+</div>

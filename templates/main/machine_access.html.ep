@@ -29,11 +29,7 @@
 </div>
 
 <div ng-show="tab_access=='group'">
-% if ($FEATURE->{ldap}) {
     %= include "main/machine_access_group"
-% } else {
-    %= include "/error/no_ldap"
-% }
 </div>
 
 <div ng-show="tab_access=='ldap'">

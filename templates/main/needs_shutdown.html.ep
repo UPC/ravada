@@ -1,0 +1,9 @@
+    <div class="alert alert-primary" ng-show="showmachine.is_active">
+        <div class="panel-heading">
+            <%=l 'This virtual machine is active and can not be changed' %>
+            <button data-dismiss="modal"
+                ng-click="shutdown()"
+            ><%=l 'shutdown now' %></button>
+        </div>
+    </div>
+

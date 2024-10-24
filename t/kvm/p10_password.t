@@ -16,13 +16,15 @@ init();
 my @VMS = vm_names();
 my $USER = create_user("foo","bar", 1);
 
+use_ok('Ravada::Route');
+
 #######################################################
 
 sub test_domain_no_password {
     my $vm_name = shift;
     my $vm = rvd_back->search_vm($vm_name);
 
-    my $net = Ravada::Network->new(address => '127.0.0.1/32');
+    my $net = Ravada::Route->new(address => '127.0.0.1/32');
 
     ok(!$net->requires_password);
     my $domain_name = new_domain_name();
@@ -43,7 +45,7 @@ sub test_domain_no_password {
     }
     is($domain->is_active,0) or return;
 
-    my $net2 = Ravada::Network->new(address => '10.0.0.1/32');
+    my $net2 = Ravada::Route->new(address => '10.0.0.1/32');
     ok(!$net2->requires_password,"Expecting net requires password ");
 
     $domain->start(user => $USER, remote_ip => '10.0.0.1');
@@ -69,7 +71,7 @@ sub test_domain_password2 {
     my $vm_name = shift;
     my $vm = rvd_back->search_vm($vm_name);
 
-    my $net = Ravada::Network->new(address => '127.0.0.1/32');
+    my $net = Ravada::Route->new(address => '127.0.0.1/32');
 
     ok(!$net->requires_password) or return;
     my $domain_name = new_domain_name();
@@ -90,7 +92,7 @@ sub test_domain_password2 {
     }
     is($domain->is_active,0) or return;
 
-    my $net2 = Ravada::Network->new(address => '10.0.0.1/32');
+    my $net2 = Ravada::Route->new(address => '10.0.0.1/32');
     ok($net2->requires_password,"Expecting net requires password ")
         or return;
 
@@ -117,7 +119,7 @@ sub test_domain_password2 {
 sub test_domain_password1($vm_name, $requires_password=1) {
     my $vm = rvd_back->search_vm($vm_name);
 
-    my $net2 = Ravada::Network->new(address => '10.0.0.1/32');
+    my $net2 = Ravada::Route->new(address => '10.0.0.1/32');
 
     ok($net2->requires_password,"Expecting net requires password ")
         or return;

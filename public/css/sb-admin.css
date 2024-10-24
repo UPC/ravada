@@ -454,6 +454,10 @@ span.info {
     font-style: italic;
 }
 
+span.output {
+    color: lightgray;
+}
+
 .title {
     padding-top: 4px;
     padding-bottom: 0px;

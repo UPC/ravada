@@ -9,7 +9,7 @@ Ravada::Request - Requests library for Ravada
 
 =cut
 
-use Carp qw(confess);
+use Carp qw(confess cluck);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
 use JSON::XS;
@@ -71,6 +71,7 @@ our %VALID_ARG = (
                        , check => 2
                        , id_vm => 2 }
     ,force_shutdown_domain => { id_domain => 1, uid => 1, at => 2, id_vm => 2 }
+    ,force_shutdown => { id_domain => 1, uid => 1, at => 2, id_vm => 2 }
     ,reboot_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2
                        , id_vm => 2 }
     ,force_reboot_domain => { id_domain => 1, uid => 1, at => 2, id_vm => 2 }
@@ -104,6 +105,9 @@ our %VALID_ARG = (
                 ,start => 2,
                 ,remote_ip => 2
                 ,with_cd => 2
+                ,storage => 2
+                ,options => 2
+                ,enable_host_devices => 2
     }
     ,change_owner => {uid => 1, id_domain => 1}
     ,add_hardware => {uid => 1, id_domain => 1, name => 1, number => 2, data => 2 }
@@ -149,7 +153,7 @@ our %VALID_ARG = (
 
     ,list_host_devices => {
         uid => 1
-        ,id_host_device => 1
+        ,id_host_device => 2
         ,_force => 2
     }
     ,remove_host_device => {
@@ -165,6 +169,15 @@ our %VALID_ARG = (
     ,update_iso_urls => { uid => 1 }
     ,list_unused_volumes => {uid => 1, id_vm => 1, start => 2, limit => 2 }
     ,remove_files => { uid => 1, id_vm => 1, files => 1 }
+    ,move_volume => { uid => 1, id_domain => 1, volume => 1, storage => 1 }
+    
+    ,list_networks => { uid => 1, id_vm => 1}
+    ,new_network => { uid => 1, id_vm => 1, name => 2 }
+    ,create_network => { uid => 1, id_vm => 1, data => 1 }
+    ,remove_network => { uid => 1, id => 1, id_vm => 2, name => 2 }
+    ,change_network => { uid => 1, data => 1 }
+
+    ,remove_clones => { uid => 1, id_domain => 1 }
 );
 
 $VALID_ARG{shutdown} = $VALID_ARG{shutdown_domain};
@@ -181,6 +194,8 @@ our %CMD_SEND_MESSAGE = map { $_ => 1 }
             shutdown_node reboot_node start_node
             compact purge
             start_domain
+
+            create_network change_network remove_network
     );
 
 our %CMD_NO_DUPLICATE = map { $_ => 1 }
@@ -198,6 +213,7 @@ qw(
     open_exposed_ports
     manage_pools
     screenshot
+    prepare_base
 );
 
 our $TIMEOUT_SHUTDOWN = 120;
@@ -214,30 +230,31 @@ our %COMMAND = (
     # list from low to high priority
     ,disk_low_priority => {
         limit => 2
-        ,commands => ['rsync_back','check_storage', 'refresh_vms']
+        ,commands => ['rsync_back','check_storage', 'refresh_vms','move_volume']
         ,priority => 30
     }
     ,disk => {
-        limit => 1
+        limit => 2
         ,commands => ['prepare_base','remove_base','set_base_vm','rebase_volumes'
                     , 'remove_base_vm'
                     , 'screenshot'
                     , 'cleanup'
-                    , 'compact'
+                    , 'compact','spinoff'
                 ]
         ,priority => 20
     }
     ,huge => {
         limit => 1
-        ,commands => ['download']
+        ,commands => ['download','manage_pools']
         ,priority => 15
     }
 
     ,secondary => {
         limit => 50
         ,priority => 4
-        ,commands => ['shutdown','shutdown_now', 'manage_pools','enforce_limits', 'set_time'
-            ,'remove_domain','refresh_machine_ports'
+        ,commands => ['shutdown','shutdown_now', 'enforce_limits', 'set_time'
+            ,'remove_domain', 'remove', 'refresh_machine_ports'
+            ,'connect_node','start_node','shutdown_node'
         ]
     }
 
@@ -265,6 +282,10 @@ our %CMD_VALIDATE = (
     ,add_hardware=> \&_validate_change_hardware
     ,change_hardware=> \&_validate_change_hardware
     ,remove_hardware=> \&_validate_change_hardware
+    ,move_volume => \&_validate_change_hardware
+    ,compact => \&_validate_compact
+    ,spinoff => \&_validate_compact
+    ,prepare_base => \&_validate_compact
 );
 
 sub _init_connector {
@@ -546,7 +567,7 @@ sub _check_args {
     my $args = { @_ };
 
     my $valid_args = $VALID_ARG{$sub};
-    for (qw(at after_request after_request_ok retry _no_duplicate _force)) {
+    for (qw(at after_request after_request_ok retry _no_duplicate _force uid)) {
         $valid_args->{$_}=2 if !exists $valid_args->{$_};
     }
 
@@ -690,7 +711,9 @@ sub _duplicated_request($self=undef, $command=undef, $args=undef) {
         $args_d = decode_json($args);
     }
     confess "Error: missing command " if !$command;
-    delete $args_d->{uid};
+    #    delete $args_d->{uid} unless $command eq 'clone';
+    delete $args_d->{uid} if $command =~ /(cleanup|refresh_vms|set_base_vm)/;
+    delete $args_d->{uid} if exists $args_d->{uid} && !defined $args_d->{uid};
     delete $args_d->{at};
     delete $args_d->{status};
     delete $args_d->{timeout};
@@ -698,7 +721,7 @@ sub _duplicated_request($self=undef, $command=undef, $args=undef) {
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT id,args FROM requests WHERE (status <> 'done')"
         ." AND command=?"
-        ." AND ( error = '' OR error is NULL)"
+        ." AND ( error = '' OR error is NULL OR error like '% waiting for process%')"
     );
     $sth->execute($command);
     while (my ($id,$args_found) = $sth->fetchrow) {
@@ -779,9 +802,11 @@ sub _new_request {
 
         my $id = ( $id_dupe or $id_recent );
         if ($id ) {
-            my $req = Ravada::Request->open($id);
-            $req->{_duplicated} = 1;
-            return $req;
+            unless ($args{command} eq 'prepare_base' && done_recently(undef,60,'remove_base')) {
+                my $req = Ravada::Request->open($id);
+                $req->{_duplicated} = 1;
+                return $req;
+            }
         }
 
     }
@@ -804,8 +829,10 @@ sub _new_request {
     ." WHERE id=?");
     $sth->execute($self->{id});
 
-
-    my $request = $self->open($self->{id});
+    my $request;
+    eval { $request = $self->open($self->{id}) };
+    warn $@ if $@ && $@ !~ /I can't find id=/;
+    return if !$request;
     $request->_validate();
     $request->status('requested') if $request->status ne'done';
 
@@ -851,6 +878,29 @@ sub _validate_start_domain($self) {
     }
 }
 
+sub _validate_compact($self) {
+    return if $self->after_request();
+
+    my $id_domain = $self->defined_arg('id_domain');
+
+    my $req_compact = $self->_search_request('compact', id_domain => $id_domain);
+    my $req_spinoff = $self->_search_request('spinoff', id_domain => $id_domain);
+
+    return if !$req_compact && !$req_spinoff;
+
+    my $id;
+    $id = $req_compact->id if $req_compact;
+
+    if ( !$id || ( $req_spinoff && $req_spinoff->id > $id) ) {
+        $id = $req_spinoff->id;
+    }
+    $req_compact->at(0) if $req_compact;
+    $req_spinoff->at(0) if $req_spinoff;
+
+    $self->after_request($id) if $id;
+
+}
+
 sub _validate_change_hardware($self) {
 
     return if $self->after_request();
@@ -862,8 +912,18 @@ sub _validate_change_hardware($self) {
     }
     return if !$id_domain;
     my $req = $self->_search_request('%_hardware', id_domain => $id_domain);
+    my $req_move = $self->_search_request('move_volume', id_domain => $id_domain);
 
-    $self->after_request($req->id) if $req && $req->id < $self->id;
+    return if !$req && ! $req_move;
+
+    my $id;
+    $id = $req->id if $req;
+
+    if ( !$id || ( $req_move && $req_move->id > $id) ) {
+        $id = $req_move->id;
+    }
+
+    $self->after_request($id);
 }
 
 sub _validate_create_domain($self) {
@@ -1370,11 +1430,19 @@ sub set_base_vm {
     my $self = {};
     bless ($self, $class);
 
-    return $self->_new_request(
+    my $req = $self->_new_request(
             command => 'set_base_vm'
              , args => $args
     );
 
+    my $id_domain = $args->{id_domain};
+    my $domain = Ravada::Front::Domain->open($id_domain);
+    my $id_vm = $args->{id_vm};
+    $id_vm = $args->{id_node} if exists $args->{id_node} && $args->{id_node};
+
+    $domain->_set_base_vm_db($id_vm, $args->{value}, $req->id);
+
+    return $req;
 }
 
 =head2 remove_base_vm
@@ -1645,7 +1713,9 @@ sub done_recently($self, $seconds=60,$command=undef, $args=undef) {
 
         return Ravada::Request->open($id) if !keys %$args_d;
 
-        my $args_found_d = decode_json($args_found);
+        my $args_found_d = {};
+        eval { $args_found_d = decode_json($args_found)};
+        warn "Warning: request $id $@" if $@;
         delete $args_found_d->{uid};
         delete $args_found_d->{at};
 
@@ -1762,6 +1832,59 @@ sub redo($self) {
         ." WHERE id=?"
     );
     $sth->execute($self->id);
+}
+
+=head2 remove
+
+Remove all requests that comply with the conditions
+
+=cut
+
+sub remove($status, %args) {
+    my $sth = _dbh->prepare(
+        "SELECT * FROM requests where status = ? "
+    );
+    $sth->execute($status);
+
+    my $sth_del = _dbh->prepare("DELETE FROM requests where id=?");
+
+    while ( my $row = $sth->fetchrow_hashref ) {
+        my $req_args = {};
+
+        eval {
+        $req_args = decode_json($row->{args}) if $row->{args};
+        };
+        warn "Warning: $@ ".$row->{args}
+        ."\n".Dumper($row) if $@;
+
+        next if $row->{status} ne $status;
+        delete $req_args->{uid};
+        next if scalar(keys%args) != scalar(keys(%$req_args));
+
+        my $found = 1;
+        for my $key (keys %$req_args) {
+
+            next if exists $args{$key}
+            && !defined $args{$key} && !defined $req_args->{$key};
+
+            $found=0 if
+            !exists $args{$key} ||
+            $args{$key} ne $req_args->{$key};
+        }
+        next if !$found;
+
+        for my $key (keys %args) {
+            next if exists $req_args->{$key}
+            && !defined $args{$key} && !defined $req_args->{$key};
+
+            $found=0 if
+            !exists $req_args->{$key} ||
+            $args{$key} ne $req_args->{$key};
+        }
+        next if !$found;
+
+        $sth_del->execute($row->{id});
+    }
 }
 
 sub AUTOLOAD {

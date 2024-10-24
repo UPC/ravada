@@ -49,6 +49,7 @@ my %SUB = (
                  ,list_next_bookings_today => \&_list_next_bookings_today
 
                  ,log_active_domains => \&_log_active_domains
+                 ,list_networks => \&_list_networks
 );
 
 our %TABLE_CHANNEL = (
@@ -60,6 +61,7 @@ our %TABLE_CHANNEL = (
     ,list_requests => 'requests'
     ,machine_info => 'domains'
     ,log_active_domains => 'log_active_domains'
+    ,list_networks => 'virtual_networks'
 );
 
 my $A_WHILE;
@@ -229,15 +231,15 @@ sub _list_host_devices($rvd, $args) {
     my $user = Ravada::Auth::SQL->new(name => $login)
         or die "Error: uknown user $login";
 
-    my $sth = $rvd->_dbh->prepare( "SELECT id,name,list_command,list_filter,devices,date_changed "
+    my $sth = $rvd->_dbh->prepare( "SELECT id,name,list_command,list_filter,devices_node,date_changed "
         ." FROM host_devices WHERE id_vm=?");
 
     $sth->execute($id_vm);
 
     my @found;
     while (my $row = $sth->fetchrow_hashref) {
-        $row->{devices} = decode_json($row->{devices}) if $row->{devices};
-        $row->{_domains} = _list_domains_with_device($rvd, $row->{id});
+        _list_domains_with_device($rvd, $row);
+        _list_devices_node($rvd, $row);
         push @found, $row;
         next unless _its_been_a_while_channel($args->{channel});
         my $req = Ravada::Request->list_host_devices(
@@ -248,17 +250,123 @@ sub _list_host_devices($rvd, $args) {
     return \@found;
 }
 
-sub _list_domains_with_device($rvd,$id_hd) {
-    my $sth=$rvd->_dbh->prepare("SELECT d.name FROM domains d,host_devices_domain hdd"
+sub _list_devices_node($rvd, $row) {
+    my $devices = {};
+    eval {
+    $devices = decode_json($row->{devices_node}) if $row->{devices_node};
+    };
+    warn "Warning: $@ $row->{devices_node}" if $@;
+    $row->{_n_devices}=0;
+
+    my %ret;
+    my %attached = _list_devices_attached($rvd);
+    if (%$devices) {
+        $row->{_nodes} = [sort keys %{$devices}];
+        for (@{$row->{_nodes}}) {
+            $row->{_n_devices} += scalar(@{$devices->{$_}});
+        }
+        $row->{_loading} = 0;
+        for my $id_node ( keys %$devices ) {
+            my @devs;
+            for my $name ( @{$devices->{$id_node}} ) {
+                my $dev = { name => $name };
+
+                $dev->{domain} = $attached{"$id_node.$name"}
+                if exists $attached{"$id_node.$name"};
+
+                push @devs,($dev);
+            }
+            $ret{$id_node} = \@devs;
+        }
+    } else {
+        $row->{_nodes} = [];
+    }
+
+    $row->{devices_node} = \%ret;
+}
+
+sub _list_devices_attached($rvd) {
+    my $sth=$rvd->_dbh->prepare(
+        "SELECT d.id,d.name,d.is_base, d.status, l.id, l.name "
+        ."     ,l.id_vm "
+        ." FROM host_devices_domain hdd, domains d"
+        ." LEFT JOIN host_devices_domain_locked l"
+        ."    ON d.id=l.id_domain "
+        ." WHERE  d.id= hdd.id_domain "
+        ."  ORDER BY d.name"
+    );
+    $sth->execute();
+    my %devices;
+    while ( my ($id,$name,$is_base, $status, $is_locked, $device, $id_vm) = $sth->fetchrow ) {
+        next if !$device;
+        $is_locked = 0 if !$is_locked || $status ne 'active';
+        my $domain = {     id => $id       ,name => $name, is_locked => $is_locked
+                      ,is_base => $is_base ,device => $device
+        };
+        $devices{"$id_vm.$device"} = $domain;
+    }
+    return %devices;
+
+}
+
+sub _list_domains_with_device($rvd,$row) {
+    my $id_hd = $row->{id};
+
+    my %devices;
+    eval {
+        my $devices = decode_json($row->{devices});
+        %devices = map { $_ => { name => $_ } } @$devices;
+    } if $row->{devices};
+    my $sth=$rvd->_dbh->prepare("SELECT d.id,d.name,d.is_base, d.status, l.id, l.name "
+        ." FROM host_devices_domain hdd, domains d"
+        ." LEFT JOIN host_devices_domain_locked l"
+        ."    ON d.id=l.id_domain "
         ." WHERE  d.id= hdd.id_domain "
         ."  AND hdd.id_host_device=?"
+        ."  ORDER BY d.name"
     );
     $sth->execute($id_hd);
-    my @domains;
-    while ( my ($name) = $sth->fetchrow ) {
-        push @domains,($name);
+    my ( @domains, @bases);
+    while ( my ($id,$name,$is_base, $status, $is_locked, $device) = $sth->fetchrow ) {
+        $is_locked = 0 if !$is_locked || $status ne 'active';
+        $device = '' if !$device;
+        my $domain = {     id => $id       ,name => $name, is_locked => $is_locked
+                      ,is_base => $is_base ,device => $device
+        };
+        $devices{$device}->{domain} = $domain if exists $devices{$device} && $is_locked;
+        if ($is_base) {
+            push @bases, ($domain);
+        } else {
+            push @domains, ($domain);
+        }
     }
-    return \@domains;
+    for my $dev ( values %devices ) {
+        _get_domain_with_device($rvd, $dev);
+    }
+
+    $row->{_domains} = \@domains;
+    $row->{_bases} = \@bases;
+}
+
+sub _get_domain_with_device($rvd, $dev) {
+    my $sql =
+        "SELECT d.id, d.name, d.is_base, d.status "
+        ." FROM host_devices_domain_locked l, domains d "
+        ." WHERE l.id_domain = d.id "
+        ."   AND l.name=?"
+        ;
+
+    my $sth = $rvd->_dbh->prepare($sql);
+    $sth->execute($dev->{name});
+    my @domains;
+    while ( my ($id,$name,$is_base, $status, $is_locked, $device) = $sth->fetchrow ) {
+        $is_locked = 0 if !$is_locked || $status ne 'active';
+        $device = '' if !$device;
+        my $domain = {     id => $id       ,name => $name, is_locked => $is_locked
+                      ,is_base => $is_base ,device => $device
+        };
+        $dev->{domain} = $domain;# if $is_locked;
+    }
 }
 
 sub _list_requests($rvd, $args) {
@@ -296,12 +404,34 @@ sub _get_node_info($rvd, $args) {
 
     return {} if!$user->is_admin;
 
-    my $node = Ravada::VM->open(id => $id_node, readonly => 1);
-    $node->_data('hostname');
-    $node->{_data}->{is_local} = $node->is_local;
-    $node->{_data}->{has_bases} = scalar($node->list_bases);
-    return $node->{_data};
+    my $sth = $rvd->_dbh->prepare("SELECT * FROM vms WHERE id=?");
+    $sth->execute($id_node);
+    my $data = $sth->fetchrow_hashref;
+    $data->{is_local}=0;
+    $data->{is_local}=1 if $data->{hostname} eq 'localhost'
+        || $data->{hostname} eq '127.0.0,1'
+        || !$data->{hostname};
 
+    $data->{bases}=_list_bases_node($rvd, $data->{id});
+
+    return $data;
+}
+
+sub _list_bases_node($rvd, $id_node) {
+    my $sth = $rvd->_dbh->prepare(
+        "SELECT d.id FROM domains d,bases_vm bv"
+        ." WHERE d.is_base=1"
+        ."  AND d.id = bv.id_domain "
+        ."  AND bv.id_vm=?"
+        ."  AND bv.enabled=1"
+    );
+    my @bases;
+    $sth->execute($id_node);
+    while ( my ($id_domain) = $sth->fetchrow ) {
+        push @bases,($id_domain);
+    }
+    $sth->finish;
+    return \@bases;
 }
 
 sub _list_recent_requests($rvd, $seconds) {
@@ -379,6 +509,18 @@ sub _log_active_domains($rvd, $args) {
     my ($unit, $time) = $args->{channel} =~ m{/(\w+)/(\d+)};
 
     return Ravada::Front::Log::list_active_recent($unit,$time);
+}
+
+sub _list_networks($rvd, $args) {
+    my @networks;
+    my $sth = $rvd->_dbh->prepare(
+        "SELECT * FROM virtual_networks ORDER BY name "
+    );
+    $sth->execute();
+    while (my $row = $sth->fetchrow_hashref) {
+        push @networks,($row);
+    }
+    return \@networks;
 }
 
 sub _its_been_a_while_channel($channel) {

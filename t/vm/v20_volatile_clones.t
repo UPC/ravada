@@ -17,6 +17,8 @@ use Test::Ravada;
 
 init();
 
+$Ravada::Domain::TTL_REMOVE_VOLATILE = 1;
+
 ######################################################################3
 sub test_volatile_clone_req {
     my $vm = shift;
@@ -204,6 +206,17 @@ sub test_enforce_limits {
         or exit;
     is($clone2->is_active,1 );
 
+    for ( 1 .. 3 ) {
+        my $clone0_2 = $vm->search_domain($clone_name);
+
+        my $clone0_f;
+        eval { $clone0_f = rvd_front->search_domain($clone_name) };
+
+        last if !$clone0_2 && !$clone0_f;
+        Ravada::Request->refresh_machine(uid => user_admin->id
+            ,id_domain =>  $clone->id, _force => 1);
+        wait_request(debug => 1);
+    }
     my $clone0_2 = $vm->search_domain($clone_name);
     is($clone0_2, undef);
     $clone0_2 = rvd_back->search_domain($clone_name);
@@ -222,9 +235,7 @@ sub test_enforce_limits {
     eval { $clone2->remove(user_admin) };
     is(''.$@,'');
 
-    eval { $clone->remove(user_admin) if !$clone->is_removed() };
-    is(''.$@,'');
-    $domain->remove(user_admin);
+    remove_domain($domain);
 
     $user->remove();
 }
@@ -240,23 +251,35 @@ sub test_internal_shutdown {
     my $clone_name = new_domain_name();
     my $user = create_user('Roland','Pryzbylewski');
     my $clone = $domain->clone( user => $user , name => $clone_name);
+    is($clone->is_volatile,1);
 
     my @volumes = $clone->list_volumes();
 
+    sleep 1;
     shutdown_domain_internal($clone);
 
     rvd_back->_cmd_refresh_vms();
-
     my $clone0_f;
+    for ( 1 .. 5 ) {
+        my $clone0_2 = $vm->search_domain($clone_name);
+        eval { $clone0_f = rvd_front->search_domain($clone_name) };
+
+        last if !$clone0_2 && !$clone0_f;
+
+        Ravada::Request->refresh_machine(uid => user_admin->id
+            ,id_domain =>  $clone->id, _force => 1);
+        wait_request(debug => 1);
+    }
+
     eval { $clone0_f = rvd_front->search_domain($clone_name) };
-    is($clone0_f, undef);
+    is($clone0_f, undef) or die $clone_name;
 
     my $list_domains = rvd_front->list_domains();
     ($clone0_f) = grep { $_->{name} eq $clone_name } @$list_domains;
     is($clone0_f, undef);
 
     for my $vol ( @volumes ) {
-        ok(!-e $vol,"Expecting $vol removed");
+        ok(!-e $vol,"Expecting $vol removed") or exit;
     }
 
     my $domain2 = rvd_back->search_domain($clone_name);
@@ -508,6 +531,24 @@ sub _test_non_persistent($vm ,$id_domain, $volatile) {
     }
 }
 
+sub test_cleanup($vm) {
+    my $user = create_user();
+    user_admin->make_admin($user->id);
+    my $user_name = $user->name;
+
+    my $domain = create_domain_v2(vm => $vm, user => $user);
+    my $id_domain = $domain->id;
+
+    remove_domain_internal($domain);
+
+    my $sth = connector->dbh->prepare("UPDATE domains set is_volatile=1 WHERE id=?");
+    $sth->execute($id_domain);
+    rvd_back->_refresh_volatile_domains();
+
+    my $user2 = Ravada::Auth::SQL->new(name => $user_name);
+    ok($user2->id);
+}
+
 ######################################################################3
 clean();
 
@@ -523,6 +564,10 @@ for my $vm_name ( vm_names() ) {
 
         skip($msg,10)   if !$vm;
         diag("Testing volatile clones for $vm_name");
+
+        test_internal_shutdown($vm);
+
+        test_cleanup($vm);
 
         test_req_volatile($vm);
 

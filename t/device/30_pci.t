@@ -62,7 +62,8 @@ clean();
 for my $vm_name ( 'KVM' ) {
 
     SKIP: {
-        my $vm = rvd_back->search_vm($vm_name);
+        my $vm;
+        $vm = rvd_back->search_vm($vm_name) if !$<;
 
         my $msg = "SKIPPED test: No $vm_name VM found ";
         if ($vm && $>) {

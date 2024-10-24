@@ -5,6 +5,7 @@ use strict;
 
 use Carp qw(confess);
 use Cwd qw(getcwd);
+use Data::Dumper;
 use File::Path qw(remove_tree make_path);
 use IPC::Run3;
 use lib './lib';
@@ -92,6 +93,32 @@ sub remove_not_needed {
         my $path = "$DIR_DST/$dir";
         die "Missing $path" if ! -e $path;
         remove_tree($path);
+    }
+    remove_custom_files("public/js/custom");
+}
+
+sub remove_custom_files {
+    my $dir = shift;
+    opendir my $ls,$dir or die "$! $dir";
+    while ( my $file = readdir $ls) {
+        next if $file =~ m/^\.+$/;
+        my $path = "$dir/$file";
+        if ( -d $path ) {
+            die "Error: no dirs should be in $dir";
+        } elsif ( -f $path ) {
+            if ($file !~ /insert_here/) {
+                my ($dir_dst, $component) = $dir =~ m{(.*)/(.*)};
+                die "Unknown dir $dir " if !exists $DIR{$dir_dst};
+                my $deb_path = "$DIR_DST/$DIR{$dir_dst}/$component/$file";
+                if (! -e $deb_path ) {
+                    ($component) = $dir =~ m{.*/(\w+/\w+)};
+                    $deb_path = "$DIR_DST/$DIR{$dir_dst}/$component/$file";
+                }
+                unlink $deb_path or die "$! $deb_path";
+            }
+        } else {
+            warn "Warning: unknown file type $file (neither file nor dir)";
+        }
     }
 }
 

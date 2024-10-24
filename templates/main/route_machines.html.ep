@@ -5,7 +5,7 @@
 <div class="row">
     <div class="col-md-3" align="right"><%=l 'All machines' %></div>
     <div class="col-md-1" align="left">
-        <input type="checkbox" name="address" ng-model="network.all_domains"
+        <input type="checkbox" name="address" ng-model="route.all_domains"
             ng-true-value="1" ng-false-value="0"
             ng-change="check_all_domains(); update_network()"
         >
@@ -18,7 +18,7 @@
 <div class="row">
     <div class="col-md-3" align="right"><%=l 'No machines' %></div>
     <div class="col-md-1" align="left">
-        <input type="checkbox" name="address" ng-model="network.no_domains"
+        <input type="checkbox" name="address" ng-model="route.no_domains"
             ng-true-value="1" ng-false-value="0"
             ng-change="check_no_domains(); update_network()"
         >
@@ -30,7 +30,7 @@
 <hr/>
 
 
-<div ng-show="network.no_domains == 0">
+<div ng-show="route.no_domains == 0">
 <div class="row">
     <div class="col-md-2">
       <%=l 'Public' %>

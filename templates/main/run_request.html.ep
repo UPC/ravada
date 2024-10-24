@@ -12,7 +12,9 @@
     >
     <div class="jumbotron" ng-cloak="">
 
-        <h2><%=l 'Running' %> {{domain.alias}}</h2>
+        <h2><%=l 'Running' %> {{domain.alias}}
+                <span ng-show="domain.is_volatile"><%=l 'Volatile' %></span>
+        </h2>
             <div class="alert alert-warning">
                 <%=l 'A viewer is required to run the virtual machines.' %>
                 <a href="/requirements"><%=l 'Read more.' %></a>
@@ -22,7 +24,7 @@
             || (domain && domain.is_base )
             || (domain && domain.is_active==0 && count_start<=2)"
             ><%=l 'Waiting for machine to start' %> <i class="fas fa-sync-alt fa-spin"></i></div>
-        <div ng-show="domain">
+        <div ng-show="domain && !(domain.is_volatile && request.error) ">
             <div ng-show="domain.description ||(domain.is_active && domain.msg_timeout)">
                 <span ng-bind-html="domain.description"
                         ng-show="domain.description">{{domain.description}}
@@ -48,7 +50,12 @@
                 <li ng-show="domain.host_devices && domain.host_devices.length"><b>Host Devices</b>
                     <ul>
                         <li ng-repeat="device in domain.host_devices">
+                            <span class="badge badge-pill badge-secondary" ng-show="!device.is_locked">
+                                <%=l 'disabled' %>
+                            </span>
+                            <span ng-class="{'disabled': !device.is_locked }">
                             {{device.name}}
+                            </span>
                         </li>
                     </ul>
                 </li>
@@ -98,15 +105,26 @@
             </div><!-- domain is active -->
         <div>
             <div class="panel-body">
-                <div ng-show="request && request.error && (!domain || !domain.is_active)">{{request.error}}</div>
                 <div ng-show="domain && request.status == 'done' && (!domain || domain.is_active == 0) && count_start>2"><%=l 'The machine is down.' %>
+
+                <span ng-show="!domain.is_volatile">
                  <a class="btn btn-primary" href="?enable_host_devices=1"><%=l 'Start again' %></a>
                  <a ng-show="domain.host_devices.length > 0" class="btn btn-secondary" href="?enable_host_devices=0"><%=l 'Start without host devices' %></a>
+                </span>
+                <span ng-show="domain.is_volatile">
+                 <a class="btn btn-primary" href="?enable_host_devices=1"><%=l 'Start again' %></a>
+                 <a ng-show="domain.host_devices.length > 0" class="btn btn-secondary" href="?enable_host_devices=0"><%=l 'Start without host devices' %></a>
+                </span>
+
                 </div>
             </div>
         </div>
         </div> <! -- show=domain -->
-        <div ng-show="request.status == 'done' && request.error">{{request.error}}</div>
+        <div ng-show="request && request.error && (!domain || !domain.is_active)">{{request.error}}</div>
+
+        <div ng-show="request && request.error && !domain">
+            <a class="btn btn-primary" href="/machine/clone/<%= $id_base %>.html?enable_host_devices=1"><%=l 'Start again' %></a>
+        </div>
 
     </div><!-- jumbotron -->
 </div><!-- container -->

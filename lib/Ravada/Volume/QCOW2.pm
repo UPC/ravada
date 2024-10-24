@@ -45,7 +45,7 @@ sub prepare_base($self) {
     if (! $self->vm->file_exists($base_img)) {
         chomp $err;
         chomp $out;
-        die "ERROR: Output file $base_img not created at "
+        die "ERROR: Output file $base_img from node ".$self->vm->name." not created at "
         ."\n"
         ."ERROR: '".($err or '')."'\n"
         ."  OUT: '".($out or '')."'\n"

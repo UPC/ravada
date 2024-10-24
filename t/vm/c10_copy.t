@@ -257,7 +257,6 @@ for my $vm_name ( vm_names() ) {
         test_copy_change_ram($vm_name);
 
         test_copy_req_nonbase($vm_name);
-        clean();
     }
 
 }

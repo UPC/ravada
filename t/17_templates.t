@@ -67,7 +67,7 @@ sub _check_html_lint($url, $content, $option = {}) {
     for my $error ( $lint->errors() ) {
         next if $error->errtext =~ /Entity .*is unknown/;
         next if $option->{internal} && $error->errtext =~ /(body|head|html|title).*required/;
-        if ( $error->errtext =~ /Unknown element <(canvas|footer|header|nav|ldap-groups)/
+        if ( $error->errtext =~ /Unknown element <(canvas|footer|header|nav|ldap-groups|local-groups)/
             || $error->errtext =~ /Entity && is unknown/
             || $error->errtext =~ /should be written as/
             || $error->errtext =~ /Unknown attribute.*%/
@@ -133,8 +133,22 @@ sub test_form_new_machine() {
 
 }
 
+sub test_copyright() {
+    my @now = localtime(time);
+    my $current_year = $now[5]+1900;
+    my $file = "templates/bootstrap/footer.html.ep";
+    open my $in,"<",$file or die "$! $file";
+    while (my $line = <$in>) {
+        my ($year) = $line =~ /Copyright.*\d+\s+\-\s+(\d+)/;
+        next if !defined $year;
+        is($year, $current_year);
+    }
+    close $in;
+}
+
 ##################################################################3
 
+test_copyright();
 test_form_new_machine();
 test_validate_html_local("templates/bootstrap");
 test_validate_html_local("templates/main");

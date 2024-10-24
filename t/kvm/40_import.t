@@ -155,7 +155,8 @@ sub test_import_spinoff {
 sub _create_vol($vm, $name) {
     my $sp = $vm->vm->get_storage_pool_by_name('default');
 
-    my $old_vol = $sp->get_volume_by_name($name);
+    my $old_vol;
+    eval { $old_vol = $sp->get_volume_by_name($name) };
     $old_vol->delete() if $old_vol;
 
     my $xml = <<EOT;

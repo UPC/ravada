@@ -5,6 +5,8 @@ use strict;
 
 use Carp qw(carp croak);
 use Data::Dumper;
+use Mojo::JSON qw( encode_json decode_json );
+
 use Ravada::Utils;
 
 use Moose;
@@ -18,6 +20,7 @@ sub BUILD($self, $args) {
     return $self->_open($args->{id}) if $args->{id};
 
     my $ldap_groups = delete $args->{ldap_groups};
+    my $local_groups = delete $args->{local_groups};
     my $users = delete $args->{users};
     my $bases = delete $args->{bases};
 
@@ -26,6 +29,7 @@ sub BUILD($self, $args) {
 
     $self->_insert_db($args);
     $self->_add_ldap_groups($ldap_groups);
+    $self->_add_local_groups($local_groups);
     $self->_add_users($users);
     $self->_add_bases($bases);
 
@@ -52,6 +56,9 @@ sub _dbh($self) {
 
 sub _insert_db($self, $field) {
 
+    my $options = $field->{options};
+    $field->{options} = encode_json($options) if $options;
+
     my $query = "INSERT INTO booking_entries "
             ."(" . join(",",sort keys %$field )." )"
             ." VALUES (". join(",", map { '?' } keys %$field )." ) "
@@ -74,6 +81,45 @@ sub _change_ldap_groups($self, $ldap_groups) {
     $self->_purge_table('booking_entry_ldap_groups','ldap_group',$ldap_groups,[ $self->ldap_groups ]);
 }
 
+sub _change_local_groups($self, $local_groups) {
+    my $sth = $self->_dbh->prepare("DELETE FROM booking_entry_local_groups "
+        ." WHERE id_booking_entry=?"
+    );
+    $sth->execute($self->_data('id'));
+    $self->_add_local_groups($local_groups);
+}
+
+
+sub _add_local_groups($self, $local_groups) {
+    return if !$local_groups;
+    my $id = $self->_data('id');
+    my %already_added = map { $_ => 1 } $self->local_groups();
+    $local_groups = [ $local_groups ] if !ref($local_groups);
+
+    my $sth = $self->_dbh->prepare("INSERT INTO booking_entry_local_groups "
+            ."(  id_booking_entry, id_group )"
+            ."values( ?,? ) "
+    );
+    confess "Error: local_groups not an array ref".Dumper($local_groups)
+    if !ref($local_groups) || ref($local_groups) ne 'ARRAY';
+
+    my $sth_gr = $self->_dbh->prepare("SELECT id FROM groups_local WHERE name=?");
+    my @local_groups2 = @$local_groups;
+    for my $current_group (@local_groups2) {
+        if ( $current_group !~ /^\d+$/) {
+            $sth_gr->execute($current_group);
+            my ($id_group) = $sth_gr->fetchrow;
+            die "Error: group '$current_group' not found" if !$id_group;
+            $current_group=$id_group;
+        }
+
+        next if $already_added{$current_group}++;
+        $sth->execute($id, $current_group);
+    }
+
+}
+
+
 sub _add_ldap_groups($self, $ldap_groups) {
     return if !$ldap_groups;
     my $id = $self->_data('id');
@@ -84,6 +130,9 @@ sub _add_ldap_groups($self, $ldap_groups) {
             ."(  id_booking_entry, ldap_group )"
             ."values( ?,? ) "
     );
+    die "Error: ldap_groups not an array ref".Dumper($ldap_groups)
+    if !ref($ldap_groups) || ref($ldap_groups) ne 'ARRAY';
+
     for my $current_group (@$ldap_groups) {
         next if $already_added{$current_group}++;
         $sth->execute($id, $current_group);
@@ -205,6 +254,14 @@ sub _open($self, $id) {
     $sth->execute($id);
     my $row = $sth->fetchrow_hashref;
     confess "Error: Booking entry $id not found " if !keys %$row;
+    eval {
+    $row->{options} = decode_json($row->{options}) if $row->{options};
+    };
+    if ($@) {
+        warn "Error decoding options $row->{options} ".$@;
+        $row->{options} = undef;
+    }
+
     $self->{_data} = $row;
 
     return $self;
@@ -224,12 +281,17 @@ sub change($self, %fields) {
         if ($field eq 'ldap_groups') {
             $self->_change_ldap_groups($fields{$field});
             next;
+        } elsif ($field eq 'local_groups') {
+            $self->_change_local_groups($fields{$field});
+            next;
         } elsif ($field eq 'users') {
             $self->_change_users($fields{$field});
             next;
         } elsif ($field eq 'bases') {
             $self->_change_bases($fields{$field});
             next;
+        } elsif ( ref($fields{$field})) {
+            $fields{$field} = encode_json($fields{$field});
         }
         next if !exists $self->{_data}->{$field};
         my $old_value = $self->_data($field);
@@ -305,6 +367,21 @@ sub ldap_groups($self) {
     return @groups;
 }
 
+sub local_groups($self) {
+    my $sth = $self->_dbh->prepare("SELECT g.name "
+        ." FROM booking_entry_local_groups be,groups_local g"
+        ." WHERE be.id_booking_entry=?"
+        ."   AND be.id_group=g.id "
+    );
+    $sth->execute($self->id);
+    my @groups;
+    while ( my ($group) = $sth->fetchrow ) {
+        push @groups,($group);
+    }
+    return @groups;
+}
+
+
 sub users ($self) {
     my $sth = $self->_dbh->prepare("SELECT id_user,u.name "
         ." FROM booking_entry_users b,users u"
@@ -363,9 +440,30 @@ sub user_allowed($entry, $user_name) {
     for my $allowed_user_name ( $entry->users ) {
         return 1 if $user_name eq $allowed_user_name;
     }
-    for my $group_name ($entry->ldap_groups) {
-        return 1 if Ravada::Auth::LDAP::is_member($user_name, $group_name);
+    my $user = Ravada::Auth::SQL->new(name => $user_name);
+    return 0 if !$user->id;
+    if ($user->external_auth() eq 'ldap') {
+        for my $group_name ($entry->ldap_groups) {
+            return 1 if Ravada::Auth::LDAP::is_member($user_name, $group_name);
+        }
     }
+    for my $group_name ($entry->local_groups) {
+            return 1 if $user->is_member($group_name);
+    }
+    return 0;
+}
+
+sub options_allowed($entry, $id_domain, $enable_host_devices=1) {
+    my $options = $entry->_data('options');
+    return 0 if !$options || !ref($options) || !keys %$options;
+
+    my $domain = Ravada::Front::Domain->open($id_domain);
+
+    if ($options->{host_devices}) {
+        return 0 if $enable_host_devices && $domain->list_host_devices();
+        return 1;
+    }
+
     return 0;
 }
 

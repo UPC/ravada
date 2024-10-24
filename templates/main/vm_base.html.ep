@@ -16,15 +16,17 @@
 <div ng-show="!showmachine || (pending_request && pending_request.status != 'done')"><i class="fas fa-sync-alt fa-spin"></i>
 </div>
 
+%= include "/main/vm_base_public"
+
 <div ng-hide="!showmachine || (pending_request && pending_request.status != 'done')">
+
+    %= include "/main/vm_remove_base"
 
     %= include "/main/vm_rebase"
 
     %= include "/main/vm_spinoff"
 
     %= include "/main/vm_prepare_base"
-
-    %= include "/main/vm_remove_base"
 
     %= include "/main/vm_base_policy"
 

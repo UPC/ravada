@@ -40,7 +40,9 @@ sub test_down_node($vm, $node) {
     is($req->status, 'done');
     like($req->error, qr{^($|checked)},"Expecting no error after refresh vms");
 
+    warn 1;
     is($clone[0]->is_active, 0, "Expecting clone not active after node shutdown");
+    warn 2;
 
     my@req;
     for (@clone) {
@@ -49,6 +51,7 @@ sub test_down_node($vm, $node) {
         ));
     }
     for my $req (@req) {
+        warn $req->command;
         rvd_back->_process_requests_dont_fork();
         next if $req->status ne 'done';
         is($req->error ,'');

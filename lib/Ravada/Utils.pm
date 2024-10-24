@@ -7,8 +7,7 @@ use Carp qw(confess);
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
-no warnings "experimental::signatures";
-use feature qw(signatures);
+use IPC::Run3 qw(run3);
 
 =head1 NAME
 
@@ -18,6 +17,8 @@ Ravada::Utils - Misc util libraries for Ravada
 
 our $USER_DAEMON;
 our $USER_DAEMON_NAME = 'daemon';
+our $TZ;
+our $TZ_SYSTEM;
 
 =head2 now
 
@@ -172,6 +173,38 @@ sub search_user_id($dbh, $user) {
     $sth->execute($user);
     my ($id) = $sth->fetchrow;
     return $id;
+}
+
+sub default_time_zone() {
+    return $ENV{TZ} if exists $ENV{TZ};
+    my $timedatectl = `which timedatectl`;
+    chomp $timedatectl;
+    if (!$timedatectl) {
+        warn "Warning: No time zone found, checked TZ, missing timedatectl";
+        return 'UTC';
+    }
+    my @cmd = ( $timedatectl, '-p', 'Timezone','show');
+    my ($in, $out, $err);
+    run3(\@cmd,\$in,\$out,\$err);
+    my ($tz) = $out =~ /=(.*)/;
+    chomp $out;
+    if (!$tz) {
+        warn "Warning: No timezone found in @cmd\n$out";
+        return 'UTC'
+    }
+    return $tz;
+}
+
+sub TZ() {
+    return $TZ if defined $TZ;
+    $TZ = Ravada::Front->setting('/backend/time_zone');
+}
+
+sub TZ_SYSTEM() {
+    return $TZ_SYSTEM if defined $TZ_SYSTEM;
+    $TZ_SYSTEM = default_time_zone();
+
+    return $TZ_SYSTEM;
 }
 
 1;

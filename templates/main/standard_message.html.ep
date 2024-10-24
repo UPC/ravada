@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include 'bootstrap/header'
+<body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
+<div id="wrapper">
+%=  include 'bootstrap/navigation'
+<div id="page-wrapper" ng-controller="new_node">
+
+    <div class="card">
+        <div class="card-body">
+            <p>
+            <%= $message %>
+            </p>
+%           if ($link) {
+                <a href="<%= $link->[0] %>"><%= $link->[1] %></a>
+%           }
+        </div>
+    </div>
+</div><!-- page wrapper -->
+</div><!-- wrapper -->
+%=      include $footer
+%=      include 'bootstrap/scripts'
+</body>
+</html>

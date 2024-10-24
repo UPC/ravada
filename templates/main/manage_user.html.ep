@@ -13,7 +13,13 @@
                     (<%= ($user->external_auth or $origin) %>)
 %               }
                 </h2>
-%               if ($user->external_auth && $user->external_auth eq 'ldap' && $user->ldap_entry ) {
+
+%               if ($user->external_auth && $user->external_auth eq 'ldap' && !$FEATURE->{ldap}) {
+                    <div class="alert alert-danger">
+                    <%=l 'LDAP not enabled' %>
+                    </div>
+%               }
+%               if ($user->external_auth && $user->external_auth eq 'ldap' && $FEATURE->{ldap} && $user->ldap_entry ) {
                     <%= $user->ldap_entry->dn %>
 %               }
              </div> <!-- del panel heading-->
@@ -49,15 +55,21 @@
                 <a class="nav-link" href="#password" role="tab" data-toggle="tab" aria-controls="password" aria-selected="true"><%=l 'Password' %></a>
             </li>
 % }
-% if ( $_user->is_admin && $user->is_external && $user->external_auth eq 'ldap' && $user->ldap_entry ) {
+% if ( $_user->is_admin && $user->is_external && $user->external_auth eq 'ldap' && $FEATURE->{ldap} && $user->ldap_entry ) {
             <li class="nav-item">
                 <a class="nav-link" href="#groups" role="tab" data-toggle="tab" aria-controls="groups" aria-selected="true"><%=l 'Groups' %></a>
             </li>
 % }
+% if ($_user->is_admin) {
+            <li class="nav-item">
+                <a class="nav-link" href="#remove" role="tab" data-toggle="tab" aria-controls="remove" aria-selected="true"><%=l 'Remove' %></a>
+            </li>
+
+% }
 
         </ul>
 % }
-% if ($user->id && $_user->is_admin && $user->is_external && $user->external_auth eq 'ldap' && !$user->ldap_entry ) {
+% if ($user->id && $_user->is_admin && $user->is_external && $user->external_auth eq 'ldap' && $FEATURE->{ldap} && !$user->ldap_entry ) {
     <div class="alert alert-danger">
     <%=l 'Error: the LDAP entry for this user has been removed.' %>
     </div>
@@ -78,10 +90,16 @@
                 %= include '/main/manage_user_password'
             </div>
 % }
-% if ( $_user->is_admin && $user->id && $user->is_external && $user->external_auth eq 'ldap' && $user->ldap_entry ) {
-            <div class="tab-pane fade" id="groups" role="tabpanel" aria-labelledby="group-tab">
+% if ( $_user->is_admin && $user->id && $user->is_external && $user->external_auth eq 'ldap' && $FEATURE->{ldap} && $user->ldap_entry ) {
+            <div class="tab-pane fade" id="groups" role="tabpanel" aria-labelledby="groups-tab">
                 %= include '/main/manage_user_groups'
             </div>
+% }
+% if ( $_user->is_admin) {
+            <div class="tab-pane fade" id="remove" role="tabpanel" aria-labelledby="remove-tab">
+                %= include '/main/manage_user_remove'
+            </div>
+
 % }
         </div>
     </div><! --page-header -->

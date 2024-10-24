@@ -14,6 +14,7 @@ log
 rvd_front.conf
 pkg-debian-out
 public/img/screenshots
+public/js/custom
 yarn.lock
 node_modules/
 t/vm/b10*

@@ -87,13 +87,17 @@ sub test_prepare_base {
     test_files_base($domain,0);
     $domain->shutdown_now($USER)    if $domain->is_active();
 
+    ok($domain->list_volumes);
+    is(scalar($domain->list_volumes), scalar($domain->list_volumes_info));;
     eval { $domain->prepare_base( user_admin ) };
     is(''.$@, '', "[$vm_name] expecting no error preparing ".$domain->name);
     ok($domain->is_base);
     is($domain->is_active(),0);
+    test_files_base($domain,1);
 
     my $description = "This is a description test";
     add_description($domain, $description);
+    ok($domain->list_volumes);
 
     eval { $domain->prepare_base( user_admin ) };
     $@ = '' if !defined $@;

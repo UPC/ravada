@@ -6,23 +6,29 @@
         %= include 'bootstrap/navigation'
         <div id="page-wrapper"
              ng-controller="admin_groups"
-             ng-init="list_group_members('<%= $name %>');list_users();"
+             ng-init="init('<%= $type %>', '<%= $name %>', '<%= $group_id %>')"
             >
             <div class="page-header">
               <div class="card" id="admin-content">
                 <div class="card-header">
-                    <h2 class="display-5"><%=l 'Group' %> <%= $name %></h2>
+                    <h2 class="display-5"><%=l 'Group' %> <%= $group_name %></h2>
+%                  if ($type eq 'ldap') {
+LDAP
+
                     <%=l 'object class:' %> <b><%= join(" - ",sort @$object_class) %></b>
                     <br/>
                     <%=l 'dn:' %> <b><%= $group->dn %></b>
+% }
                 </div>
               </div>
             </div>
-            <div class="card-body">
-                <div ng-show="<%= $_user->can_manage_groups %> && !removed">
-                    <%=l 'New group member' %>
+            <div class="card-body" ng-cloak="1">
+                <div class="border border-secondary mb-4 p-4"
+                    ng-show="<%= $_user->can_manage_groups %> && !removed">
+                <div >
+                    <b><%=l 'New group member' %></b>
                     <input type="text" ng-model="username_filter"
-                                       ng-change="list_users()"
+                                       ng-change="list_users('<%= $type %>')"
                                        placeholder="<%=l 'Search' %>"
                     />
                     <span ng-show="loading_users"><i class="fas fa-sync-alt fa-spin"></i></span>
@@ -32,10 +38,24 @@
                         ng-options="user.name for user in users"
                     >
                     </select>
+                    <span class="error" ng-show="username_filter && !loading_users && users && !users.length">
+                        <%=l 'No users found' %>
+                    </span>
                     <button ng-show="new_member && new_member.name"
-                            ng-click="add_member(new_member.name)">
+                            ng-click="add_member(new_member.id, new_member.name)">
                       <%=l 'Add' %>
                     </button>
+                </div>
+                    <hr>
+                    <b><%=l 'Batch upload' %></b>
+                    <form method="post" enctype="multipart/form-data" name="form_upload"
+                        role="form"
+                        action="<%= $url %>"
+                        novalidate
+                        ><%= $url%>
+                    <input name="members" type="file" required>
+                    <input type="submit" value="<%=l 'upload members' %>"/>
+                    </form>
                 </div>
 
                 <div ng-show="!removed">
@@ -46,7 +66,7 @@
                 </div>
                 </div>
 
-                <table class="table table-striped" ng-show="group_members.length>0">
+                <table class="table table-striped" ng-show="group_members.length>0" border="1">
                     <thead>
                         <tr>
                             <th><%=l 'Name' %></th>
@@ -58,7 +78,7 @@
                                         <button ng-click="remove_member(user)"
                                             ng-show="<%= $_user->can_manage_groups %>"
                                             class="badge badge-light text-blue">x</button>
-                                        <a ng-bind-html="user" href="/admin/user/{{user}}.html?origin=ldap">{{user}}</a>
+                                        <a ng-bind-html="user.name" href="/admin/user/{{user.id}}.html?origin=ldap">{{user.name}}</a>
                                     </td>
                                 </tr>
                     </tbody>
@@ -85,5 +105,6 @@
     </div>
 %= include $footer
 %= include 'bootstrap/scripts'
+%= include 'bootstrap/messages'
 </body>
 </html>

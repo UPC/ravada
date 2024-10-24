@@ -11,6 +11,7 @@ use_ok('Ravada');
 use_ok('Ravada::VM::Void');
 use_ok('Ravada::Auth::SQL');
 
+init();
 my $ravada = rvd_back();
 
 #

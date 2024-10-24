@@ -1,0 +1,24 @@
+<div class="row" ng-show="showmachine.is_base">
+    <div class="col-md-2" align="right">
+            <label><b><%=l 'Public' %></b></label>
+    </div>
+    <div class="col-md-10">
+        <input type="checkbox" ng-model="showmachine.is_public"
+            ng-true-value="1" ng-false-value="0"
+            ng-click="set_value('is_public' , !showmachine.is_public)"
+        />
+        <span class="info"><%=l 'Allow users to clone this base' %></span>
+    </div>
+</div>
+<div class="row" ng-show="showmachine.is_base && !showmachine.is_public">
+    <div class="col-md-2" align="right">
+            <label><b><%=l 'Show Clones' %></b></label>
+    </div>
+    <div class="col-md-10">
+        <input type="checkbox" ng-model="showmachine.show_clones"
+            ng-true-value="1" ng-false-value="0"
+            ng-click="set_value('show_clones' , !showmachine.show_clones)"
+        />
+        <span class="info"><%=l 'Show the base when the user already created a clone' %></span>
+    </div>
+</div>
