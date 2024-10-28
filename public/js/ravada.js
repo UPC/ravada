@@ -595,6 +595,26 @@
             $scope.new_max_virt_cpu= 0+$scope.showmachine.max_virt_cpu;
             $scope.new_memory = ($scope.showmachine.memory / 1024);
             $scope.new_max_mem = ($scope.showmachine.max_mem / 1024);
+
+            $scope.new_option.n_virt_cpu= 0+$scope.showmachine.n_virt_cpu;
+            $scope.new_option.max_virt_cpu= 0+$scope.showmachine.max_virt_cpu;
+            $scope.new_option.memory = Math.floor($scope.showmachine.memory / 1024);
+            $scope.new_option.max_mem = Math.floor($scope.showmachine.max_mem / 1024);
+
+          };
+
+          $scope.update_options = function() {
+              if ($scope.new_option.max_mem != Math.floor($scope.showmachine.max_mem/1024)) {
+                  console.log("old max mem="+$scope.showmachine.max_mem);
+                  console.log("old max mem="+$scope.showmachine.max_mem/1024);
+                  console.log("new max mem="+$scope.new_option.max_mem);
+                  $scope.request('change_hardware',{
+                        'id_domain': $scope.showmachine.id
+                        ,'hardware': 'memory'
+                        ,'data': { 'max_mem': $scope.new_option.max_mem*1024}
+                        });
+
+              }
           };
 
           $scope.init = function(id, url,is_admin) {
@@ -605,6 +625,7 @@
                    , 'Accept', 'Connection', 'Accept-Language', 'DNT', 'Host'
                    , 'Accept-Encoding', 'Cache-Control', 'X-Forwarded-For'
                 ];
+                $scope.new_option={};
 
                 subscribe_ws(url_ws, is_admin);
                 $http.get('/machine/info/'+$scope.showmachineId+'.json')
@@ -616,7 +637,18 @@
                                 update_info_settings();
                                 $scope.new_run_timeout = ($scope.showmachine.run_timeout / 60);
                                 if (!$scope.new_run_timeout) $scope.new_run_timeout = undefined;
+                                $scope.new_option.run_timeout = ($scope.showmachine.run_timeout / 60);
+                                if (!$scope.new_option.run_timeout) $scope.new_option.run_timeout = undefined;
 
+                                var fields = ['volatile_clones','autostart'
+                                    ,'shutdown_disconnected','balance_policy'
+                                    ,'auto_compact','shutdown_grace_time'
+                                    ,'id_owner'
+                                ];
+                                for ( var n_key=0 ; n_key<fields.length ; n_key++) {
+                                    var field=fields[n_key];
+                                    $scope.new_option[field] = $scope.showmachine[field];
+                                }
                                 $scope.new_volatile_clones = $scope.showmachine.volatile_clones;
                                 $scope.new_autostart = $scope.showmachine.autostart;
                                 $scope.new_shutdown_disconnected
@@ -1114,6 +1146,7 @@
                             if (response.data[i].id == $scope.showmachine.id_owner) {
                                 $scope.copy_owner = response.data[i].id;
                                 $scope.new_owner = response.data[i];
+                                $scope.new_option.owner = response.data[i];
                             }
                         }
                     });

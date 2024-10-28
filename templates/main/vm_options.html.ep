@@ -2,7 +2,8 @@
     <div ng-hide="showmachine">
         <%=l 'Loading machine status' %> <i class="fas fa-sync-alt fa-spin"></i>
     </div>
-    <form ng-show="showmachine" class="form" action="<%= $action %>" method="post">
+    <form ng-show="showmachine" class="form" name="form_options"
+    >
         <div class="form-group">
             <div class="row" ng-show="showmachine.ip">
                 <div class="col-lg-3 mt-2" align="right">
@@ -66,6 +67,7 @@
                      </div>
                 </div>
             </div>
+            {{new_option}}
 
             <div class="row">
                 <div class="col-lg-3 mt-2" align="right">
@@ -73,12 +75,7 @@
                 </div>
                 <div class="col-lg-2">
                     <input class="form-control" type="text" name="ram" size="5"
-                    ng-blur="request('change_hardware',{
-                        'id_domain': showmachine.id
-                        ,'hardware': 'memory'
-                        ,'data': { 'max_mem': new_max_mem*1024}
-                        })"
-                    ng-model="new_max_mem">
+                    ng-model="new_option.max_mem">
 
                 </div>
                 <div class="col-lg-4" ng-show="showmachine.needs_restart">
@@ -278,6 +275,20 @@
             </div>
 %   }
         </div><!-- of form-group -->
+
+    <div class="form-group row">
+        <div class="col-md-3" align="right"></div>
+        <div class="col-md-4" align="left">
+        <button ng-show="node.id" class="btn btn-outline-secondary"
+            ng-click="reset_options()"><%=l 'Cancel' %></button>
+        <button class="btn btn-primary"
+            ng-click="update_options(node)"
+            ng-disabled="!form_options.$valid || form_node.$pristine
+            "><%=l 'Save' %></button>
+        </div>
+    </div>
+
+
     </form>
 
 </div><!-- of card-body options -->
