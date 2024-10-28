@@ -605,9 +605,6 @@
 
           $scope.update_options = function() {
               if ($scope.new_option.max_mem != Math.floor($scope.showmachine.max_mem/1024)) {
-                  console.log("old max mem="+$scope.showmachine.max_mem);
-                  console.log("old max mem="+$scope.showmachine.max_mem/1024);
-                  console.log("new max mem="+$scope.new_option.max_mem);
                   $scope.request('change_hardware',{
                         'id_domain': $scope.showmachine.id
                         ,'hardware': 'memory'
@@ -615,6 +612,22 @@
                         });
 
               }
+              if ($scope.new_option.memory != Math.floor($scope.showmachine.memory/1024)) {
+                  $scope.request('change_hardware',{
+                        'id_domain': $scope.showmachine.id
+                        ,'hardware': 'memory'
+                        ,'data': { 'memory': $scope.new_option.memory*1024}
+                        });
+
+              }
+              if ($scope.new_option.max_virt_cpu != $scope.showmachine.max_virt_cpu) {
+                  $scope.request('change_hardware',{
+                        'id_domain': $scope.showmachine.id
+                        ,'hardware': 'vcpus'
+                        ,'data': { 'max_virt_cpu': $scope.new_option.max_virt_cpu }
+                        });
+              }
+
           };
 
           $scope.init = function(id, url,is_admin) {
