@@ -88,12 +88,12 @@
                 </div>
                 <div class="col-lg-2">
                     <input class="form-control" type="text" name="cram" size="5"
-                    ng-blur="request('change_hardware',{
-                        'id_domain': showmachine.id
-                        ,'hardware': 'memory'
-                        ,'data': { 'memory': new_memory*1024}
-                        })"
-                    ng-model="new_memory">
+                    ng-model="new_option.memory">
+                </div>
+                <div class="col-lg-7">
+                    <span class="error" ng-show="new_option.memory > new_option.max_mem">
+                    <%=l 'Current memory can not be more than max memory' %>
+                    </span>
                 </div>
            </div>
            <div class="row">
@@ -104,12 +104,7 @@
                     <input class="form-control" type="number" name="max_cpus" size="5"
                     min="1"
                     ng-disabled="<%= (!$USER->is_admin or 0) %> || topology"
-                    ng-change="request('change_hardware',{
-                        'id_domain': showmachine.id
-                        ,'hardware': 'vcpus'
-                        ,'data': { 'max_virt_cpu': new_max_virt_cpu }
-                        })"
-                    ng-model="new_max_virt_cpu">
+                    ng-model="new_option.max_virt_cpu">
                 </div>
                 <div class="col-lg-7" ng-show="topology">
                     <small class="text-secondary">
@@ -268,6 +263,7 @@
                     <select class="form-control" ng-model="new_owner" name="id_owner"
                         ng-options="user.name for user in list_users track by user.id"
                         ng-change="set_value('id_owner',new_owner.id)"
+                        ng-disabled="!list_users || list_users.length==0"
                     >
                     </select>
                 </div>
@@ -279,11 +275,14 @@
     <div class="form-group row">
         <div class="col-md-3" align="right"></div>
         <div class="col-md-4" align="left">
-        <button ng-show="node.id" class="btn btn-outline-secondary"
+        <button ng-enabled="node.id && list_users" class="btn btn-outline-secondary"
             ng-click="reset_options()"><%=l 'Cancel' %></button>
         <button class="btn btn-primary"
             ng-click="update_options(node)"
             ng-disabled="!form_options.$valid || form_node.$pristine
+            || new_option.memory > new_option.max_mem
+            || !node.id
+            || !list_users || !list_users.length
             "><%=l 'Save' %></button>
         </div>
     </div>
