@@ -22,7 +22,7 @@ msgid "Ravada broker"
 msgstr "Môi giới"
 
 msgid "Machine Name"
-msgstr "Tên may moc"
+msgstr "Tên máy móc"
 
 msgid "Tools"
 msgstr "Công cụ"
@@ -31,22 +31,22 @@ msgid "Choose a Machine to Start"
 msgstr "Chọn một máy để bắt đầu"
 
 msgid "Start"
-msgstr "bắt đầu"
+msgstr "Bắt đầu"
 
 msgid "Stop"
-msgstr "dừng lại"
+msgstr "Dừng"
 
 msgid "View"
-msgstr "Lượt xem"
+msgstr "Xem"
 
 msgid "Prepare base"
 msgstr "Chuẩn bị cơ sở"
 
 msgid "Clone"
-msgstr "nhân bản"
+msgstr "Nhân bản"
 
 msgid "Clone/s"
-msgstr "nhân bản"
+msgstr "Nhân bản/s"
 
 msgid "Users List"
 msgstr "Danh sách người dùng"
@@ -55,22 +55,22 @@ msgid "Name"
 msgstr "Tên"
 
 msgid "Log Out"
-msgstr "đăng xuất"
+msgstr "Đăng xuất"
 
 msgid "Available Machines"
 msgstr "Máy có sẵn"
 
 msgid "Help"
-msgstr "Cứu giúp"
+msgstr "Trợ giúp"
 
 msgid "Requirements"
 msgstr "Yêu cầu"
 
 msgid "About"
-msgstr "trong khoảng"
+msgstr "Trong khoảng"
 
 msgid "Mark all as read"
-msgstr "đánh dấu tất cả như đã đọc"
+msgstr "Đánh dấu tất cả như đã đọc"
 
 msgid "Settings"
 msgstr "Cài đặt"
@@ -88,19 +88,19 @@ msgid "Language:"
 msgstr "Ngôn ngữ:"
 
 msgid "English"
-msgstr "Anh"
+msgstr "Tiếng Anh"
 
 msgid "Spanish"
-msgstr "người Tây Ban Nha"
+msgstr "Tiếng Tây Ban Nha"
 
 msgid "Catalan"
 msgstr "Tiếng Catalan"
 
 msgid "Galician"
-msgstr "Galicia"
+msgstr "Tiếng Galicia"
 
 msgid "French"
-msgstr "người Pháp"
+msgstr "Tiếng Pháp"
 
 msgid "Hindi"
 msgstr "Tiếng Hindi"
@@ -109,16 +109,16 @@ msgid "Indonesian"
 msgstr "Tiếng Indonesia"
 
 msgid "Persian"
-msgstr "Ba Tư"
+msgstr "Tiếng Ba Tư"
 
 msgid "Japanese"
-msgstr "tiếng Nhật"
+msgstr "Tiếng Nhật"
 
 msgid "German"
-msgstr "tiếng Đức"
+msgstr "Tiếng Đức"
 
 msgid "New Password:"
-msgstr "mật khẩu mới :"
+msgstr "Mật khẩu mới :"
 
 msgid "Confirm Password:"
 msgstr "Xác nhận mật khẩu:"
@@ -133,10 +133,10 @@ msgid "Your password has been changed successfully"
 msgstr "Mật khẩu của bạn đã được thay đổi thành công"
 
 msgid "Password is too short"
-msgstr "Mật khẩu quá nhỏ"
+msgstr "Mật khẩu quá ngắn"
 
 msgid "Password fields do not match"
-msgstr "Các trường mật khẩu không bằng nhau"
+msgstr "Các trường mật khẩu không khớp"
 
 msgid "Some of the password fields are empty"
 msgstr "Một số trường mật khẩu trống"
@@ -154,10 +154,10 @@ msgid "Running"
 msgstr "Đang chạy"
 
 msgid "Shutdown"
-msgstr "tắt máy"
+msgstr "Tắt máy"
 
 msgid "Screenshot"
-msgstr "ảnh chụp màn hình"
+msgstr "Ảnh chụp màn hình"
 
 msgid "Paused"
 msgstr "Tạm dừng"
@@ -169,7 +169,7 @@ msgid "Process"
 msgstr "Quá trình"
 
 msgid "Copy"
-msgstr "bản sao"
+msgstr "Bản sao"
 
 msgid "Error!"
 msgstr "Lỗi!"
@@ -178,25 +178,25 @@ msgid "Error"
 msgstr "Lỗi"
 
 msgid "Backend not available!"
-msgstr "Cuối cùng không có sẵn!"
+msgstr "Backend không có sẵn!"
 
 msgid "Subject"
 msgstr "Môn học"
 
 msgid "Date"
-msgstr "ngày tháng"
+msgstr "Ngày tháng"
 
 msgid "Mark as read"
-msgstr "đánh dấu là đã đọc"
+msgstr "Đánh dấu là đã đọc"
 
 msgid "Mark as unread"
-msgstr "đánh dấu là chưa đọc"
+msgstr "Đánh dấu là chưa đọc"
 
 msgid "No messages to show"
 msgstr "Không có tin nhắn để hiển thị!"
 
 msgid "Admin"
-msgstr "quản trị viên"
+msgstr "Quản trị viên"
 
 msgid "Machines"
 msgstr "Máy móc"
@@ -232,13 +232,13 @@ msgid "Are you sure?"
 msgstr "Bạn có chắc không"
 
 msgid "Yes"
-msgstr "Vâng"
+msgstr "Có"
 
 msgid "No"
 msgstr "Không"
 
 msgid "Make public"
-msgstr "công khai"
+msgstr "Công khai"
 
 msgid "Machine settings"
 msgstr "Cài đặt máy"
@@ -253,7 +253,7 @@ msgid "hide clones"
 msgstr "ẩn bản sao"
 
 msgid "For Spice redirection you will need to install"
-msgstr "cho chuyển hướng Spice bạn sẽ cần cài đặt"
+msgstr "Để chuyển hướng Spice bạn sẽ cần cài đặt"
 
 msgid "in your computer."
 msgstr "trong máy tính của bạn"
@@ -385,7 +385,7 @@ msgid "From Machine"
 msgstr "Từ máy"
 
 msgid "Backend"
-msgstr "Cuối tuần"
+msgstr "Backend"
 
 msgid "Select Template"
 msgstr "Chọn mẫu"
@@ -422,7 +422,7 @@ msgid "Machine name can't exceed 20 characters."
 msgstr "Tên máy không thể vượt quá 20 ký tự."
 
 msgid "Backend selection is required."
-msgstr "Lựa chọn cuối cùng là cần thiết."
+msgstr "Lựa chọn Backend là cần thiết."
 
 msgid "ISO image selection is required."
 msgstr "Lựa chọn hình ảnh ISO là bắt buộc."
@@ -431,7 +431,7 @@ msgid "Template selection is required."
 msgstr "Lựa chọn mẫu là bắt buộc."
 
 msgid "A machine with that name already exists."
-msgstr "Một máy có tên đó đã tồn tại."
+msgstr "Tên máy đó đã tồn tại."
 
 msgid ""
 "The machine name is only allowed to consist of alphabetic characters, "
@@ -440,7 +440,7 @@ msgstr ""
 "Tên máy chỉ được phép bao gồm các ký tự chữ cái, số, dấu gạch ngang và điểm."
 
 msgid "Create"
-msgstr "Tạo nên"
+msgstr "Tạo"
 
 msgid ""
 "can change the settings of all virtual machines cloned from one base owned "
@@ -474,7 +474,7 @@ msgid "Create one."
 msgstr "Tạo một cái."
 
 msgid "not public"
-msgstr "không được công khai"
+msgstr "không công khai"
 
 msgid "User Settings"
 msgstr "Thiết lập người dùng"
@@ -495,7 +495,7 @@ msgid "Shutting down ..."
 msgstr "Đang Tắt ..."
 
 msgid "It may take a couple of minutes."
-msgstr "Nó có thể mất một vài phút."
+msgstr "Có thể mất một vài phút."
 
 msgid "Hybernating ..."
 msgstr "Ngủ đông ..."
@@ -516,7 +516,7 @@ msgid "Graphics"
 msgstr "Đồ họa"
 
 msgid "Remove Machine"
-msgstr "Tháo máy"
+msgstr "Xóa máy"
 
 msgid "System overview"
 msgstr "Tổng quan hệ thống"
@@ -571,7 +571,7 @@ msgid "This machine has not Graphics parameters!"
 msgstr "Máy này không có thông số đồ họa!"
 
 msgid "recommended"
-msgstr "đề nghị"
+msgstr "khuyến nghị"
 
 msgid "to"
 msgstr "đến"
