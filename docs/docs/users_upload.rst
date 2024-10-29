@@ -52,40 +52,6 @@ and upload from the "Group Administration" page.
 
 .. image:: images/manage_group_members.png
 
-CLI
-~~~
-
-It is also possible to upload the group members from the command line.
-In the Ravada host server use the rvd_back command.
-
-Add members to one group
-------------------------
-
-By default, the group name will be the name of the file. So this command
-will create the group "students" and will add all the names in the file
-to it.
-
-::
-
-  sudo rvd_back --upload-group-members=students.txt
-
-The group name can be supplied if necessary:
-
-::
-
-  sudo rvd_back --upload-group-members=members.txt --group=students
-
-Add members to many groups
---------------------------
-
-If you want to create a large amount of groups, store the files in
-a directory and pass it to the CLI. All the groups will be created
-using the filenames as names for each group.
-
-::
-
-  sudo rvd_back --upload-group-members=/var/lib/groups/
-
 File Formats
 ============
 
@@ -235,4 +201,39 @@ After uploading this file, the group accounting will be removed.
           }
       ]
   }
+
+CLI
+~~~
+
+It is also possible to upload the group members from the command line.
+In the Ravada host server use the rvd_back command.
+
+Add members to one group
+------------------------
+
+By default, the group name will be the name of the file. So this command
+will create the group "students" and will add all the names in the file
+to it.
+
+::
+
+  sudo rvd_back --upload-group-members=students.txt
+
+The group name can be supplied if necessary:
+
+::
+
+  sudo rvd_back --upload-group-members=members.txt --group=students
+
+Add members to many groups
+--------------------------
+
+If you want to create a large amount of groups, store the files in
+a directory and pass it to the CLI. All the groups will be created
+using the filenames as names for each group.
+
+::
+
+  sudo rvd_back --upload-group-members=/var/lib/groups/
+
 
