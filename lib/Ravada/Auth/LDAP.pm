@@ -768,7 +768,9 @@ sub _login_match {
 #       return 1 if $mesg && !$mesg->code;
 
 #       warn "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $username";
-        next if $entry->get_value('userPassword') !~ /^\{.*?_.*?\}/;
+        next unless $entry->get_value('userPassword') =~ /^\{.*?_.*?\}/
+                    || $entry->get_value('userPassword') =~ /^\{[a-zA-Z0-9]+\}/;
+
         eval { $user_ok = $self->_match_password($entry, $password) };
         warn $@ if $@;
 
