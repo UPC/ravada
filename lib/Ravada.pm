@@ -2941,7 +2941,7 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('domains','needs_restart','int not null default 0');
     $self->_upgrade_table('domains','shutdown_disconnected','int not null default 0');
-    $self->_upgrade_table('domains','shutdown_grace_time','int not null default 0');
+    $self->_upgrade_table('domains','shutdown_grace_time','int not null default 10');
     $self->_upgrade_table('domains','shutdown_timeout','int default null');
     $self->_upgrade_table('domains','log_status','text');
     $self->_upgrade_table('domains','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
