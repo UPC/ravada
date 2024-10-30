@@ -242,13 +242,11 @@ sub _list_host_devices($rvd, $args) {
         _list_devices_node($rvd, $row);
         push @found, $row;
         next unless _its_been_a_while_channel($args->{channel});
-    warn $args->{channel}." "._its_been_a_while_channel($args->{channel});
 
         my $req = Ravada::Request->list_host_devices(
             uid => $user->id
             ,id_host_device => $row->{id}
         );
-        warn $req->id;
     }
     return \@found;
 }

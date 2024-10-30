@@ -567,7 +567,6 @@ sub _filter_hds($hd0, $hd1) {
         my @words = split(/\s+/,$devices2[$n]);
         for ( 0 .. 4 ) {shift @words }
         for my $word0 ( @words ) {
-            warn $word0;
             $hd1->_data('list_filter' => $word0);
             @devices2 = $hd1->list_devices();
             last FOUND if @devices2 && _is_different(\@devices,\@devices2);
@@ -602,7 +601,7 @@ sub test_change_hd_in_clone($domain) {
 
     my @args = ( uid => user_admin->id ,id_domain => $domain->id);
     Ravada::Request->clone(@args, number => scalar($hd0->list_devices));
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
     _req_start($domain->clones);
 
