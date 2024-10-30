@@ -591,41 +591,41 @@
           var url_ws;
 
           var update_info_settings = function() {
-            $scope.new_n_virt_cpu= 0+$scope.showmachine.n_virt_cpu;
-            $scope.new_max_virt_cpu= 0+$scope.showmachine.max_virt_cpu;
-            $scope.new_memory = ($scope.showmachine.memory / 1024);
-            $scope.new_max_mem = ($scope.showmachine.max_mem / 1024);
-
             $scope.new_option.n_virt_cpu= 0+$scope.showmachine.n_virt_cpu;
             $scope.new_option.max_virt_cpu= 0+$scope.showmachine.max_virt_cpu;
             $scope.new_option.memory = Math.floor($scope.showmachine.memory / 1024);
             $scope.new_option.max_mem = Math.floor($scope.showmachine.max_mem / 1024);
 
+            $scope.new_option.run_timeout = ($scope.showmachine.run_timeout / 60);
+            if (!$scope.new_option.run_timeout) $scope.new_option.run_timeout = undefined;
+
           };
 
           $scope.update_options = function() {
-              if ($scope.new_option.max_mem != Math.floor($scope.showmachine.max_mem/1024)) {
+              if ($scope.new_option.max_mem != Math.floor($scope.showmachine.max_mem/1024)
+                 || $scope.new_option.memory != Math.floor($scope.showmachine.memory/1024)) {
                   $scope.request('change_hardware',{
                         'id_domain': $scope.showmachine.id
                         ,'hardware': 'memory'
-                        ,'data': { 'max_mem': $scope.new_option.max_mem*1024}
+                        ,'data': { 'max_mem': $scope.new_option.max_mem*1024
+                                ,'memory': $scope.new_option.memory*1024
+                            }
                         });
 
               }
-              if ($scope.new_option.memory != Math.floor($scope.showmachine.memory/1024)) {
-                  $scope.request('change_hardware',{
-                        'id_domain': $scope.showmachine.id
-                        ,'hardware': 'memory'
-                        ,'data': { 'memory': $scope.new_option.memory*1024}
-                        });
-
-              }
-              if ($scope.new_option.max_virt_cpu != $scope.showmachine.max_virt_cpu) {
+              if ($scope.new_option.max_virt_cpu != $scope.showmachine.max_virt_cpu
+                || $scope.new_option.n_virt_cpu != $scope.showmachine.n_virt_cpu
+              ) {
                   $scope.request('change_hardware',{
                         'id_domain': $scope.showmachine.id
                         ,'hardware': 'vcpus'
-                        ,'data': { 'max_virt_cpu': $scope.new_option.max_virt_cpu }
+                        ,'data': { 'max_virt_cpu': $scope.new_option.max_virt_cpu
+                            ,'n_virt_cpu': $scope.new_option.n_virt_cpu
+                            }
                         });
+              }
+              if ($scope.new_option.run_timeout != Math.floor($scope.showmachine.run_time/60)) {
+                  $scope.set_value('run_timeout',$scope.new_option.run_timeout*60);
               }
 
           };
@@ -648,10 +648,6 @@
                                 $scope.new_name=$scope.showmachine.alias+"-2";
                                 $scope.validate_new_name($scope.showmachine.alias);
                                 update_info_settings();
-                                $scope.new_run_timeout = ($scope.showmachine.run_timeout / 60);
-                                if (!$scope.new_run_timeout) $scope.new_run_timeout = undefined;
-                                $scope.new_option.run_timeout = ($scope.showmachine.run_timeout / 60);
-                                if (!$scope.new_option.run_timeout) $scope.new_option.run_timeout = undefined;
 
                                 var fields = ['volatile_clones','autostart'
                                     ,'shutdown_disconnected','balance_policy'
