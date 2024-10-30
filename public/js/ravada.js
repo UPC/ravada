@@ -679,7 +679,6 @@
                                     var field=fields_option[n_key];
                                     $scope.new_option[field] = $scope.showmachine[field];
                                 }
-                                $scope.new_volatile_clones = $scope.showmachine.volatile_clones;
                                 $scope.new_balance_policy=$scope.showmachine.balance_policy;
 
                                 load_balance_options();
