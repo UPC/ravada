@@ -352,6 +352,14 @@
             $scope.shared_user_count = -1
             $scope.access_groups=[];
 
+            var fields_minutes = ['run_timeout','shutdown_timeout'];
+            var fields_option=[ 'volatile_clones','autostart'
+                               ,'shutdown_disconnected','balance_policy'
+                               ,'auto_compact','shutdown_grace_time'
+                               ,'id_owner'
+            ];
+
+
             $scope.getUnixTimeFromDate = function(date) {
                 date = (date instanceof Date) ? date : date ? new Date(date) : new Date();
                 return date.getTime() / 1000;
@@ -599,6 +607,10 @@
             $scope.new_option.run_timeout = ($scope.showmachine.run_timeout / 60);
             if (!$scope.new_option.run_timeout) $scope.new_option.run_timeout = undefined;
 
+            $scope.new_option.shutdown_timeout = ($scope.showmachine.shutdown_timeout / 60);
+            if (!$scope.new_option.shutdown_timeout) $scope.new_option.shutdown_timeout = undefined;
+
+
           };
 
           $scope.update_options = function() {
@@ -624,8 +636,22 @@
                             }
                         });
               }
-              if ($scope.new_option.run_timeout != Math.floor($scope.showmachine.run_time/60)) {
-                  $scope.set_value('run_timeout',$scope.new_option.run_timeout*60);
+              // fields that are minutes and we pass as seconds
+              for ( var n_key=0 ; n_key<fields_minutes.length ; n_key++) {
+                var field=fields_minutes[n_key];
+                if ($scope.new_option[field]!= Math.floor($scope.showmachine[field]/60)) {
+                  $scope.set_value(field,$scope.new_option[field]*60);
+                }
+              }
+              // fields set value when changed
+              for ( var n_key=0 ; n_key<fields_option.length ; n_key++) {
+                var field=fields_option[n_key];
+                if ($scope.new_option[field]!= $scope.showmachine[field]) {
+                  $scope.set_value(field,$scope.new_option[field]);
+                }
+              }
+              if ($scope.new_option.owner.id != $scope.showmachine.id_owner) {
+                  $scope.set_value('id_owner',$scope.new_option.owner.id);
               }
 
           };
@@ -649,24 +675,12 @@
                                 $scope.validate_new_name($scope.showmachine.alias);
                                 update_info_settings();
 
-                                var fields = ['volatile_clones','autostart'
-                                    ,'shutdown_disconnected','balance_policy'
-                                    ,'auto_compact','shutdown_grace_time'
-                                    ,'id_owner'
-                                ];
-                                for ( var n_key=0 ; n_key<fields.length ; n_key++) {
-                                    var field=fields[n_key];
+                                for ( var n_key=0 ; n_key<fields_option.length ; n_key++) {
+                                    var field=fields_option[n_key];
                                     $scope.new_option[field] = $scope.showmachine[field];
                                 }
                                 $scope.new_volatile_clones = $scope.showmachine.volatile_clones;
-                                $scope.new_autostart = $scope.showmachine.autostart;
-                                $scope.new_shutdown_disconnected
-                                    = $scope.showmachine.shutdown_disconnected;
                                 $scope.new_balance_policy=$scope.showmachine.balance_policy;
-                                $scope.new_auto_compact
-                                    = $scope.showmachine.auto_compact;
-                                $scope.new_shutdown_grace_time
-                                    = $scope.showmachine.shutdown_grace_time;
 
                                 load_balance_options();
                                 get_node_info($scope.showmachine.id_vm);

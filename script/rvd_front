@@ -4663,6 +4663,15 @@ sub machine_set_value($c, $id, $field, $value, $value_text=$value) {
     my $field_text = $field;
     $field_text =~ tr/_/ /;
 
+    $value_text = int($value_text/60) if $field =~ /shutdown_disconnected|shutdown_timeout|run_timeout/;
+
+    if ($field eq 'id_owner') {
+        $field_text = 'owner';
+        my $user = Ravada::Auth::SQL->search_by_id($value);
+        $value_text = $user->name;
+
+    }
+
     $USER->send_message("Setting $field_text to $value_text in "
         .$domain->name)
         if !defined $domain->_data($field) || $domain->_data($field) ne $value;

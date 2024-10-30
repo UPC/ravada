@@ -67,11 +67,10 @@
                      </div>
                 </div>
             </div>
-            {{new_option}}
 
             <div class="row">
                 <div class="col-lg-3 mt-2" align="right">
-                    <label class="small" for="ram"><%=l 'Max memory (MB)' %></label>
+                    <label class="small_row" for="ram"><%=l 'Max memory (MB)' %></label>
                 </div>
                 <div class="col-lg-2">
                     <input class="form-control" type="text" name="ram" size="5"
@@ -84,7 +83,7 @@
             </div>
            <div class="row">
                 <div class="col-lg-3 mt-2" align="right">
-                    <label class="small" for="cram"><%=l 'Current memory (MB)' %></label>
+                    <label class="small_row" for="cram"><%=l 'Current memory (MB)' %></label>
                 </div>
                 <div class="col-lg-2">
                     <input class="form-control" type="text" name="cram" size="5"
@@ -98,7 +97,7 @@
            </div>
            <div class="row">
                 <div class="col-lg-3 mt-2" align="right">
-                    <label class="small" for="max_cpus"><%=l 'Max CPUs' %></label>
+                    <label class="small_row" for="max_cpus"><%=l 'Max CPUs' %></label>
                 </div>
                 <div class="col-lg-2">
                     <input class="form-control" type="number" name="max_cpus" size="5"
@@ -116,7 +115,7 @@
 
            <div class="row" ng-show="showmachine.is_active">
                 <div class="col-lg-3 mt-2" align="right">
-                    <label class="small" for="cpus"><%=l 'Current CPUs' %></label>
+                    <label class="small_row" for="cpus"><%=l 'Current CPUs' %></label>
                 </div>
                 <div class="col-lg-2">
                     <input class="form-control" type="number" name="cpus" size="5"
@@ -129,7 +128,7 @@
 %   if ($USER->can_change_settings){
             <div class="row">
                 <div class="col-lg-3 mt-0" align="right">
-                    <label class="small" for="timeout"><%=l 'Run Timeout' %></label>
+                    <label class="small_row" for="timeout"><%=l 'Run Timeout' %></label>
                 </div>
                 <div class="col-lg-2">
                     <input type="text" size="5" name="timeout"
@@ -141,12 +140,11 @@
             </div>
             <div class="row">
                 <div class="col-lg-3 mt-0" align="right">
-                    <label class="small" for="shutdown_timeout"><%=l 'Shutdown Timeout' %></label>
+                    <label class="small_row" for="shutdown_timeout"><%=l 'Shutdown Timeout' %></label>
                 </div>
                 <div class="col-lg-2">
                     <input type="text" size="5" name="shutdown_timeout"
-                    ng-change="set_value('shutdown_timeout',new_shutdown_timeout*60)"
-                    ng-model="new_shutdown_timeout"
+                    ng-model="new_option.shutdown_timeout"
                     >
                 </div>
                 <div class="col-lg-6"><small class="text-secondary"><%=l 'The machine will power off after this minutes after shutdown.' %></small></div>
@@ -155,13 +153,12 @@
 %   if ($USER->can_change_settings && $USER->is_admin){
             <div class="row" ng-show="showmachine.is_base">
                 <div class="col-lg-3 mt-0" align="right">
-                    <label class="small" for="volatile_clones"><%=l 'Volatile Clones' %></label>
+                    <label class="small_row" for="volatile_clones"><%=l 'Volatile Clones' %></label>
                 </div>
                 <div class="col-lg-2">
-                    <input type="checkbox" ng-model="new_volatile_clones"
+                    <input type="checkbox" ng-model="new_option.volatile_clones"
                     name="volatile_clones"
                     ng-true-value="1" ng-false-value="0"
-                    ng-change="set_bool('volatile_clones',new_volatile_clones)"
                     >
                 </div>
                 <div class="col-md-7"><small class="text-secondary">
@@ -170,62 +167,57 @@
             </div>
             <div class="row" ng-hide="showmachine.is_base">
                 <div class="col-lg-3 mt-0" align="right">
-                    <label class="small" for="autostart"><%=l 'Autostart' %></label>
+                    <label class="small_row" for="autostart"><%=l 'Autostart' %></label>
                 </div>
                 <div class="col-lg-2">
-                    <input type="checkbox" ng-model="new_autostart" name="autostart"
+                    <input type="checkbox" ng-model="new_option.autostart" name="autostart"
                     ng-disabled="<%= !$USER->is_admin %>"
                     ng-true-value="1" ng-false-value="0"
-                    ng-change="request('domain_autostart',
-                        { 'value': new_autostart
-                        ,'id_domain': showmachine.id
-                        })"
                     >
                 </div>
                 <div class="col-md-7"><small class="text-secondary">
                     <%=l 'Virtual Machine will start on host start.' %></small>
                 </div>
             </div>
+            <div ng-class="{'mb-3 border': new_option.shutdown_disconnected }">
             <div class="row">
-                <div class="col-lg-3 mt-0" align="right">
-                    <label class="small" for="shutdown_disconnected"><%=l 'Shutdown disconnected' %></label>
+                <div class="col-lg-3 m-0" align="right">
+                    <label class="small_row" for="shutdown_disconnected"><%=l 'Shutdown disconnected' %></label>
                 </div>
                 <div class="col-lg-2">
-                    <input type="checkbox" ng-model="new_shutdown_disconnected" name="shutdown_disconnected"
+                    <input type="checkbox" ng-model="new_option.shutdown_disconnected" name="shutdown_disconnected"
                     ng-disabled="<%= !$USER->is_admin %>"
                     ng-true-value="1" ng-false-value="0"
-                    ng-change="set_bool('shutdown_disconnected',new_shutdown_disconnected)"
                     >
                 </div>
                 <div class="col-md-7"><small class="text-secondary">
                     <%=l 'Virtual Machine will be shutdown when user disconnects.' %></small>
                 </div>
             </div>
-            <div class="row">
-                <div class="col-lg-3 mt-0" align="right">
+            <div class="row" ng-show="new_option.shutdown_disconnected">
+                <div class="col-lg-3 mt-0 mb-2" align="right">
                     <label class="small" for="shutdown_grace_time"><%=l 'Shutdown grace time' %></label>
                 </div>
-                <div class="col-lg-2">
+                <div class="col-lg-2 mt-0">
                     <input type="text" size="5" name="shutdown_grace_time"
-                    ng-disabled="<%= (!$USER->is_admin or 0) %> || !new_shutdown_disconnected"
-                    ng-change="set_value('shutdown_grace_time',new_shutdown_grace_time)"
-                    ng-model="new_shutdown_grace_time"
+                    ng-disabled="<%= (!$USER->is_admin or 0) %> || !new_option.shutdown_disconnected"
+                    ng-model="new_option.shutdown_grace_time"
                     >
                 </div>
-                <div class="col-md-7"><small class="text-secondary">
+                <div class="col-md-7">
+                    <small class="text-secondary">
                     <%=l 'Minutes of grace time before shutdown.' %></small>
                 </div>
-
+            </div>
             </div>
             <div class="row">
                 <div class="col-lg-3 mt-0" align="right">
-                    <label class="small" for="auto_compact"><%=l 'Auto Compact' %></label>
+                    <label class="small_row" for="auto_compact"><%=l 'Auto Compact' %></label>
                 </div>
                 <div class="col-lg-2">
-                    <input type="checkbox" ng-model="new_auto_compact" name="auto_compact"
+                    <input type="checkbox" ng-model="new_option.auto_compact" name="auto_compact"
                     ng-disabled="<%= !$USER->is_admin || !$auto_compact %>"
                     ng-true-value="1" ng-false-value="0"
-                    ng-change="set_bool('auto_compact',new_auto_compact)"
                     >
                 </div>
                 <div class="col-md-7">
@@ -251,12 +243,11 @@
 %   if ($USER->is_admin){
             <div class="row">
                 <div class="col-lg-3 mt-0" align="right">
-                     <label class="small" for="new_owner"><%=l 'Owner' %></label>
+                     <label class="small_row" for="new_owner"><%=l 'Owner' %></label>
                 </div>
                 <div class="col-lg-4">
-                    <select class="form-control" ng-model="new_owner" name="id_owner"
+                    <select class="form-control" ng-model="new_option.owner" name="id_owner"
                         ng-options="user.name for user in list_users track by user.id"
-                        ng-change="set_value('id_owner',new_owner.id)"
                         ng-disabled="!list_users || list_users.length==0"
                     >
                     </select>
