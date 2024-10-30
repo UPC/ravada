@@ -122,12 +122,7 @@
                     <input class="form-control" type="number" name="cpus" size="5"
                     min="1" max="{{max_virt_cpu}}"
                     ng-disabled="<%= (!$USER->is_admin or 0) %> || topology"
-                    ng-change="request('change_hardware',{
-                        'id_domain': showmachine.id
-                        ,'hardware': 'vcpus'
-                        ,'data': { 'n_virt_cpu': new_n_virt_cpu }
-                        })"
-                    ng-model="new_n_virt_cpu">
+                    ng-model="new_option.n_virt_cpu">
                 </div>
            </div>
 
@@ -139,8 +134,7 @@
                 <div class="col-lg-2">
                     <input type="text" size="5" name="timeout"
                     ng-disabled="<%= !$USER->is_admin %>"
-                    ng-change="set_value('run_timeout',new_run_timeout*60)"
-                    ng-model="new_run_timeout"
+                    ng-model="new_option.run_timeout"
                     >
                 </div>
                 <div class="col-lg-6"><small class="text-secondary"><%=l 'The machine will shutdown after these minutes' %></small></div>
