@@ -3,8 +3,11 @@ use strict;
 
 use Carp qw(confess);
 use Data::Dumper;
+use IPC::Run3 qw(run3);
+
 use Test::More;
 use Mojo::JSON qw( encode_json decode_json );
+use Storable qw(dclone);
 use YAML qw(Load Dump  LoadFile DumpFile);
 
 use Ravada::HostDevice::Templates;
@@ -83,6 +86,7 @@ sub _check_used_mdev($vm, $hd) {
             warn "No $uuid found in mdevctl list";
             next;
         }
+
         $dom_imported->_lock_host_device($hd, $dev);
     }
     return $hd->list_available_devices();
@@ -134,12 +138,21 @@ sub _create_mdev($vm) {
 
     _check_mdev($vm, $hd);
 
+    warn $id;
     return $hd;
 }
 
 sub test_mdev($vm) {
 
     my $hd = _create_mdev($vm);
+
+    my $hd1 = _create_mdev($vm);
+    isnt($hd1->id, $hd->id);
+
+    _filter_hds($hd, $hd1);
+
+    warn Dumper([[$hd->list_available_devices],[$hd1->list_available_devices]]);
+
     my $n_devices = _check_mdev($vm, $hd);
     is( $hd->list_available_devices() , $n_devices);
 
@@ -165,6 +178,12 @@ sub test_mdev($vm) {
 
     test_change_ram($domain);
 
+    _req_shutdown($domain);
+    for ( 1 .. 10 ) {
+        last if !$domain->is_active;
+        sleep 1;
+        diag("waiting for ".$domain->name." to shutdown");
+    }
     test_config_no_hd($domain);
 
     return ($domain, $hd);
@@ -540,7 +559,7 @@ sub test_xml_no_hd($domain) {
 
     my $hd_path = "/domain/devices/hostdev";
     my ($hostdev) = $doc->findnodes($hd_path);
-    ok(!$hostdev,"Expecting no $hd_path") or exit;
+    ok(!$hostdev,"Expecting no $hd_path in ".$domain->name) or confess;
     my $model = "/domain/devices/video/model";
     my ($video) = $doc->findnodes($model);
     ok($video,"Expecting a $model ".$domain->name) or exit;
@@ -552,32 +571,116 @@ sub test_xml_no_hd($domain) {
     ok(!$kvm,"Expecting no $kvm_path in ".$domain->name) or confess;
 }
 
-sub _filter_hds($hd0, $hd1) {
-    my @devices = $hd0->list_devices();
-    my @devices2 = $hd1->list_devices();
-    return if _is_different(\@devices, \@devices2);
+sub _filter_hds_nvidia($hd0, $hd1) {
 
-    for my $n ( 0 .. scalar(@devices)-1 ) {
-        my ($word0) = $devices[$n] =~ / ID .*? (\w+)/;
-        $hd0->_data('list_filter' => $word0);
-        @devices = $hd0->list_devices();
-        last if @devices;
+    my @cmd = ('mdevctl','list', '--dumpjson');
+    my ($in, $out, $err);
+
+    run3(\@cmd, \$in, \$out, \$err);
+
+    my $list = decode_json($out);
+    my %types;
+
+    _inspect_element($list, \%types);
+
+    my ($type0, $type1) = keys %types;
+
+    return unless $type0 && $type1;
+    $hd0->_data('list_filter' => $type0);
+    $hd1->_data('list_filter' => $type1);
+}
+
+sub _inspect_element($list,$types) {
+    if (ref($list) eq 'HASH') {
+        _inspect_hash($list, $types);
+    } elsif (ref($list) eq 'ARRAY') {
+        _inspect_array($list, $types);
+    } else {
+        die Dumper([ref($list),$list]);
     }
-    FOUND: for my $n ( 1 .. scalar(@devices2)-1 ) {
-        my @words = split(/\s+/,$devices2[$n]);
-        for ( 0 .. 4 ) {shift @words }
-        for my $word0 ( @words ) {
+}
+
+sub _inspect_hash($list, $types) {
+    for my $key (keys %$list) {
+        my $value = $list->{$key};
+        if ($key eq 'mdev_type') {
+            $types->{$value}++;
+        }
+        return if !ref($value);
+        _inspect_element($value, $types);
+    }
+}
+
+sub _inspect_array($list, $types) {
+    for my $elem (@$list) {
+        return if !ref($elem);
+        _inspect_element($elem, $types);
+    }
+}
+
+sub _filter_hds($hd0, $hd1) {
+
+    my @devices0 = $hd0->list_devices();
+    my @devices1 = $hd1->list_devices();
+
+    return if _is_different(\@devices0, \@devices1);
+
+    _filter_hds_nvidia($hd0, $hd1);
+
+    @devices0 = $hd0->list_devices();
+    @devices1 = $hd1->list_devices();
+
+    return if _is_different(\@devices0, \@devices1);
+
+    my @devices0b = @devices0;
+    my @devices1b = @devices1;
+
+    FOUND0:for my $n ( 0 .. scalar(@devices0)-1 ) {
+        my @words = split(/\s+/,$devices0[$n]);
+        for my $word0 ( reverse @words ) {
+            next if $word0 =~ /nvidia/;
+            $word0 =~ s/(\d+\:\d+\:\d+)\.\d+/$1/;
+            warn $word0;
+            $hd0->_data('list_filter' => $word0);
+            @devices0b = $hd0->list_available_devices();
+            last FOUND0 if @devices0b;
+        }
+    }
+    FOUND1: for my $n ( 1 .. scalar(@devices1)-1 ) {
+        my @words = split(/\s+/,$devices1[$n]);
+        for my $word0 ( reverse @words ) {
+            next if $word0 =~ /nvidia/;
+            $word0 =~ s/(\d+\:\d+\:\d+)\.\d+/$1/;
+            warn $word0;
+            next if $word0 eq $hd1->_data('list_filter');
             $hd1->_data('list_filter' => $word0);
-            @devices2 = $hd1->list_devices();
-            last FOUND if @devices2 && _is_different(\@devices,\@devices2);
+            @devices1b = $hd1->list_available_devices();
+            last FOUND1 if @devices1b && _is_different(\@devices0b,\@devices1b)
+            && _devices_not_in(\@devices0b, \@devices1b);
         }
     }
 }
 
+sub _devices_not_in($list1, $list2) {
+    my %list1 = map { $_ => 1 } @$list1;
+    my %list2 = map { $_ => 1 } @$list2;
+
+    for my $key (keys %list2 ) {
+        return 0 if exists $list1{$key};
+    }
+    return 1;
+}
+
 sub _is_different($list1, $list2) {
-    return 1 if scalar(@$list1) != scalar(@$list2);
-    for my $n (0 .. scalar (@$list1)-1) {
-        return 1 if $list1->[$n] ne $list2->[$n];
+
+    my $list1b = dclone($list1);
+    my $list2b = dclone($list2);
+    return 1 if scalar(@$list1b) != scalar(@$list2b);
+
+    my @list1c = sort(@$list1b);
+    my @list2c = sort(@$list2b);
+    for my $n (0 .. scalar (@list1c)-1) {
+        return 1 if $list1c[$n] ne $list2c[$n];
     }
     return 0;
 }
@@ -592,16 +695,29 @@ sub test_change_hd_in_clone($domain) {
     }
     remove_domain($domain->clones);
 
-    my ($hd0) = $domain->list_host_devices();
+    my ($hd0, $hd1) = $domain->list_host_devices();
 
-    my $hd1 = _create_mdev($domain->_vm);
+    $hd1 = _create_mdev($domain->_vm) if !$hd1;
     isnt($hd1->id, $hd0->id);
 
     _filter_hds($hd0, $hd1);
 
+    warn Dumper([$hd0->list_available_devices]);
+    warn Dumper([$hd1->list_available_devices]);
+
+    die "Error: no available devices in ".$hd0->name
+    if scalar($hd0->list_available_devices) < 1;
+
+    die "Error: no available devices in ".$hd1->name
+    if scalar($hd1->list_available_devices) < 1;
+
+    for my $hd ( $hd0, $hd1) {
+        warn Dumper([$hd->name, $hd->list_available_devices]);
+    }
+
     my @args = ( uid => user_admin->id ,id_domain => $domain->id);
-    Ravada::Request->clone(@args, number => scalar($hd0->list_devices));
-    wait_request(debug => 0);
+    Ravada::Request->clone(@args, number => scalar($hd0->list_available_devices)-1);
+    wait_request(debug => 1);
 
     _req_start($domain->clones);
 
@@ -797,7 +913,6 @@ for my $vm_name ('KVM', 'Void' ) {
         test_change_hd_in_clone($domain);
 
         test_base($domain);
-        test_change_hd_in_clone($domain);
 
         test_mdev_kvm_state($vm);
     }

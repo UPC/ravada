@@ -731,6 +731,9 @@ sub _around_import_domain {
     if ($import_base) {
         $self->_import_base($domain);
     }
+    $domain->_data('id_vm' => $self->id)
+    if !defined $domain->_data('id_vm');
+
     return $domain;
 }
 
