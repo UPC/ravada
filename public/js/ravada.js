@@ -650,13 +650,18 @@
                   $scope.set_value(field,$scope.new_option[field]);
                 }
               }
-              if ($scope.new_option.owner.id != $scope.showmachine.id_owner) {
+              if ($scope.new_option['owner']
+                  && $scope.new_option.owner.id != $scope.showmachine.id_owner) {
                   $scope.set_value('id_owner',$scope.new_option.owner.id);
               }
 
           };
 
           $scope.init = function(id, url,is_admin) {
+                if (!is_admin) {
+                    fields_minutes = [];
+                }
+
                 url_ws = url;
                 $scope.showmachineId=id;
                 $scope.tab_access=['group']

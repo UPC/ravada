@@ -4657,7 +4657,7 @@ sub machine_set_value($c, $id, $field, $value, $value_text=$value) {
 
     my %privileged = map { $_ => 1 } qw(timeout id_owner shutdown_disconnected shutdown_timeout autostart balance_policy);
 
-    return access_denied($c)       if !$USER->can_manage_machine($c->stash('id'));
+    return access_denied($c)       if !$USER->can_manage_machine($id);
     return access_denied($c) if $privileged{$field} && !$USER->is_admin;
 
     my $domain = Ravada::Front::Domain->open($id) or die "Unkown domain $id";
