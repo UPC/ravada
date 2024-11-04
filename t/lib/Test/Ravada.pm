@@ -1843,15 +1843,18 @@ sub _clean_remote_nodes {
     }
 }
 
-sub clean_remote_node($node) {
-    return if !$node;
+sub clean_remote_node(@node) {
 
-    start_node($node) if !$node->is_local();
-    _remove_old_domains_vm($node);
-    wait_request(debug => 0);
-    _remove_old_disks($node);
-    flush_rules_node($node)  if !$node->is_local() && $node->is_active;
-    remove_qemu_pools($node);
+    for my $node (@node) {
+        next if !$node;
+
+        start_node($node) if !$node->is_local();
+        _remove_old_domains_vm($node);
+        wait_request(debug => 0);
+        _remove_old_disks($node);
+        flush_rules_node($node)  if !$node->is_local() && $node->is_active;
+        remove_qemu_pools($node);
+    }
 }
 
 sub _remove_old_disks {

@@ -138,7 +138,6 @@ sub _create_mdev($vm) {
 
     _check_mdev($vm, $hd);
 
-    warn $id;
     return $hd;
 }
 
@@ -151,7 +150,12 @@ sub test_mdev($vm) {
 
     _filter_hds($hd, $hd1);
 
-    warn Dumper([[$hd->list_available_devices],[$hd1->list_available_devices]]);
+    if ( !$hd->list_available_devices || !$hd1->list_available_devices ) {
+
+        warn Dumper([[$hd->_data('list_command'),$hd->_data('list_filter')],[$hd1->_data('list_command'),$hd1->_data('list_filter')]]);
+        warn Dumper([[$hd->list_available_devices],[$hd1->list_available_devices]]);
+        die "Not available devices";
+    }
 
     my $n_devices = _check_mdev($vm, $hd);
     is( $hd->list_available_devices() , $n_devices);
@@ -573,10 +577,13 @@ sub test_xml_no_hd($domain) {
 
 sub _filter_hds_nvidia($hd0, $hd1) {
 
+    return if !-e $hd0->_data('list_command');
     my @cmd = ('mdevctl','list', '--dumpjson');
     my ($in, $out, $err);
 
     run3(\@cmd, \$in, \$out, \$err);
+    return if $err && $err & $err =~ /No such file/;
+    return if !$out;
 
     my $list = decode_json($out);
     my %types;
@@ -640,7 +647,6 @@ sub _filter_hds($hd0, $hd1) {
         for my $word0 ( reverse @words ) {
             next if $word0 =~ /nvidia/;
             $word0 =~ s/(\d+\:\d+\:\d+)\.\d+/$1/;
-            warn $word0;
             $hd0->_data('list_filter' => $word0);
             @devices0b = $hd0->list_available_devices();
             last FOUND0 if @devices0b;
@@ -651,7 +657,6 @@ sub _filter_hds($hd0, $hd1) {
         for my $word0 ( reverse @words ) {
             next if $word0 =~ /nvidia/;
             $word0 =~ s/(\d+\:\d+\:\d+)\.\d+/$1/;
-            warn $word0;
             next if $word0 eq $hd1->_data('list_filter');
             $hd1->_data('list_filter' => $word0);
             @devices1b = $hd1->list_available_devices();
@@ -695,15 +700,12 @@ sub test_change_hd_in_clone($domain) {
     }
     remove_domain($domain->clones);
 
-    my ($hd0, $hd1) = $domain->list_host_devices();
+    my ($hd0, $hd1) = $domain->_vm->list_host_devices();
 
     $hd1 = _create_mdev($domain->_vm) if !$hd1;
     isnt($hd1->id, $hd0->id);
 
     _filter_hds($hd0, $hd1);
-
-    warn Dumper([$hd0->list_available_devices]);
-    warn Dumper([$hd1->list_available_devices]);
 
     die "Error: no available devices in ".$hd0->name
     if scalar($hd0->list_available_devices) < 1;
@@ -711,13 +713,9 @@ sub test_change_hd_in_clone($domain) {
     die "Error: no available devices in ".$hd1->name
     if scalar($hd1->list_available_devices) < 1;
 
-    for my $hd ( $hd0, $hd1) {
-        warn Dumper([$hd->name, $hd->list_available_devices]);
-    }
-
     my @args = ( uid => user_admin->id ,id_domain => $domain->id);
     Ravada::Request->clone(@args, number => scalar($hd0->list_available_devices)-1);
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
     _req_start($domain->clones);
 
@@ -826,7 +824,10 @@ sub test_volatile_clones($vm, $domain, $host_device) {
 
     my $n=2;
     my $max_n_device = $host_device->list_available_devices();
-    return if $max_n_device<2;
+    if ( $max_n_device<2 ) {
+        $domain->_data('volatile_clones' => 0);
+        return;
+    }
     my $exp_avail = $host_device->list_available_devices()- $n;
 
     Ravada::Request->clone(@args, number => $n, remote_ip => '1.2.3.4');
