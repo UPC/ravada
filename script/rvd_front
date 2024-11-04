@@ -4654,6 +4654,7 @@ sub resume_machine {
 
 sub machine_set_value($c, $id, $field, $value, $value_text=$value) {
 
+
     my %privileged = map { $_ => 1 } qw(timeout id_owner shutdown_disconnected shutdown_timeout autostart balance_policy);
 
     return access_denied($c)       if !$USER->can_manage_machine($c->stash('id'));
@@ -4663,6 +4664,11 @@ sub machine_set_value($c, $id, $field, $value, $value_text=$value) {
     my $field_text = $field;
     $field_text =~ tr/_/ /;
 
+    return if !defined $domain->_data($field) && !defined $value;
+    return if defined $value && defined $domain->_data($field)
+    && $value eq $domain->_data($field);
+
+    $value_text = 0 if !defined $value_text;
     $value_text = int($value_text/60) if $field =~ /shutdown_disconnected|shutdown_timeout|run_timeout/;
 
     if ($field eq 'id_owner') {
@@ -4672,6 +4678,13 @@ sub machine_set_value($c, $id, $field, $value, $value_text=$value) {
 
     }
 
+    if ($field eq "autostart" && defined $value) {
+        my $req = Ravada::Request->domain_autostart(
+            uid => $USER->id
+            ,id_domain => $domain->id
+            ,value => $value
+        );
+    }
     $USER->send_message("Setting $field_text to $value_text in "
         .$domain->name)
         if !defined $domain->_data($field) || $domain->_data($field) ne $value;

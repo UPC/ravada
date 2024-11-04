@@ -264,11 +264,13 @@
             ng-click="reset_options()"><%=l 'Cancel' %></button>
         <button class="btn btn-primary"
             ng-click="update_options(node)"
-            ng-disabled="!form_options.$valid || form_node.$pristine
+            ng-disabled="!form_options.$valid || form_options.$pristine
             || new_option.memory > new_option.max_mem
             || !node.id
             || !list_users || !list_users.length
             "><%=l 'Save' %></button>
+            valid={{form_options.$valid}}<br/>
+            pristine={{form_options.$pristine}}<br/>
         </div>
     </div>
 
