@@ -706,6 +706,8 @@
                                 list_host_devices();
                                 list_access_groups('ldap');
                                 list_access_groups('local');
+                            } else {
+                                $scope.list_users=[ 'NULL' ];
                             }
                             $scope.copy_ram = $scope.showmachine.max_mem / 1024 / 1024;
                 });
@@ -717,7 +719,7 @@
           };
 
           var list_interfaces = function() {
-            if (! $scope.network_nats) {
+            if (! $scope.network_nats && $scope.can_list_networks) {
                 $http.get('/v2/vm/list_networks/'+$scope.showmachine.id_vm)
                     .then(function(response) {
                         $scope.network_nats= [];

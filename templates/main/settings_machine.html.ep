@@ -9,7 +9,11 @@
     <div class="page-header">
         <div class="card"
              ng-controller="singleMachinePage"
-             ng-init="init(<%= $id %>, '<%= url_for('ws_subscribe')->to_abs %>',<%= $USER->is_admin %> )">
+             ng-init="init(<%= $id %>, '<%= url_for('ws_subscribe')->to_abs %>',<%= $USER->is_admin %> );
+                       can_list_networks=<%= ( $USER->is_admin
+                        || $USER->can_create_networks || $USER->can_manage_all_networks
+                        || 0 ) %>"
+             ">
 
              <div class="card-header">
                <div>
