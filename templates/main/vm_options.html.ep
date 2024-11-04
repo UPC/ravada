@@ -74,6 +74,7 @@
                 </div>
                 <div class="col-lg-2">
                     <input class="form-control" type="text" name="ram" size="5"
+                    ng-disabled="<%= (!$USER->is_admin or 0) %> || topology"
                     ng-model="new_option.max_mem">
 
                 </div>
@@ -138,13 +139,14 @@
                 </div>
                 <div class="col-lg-6"><small class="text-secondary"><%=l 'The machine will shutdown after these minutes' %></small></div>
             </div>
-            <div class="row">
+            <div class="row" >
                 <div class="col-lg-3 mt-0" align="right">
                     <label class="small_row" for="shutdown_timeout"><%=l 'Shutdown Timeout' %></label>
                 </div>
                 <div class="col-lg-2">
                     <input type="text" size="5" name="shutdown_timeout"
                     ng-model="new_option.shutdown_timeout"
+                    ng-disabled="<%= !$USER->is_admin or 0 %>"
                     >
                 </div>
                 <div class="col-lg-6"><small class="text-secondary"><%=l 'The machine will power off after this minutes after shutdown.' %></small></div>
