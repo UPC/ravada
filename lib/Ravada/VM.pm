@@ -2138,7 +2138,11 @@ sub balance_vm($self, $uid, $base=undef, $id_domain=undef, $host_devices=1) {
 
         if ($id_domain) {
             my @vms_all = $base->list_vms(0,1);
-            @vms = $self->_filter_host_devices($id_domain, @vms_all) if $host_devices;
+            if ( $host_devices ) {
+                @vms = $self->_filter_host_devices($id_domain, @vms_all);
+            } else {
+                @vms = @vms_all;
+            }
         } else {
             @vms= $base->list_vms($host_devices,1);
         }
