@@ -1813,8 +1813,9 @@ sub set_memory {
     my $value = shift;
 
     my $max_mem = $self->get_max_mem();
-    confess "ERROR: invalid argument '$value': cannot set memory higher than max memory"
+    die "ERROR: invalid argument '$value': cannot set memory higher than max memory"
             ." ($max_mem)"
+            ."\n"
         if $value > $max_mem;
 
     $self->_set_memory_xml($value);
