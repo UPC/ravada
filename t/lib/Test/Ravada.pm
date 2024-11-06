@@ -1604,6 +1604,8 @@ sub remove_void_networks($vm=undef) {
         eval { $vm = rvd_back->search_vm('Void') };
         die $@ if $@;
     }
+    return if $< != $>;
+
     my $dir_net = $vm->dir_img()."/networks";
     return if ! -e $dir_net;
     my $base = base_domain_name();

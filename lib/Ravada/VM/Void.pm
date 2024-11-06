@@ -242,7 +242,6 @@ sub dir_img($self=undef) {
 }
 
 sub _storage_path($self, $storage) {
-    confess if !defined $storage;
     my @list = $self->list_storage_pools(1);
     my ($sp) = grep { $_->{name} eq $storage } @list;
 
