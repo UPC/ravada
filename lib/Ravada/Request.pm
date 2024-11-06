@@ -9,7 +9,7 @@ Ravada::Request - Requests library for Ravada
 
 =cut
 
-use Carp qw(carp confess cluck);
+use Carp qw(confess cluck);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
 use JSON::XS;
