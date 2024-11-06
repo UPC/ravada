@@ -731,6 +731,9 @@ sub _around_import_domain {
     if ($import_base) {
         $self->_import_base($domain);
     }
+    $domain->_data('id_vm' => $self->id)
+    if !defined $domain->_data('id_vm');
+
     return $domain;
 }
 
@@ -2133,7 +2136,17 @@ sub balance_vm($self, $uid, $base=undef, $id_domain=undef, $host_devices=1) {
         confess "Error: base is not an object ".Dumper($base)
         if !ref($base);
 
-        @vms = $base->list_vms($host_devices,1);
+        if ($id_domain) {
+            my @vms_all = $base->list_vms(0,1);
+            if ( $host_devices ) {
+                @vms = $self->_filter_host_devices($id_domain, @vms_all);
+            } else {
+                @vms = @vms_all;
+            }
+        } else {
+            @vms= $base->list_vms($host_devices,1);
+        }
+
     } else {
         @vms = $self->list_nodes();
     }
@@ -2152,6 +2165,23 @@ sub balance_vm($self, $uid, $base=undef, $id_domain=undef, $host_devices=1) {
     return $vm if $vm;
     die "Error: No available devices or no free nodes.\n" if $host_devices;
     die "Error: No free nodes available.\n";
+}
+
+sub _filter_host_devices($self, $id_domain, @vms_all) {
+    my $domain = Ravada::Domain->open($id_domain);
+
+    my @host_devices = $domain->list_host_devices();
+
+    my @vms;
+    for my $vm (@vms_all) {
+        next if !$domain->_available_hds($vm->id, \@host_devices);
+        push @vms, ($vm);
+    }
+
+    die "Error: No available devices in ".join(" , ",map { $_->name } @host_devices)."\n"
+    if !scalar(@vms);
+
+    return @vms;
 }
 
 sub _balance_already_started($self, $uid, $id_domain, $vms) {
