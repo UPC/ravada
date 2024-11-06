@@ -265,7 +265,7 @@
         <button ng-enabled="node.id && list_users" class="btn btn-outline-secondary"
             ng-click="reset_options()"><%=l 'Cancel' %></button>
         <button class="btn btn-primary"
-            ng-click="update_options(node)"
+            ng-click="update_options(node); form_options.$pristine=true"
             ng-disabled="!form_options.$valid || form_options.$pristine
             || new_option.memory > new_option.max_mem
             || !node.id
