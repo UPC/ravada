@@ -1640,14 +1640,23 @@ post '/machine/set' => sub($c) {
     my $arg = decode_json($c->req->body);
 
     my $id = delete $arg->{id} or die "Error: missing id";
-    my $field = delete $arg->{field} or die "Error: missing field";
+    my $options = delete $arg->{options};
+    my $field = delete $arg->{field};
 
-    die "Error: missing value" if !exists $arg->{value};
+    die "Error: requires options or field ".join(" ",$arg)
+    unless $options || $field;
 
-    my $value = delete $arg->{value};
-    my $value_text = (delete $arg->{value_text} or $value);
+    die "Error: missing value" if $field && !exists $arg->{value};
+    die "Error: unnecessary value when options" if $options && exists $arg->{value};
 
-    machine_set_value($c, $id, $field, $value, $value_text);
+    if ($field) {
+        my $value = delete $arg->{value};
+        my $value_text = (delete $arg->{value_text} or $value);
+
+        machine_set_value($c, $id, $field, $value, $value_text);
+    } else {
+        # TODO parse options and set them when necessary
+    }
 };
 
 get '/machine/set/#id/#field/#value' => sub {

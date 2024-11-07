@@ -613,7 +613,16 @@
 
           };
 
-          $scope.update_options = function() {
+          $scope.update_options = function () {
+            $http.post("/machine/set/"
+                      , JSON.stringify({
+                          'id': $scope.showmachine.id
+                          ,options: $scope.new_option
+                      })
+            );
+
+          };
+          $scope.update_options_old = function() {
               if ($scope.new_option.max_mem != Math.floor($scope.showmachine.max_mem/1024)
                  || $scope.new_option.memory != Math.floor($scope.showmachine.memory/1024)) {
                   $scope.request('change_hardware',{
