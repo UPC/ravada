@@ -1654,8 +1654,13 @@ post '/machine/set' => sub($c) {
         my $value_text = (delete $arg->{value_text} or $value);
 
         machine_set_value($c, $id, $field, $value, $value_text);
+
+        return $c->render(json => { $field => $value_text });
     } else {
-        # TODO parse options and set them when necessary
+        machine_change_hardware($c, $id, $options);
+        machine_set_options($c, $id, $options);
+
+        return $c->render(json => $options );
     }
 };
 
@@ -4661,13 +4666,107 @@ sub resume_machine {
     return $c->render(json => { req => $req->id });
 }
 
-sub machine_set_value($c, $id, $field, $value, $value_text=$value) {
+sub machine_change_hardware($c, $id, $options) {
 
+    my $domain = Ravada::Front::Domain->open($id) or die "Unkown domain $id";
+
+
+    my $max_mem = delete $options->{max_mem};
+    my $memory = delete $options->{memory};
+
+    my $info = $domain->get_info();
+    my %change_mem;
+    if (int($info->{max_mem}/1024) != $max_mem && $USER->is_admin) {
+        $change_mem{max_mem} = $max_mem*1024;
+    }
+
+    if (int($info->{memory}/1024) != $memory) {
+        $change_mem{memory} = $memory*1024;
+    }
+    Ravada::Request->change_hardware(
+        uid => $USER->id
+        ,id_domain => $id
+        ,hardware=> 'memory'
+        ,data => \%change_mem
+    ) if keys %change_mem;
+
+    my $max_virt_cpu = delete $options->{max_virt_cpu};
+    my $n_virt_cpu = delete $options->{n_virt_cpu};
+
+    my %change_cpu;
+
+    if ($info->{max_virt_cpu} != $max_virt_cpu && $USER->is_admin) {
+        $change_cpu{max_virt_cpu} = $max_virt_cpu;
+    }
+
+    if ($info->{n_virt_cpu} != $n_virt_cpu) {
+        $change_cpu{n_virt_cpu} = $n_virt_cpu;
+    }
+    Ravada::Request->change_hardware(
+        uid => $USER->id
+        ,id_domain => $id
+        ,hardware=> 'vcpus'
+        ,data => \%change_cpu
+    ) if keys %change_cpu;
+
+
+}
+
+sub machine_set_options($c, $id, $options) {
+    return access_denied($c)       if !$USER->can_manage_machine($id);
+
+    my $domain = Ravada::Front::Domain->open($id) or die "Unkown domain $id";
+
+    my $owner = delete $options->{owner};
+    $options->{id_owner} = $owner->{id} if $owner;
+
+    my %field_minutes = map { $_ => 1 } ('run_timeout','shutdown_timeout');
+
+    my $change;
+    for my $key (keys %$options) {
+        next if _privileged_machine_field($key) && !$USER->is_admin;
+
+        next if !defined $options->{$key} && !defined $domain->_data($key);
+        next if !$options->{$key} && !$domain->_data($key);
+
+        next unless defined $options->{$key} && !defined $domain->_data($key)
+         || !defined $options->{$key} && defined $domain->_data($key)
+         || $options->{$key} ne $domain->_data($key);
+
+        $change->{$key} = $options->{$key};
+        my $value_text = $options->{$key};
+
+        if ( exists $options->{$key} && defined $options->{$key}
+            && $field_minutes{$key}) {
+                $options->{$key} = $options->{$key}*60;
+
+                if ($value_text =~ /^\d+$/) {
+                    if ( $value_text >1 ) {
+                        $value_text .= " minutes";
+                    } elsif ($value_text == 1 ) {
+                        $value_text .=" minute";
+                    } else {
+                        $value_text = "none";
+                    }
+                }
+        }
+
+        machine_set_value($c, $id, $key => $options->{$key}, $value_text);
+    }
+
+    return $c->render(json => $change);
+}
+
+sub _privileged_machine_field($field) {
 
     my %privileged = map { $_ => 1 } qw(timeout id_owner shutdown_disconnected shutdown_timeout autostart balance_policy);
+    return $privileged{$field};
+}
+
+sub machine_set_value($c, $id, $field, $value, $value_text=$value) {
 
     return access_denied($c)       if !$USER->can_manage_machine($id);
-    return access_denied($c) if $privileged{$field} && !$USER->is_admin;
+    return access_denied($c) if _privileged_machine_field($field) && !$USER->is_admin;
 
     my $domain = Ravada::Front::Domain->open($id) or die "Unkown domain $id";
     my $field_text = $field;
@@ -4678,7 +4777,6 @@ sub machine_set_value($c, $id, $field, $value, $value_text=$value) {
     && $value eq $domain->_data($field);
 
     $value_text = 0 if !defined $value_text;
-    $value_text = int($value_text/60) if $field =~ /shutdown_disconnected|shutdown_timeout|run_timeout/;
 
     if ($field eq 'id_owner') {
         $field_text = 'owner';
@@ -4697,7 +4795,8 @@ sub machine_set_value($c, $id, $field, $value, $value_text=$value) {
     $USER->send_message("Setting $field_text to $value_text in "
         .$domain->name)
         if !defined $domain->_data($field) || $domain->_data($field) ne $value;
-    return $c->render(json => { $field => $domain->_data($field, $value)});
+
+    $domain->_data($field, $value);
 
 }
 
