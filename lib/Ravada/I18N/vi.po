@@ -24,7 +24,7 @@ msgid "Ravada broker"
 msgstr "Ravada broker"
 
 msgid "Machine Name"
-msgstr "Tên máy móc"
+msgstr "Tên máy"
 
 msgid "Tools"
 msgstr "Công cụ"
@@ -39,16 +39,16 @@ msgid "Stop"
 msgstr "Dừng lại"
 
 msgid "View"
-msgstr "Lượt xem"
+msgstr "Xem"
 
 msgid "Prepare base"
 msgstr "Chuẩn bị cơ sở"
 
 msgid "Clone"
-msgstr "Dòng vô tính"
+msgstr "Nhân bản"
 
 msgid "Clone/s"
-msgstr "Nhân bản / s"
+msgstr "Nhân bản /s"
 
 msgid "Users List"
 msgstr "Danh sách người dùng"
@@ -63,7 +63,7 @@ msgid "Available Machines"
 msgstr "Máy có sẵn"
 
 msgid "Help"
-msgstr "Cứu giúp"
+msgstr "Trợ giúp"
 
 msgid "Requirements"
 msgstr "Yêu cầu"
@@ -72,7 +72,7 @@ msgid "About"
 msgstr "Về"
 
 msgid "Mark all as read"
-msgstr "đánh dấu tất cả như đã đọc"
+msgstr "Đánh dấu tất cả như đã đọc"
 
 msgid "Settings"
 msgstr "Cài đặt"
@@ -111,7 +111,7 @@ msgid "Indonesian"
 msgstr "Tiếng Indonesia"
 
 msgid "Persian"
-msgstr "Tiếng ba tư"
+msgstr "Tiếng Ba Tư"
 
 msgid "Japanese"
 msgstr "Tiếng Nhật"
@@ -291,7 +291,7 @@ msgid "Login"
 msgstr "Đăng nhập"
 
 msgid "SSO/CAS Login"
-msgstr "Đăng nhập SSO / CAS"
+msgstr "Đăng nhập SSO/CAS"
 
 msgid "Welcome"
 msgstr "Chào mừng"
@@ -438,7 +438,7 @@ msgstr "Máy có tên đó đã tồn tại."
 msgid "The machine name is only allowed to consist of alphabetic characters, numbers, dashes and points."
 msgstr "Tên máy chỉ được phép bao gồm các ký tự chữ cái, số, dấu gạch ngang và điểm."
 
-msgid "Create"
+msgid "Create
 msgstr "Tạo ra"
 
 msgid "monitoring"
@@ -772,7 +772,7 @@ msgid "You need a screenshot in order to copy it to the base machine."
 msgstr "Bạn cần một ảnh chụp màn hình để sao chép nó vào máy cơ bản."
 
 msgid "Add"
-msgstr "cộng"
+msgstr "thêm"
 
 msgid "The changes will apply on next restart"
 msgstr "Các thay đổi sẽ áp dụng vào lần khởi động lại tiếp theo"
@@ -859,7 +859,7 @@ msgid "verify"
 msgstr "kiểm chứng"
 
 msgid "save"
-msgstr "tiết kiệm"
+msgstr "lưu"
 
 msgid "Verifying"
 msgstr "Đang xác minh"
@@ -1027,7 +1027,7 @@ msgid "Assign this virtual machine to the pre-started pool"
 msgstr "Gán máy ảo này cho nhóm khởi động trước"
 
 msgid "Virtual machines in the pool."
-msgstr "Máy ảo trong hồ bơi."
+msgstr "Máy ảo trong nhóm."
 
 msgid "Pool"
 msgstr "Nhóm"
