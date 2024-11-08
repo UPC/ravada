@@ -352,7 +352,6 @@
             $scope.shared_user_count = -1
             $scope.access_groups=[];
 
-            var fields_minutes = ['run_timeout','shutdown_timeout'];
             var fields_option=[ 'volatile_clones','autostart'
                                ,'shutdown_disconnected','balance_policy'
                                ,'auto_compact','shutdown_grace_time'
@@ -604,10 +603,10 @@
             $scope.new_option.memory = Math.floor($scope.showmachine.memory / 1024);
             $scope.new_option.max_mem = Math.floor($scope.showmachine.max_mem / 1024);
 
-            $scope.new_option.run_timeout = ($scope.showmachine.run_timeout / 60);
+            $scope.new_option.run_timeout = Math.floor($scope.showmachine.run_timeout / 60);
             if (!$scope.new_option.run_timeout) $scope.new_option.run_timeout = undefined;
 
-            $scope.new_option.shutdown_timeout = ($scope.showmachine.shutdown_timeout / 60);
+            $scope.new_option.shutdown_timeout = Math.floor($scope.showmachine.shutdown_timeout / 60);
             if (!$scope.new_option.shutdown_timeout) $scope.new_option.shutdown_timeout = undefined;
 
 
@@ -620,49 +619,6 @@
                           ,options: $scope.new_option
                       })
             );
-
-          };
-          $scope.update_options_old = function() {
-              if ($scope.new_option.max_mem != Math.floor($scope.showmachine.max_mem/1024)
-                 || $scope.new_option.memory != Math.floor($scope.showmachine.memory/1024)) {
-                  $scope.request('change_hardware',{
-                        'id_domain': $scope.showmachine.id
-                        ,'hardware': 'memory'
-                        ,'data': { 'max_mem': $scope.new_option.max_mem*1024
-                                ,'memory': $scope.new_option.memory*1024
-                            }
-                        });
-
-              }
-              if ($scope.new_option.max_virt_cpu != $scope.showmachine.max_virt_cpu
-                || $scope.new_option.n_virt_cpu != $scope.showmachine.n_virt_cpu
-              ) {
-                  $scope.request('change_hardware',{
-                        'id_domain': $scope.showmachine.id
-                        ,'hardware': 'vcpus'
-                        ,'data': { 'max_virt_cpu': $scope.new_option.max_virt_cpu
-                            ,'n_virt_cpu': $scope.new_option.n_virt_cpu
-                            }
-                        });
-              }
-              // fields that are minutes and we pass as seconds
-              for ( var n_key=0 ; n_key<fields_minutes.length ; n_key++) {
-                var field=fields_minutes[n_key];
-                if ($scope.new_option[field]!= Math.floor($scope.showmachine[field]/60)) {
-                  $scope.set_value(field,$scope.new_option[field]*60);
-                }
-              }
-              // fields set value when changed
-              for ( var n_key=0 ; n_key<fields_option.length ; n_key++) {
-                var field=fields_option[n_key];
-                if ($scope.new_option[field]!= $scope.showmachine[field]) {
-                  $scope.set_value(field,$scope.new_option[field]);
-                }
-              }
-              if ($scope.new_option['owner']
-                  && $scope.new_option.owner.id != $scope.showmachine.id_owner) {
-                  $scope.set_value('id_owner',$scope.new_option.owner.id);
-              }
 
           };
 
