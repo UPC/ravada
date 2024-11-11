@@ -1122,12 +1122,14 @@
                     new_settings.capacity=undefined;
                 }
                 if (hardware=='memory') {
+                    $scope.new_option.memory=new_settings.memory;
+                    $scope.new_option.max_mem=new_settings.max_mem;
                     new_settings.memory *= 1024;
                     new_settings.max_mem *= 1024;
                 }
                 if (hardware == 'cpu') {
                     $scope.new_option.max_virt_cpu = new_settings.vcpu['#text'];
-                    $scope.new_option.n_virt_cpu = new_settings.vcpus.current;
+                    $scope.new_option.n_virt_cpu = new_settings.vcpu.current;
                 }
                 $scope.request('change_hardware',
                     {'id_domain': $scope.showmachine.id
