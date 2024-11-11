@@ -477,7 +477,10 @@
                             //subscribe_bases(url);
                         }
                         if ($scope.edit) { $scope.lock_info = true }
-                        update_info_settings();
+
+                        if (!$scope.form_options.$pristine) {
+                            update_info_settings();
+                        }
                     });
                     _select_new_base();
                 }
@@ -608,11 +611,29 @@
 
             $scope.new_option.shutdown_timeout = Math.floor($scope.showmachine.shutdown_timeout / 60);
             if (!$scope.new_option.shutdown_timeout) $scope.new_option.shutdown_timeout = undefined;
-
+            for ( var n_key=0 ; n_key<fields_option.length ; n_key++) {
+                                    var field=fields_option[n_key];
+                                    $scope.new_option[field] = $scope.showmachine[field];
+            }
+            $scope.new_balance_policy=$scope.showmachine.balance_policy;
 
           };
 
+          $scope.reset_options = function() {
+              update_info_settings();
+              set_new_owner();
+              $scope.form_options.$setPristine();
+          };
+
           $scope.update_options = function () {
+              if(!$scope.topology) {
+                if (!$scope.showmachine.is_active) {
+                    $scope.new_option.n_virt_cpu = $scope.new_option.max_virt_cpu;
+
+                }
+                $scope.showmachine.hardware.cpu[0].vcpu['#text'] = $scope.new_option.max_virt_cpu;
+                $scope.showmachine.hardware.cpu[0].vcpu.current = $scope.new_option.n_virt_cpu;
+              }
             $http.post("/machine/set/"
                       , JSON.stringify({
                           'id': $scope.showmachine.id
@@ -623,6 +644,7 @@
           };
 
           $scope.init = function(id, url,is_admin) {
+                $scope.is_admin = is_admin;
                 if (!is_admin) {
                     fields_minutes = [];
                 }
@@ -643,13 +665,8 @@
                             if (typeof $scope.new_name == 'undefined' ) {
                                 $scope.new_name=$scope.showmachine.alias+"-2";
                                 $scope.validate_new_name($scope.showmachine.alias);
-                                update_info_settings();
 
-                                for ( var n_key=0 ; n_key<fields_option.length ; n_key++) {
-                                    var field=fields_option[n_key];
-                                    $scope.new_option[field] = $scope.showmachine[field];
-                                }
-                                $scope.new_balance_policy=$scope.showmachine.balance_policy;
+                                update_info_settings();
 
                                 load_balance_options();
                                 get_node_info($scope.showmachine.id_vm);
@@ -1108,6 +1125,10 @@
                     new_settings.memory *= 1024;
                     new_settings.max_mem *= 1024;
                 }
+                if (hardware == 'cpu') {
+                    $scope.new_option.max_virt_cpu = new_settings.vcpu['#text'];
+                    $scope.new_option.n_virt_cpu = new_settings.vcpus.current;
+                }
                 $scope.request('change_hardware',
                     {'id_domain': $scope.showmachine.id
                         ,'hardware': hardware
@@ -1136,15 +1157,20 @@
                 $http.get('/list_users.json')
                     .then(function(response) {
                         $scope.list_users=response.data;
-                        for (var i = 0; i < response.data.length; i++) {
-                            if (response.data[i].id == $scope.showmachine.id_owner) {
-                                $scope.copy_owner = response.data[i].id;
-                                $scope.new_owner = response.data[i];
-                                $scope.new_option.owner = response.data[i];
-                            }
-                        }
+                        set_new_owner();
                     });
             }
+
+            var set_new_owner = function() {
+                for (var i = 0; i < $scope.list_users.length; i++) {
+                    if ($scope.list_users[i].id == $scope.showmachine.id_owner) {
+                        $scope.copy_owner = $scope.list_users[i].id;
+                        $scope.new_owner = $scope.list_users[i];
+                        $scope.new_option.owner = $scope.list_users[i];
+                        return;
+                    }
+                }
+            };
             var list_groups = function() {
                 $http.get('/group/ldap/list')
                     .then(function(response) {

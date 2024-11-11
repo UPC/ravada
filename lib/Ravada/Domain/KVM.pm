@@ -3080,7 +3080,7 @@ sub _change_hardware_vcpus($self, $index, $data) {
 
         };
         if ($@) {
-            warn $@;
+            warn "Error on set current ".$@;
             $self->_data('needs_restart' => 1) if $self->is_active;
         }
         my ($vcpus) = $doc->findnodes('/domain/vcpu');

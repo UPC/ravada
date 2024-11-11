@@ -13,7 +13,7 @@
                        can_list_networks=<%= ( $USER->is_admin
                         || $USER->can_create_networks || $USER->can_manage_all_networks
                         || 0 ) %>"
-             ">
+             >
 
              <div class="card-header">
                <div>

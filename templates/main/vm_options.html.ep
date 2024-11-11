@@ -262,10 +262,11 @@
     <div class="form-group row">
         <div class="col-md-3" align="right"></div>
         <div class="col-md-4" align="left">
-        <button ng-enabled="node.id && list_users" class="btn btn-outline-secondary"
+        <button ng-enabled="node.id && list_users"
+            ng-disabled="form_options.$pristine"
             ng-click="reset_options()"><%=l 'Cancel' %></button>
-        <button class="btn btn-primary"
-            ng-click="update_options(node)"
+        <button
+            ng-click="update_options(node) ; form_options.$setPristine();"
             ng-disabled="!form_options.$valid || form_options.$pristine
             || new_option.memory > new_option.max_mem
             || !node.id
