@@ -121,7 +121,7 @@
                 <div class="col-lg-2">
                     <input class="form-control" type="number" name="cpus" size="5"
                     min="1" max="{{max_virt_cpu}}"
-                    ng-disabled="<%= (!$USER->is_admin or 0) %> || topology"
+                    ng-disabled="topology"
                     ng-model="new_option.n_virt_cpu">
                 </div>
            </div>

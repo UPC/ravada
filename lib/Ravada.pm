@@ -5375,12 +5375,16 @@ sub _cmd_change_hardware {
 
     my $user = Ravada::Auth::SQL->search_by_id($uid);
 
+    my $info = $domain->info($user);
+
     die "Error: User ".$user->name." not allowed\n"
     unless $user->is_admin
     || $hardware eq 'memory'
     || ($hardware eq 'network'
         && $user->can_change_hardware_network($domain, $data)
        )
+    || ($hardware eq 'vcpus' && keys %$data == 1 && exists $data->{n_virt_cpu}
+            && $data->{n_virt_cpu} <= $info->{max_virt_cpu})
     ;
 
     $domain->change_hardware(
