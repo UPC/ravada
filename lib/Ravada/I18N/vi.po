@@ -670,7 +670,7 @@ msgid "Confirm Password"
 msgstr "Xác nhận mật khẩu"
 
 msgid "Username is required"
-msgstr "tên người dùng là bắt buộc"
+msgstr "Tên người dùng là bắt buộc"
 
 msgid "Username can not exceed 20 characters"
 msgstr "Tên người dùng không được vượt quá 20 ký tự"
