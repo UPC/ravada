@@ -332,6 +332,8 @@ sub test_auto_shutdown_disconnected($vm, $grace=0) {
     is($clone->_data('shutdown_disconnected'),1);
     if ($grace) {
         $clone->_data('shutdown_grace_time',2);
+    } else {
+        $clone->_data('shutdown_grace_time',0);
     }
 
     $clone->start(user => user_admin, remote_ip => '1.2.3.4');
