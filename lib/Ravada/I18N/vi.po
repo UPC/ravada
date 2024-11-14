@@ -438,7 +438,7 @@ msgstr "Máy có tên đó đã tồn tại."
 msgid "The machine name is only allowed to consist of alphabetic characters, numbers, dashes and points."
 msgstr "Tên máy chỉ được phép bao gồm các ký tự chữ cái, số, dấu gạch ngang và điểm."
 
-msgid "Create
+msgid "Create"
 msgstr "Tạo ra"
 
 msgid "monitoring"
