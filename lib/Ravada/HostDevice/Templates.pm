@@ -204,7 +204,7 @@ our @TEMPLATES_VOID = (
         ]
     }
     ,{ name => "GPU Mediated Device"
-        ,list_command => "lsusb "
+        ,list_command => "lsusb"
         ,list_filter => '.*'
         ,template_args => encode_json(
             { uuid => '^(.*?) '}

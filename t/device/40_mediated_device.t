@@ -3,8 +3,10 @@ use strict;
 
 use Carp qw(confess);
 use Data::Dumper;
+use IPC::Run3 qw(run3);
 use Test::More;
 use Mojo::JSON qw( encode_json decode_json );
+use Storable qw(dclone);
 use YAML qw(Load Dump  LoadFile DumpFile);
 
 use Ravada::HostDevice::Templates;
@@ -83,20 +85,27 @@ sub _check_used_mdev($vm, $hd) {
             warn "No $uuid found in mdevctl list";
             next;
         }
+
         $dom_imported->_lock_host_device($hd, $dev);
     }
     return $hd->list_available_devices();
 }
 
-sub _req_start($domain) {
-    if ($MOCK_MDEV) {
-        $domain->_attach_host_devices();
-    } else {
-        Ravada::Request->start_domain(
-            uid => user_admin->id
-            ,id_domain => $domain->id
-        );
-        wait_request();
+sub _req_start(@domain) {
+    for my $domain0 ( @domain ) {
+        my $domain = $domain0;
+        if (ref($domain) !~ /^Ravada/) {
+            $domain = Ravada::Domain->open($domain0->{id});
+        }
+        if ($MOCK_MDEV) {
+            $domain->_attach_host_devices();
+        } else {
+            Ravada::Request->start_domain(
+                uid => user_admin->id
+                ,id_domain => $domain->id
+            );
+            wait_request();
+        }
     }
 }
 
@@ -117,14 +126,35 @@ sub _req_shutdown($domain) {
 
 }
 
-sub test_mdev($vm) {
 
+sub _create_mdev($vm) {
     my $templates = Ravada::HostDevice::Templates::list_templates($vm->id);
     my ($mdev) = grep { $_->{name} =~ /GPU Mediated Device/ } @$templates;
     ok($mdev,"Expecting PCI template in ".$vm->name) or return;
 
     my $id = $vm->add_host_device(template => $mdev->{name});
     my $hd = Ravada::HostDevice->search_by_id($id);
+
+    _check_mdev($vm, $hd);
+
+    return $hd;
+}
+
+sub test_mdev($vm) {
+
+    my $hd = _create_mdev($vm);
+
+    my $hd1 = _create_mdev($vm);
+    isnt($hd1->id, $hd->id);
+
+    _filter_hds($hd, $hd1);
+
+    if ( !$hd->list_available_devices || !$hd1->list_available_devices ) {
+
+        warn Dumper([[$hd->_data('list_command'),$hd->_data('list_filter')],[$hd1->_data('list_command'),$hd1->_data('list_filter')]]);
+        warn Dumper([[$hd->list_available_devices],[$hd1->list_available_devices]]);
+        die "Not available devices";
+    }
 
     my $n_devices = _check_mdev($vm, $hd);
     is( $hd->list_available_devices() , $n_devices);
@@ -134,7 +164,7 @@ sub test_mdev($vm) {
         ,user => user_admin
     );
     test_config_no_hd($domain);
-    $domain->add_host_device($id);
+    $domain->add_host_device($hd->id);
     _req_start($domain);
     test_config($domain);
     is($hd->list_available_devices(), $n_devices-1) or exit;
@@ -151,6 +181,12 @@ sub test_mdev($vm) {
 
     test_change_ram($domain);
 
+    _req_shutdown($domain);
+    for ( 1 .. 10 ) {
+        last if !$domain->is_active;
+        sleep 1;
+        diag("waiting for ".$domain->name." to shutdown");
+    }
     test_config_no_hd($domain);
 
     return ($domain, $hd);
@@ -526,7 +562,7 @@ sub test_xml_no_hd($domain) {
 
     my $hd_path = "/domain/devices/hostdev";
     my ($hostdev) = $doc->findnodes($hd_path);
-    ok(!$hostdev,"Expecting no $hd_path") or exit;
+    ok(!$hostdev,"Expecting no $hd_path in ".$domain->name) or confess;
     my $model = "/domain/devices/video/model";
     my ($video) = $doc->findnodes($model);
     ok($video,"Expecting a $model ".$domain->name) or exit;
@@ -538,6 +574,200 @@ sub test_xml_no_hd($domain) {
     ok(!$kvm,"Expecting no $kvm_path in ".$domain->name) or confess;
 }
 
+sub _filter_hds_nvidia($hd0, $hd1) {
+
+    return if !-e $hd0->_data('list_command');
+    my @cmd = ('mdevctl','list', '--dumpjson');
+    my ($in, $out, $err);
+
+    run3(\@cmd, \$in, \$out, \$err);
+    return if $err && $err & $err =~ /No such file/;
+    return if !$out;
+
+    my $list = decode_json($out);
+    my %types;
+
+    _inspect_element($list, \%types);
+
+    my ($type0, $type1) = keys %types;
+
+    return unless $type0 && $type1;
+    $hd0->_data('list_filter' => $type0);
+    $hd1->_data('list_filter' => $type1);
+}
+
+sub _inspect_element($list,$types) {
+    if (ref($list) eq 'HASH') {
+        _inspect_hash($list, $types);
+    } elsif (ref($list) eq 'ARRAY') {
+        _inspect_array($list, $types);
+    } else {
+        die Dumper([ref($list),$list]);
+    }
+}
+
+sub _inspect_hash($list, $types) {
+    for my $key (keys %$list) {
+        my $value = $list->{$key};
+        if ($key eq 'mdev_type') {
+            $types->{$value}++;
+        }
+        return if !ref($value);
+        _inspect_element($value, $types);
+    }
+}
+
+sub _inspect_array($list, $types) {
+    for my $elem (@$list) {
+        return if !ref($elem);
+        _inspect_element($elem, $types);
+    }
+}
+
+sub _filter_hds($hd0, $hd1) {
+
+    my @devices0 = $hd0->list_devices();
+    my @devices1 = $hd1->list_devices();
+
+    return if _is_different(\@devices0, \@devices1);
+
+    _filter_hds_nvidia($hd0, $hd1);
+
+    @devices0 = $hd0->list_devices();
+    @devices1 = $hd1->list_devices();
+
+    return if _is_different(\@devices0, \@devices1);
+
+    my @devices0b = @devices0;
+    my @devices1b = @devices1;
+
+    FOUND0:for my $n ( 0 .. scalar(@devices0)-1 ) {
+        my @words = split(/\s+/,$devices0[$n]);
+        for my $word0 ( reverse @words ) {
+            next if $word0 =~ /nvidia/;
+            $word0 =~ s/(\d+\:\d+\:\d+)\.\d+/$1/;
+            $hd0->_data('list_filter' => $word0);
+            @devices0b = $hd0->list_available_devices();
+            last FOUND0 if @devices0b;
+        }
+    }
+    FOUND1: for my $n ( 1 .. scalar(@devices1)-1 ) {
+        my @words = split(/\s+/,$devices1[$n]);
+        for my $word0 ( reverse @words ) {
+            next if $word0 =~ /nvidia/;
+            $word0 =~ s/(\d+\:\d+\:\d+)\.\d+/$1/;
+            next if $word0 eq $hd1->_data('list_filter');
+            $hd1->_data('list_filter' => $word0);
+            @devices1b = $hd1->list_available_devices();
+            last FOUND1 if @devices1b && _is_different(\@devices0b,\@devices1b)
+            && _devices_not_in(\@devices0b, \@devices1b);
+        }
+    }
+}
+
+sub _devices_not_in($list1, $list2) {
+    my %list1 = map { $_ => 1 } @$list1;
+    my %list2 = map { $_ => 1 } @$list2;
+
+    for my $key (keys %list2 ) {
+        return 0 if exists $list1{$key};
+    }
+    return 1;
+}
+
+sub _is_different($list1, $list2) {
+
+    my $list1b = dclone($list1);
+    my $list2b = dclone($list2);
+    return 1 if scalar(@$list1b) != scalar(@$list2b);
+
+    my @list1c = sort(@$list1b);
+    my @list2c = sort(@$list2b);
+    for my $n (0 .. scalar (@list1c)-1) {
+        return 1 if $list1c[$n] ne $list2c[$n];
+    }
+    return 0;
+}
+
+sub test_change_hd_in_clone($domain) {
+
+    if (!$domain->is_base) {
+        my @args = ( uid => user_admin->id ,id_domain => $domain->id);
+
+        Ravada::Request->shutdown_domain(@args);
+        Ravada::Request->prepare_base(@args);
+    }
+    remove_domain($domain->clones);
+
+    my ($hd0, $hd1) = $domain->_vm->list_host_devices();
+
+    $hd1 = _create_mdev($domain->_vm) if !$hd1;
+    isnt($hd1->id, $hd0->id);
+
+    _filter_hds($hd0, $hd1);
+
+    die "Error: no available devices in ".$hd0->name
+    if scalar($hd0->list_available_devices) < 1;
+
+    die "Error: no available devices in ".$hd1->name
+    if scalar($hd1->list_available_devices) < 1;
+
+    my @args = ( uid => user_admin->id ,id_domain => $domain->id);
+    Ravada::Request->clone(@args, number => scalar($hd0->list_available_devices)-1);
+    wait_request(debug => 0);
+
+    _req_start($domain->clones);
+
+    my @clones = $domain->clones();
+    my $clone = Ravada::Domain->open($clones[0]->{id});
+    _req_shutdown($clone);
+
+    my $name = new_domain_name();
+    Ravada::Request->clone(@args, name => $name);
+    wait_request(debug => 0);
+    my $clone_new = rvd_back->search_domain($name);
+    _req_start($clone_new);
+
+    my @clone_hd = $clone->list_host_devices;
+    is($clone_hd[0]->id,$hd0->id);
+
+    my $req = Ravada::Request->remove_host_device(
+        uid => user_admin->id
+        ,id_domain => $clone->id
+        ,id_host_device => $hd0->id
+    );
+    wait_request();
+    is($req->error,'');
+
+    $clone->add_host_device($hd1->id);
+
+    rvd_back->_cmd_refresh_vms();
+
+    {
+    my $cloneb = Ravada::Domain->open($clone->id);
+
+    my @cloneb_hd = $cloneb->list_host_devices;
+    is($cloneb_hd[0]->id,$hd1->id);
+    }
+
+    _req_start($clone);
+
+    rvd_back->_cmd_refresh_vms();
+
+    {
+    my $cloneb = Ravada::Domain->open($clone->id);
+
+    my @cloneb_hd = $cloneb->list_host_devices;
+    is($cloneb_hd[0]->id,$hd1->id);
+    }
+
+    _req_shutdown($clone);
+
+    remove_domain(@clones, $clone_new);
+    $hd0->_data('list_filter' => '');
+    $hd1->remove();
+
+}
 
 sub test_base($domain) {
 
@@ -559,8 +789,20 @@ sub test_base($domain) {
         my $clone = Ravada::Domain->open($clone_data->{id});
         $clone->_attach_host_devices();
         test_config($clone);
+
+        test_clone_clone($clone_data->{id});
         $clone->remove(user_admin);
     }
+}
+
+sub test_clone_clone($id_clone) {
+    my $req = Ravada::Request->clone(
+        uid => user_admin->id
+        ,id_domain => $id_clone
+    );
+    wait_request(debug => 0);
+
+    is($req->error,'') or exit;
 }
 
 sub test_volatile_clones($vm, $domain, $host_device) {
@@ -581,7 +823,10 @@ sub test_volatile_clones($vm, $domain, $host_device) {
 
     my $n=2;
     my $max_n_device = $host_device->list_available_devices();
-    return if $max_n_device<2;
+    if ( $max_n_device<2 ) {
+        $domain->_data('volatile_clones' => 0);
+        return;
+    }
     my $exp_avail = $host_device->list_available_devices()- $n;
 
     Ravada::Request->clone(@args, number => $n, remote_ip => '1.2.3.4');
@@ -663,11 +908,13 @@ for my $vm_name ('KVM', 'Void' ) {
         } else {
             $BASE = import_domain($vm);
         }
-        test_mdev_kvm_state($vm);
         my ($domain, $host_device) = test_mdev($vm);
         test_volatile_clones($vm, $domain, $host_device);
+        test_change_hd_in_clone($domain);
+
         test_base($domain);
 
+        test_mdev_kvm_state($vm);
     }
 }
 

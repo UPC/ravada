@@ -1813,8 +1813,9 @@ sub set_memory {
     my $value = shift;
 
     my $max_mem = $self->get_max_mem();
-    confess "ERROR: invalid argument '$value': cannot set memory higher than max memory"
+    die "ERROR: invalid argument '$value': cannot set memory higher than max memory"
             ." ($max_mem)"
+            ."\n"
         if $value > $max_mem;
 
     $self->_set_memory_xml($value);
@@ -3079,7 +3080,7 @@ sub _change_hardware_vcpus($self, $index, $data) {
 
         };
         if ($@) {
-            warn $@;
+            warn "Error on set current ".$@;
             $self->_data('needs_restart' => 1) if $self->is_active;
         }
         my ($vcpus) = $doc->findnodes('/domain/vcpu');

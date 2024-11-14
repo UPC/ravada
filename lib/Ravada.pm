@@ -2941,7 +2941,9 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('domains','needs_restart','int not null default 0');
     $self->_upgrade_table('domains','shutdown_disconnected','int not null default 0');
+    $self->_upgrade_table('domains','shutdown_grace_time','int not null default 10');
     $self->_upgrade_table('domains','shutdown_timeout','int default null');
+    $self->_upgrade_table('domains','log_status','text');
     $self->_upgrade_table('domains','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
     $self->_upgrade_table('domains','balance_policy','int default 0');
 
@@ -5373,12 +5375,16 @@ sub _cmd_change_hardware {
 
     my $user = Ravada::Auth::SQL->search_by_id($uid);
 
+    my $info = $domain->info($user);
+
     die "Error: User ".$user->name." not allowed\n"
     unless $user->is_admin
     || $hardware eq 'memory'
     || ($hardware eq 'network'
         && $user->can_change_hardware_network($domain, $data)
        )
+    || ($hardware eq 'vcpus' && keys %$data == 1 && exists $data->{n_virt_cpu}
+            && $data->{n_virt_cpu} <= $info->{max_virt_cpu})
     ;
 
     $domain->change_hardware(
@@ -6523,12 +6529,15 @@ sub _shutdown_disconnected($self) {
         if ($is_active && $domain->client_status eq 'disconnected') {
             next if $self->_domain_just_started($domain) || $self->_verify_connection($domain);
             next if $req_shutdown;
+            next if !$domain->check_grace('disconnected');
             Ravada::Request->shutdown_domain(
                 uid => Ravada::Utils::user_daemon->id
                 ,id_domain => $domain->id
                 ,at => time + 120
                 ,check => 'disconnected'
             );
+            my $user = Ravada::Auth::SQL->search_by_id($domain->id_owner);
+            $user->send_message("The virtual machine has been disconnected for too long. Shutting down ".$dom->{name});
         } elsif ($req_shutdown) {
             $req_shutdown->status('done','Canceled') if $req_shutdown;
         }

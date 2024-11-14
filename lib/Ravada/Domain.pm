@@ -42,7 +42,7 @@ our $CONNECTOR;
 our $MIN_FREE_MEMORY = 1024*1024;
 our $IPTABLES_CHAIN = 'RAVADA';
 
-our %PROPAGATE_FIELD = map { $_ => 1} qw( run_timeout shutdown_disconnected);
+our %PROPAGATE_FIELD = map { $_ => 1} qw( run_timeout shutdown_disconnected shutdown_grace_time);
 
 our $TIME_CACHE_NETSTAT = 60; # seconds to cache netstat data output
 our $RETRY_SET_TIME=10;
@@ -2167,13 +2167,13 @@ sub info($self, $user) {
         ,autostart => $self->autostart
         ,volatile_clones => $self->volatile_clones
         ,id_vm => $self->_data('id_vm')
-        ,auto_compact => $self->auto_compact
+        ,auto_compact => ($self->auto_compact or 0)
         ,date_changed => $self->_data('date_changed')
         ,is_volatile => $self->_data('is_volatile')
     };
 
     $info->{alias} = ( $self->_data('alias') or $info->{name} );
-    for (qw(comment screenshot id_owner shutdown_disconnected is_compacted has_backups balance_policy)) {
+    for (qw(comment screenshot id_owner shutdown_disconnected is_compacted has_backups balance_policy shutdown_grace_time shutdown_timeout)) {
         $info->{$_} = $self->_data($_);
     }
     if ($self->is_known() ) {
@@ -3291,6 +3291,7 @@ sub _post_shutdown {
     $self->needs_restart(0) if $self->is_known()
                                 && $self->needs_restart()
                                 && !$is_active;
+    $self->clean_status('disconnected');
 }
 
 sub _schedule_compact($self) {
@@ -5818,7 +5819,41 @@ sub client_status($self, $force=0) {
     $self->_data('client_status', $status);
     $self->_data('client_status_time_checked', time );
 
+    if ($self->_data('shutdown_grace_time')) {
+        if ($status eq 'disconnected') {
+            $self->log_status($status);
+        } else {
+            $self->clean_status('disconnected');
+        }
+    }
+
     return $status;
+}
+sub clean_status($self, $type) {
+    my $json_status = $self->_data('log_status');
+    my $h_status = {};
+    if ($json_status) {
+        eval { $h_status = decode_json($json_status) };
+        $h_status = {} if $@;
+    }
+    $h_status->{disconnected} = [];
+    $self->_data('log_status', encode_json($h_status));
+}
+
+sub log_status($self, $type) {
+    my $json_status = $self->_data('log_status');
+    my $h_status = {};
+    if ($json_status) {
+        eval { $h_status = decode_json($json_status) };
+        $h_status = {} if $@;
+    }
+    my $time = time();
+    for my $old ( @{$h_status->{$type}} ) {
+        return if $old >= $time-60;
+    }
+    push @{$h_status->{$type}},(time());
+
+    $self->_data('log_status', encode_json($h_status));
 }
 
 sub _run_netstat($self, $force=undef) {
@@ -7276,7 +7311,12 @@ sub add_host_device($self, $host_device) {
     my $id_hd = $host_device;
     $id_hd = $host_device->id if ref($host_device);
 
-    confess if !$id_hd;
+    my $sth0 = $$CONNECTOR->dbh->prepare("SELECT id FROM host_devices_domain "
+        ." WHERE id_host_device=? AND id_domain=?"
+    );
+    $sth0->execute($id_hd, $self->id);
+    my ($found) = $sth0->fetchrow;
+    return if $found;
 
     my $sth = $$CONNECTOR->dbh->prepare("INSERT INTO host_devices_domain "
         ."(id_host_device, id_domain) "
@@ -7997,4 +8037,27 @@ sub _volatile_active($self) {
     return 1;
 
 }
+
+sub check_grace($self,$type) {
+    return 1 if !$self->_data('shutdown_grace_time');
+    my $log_status = $self->_data('log_status');
+    return if !$log_status;
+    my $hash_status;
+    eval {
+        $hash_status= decode_json($log_status);
+    };
+    if ($@) {
+        warn "$@ : '$log_status'";
+        return;
+    }
+    my $log = $hash_status->{$type};
+    return if !$log;
+    my $old;
+    for my $current (@$log) {
+        $old = $current if !defined $old || $current<$old;
+    }
+    return 1 if time-$old >= 60*$self->_data('shutdown_grace_time');
+    return 0;
+}
+
 1;
