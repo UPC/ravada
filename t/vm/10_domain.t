@@ -321,7 +321,7 @@ sub test_shutdown {
     $domain->remove(user_admin);
 }
 
-sub test_auto_shutdown_disconnected($vm) {
+sub test_auto_shutdown_disconnected($vm, $grace=0) {
     my $base= create_domain($vm);
     $base->_data('shutdown_disconnected',1);
 
@@ -330,6 +330,11 @@ sub test_auto_shutdown_disconnected($vm) {
 
     my $clone = $base->clone(name => new_domain_name, user => user_admin);
     is($clone->_data('shutdown_disconnected'),1);
+    if ($grace) {
+        $clone->_data('shutdown_grace_time',2);
+    } else {
+        $clone->_data('shutdown_grace_time',0);
+    }
 
     $clone->start(user => user_admin, remote_ip => '1.2.3.4');
     for (1 .. 60) {
@@ -343,8 +348,27 @@ sub test_auto_shutdown_disconnected($vm) {
     wait_request(debug => 0);
     is($req->status,'done');
     is($req->error, '');
+    $req->_delete();
 
     my ($req_shutdown) = grep { $_->command =~ /shutdown/ } $clone->list_requests(1);
+
+    if ($grace) {
+        ok($clone->is_active && !$req_shutdown);
+        for my $n (0 .. 60 ) {
+            sleep 1 if $n;
+            my $req2=Ravada::Request->enforce_limits( _force => 1);
+            wait_request(request => $req2, skip => [],debug => 1);
+            is($req2->error,'');
+            ($req_shutdown) = grep { $_->command =~ /shutdown/ } $clone->list_requests(1);
+
+            last if (!$clone->is_active || $req_shutdown);
+            _mock_disconnected($clone);
+            my $sth = connector->dbh->prepare(
+                "DELETE FROM requests where command='enforce_limits'"
+            );
+            $sth->execute;
+        }
+    }
     ok(!$clone->is_active || $req_shutdown) or exit;
     is($req_shutdown->status,'requested') if $req_shutdown;
 
@@ -355,9 +379,26 @@ sub test_auto_shutdown_disconnected($vm) {
     is($req->error, '');
 
     like($req_shutdown->status,qr(done|requested)) if $req_shutdown;
+    my $json_log=$clone->_data('log_status');
+    my $log = decode_json($json_log);
+    my $disconnected = $log->{disconnected};
+    is_deeply($disconnected,[]);
 
     $clone->remove(user_admin);
     $base->remove(user_admin);
+}
+
+sub _mock_disconnected($domain, $minutes=2) {
+    my $json_status = $domain->_data('log_status');
+    my $h_status = {};
+    if ($json_status) {
+        eval { $h_status = decode_json($json_status) };
+        $h_status = {} if $@;
+    }
+    push @{$h_status->{'disconnected'}},(time()-$minutes*60);
+
+    $domain->_data('log_status', encode_json($h_status));
+
 }
 
 sub test_shutdown_paused_domain {
@@ -672,6 +713,7 @@ for my $vm_name ( vm_names() ) {
         test_vm_in_db($vm_name, $conf)    if $conf;
 
         test_shutdown($vm);
+        test_auto_shutdown_disconnected($vm,1);#grace
         test_auto_shutdown_disconnected($vm);
 
         test_vm_connect($vm_name, $host, $conf);

@@ -577,6 +577,7 @@ sub _around_create_domain {
         $domain->run_timeout($base->run_timeout)
             if defined $base->run_timeout();
         $domain->_data(shutdown_disconnected => $base->_data('shutdown_disconnected'));
+        $domain->_data(shutdown_grace_time => $base->_data('shutdown_grace_time'));
         for my $port ( $base->list_ports ) {
             my %port = %$port;
             delete @port{'id','id_domain','public_port','id_vm', 'is_secondary'};
@@ -2138,6 +2139,7 @@ sub balance_vm($self, $uid, $base=undef, $id_domain=undef, $host_devices=1) {
 
         if ($id_domain) {
             my @vms_all = $base->list_vms(0,1);
+            push @vms_all,($self) if !@vms_all;
             if ( $host_devices ) {
                 @vms = $self->_filter_host_devices($id_domain, @vms_all);
             } else {
@@ -2171,6 +2173,7 @@ sub _filter_host_devices($self, $id_domain, @vms_all) {
     my $domain = Ravada::Domain->open($id_domain);
 
     my @host_devices = $domain->list_host_devices();
+    return @vms_all if !@host_devices;
 
     my @vms;
     for my $vm (@vms_all) {

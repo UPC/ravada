@@ -507,3 +507,10 @@ td.box{
 .error {
     color: orange
 }
+
+label.small_row {
+    font-size: 80%;
+    font-weight: 600;
+    display: inline-block;
+    margin-bottom: .5rem;
+}
