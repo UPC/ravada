@@ -1,6 +1,6 @@
 ---
 name: ⚠️  Bug Report
-about: Report a reproducible bug in the current release of Ravda
+about: Report a reproducible bug in the current release of Ravada
 labels: ["bug"]
 ---
 body:
