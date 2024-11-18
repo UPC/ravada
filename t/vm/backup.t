@@ -387,6 +387,49 @@ sub backup_clash_user($vm) {
     #TODO
 }
 
+sub test_req_backup($vm) {
+    my $domain = create_domain($vm);
+    my $user = create_user();
+
+    my $req = Ravada::Request->backup(
+        uid => $user->id
+        ,id_domain => $domain->id
+    );
+    wait_request(check_error => 0);
+    like($req->error,qr/not authorized/i);
+
+    $domain->start(user_admin);
+
+    $req = Ravada::Request->backup(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request(check_error => 0);
+    like($req->error,qr/is active/i);
+
+    my $req_shutdown = Ravada::Request->shutdown_domain(
+        uid => user_admin->id
+        ,id_domain=> $domain->id
+    );
+    wait_request();
+
+    $req->redo();
+
+    wait_request();
+    is($req->error,'');
+    like($req->output,qr /\//);
+
+    remove_domain($domain);
+}
+
+sub test_req_restore($vm, $file) {
+    my $req = Ravada::Request->restore_backup(
+        uid => user_admin->id
+        ,file => $file
+    );
+    wait_request();
+}
+
 ########################################################################
 
 init();
@@ -402,6 +445,9 @@ for my $vm_name ( vm_names() ) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
+        my $file = test_req_backup($vm);
+        test_req_restore($vm, $file);
+
         backup_auto_start($vm);
 
         backup_clone_and_base($vm);
@@ -409,7 +455,6 @@ for my $vm_name ( vm_names() ) {
 
         backup_clone($vm);
         backup_clone_fail($vm);
-
         restore_from_file($vm);
         restore_from_file($vm,"remove");
 

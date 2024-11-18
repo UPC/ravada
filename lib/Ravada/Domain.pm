@@ -2633,7 +2633,7 @@ sub is_locked {
 
     $self->_init_connector() if !defined $$CONNECTOR;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,at_time FROM requests "
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,at_time,command FROM requests "
         ." WHERE id_domain=? AND status <> 'done'"
         ."   AND command <> 'open_exposed_ports'"
         ."   AND command <> 'open_iptables' "
@@ -2645,11 +2645,13 @@ sub is_locked {
         ."   AND command <> 'add_hardware'"
     );
     $sth->execute($self->id);
-    my ($id, $at_time) = $sth->fetchrow;
+    while (my ($id, $at_time,$command) = $sth->fetchrow) {
+        next if $at_time && $at_time - time > 1;
+        return $id;
+    };
     $sth->finish;
 
-    return 0 if $at_time && $at_time - time > 1;
-    return ($id or 0);
+    return 0;
 }
 
 =head2 id_owner

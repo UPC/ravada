@@ -6605,6 +6605,7 @@ sub _req_method {
 ,set_time => \&_cmd_set_time
 ,compact => \&_cmd_compact
 ,purge => \&_cmd_purge
+,backup => \&_cmd_backup
 
 ,list_storage_pools => \&_cmd_list_storage_pools
 ,active_storage_pool => \&_cmd_active_storage_pool
@@ -7277,6 +7278,18 @@ sub _cmd_move_volume($self, $request) {
     if ($volume !~ /\.iso$/) {
         $vm->remove_file($volume);
     }
+}
+
+sub _cmd_backup($self, $request) {
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized to backup"
+        if !$user->is_admin;
+
+    my $domain = Ravada::Domain->open($request->args('id_domain'));
+    die "Error: I can not backup while machine is active".$domain->name."\n"
+    if $domain->is_active;
+
+    $request->output($domain->backup());
 }
 
 =head2 set_debug_value

@@ -988,6 +988,7 @@ sub backup($rvd_back) {
     die "Error: please provide the virtual machine name to backup.\n"
     unless scalar(@ARGV);
 
+    my @reqs;
     for my $name (@ARGV) {
         my $dom;
         if ( $name =~ /^\d+$/ ) {
@@ -995,11 +996,44 @@ sub backup($rvd_back) {
         } else {
             $dom = $rvd_back->search_domain($name);
         }
+        if (!$dom) {
+            warn "Error: Unkonwn domain $name\n";
+            next;
+        }
         if ($dom->is_active) {
             warn "Error: $name is active, not backing up.\n";
             next;
         }
-        print $dom->backup()."\n";
+        print "Issuing backup of ".$dom->name."\n";
+        my $req = Ravada::Request->backup(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_domain => $dom->id
+        );
+        push @reqs,($req);
+    }
+
+    my $t0 = time;
+    for (;;) {
+        my $pending = 0;
+        my @reqs2;
+        for my $req (@reqs) {
+            if ($req->status eq 'done') {
+                print "Completed backup:\n  ";
+                if ($req->error) {
+                    print $req->error."\n";
+                }
+                print $req->output."\n" if$req->output;
+            } else {
+                push @reqs2,($req);
+            }
+        }
+        last if !@reqs2;
+        @reqs = @reqs2;
+        sleep 1;
+        if (time - $t0 > 10 ) {
+            print "Waiting for ".scalar(@reqs)." backups to finish\n";
+            $t0 = time;
+        }
     }
     exit 0;
 }
