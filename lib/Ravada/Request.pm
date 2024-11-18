@@ -136,6 +136,7 @@ our %VALID_ARG = (
     ,compact => { uid => 1, id_domain => 1 , keep_backup => 2 }
       ,purge => { uid => 1, id_domain => 1 }
       ,backup => { uid => 1, id_domain => 1, compress => 2}
+      ,restore_backup => { uid => 1, file => 1, id_domain => 2 }
 
     ,list_machine_types => { uid => 1, id_vm => 2, vm_type => 2}
     ,list_cpu_models => { uid => 1, id_domain => 1}

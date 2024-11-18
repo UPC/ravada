@@ -1038,21 +1038,55 @@ sub backup($rvd_back) {
     exit 0;
 }
 
+sub _confirm_restore($name) {
+    if ($ENV{TERM}) {
+            print "Virtual Machine $name already exists."
+            ." All the data will be overwritten."
+            ." Are you sure you want to restore a backup ?";
+            my $answer = <STDIN>;
+            return 0 unless $answer =~ /^y/i;
+    }
+    return 1;
+}
+
+
 sub restore($rvd_back) {
     die "Error: please provide the file to restore.\n"
     unless scalar(@ARGV);
 
+    my @reqs;
     for my $item (@ARGV) {
         if ($item =~ m{/}) {
-            my $dom = $rvd_back->restore_backup($item,1);
-            if ($dom) {
-                print $dom->name." restored successfuly.\n";
-            } else {
-                print "backup for $item aborted.\n";
-            }
+
+            my ($name) = $item =~ m{.*/(.*?).\d{4}-\d\d-\d\d_\d\d-\d\d-};
+            my $dom = $rvd_back->search_domain($name);
+            next if $dom && !_confirm_restore($name);
+            my $id_domain;
+            $id_domain = $dom->id if $dom;
+
+            push @reqs,(Ravada::Request->restore_backup(
+                    id_domain => $id_domain
+                    ,file => $item
+                    ,uid => Ravada::Utils::user_daemon->id
+                ));
         } else {
             warn "Error: I can't find '$item'. Plese pass the path with the backed up filename.\n";
         }
+    }
+
+    for (;;) {
+        last if !@reqs;
+        my @reqs2;
+        for my $req ( @reqs ) {
+            if ( $req->status eq 'done' ) {
+                warn $req->error if $req->error;
+                print $req->args('file')." restored.\n";
+                print(($req->output or '')."\n");
+                next;
+            }
+            push @reqs2,($req);
+        }
+        @reqs = @reqs2;
     }
 }
 
