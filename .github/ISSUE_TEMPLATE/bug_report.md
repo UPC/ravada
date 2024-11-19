@@ -2,7 +2,6 @@
 name: ⚠️  Bug Report
 about: Report a reproducible bug in the current release of Ravada
 labels: ["bug"]
----
 body:
   - type: markdown
     attributes:
@@ -80,3 +79,5 @@ body:
       placeholder: A TypeError exception was raised
     validations:
       required: true
+
+---
