@@ -146,7 +146,7 @@ sub backup($vm,$remove_user=undef) {
     }
 
     my ($backup) = $domain->list_backups();
-    $domain->restore_backup($backup,0);
+    $domain->restore_backup($backup);
 
     my @md5_restored = _vols_md5($domain);
     is_deeply(\@md5_restored, \@md5) or exit;
@@ -420,6 +420,10 @@ sub test_req_backup($vm) {
     like($req->output,qr /\//);
 
     remove_domain($domain);
+
+    my $file = $req->output;
+    chomp $file;
+    return $file;
 }
 
 sub test_req_restore($vm, $file) {

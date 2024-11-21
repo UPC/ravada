@@ -989,6 +989,7 @@ sub backup($rvd_back) {
     unless scalar(@ARGV);
 
     my @reqs;
+    my %dupe;
     for my $name (@ARGV) {
         my $dom;
         if ( $name =~ /^\d+$/ ) {
@@ -997,8 +998,11 @@ sub backup($rvd_back) {
             $dom = $rvd_back->search_domain($name);
         }
         if (!$dom) {
-            warn "Error: Unkonwn domain $name\n";
+            warn "Error: Unknown domain $name\n";
             next;
+        }
+        if ($dupe{$dom->name}++) {
+            warn "Warning: Backup of ".$dom->name." duplicated, requested only one.\n";
         }
         if ($dom->is_active) {
             warn "Error: $name is active, not backing up.\n";
@@ -1012,17 +1016,24 @@ sub backup($rvd_back) {
         push @reqs,($req);
     }
 
+    _wait_request(@reqs);
+    exit 0;
+}
+
+sub _wait_request(@reqs) {
     my $t0 = time;
     for (;;) {
+        last if !@reqs;
         my $pending = 0;
         my @reqs2;
         for my $req (@reqs) {
             if ($req->status eq 'done') {
-                print "Completed backup:\n  ";
+                print "Finished ".$req->command;
                 if ($req->error) {
-                    print $req->error."\n";
+                    warn $req->error."\n";
                 }
-                print $req->output."\n" if$req->output;
+                print "\n\t".$req->output if $req->output;
+                print "\n";
             } else {
                 push @reqs2,($req);
             }
@@ -1031,11 +1042,11 @@ sub backup($rvd_back) {
         @reqs = @reqs2;
         sleep 1;
         if (time - $t0 > 10 ) {
-            print "Waiting for ".scalar(@reqs)." backups to finish\n";
+            print "Waiting for ".scalar(@reqs)." requests to finish\n";
             $t0 = time;
         }
     }
-    exit 0;
+
 }
 
 sub _confirm_restore($name) {
@@ -1074,20 +1085,8 @@ sub restore($rvd_back) {
         }
     }
 
-    for (;;) {
-        last if !@reqs;
-        my @reqs2;
-        for my $req ( @reqs ) {
-            if ( $req->status eq 'done' ) {
-                warn $req->error if $req->error;
-                print $req->args('file')." restored.\n";
-                print(($req->output or '')."\n");
-                next;
-            }
-            push @reqs2,($req);
-        }
-        @reqs = @reqs2;
-    }
+    _wait_request(@reqs);
+    exit(0);
 }
 
 sub _list_domains($rvd_back
