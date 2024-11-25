@@ -108,6 +108,7 @@ create_domain
     wait_ip
 
     config_host_devices
+    create_host_devices
 
     end
 );
@@ -160,6 +161,17 @@ my $MNT_RVD= "/mnt/test_rvd";
 my $QEMU_NBD = `which qemu-nbd`;
 chomp $QEMU_NBD;
 my $NBD_LOADED;
+
+################################################
+#
+# Host Devices (HD)
+#
+
+my $HD_PATH = "/var/tmp/$</ravada/dev";
+my $HD_N_DEVICE = 0;
+my $MOCK_DEVICES = 0;
+
+#################################################
 
 my $FH_FW;
 my $FH_NODE;
@@ -3298,6 +3310,122 @@ sub _search_domain_by_name($name) {
     $sth->execute($name);
     my ($id) = $sth->fetchrow;
     return $id;
+}
+
+sub _create_mock_devices($vm, $n_devices, $type, $value="fff:fff") {
+
+    $MOCK_DEVICES=1;
+
+    $vm->run_command("mkdir","-p",$HD_PATH) if !$vm->file_exists($HD_PATH);
+
+    if ($vm->type eq 'KVM') {
+       return _create_mock_devices_kvm($vm, $n_devices, $type, $value );
+    } elsif ($vm->type eq 'Void') {
+       return _create_mock_devices_void($vm, $n_devices, $type, $value );
+    }
+}
+
+sub _create_mock_devices_void($vm, $n_devices, $type, $value="fff:fff") {
+
+    my $name = base_domain_name()."_${type} ID";
+
+    for my $n ( 1 .. $n_devices ) {
+        my $file= "$HD_PATH/${name} $HD_N_DEVICE$value${n} Foobar "
+            .$vm->name;
+        $vm->write_file($file,"fff6f017-3417-4ad3-b05e-17ae3e1a461".int(rand(10)));
+    }
+    $HD_N_DEVICE ++;
+
+    return ("find $HD_PATH/",$name);
+}
+
+sub _create_mock_devices_kvm($vm, $n_devices, $type, $value="fff:fff") {
+
+    my $name = base_domain_name()."_${type}_KVM ";
+    for my $n ( 1 .. $n_devices ) {
+        my $dev = _number($HD_N_DEVICE.$n);
+        my $bus = _number($HD_N_DEVICE.$n);
+        my $vendor = _hex($HD_N_DEVICE.$n);
+        my $id = _hex($HD_N_DEVICE.$n);
+
+        my $file= "$HD_PATH/${name} ".$vm->name
+        ." Bus $bus Device $dev: ID $vendor:$id";
+
+        $vm->write_file($file,"fff6f017-3417-4ad3-b05e-17ae3e1a461".int(rand(10)));
+    }
+    $HD_N_DEVICE ++;
+
+    return ("find $HD_PATH/",$name);
+
+}
+
+sub _number($value, $length=3) {
+    my $dev = $value;
+    for ( length($dev) .. $length-1) {
+        $dev .= int(rand(10));
+    }
+    return $dev;
+}
+
+sub _hex($value, $length=4) {
+    my $hex=$value;
+    for ( length($hex) .. $length-1) {
+        $hex .= chr(ord('a')+int(rand(7)));
+    }
+    return $hex;
+}
+
+sub create_host_devices($node, $number=3, $type=undef) {
+
+    $node = [ $node ] if !ref($node) || ref($node) ne 'ARRAY';
+    $number = [ $number ] if !ref($number);
+
+    my $vm = $node->[0];
+
+    my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
+    my ($first) = $templates->[0];
+    if ($type) {
+        ($first) = grep { $_->{name} =~ /$type/i } @$templates;
+        return if !$first && $type && $vm->type eq 'Void';
+        die "Error no template $type found in ".Dumper($templates) if !$first;
+    }
+
+    $vm->add_host_device(template => $first->{name});
+
+    my $config = config_host_devices($first->{name},0);
+
+    my ($hd, $found);
+    my @list_hostdev = $vm->list_host_devices();
+    ($hd) = $list_hostdev[-1];
+    if ($config) {
+        $hd->_data('list_filter' => $config);
+
+        my %devices_nodes = $hd->list_devices_nodes();
+
+        $found=1;
+        for my $n (0 .. scalar(@$node)-1) {
+            my $curr_node = $node->[$n];
+            my $devices = $devices_nodes{$curr_node->id};
+            $found=0 unless scalar(@$devices) >= $number->[0];
+        }
+        $MOCK_DEVICES=0;
+        return $hd if $found;
+
+    }
+    if ( $type && !$found ) {
+        $hd->remove;
+        return;
+    }
+    my ($list_command,$list_filter) = _create_mock_devices($node->[0], $number->[0], "USB" );
+    for my $i (1..scalar(@$node)-1) {
+        die "Error, missing number[$i] ".Dumper($number) unless defined $number->[$i];
+        _create_mock_devices($node->[$i], $number->[$i], "USB" );
+    }
+
+    $hd->_data('list_command',$list_command);
+    $hd->_data('list_filter',$list_filter);
+
+    return $hd;
 }
 
 
