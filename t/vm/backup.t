@@ -459,6 +459,7 @@ for my $vm_name ( vm_names() ) {
 
         backup_clone($vm);
         backup_clone_fail($vm);
+
         restore_from_file($vm);
         restore_from_file($vm,"remove");
 

@@ -1008,7 +1008,7 @@ sub backup($rvd_back) {
             warn "Error: $name is active, not backing up.\n";
             next;
         }
-        print "Issuing backup of ".$dom->name."\n";
+        print "Requesting backup of ".$dom->name."\n";
         my $req = Ravada::Request->backup(
             uid => Ravada::Utils::user_daemon->id
             ,id_domain => $dom->id
