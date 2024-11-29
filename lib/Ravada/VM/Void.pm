@@ -875,6 +875,36 @@ sub remove_storage_pool($self, $name) {
     $self->write_file($file_sp, Dump( \@sp2));
 }
 
+sub get_gpu_nvidia_status($self) {
+
+    my $file = Ravada::Front::Domain::Void::_config_dir()."/gpu/nvidia_smi.txt";
+
+    return undef if !$self->file_exists($file);
+
+    my $text = $self->read_file($file);
+
+    my %status;
+    my $current;
+    for my $line (split /\n/,$text) {
+       if ($line =~ /^\s+(VM Name).*?: (.*)/) {
+            $current = $2;
+            next;
+        }
+        my ($field, $value) = $line =~ /.*?(\w+)\s+\:\s+(\d+)\s+\%/;
+        if (!$field) {
+            ($field,$value) = $line =~ /.*?(\w+)\s+\:\s+(\d+)\s+MiB/;
+            $field = "Memory $field" if $field;
+        }
+        $status{$current}->{$field} = $value if $field && defined $value;
+    }
+
+    for my $name ( keys %status ) {
+        for my $field (keys %{$status{$name}} ) {
+            $self->log_status($name, $field, $status{$name}->{$field});
+        }
+    }
+}
+
 #########################################################################3
 
 1;

@@ -19,7 +19,12 @@ my $BASE;
 my $MOCK_MDEV;
 my $N_TIMERS;
 
+my $VGPU_ID = 3251658935;
 ####################################################################
+
+sub _vgpu_id() {
+    return $VGPU_ID++;
+}
 
 sub test_shutdown_inactive($vm) {
     my $name = new_domain_name();
@@ -64,6 +69,96 @@ sub _mock_inactive($domain, $minutes=2) {
 
 }
 
+sub _mock_nvidia_load($vm, $value={}) {
+
+    my @domains = $vm->list_domains(active => 1);
+
+    if (ref($vm) =~ /Void/) {
+        my $dir = Ravada::Front::Domain::Void::_config_dir()."/gpu";
+        mkdir $dir or die "$! $dir" if ! -e $dir;
+        my $file = "$dir/nvidia_smi.txt";
+        open my $out,">",$file or die "$! $file";
+        for my $n ( 41 .. 43 ) {
+            last if !@domains;
+            print $out "GPU 00000000:$n:00.0\n";
+            for ( 1 .. 3 ) {
+                my $domain = shift @domains;
+                my $vm_name = "";
+                $vm_name = $domain->name if $domain;
+                print $out "    vGPU ID                : "._vgpu_id()."\n";
+                print $out "        VM Name            : $vm_name\n";
+                print $out "        Utilization\n";
+                for my $item (qw(Gpu Memory Encoder Decoder Jpeg)) {
+                    my $current = 0;
+                    $current=$value->{$vm_name} if exists $value->{$vm_name};
+                    print $out "            $item            : $current %\n";
+                }
+            }
+        }
+        close $out;
+    } else {
+        die "TODO for ".ref($vm);
+    }
+}
+
+sub test_status($vm) {
+
+    my $dir = Ravada::Front::Domain::Void::_config_dir()."/gpu";
+    mkdir $dir or die "$! $dir" if ! -e $dir;
+    my $file = "$dir/nvidia_smi.txt";
+    unlink $file if -e $file;
+
+    my $out = $vm->get_gpu_nvidia_status();
+
+    is($out, undef);
+
+    my @clones;
+    for ( 1 .. 3 ) {
+        my $name = new_domain_name();
+        push @clones,($name);
+        Ravada::Request->clone(
+            uid => user_admin->id
+            ,id_domain => $BASE->id
+            ,name => $name
+            ,start => 1
+        );
+    }
+    wait_request();
+    _mock_nvidia_load($vm);
+
+    $vm->get_gpu_nvidia_status();
+
+    my %load;
+    my $n = 0;
+    for my $name (@clones) {
+        my $domain = $vm->search_domain($name);
+        my $status = $domain->_data('log_status');
+        my $data;
+        eval {
+            $data = decode_json($status);
+        };
+        my $info = $data->{vgpu}->{Gpu}->[-1];
+        my ($time) = keys %$info;
+        $load{$name} = ++$n;
+    }
+
+    _mock_nvidia_load($vm, \%load);
+
+    $vm->get_gpu_nvidia_status();
+    for my $name (@clones) {
+        my $domain = $vm->search_domain($name);
+        my $status = $domain->_data('log_status');
+        my $data;
+        eval {
+            $data = decode_json($status);
+        };
+        my $info = $data->{vgpu}->{Gpu}->[-1];
+        my ($time) = keys %$info;
+        is($info->{$time},$load{$name});
+    }
+
+    exit;
+}
 
 ####################################################################
 
@@ -91,6 +186,7 @@ for my $vm_name ('KVM', 'Void' ) {
             $BASE = import_domain($vm);
         }
 
+        test_status($vm);
         test_shutdown_inactive($vm);
     }
 }

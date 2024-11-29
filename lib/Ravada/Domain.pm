@@ -5840,7 +5840,7 @@ sub clean_status($self, $type) {
     $self->_data('log_status', encode_json($h_status));
 }
 
-sub log_status($self, $type) {
+sub log_status($self, $type, $value=undef , $prefix=undef) {
     my $json_status = $self->_data('log_status');
     my $h_status = {};
     if ($json_status) {
@@ -5851,7 +5851,13 @@ sub log_status($self, $type) {
     for my $old ( @{$h_status->{$type}} ) {
         return if $old >= $time-60;
     }
-    push @{$h_status->{$type}},(time());
+    if (!defined $value) {
+        push @{$h_status->{$type}},(time());
+    } elsif ($prefix) {
+        push @{$h_status->{$prefix}->{$type}},({ time() => $value });
+    } else {
+        push @{$h_status->{$type}},({ time() => $value });
+    }
 
     $self->_data('log_status', encode_json($h_status));
 }

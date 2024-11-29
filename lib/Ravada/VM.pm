@@ -3093,6 +3093,11 @@ sub list_files($self, $dir, $pattern=undef) {
     return $self->_list_files_remote($dir, $pattern);
 }
 
+sub log_status($self, $domain_name, $field, $value ) {
+    my $domain = $self->search_domain($domain_name);
+    $domain->log_status($field, $value, 'vgpu');
+}
+
 1;
 
 
