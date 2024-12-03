@@ -1468,7 +1468,7 @@ Returns if the virtual manager connection is available
 =cut
 
 sub ping($self, $option=undef, $cache=1) {
-    confess "ERROR: option unknown" if defined $option && $option ne 'debug';
+    confess "ERROR: option '$option'" if defined $option && $option ne 'debug';
 
     return 1 if $self->is_local();
 
@@ -1525,7 +1525,7 @@ sub _do_ping($self, $host, $debug=0) {
     $p->close();
 
     return if $>; # icmp ping requires root privilege
-    warn "trying icmp"   if $debug;
+    warn "trying icmp $host"   if $debug;
     $p= Net::Ping->new('icmp',2);
     eval { $ping_ok = $p->ping($host) };
     warn $@ if $@;

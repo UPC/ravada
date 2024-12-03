@@ -2060,6 +2060,7 @@ sub _unlock_all {
 }
 
 sub _clean_iptables_ravada($node) {
+    return if !$node->vm;
     my ($out, $err) = $node->run_command("iptables-save","-t","filter");
     is($err,'');
     for my $line (split /\n/,$out) {
@@ -2101,6 +2102,7 @@ sub _flush_forward($node=undef) {
 sub flush_rules_node($node) {
     _lock_fw();
     _clean_iptables_ravada($node);
+    $node->connect if !$node->vm;
     $node->create_iptables_chain($CHAIN);
     my ($out, $err) = $node->run_command("iptables","-F", $CHAIN);
     is($err,'');
@@ -2158,8 +2160,12 @@ sub flush_rules {
 sub _domain_node($node) {
     my $vm = rvd_back->search_vm('KVM','localhost');
     ok($vm) or die Dumper(rvd_back->_create_vm);
-    my $domain = $vm->search_domain($node->name, 1);
-    $domain = rvd_back->import_domain(name => $node->name
+
+    my $name = $node;
+    $name = $node->name if ref($node);
+
+    my $domain = $vm->search_domain($name, 1);
+    $domain = rvd_back->import_domain(name => $name
             ,user => user_admin->name
             ,vm => 'KVM'
             ,spinoff_disks => 0
@@ -2235,6 +2241,41 @@ sub shutdown_node($node) {
     is($node->ping(undef,0),0);
 }
 
+sub _set_node_ip_from_domain($node, $domain) {
+
+    return $node if !$domain->is_active;
+
+    for ( 1 .. 60 ) {
+        last if $domain->ip;
+        sleep 1;
+        diag("waiting for domain ip");
+    }
+
+    my $info = $domain->info(user_admin);
+    my @ip;
+    my $found=0;
+    for my $if (@{$info->{interfaces}}) {
+        for my $addr ( @{$if->{addrs}}) {
+            push @ip,($addr->{addr});
+            $found++ if $addr->{addr} eq $node->ip;
+        }
+    }
+
+    return $node if $node->_data('hostname') eq $ip[0]
+    && defined $ip[1] && $node->_data('public_ip') eq $ip[1]
+    && $found;
+
+    warn "reloading node with ip ".$node->ip." -> ".$domain->ip;
+    $node->_data('hostname' => $ip[0]);
+
+    if (defined $ip[1]) {
+        $node->_data('public_ip' => $ip[1]);
+    }
+    $node->_clean_cache();
+    return Ravada::VM->open($node->id);
+    confess $node->host if $node->host ne $domain->ip;
+}
+
 sub start_node($node) {
 
     confess "Undefined node"    if !defined $node;
@@ -2255,10 +2296,14 @@ sub start_node($node) {
 
     $domain->start(user => user_admin, remote_ip => '127.0.0.1')  if !$domain->is_active;
 
+
+    $node = _set_node_ip_from_domain($node, $domain);
+
     for ( 1 .. 60 ) {
-        last if $node->ping(undef,0); # no cache
+        last if $node->ping('debug',0); # no cache
         sleep 1;
         diag("Waiting for ping node ".$node->name." ".$node->ip." $_");#  if !($_ % 10);
+        $node = _set_node_ip_from_domain($node, $domain);
     }
 
     is($node->ping('debug',0),1,"[".$node->type."] Expecting ping node ".$node->name) or exit;
@@ -2320,6 +2365,7 @@ sub start_node($node) {
         $node->enabled(1);
         $node2 = Ravada::VM->open(id => $node->id);
         if ($node2) {
+            $node2 = _set_node_ip_from_domain($node2, $domain);
             last if $node2->is_active(1) && $node2->ip && $node2->_ssh;
             diag("Waiting for node ".$node2->name." active ... $_")  if !($_ % 10);
             $node2->disconnect();
@@ -2525,6 +2571,13 @@ sub _do_remote_node($vm_name, $remote_config) {
     my $node;
     my @list_nodes0 = rvd_front->list_vms;
 
+    my $domain = _domain_node($remote_config->{name});
+    if ($domain && $domain->ip) {
+        unlock_hash(%$remote_config);
+        $remote_config->{host} = $domain->ip;
+        lock_hash(%$remote_config);
+    }
+
     if (! $remote_config->{public_ip}) {
         unlock_hash(%$remote_config);
         delete $remote_config->{public_ip};
@@ -2561,7 +2614,9 @@ sub _do_remote_node($vm_name, $remote_config) {
     }
     start_node($node)   if !$node->is_active();
 
-    clean_remote_node($node);
+    $node->connect if !$node->vm;
+
+    clean_remote_node($node) if $node->vm;
 
     eval { $node->vm };
     is($@,'')   or return;

@@ -80,7 +80,7 @@ sub BUILD {
     Ravada::_init_config($self->config()) if $self->config;
     Ravada::Auth::init($Ravada::CONFIG);
     $CONNECTOR->dbh();
-    @VM_TYPES = @{$Ravada::CONFIG->{vm}};
+    @VM_TYPES = @{$Ravada::CONFIG->{vm}} if $Ravada::CONFIG->{vm};
 }
 
 =head2 list_bases
