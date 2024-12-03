@@ -1,83 +1,44 @@
 ---
-name: ⚠️  Bug Report
-about: Report a reproducible bug in the current release of Ravada
-labels: ["bug"]
-body:
-  - type: markdown
-    attributes:
-  - type: input
-    attributes:
-      label: Ravada version
-      description: What version of Ravada are you currently running?
-      placeholder: 
-    validations:
-      required: true
-  - type: dropdown
-    attributes:
-      label: Client/Server
-      description: What browser do you have?
-      options:
-        - "Server"
-        - "Client"
-    validations:
-      required: true
-  - type: dropdown 
-    attributes: 
-      label: Operating System 
-      description: What operating system are you using?
-      options: 
-        - "Ubuntu" 
-        - "Windows" 
-      visibleWhen: 
-        - field: Client/Server value: "Client" 
-    validations: 
-      required: true
-  - type: dropdown 
-    attributes: 
-      label: Operating System 
-      description: What operating system are you using? 
-      options: 
-        - "Ubuntu Server" 
-        - "Windows Server" 
-        - "Ubuntu" 
-        - "Windows" 
-        visibleWhen: 
-          - field: Client/Server value: "Server" 
-      validations: 
-        required: true
-  - type: dropdown
-    attributes:
-      label: Browser
-      description: What browser do you have?
-      options:
-        - "Firefox"
-        - "Chrome"
-        - "Microsoft Edge"
-        - "Opera"
-        - "Others"
-    validations:
-      required: true
-  - type: textarea
-    attributes:
-      label: Steps to Reproduce
-      description: >
-        A clear and concise description of what you expected to happen.
-      placeholder: |   
-    validations:
-      required: true
-  - type: textarea
-    attributes:
-      label: Expected Behavior
-      description: What did you expect to happen?
-      placeholder: 
-    validations:
-      required: true
-  - type: textarea
-    attributes:
-      label: Observed Behavior
-      description: What happened instead?
-      placeholder: A TypeError exception was raised
-    validations:
-      required: true
+name: Bug report
+about: Create a report to help us improve
+title: ''
+labels: ''
+assignees: ''
 
 ---
+
+**Describe the bug**
+A clear and concise description of what the bug is.
+
+**To Reproduce**
+Steps to reproduce the behavior:
+1. Go to '...'
+2. Click on '....'
+3. Scroll down to '....'
+4. See error
+
+**Expected behavior**
+A clear and concise description of what you expected to happen.
+
+**Screenshots**
+If applicable, add screenshots to help explain your problem.
+
+**Server (please complete the following information):**
+ - OS: [e.g. Ubuntu Server X]
+ - Browser [e.g. chrome, safari]
+ - Ravada Version [e.g. 0.6]
+
+**Client (please complete the following information):**
+ - Browser: [e.g. Firefox]
+ - OS: [e.g. Windows]
+ - Spice client version [e.g. 1.8]
+
+**Additional context**
+Add any other context about the problem here.
+
+Remember that courtesy and proper grammar go a long way.
+Please take the time to craft a precise, polite issue.
+We will do our best to help, but remember that this is an open source project - none of us are getting paid a salary to develop this project, or act as your personal support hotline ;-)
+
+Carefully search the [existing issues](https://github.com/UPC/ravada/issues), both opened and closed. Your question may have already been asked and answered before!
+
