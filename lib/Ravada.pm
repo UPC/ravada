@@ -6626,6 +6626,8 @@ sub _req_method {
 ,set_time => \&_cmd_set_time
 ,compact => \&_cmd_compact
 ,purge => \&_cmd_purge
+,backup => \&_cmd_backup
+,restore_backup => \&_cmd_restore_backup
 
 ,list_storage_pools => \&_cmd_list_storage_pools
 ,active_storage_pool => \&_cmd_active_storage_pool
@@ -7300,6 +7302,30 @@ sub _cmd_move_volume($self, $request) {
     }
 }
 
+sub _cmd_backup($self, $request) {
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized to backup"
+        if !$user->is_admin;
+
+    my $domain = Ravada::Domain->open($request->args('id_domain'));
+    die "Error: I can not backup while machine is active".$domain->name."\n"
+    if $domain->is_active;
+
+    $request->output($domain->backup());
+}
+
+sub _cmd_restore_backup($self, $request) {
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized to backup"
+        if !$user->is_admin;
+
+    my $file = $request->args('file');
+    die "Error: missing file  '$file'" if ! -e $file;
+
+    $self->restore_backup($file,0);
+    $request->output();
+}
+
 =head2 set_debug_value
 
 Sets debug global variable from setting
@@ -7337,8 +7363,18 @@ sub restore_backup($self, $file, $interactive=undef) {
         $interactive = $ENV{TERM};
     }
 
-    return Ravada::Domain::restore_backup(undef, $file, $interactive, $self);
+    my ($name) = $file =~ m{.*/(.*?).\d{4}-\d\d-\d\d_\d\d-\d\d-};
+    my $domain = $self->search_domain($name);
+
+    die "Error: ".$domain->name." is active, shut it down to restore.\n"
+    if $domain && $domain->is_active;
+
+    return if $domain && $interactive && !$self->_confirm_restore();
+
+    return Ravada::Domain::restore_backup($domain, $file);
 }
+
+
 
 sub _restore_backup_data($self, $file_data, $file_data_extra
                             ,$file_data_owner) {

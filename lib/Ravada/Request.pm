@@ -135,6 +135,8 @@ our %VALID_ARG = (
     }
     ,compact => { uid => 1, id_domain => 1 , keep_backup => 2 }
       ,purge => { uid => 1, id_domain => 1 }
+      ,backup => { uid => 1, id_domain => 1, compress => 2}
+      ,restore_backup => { uid => 1, file => 1, id_domain => 2 }
 
     ,list_machine_types => { uid => 1, id_vm => 2, vm_type => 2}
     ,list_cpu_models => { uid => 1, id_domain => 1}
@@ -192,7 +194,7 @@ our %CMD_SEND_MESSAGE = map { $_ => 1 }
             expose remove_expose
             rebase rebase_volumes
             shutdown_node reboot_node start_node
-            compact purge
+            compact purge backup
             start_domain
 
             create_network change_network remove_network
@@ -239,7 +241,7 @@ our %COMMAND = (
                     , 'remove_base_vm'
                     , 'screenshot'
                     , 'cleanup'
-                    , 'compact','spinoff'
+                    , 'compact','spinoff','backup'
                 ]
         ,priority => 20
     }

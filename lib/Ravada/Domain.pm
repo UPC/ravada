@@ -2633,7 +2633,7 @@ sub is_locked {
 
     $self->_init_connector() if !defined $$CONNECTOR;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,at_time FROM requests "
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,at_time,command FROM requests "
         ." WHERE id_domain=? AND status <> 'done'"
         ."   AND command <> 'open_exposed_ports'"
         ."   AND command <> 'open_iptables' "
@@ -2645,11 +2645,13 @@ sub is_locked {
         ."   AND command <> 'add_hardware'"
     );
     $sth->execute($self->id);
-    my ($id, $at_time) = $sth->fetchrow;
+    while (my ($id, $at_time,$command) = $sth->fetchrow) {
+        next if $at_time && $at_time - time > 1;
+        return $id;
+    };
     $sth->finish;
 
-    return 0 if $at_time && $at_time - time > 1;
-    return ($id or 0);
+    return 0;
 }
 
 =head2 id_owner
@@ -7729,17 +7731,6 @@ sub backup($self) {
     return $file_backup;
 }
 
-sub _confirm_restore($self) {
-    if ($ENV{TERM}) {
-            print "Virtual Machine ".$self->name." already exists."
-            ." All the data will be overwritten."
-            ." Are you sure you want to restore a backup ?";
-            my $answer = <STDIN>;
-            return 0 unless $answer =~ /^y/i;
-    }
-    return 1;
-}
-
 sub _parse_file($file) {
     CORE::open my $f,"<",$file or confess "$! $file";
     my $json = join "",<$f>;
@@ -7832,20 +7823,13 @@ sub _check_parent_base_volumes($data, $file) {
 
 }
 
-sub restore_backup($self, $backup, $interactive, $rvd_back=undef) {
+sub restore_backup($self, $backup) {
     my $file = $backup;
     $file = $backup->{file} if ref($backup);
 
     die "Error: missing file  '$file'" if ! -e $file;
 
     my ($name) = $file =~ m{.*/(.*?).\d{4}-\d\d-\d\d_\d\d-\d\d-};
-    if (!$self) {
-        $self = $rvd_back->search_domain($name);
-    }
-    die "Error: ".$self->name." is active, shut it down to restore.\n"
-    if $self && $self->is_active;
-
-    return if $self && $interactive && !$self->_confirm_restore();
 
     my $data = _extract_metadata($file,$name);
     _check_metadata_before_restore($data);
