@@ -1496,7 +1496,27 @@ sub _update_data {
     $self->_add_domain_drivers_cpu();
     $self->_add_domain_drivers_usb_controller();
 
+    $self->_clean_wrong_access_group();
     $self->_add_indexes();
+}
+
+sub _clean_wrong_access_group($self) {
+    my $sth = $self->_dbh->prepare(
+        "SELECT * FROM group_access"
+    );
+    my $sth_del = $self->_dbh->prepare(
+        "DELETE FROM group_access WHERE id=?"
+    );
+    my %dupe;
+    $sth->execute;
+    while ( my $row = $sth->fetchrow_hashref ) {
+        next if !$row;
+        my $key = $row->{id_domain}.":".$row->{id_group}.":".($row->{type} or '');
+        if ($dupe{$key}++) {
+            $sth_del->execute($row->{id});
+        }
+    }
+    $sth->finish;
 }
 
 sub _install_grants($self) {
@@ -1563,6 +1583,7 @@ sub _add_indexes_generic($self) {
         ]
         ,group_access => [
             "unique (id_domain,name,id_group)"
+            ,"unique (id_domain,id_group,type)"
             ,"index(id_domain)"
             ,"index(id_group)"
         ]
