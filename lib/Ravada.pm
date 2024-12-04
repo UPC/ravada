@@ -1511,7 +1511,7 @@ sub _clean_wrong_access_group($self) {
     $sth->execute;
     while ( my $row = $sth->fetchrow_hashref ) {
         next if !$row;
-        my $key = $row->{id_domain}.":".$row->{id_group}.":".($row->{type} or '');
+        my $key = $row->{id_domain}.":".($row->{id_group} or 0).":".($row->{name} or '').":".($row->{type} or '');
         if ($dupe{$key}++) {
             $sth_del->execute($row->{id});
         }
@@ -1584,6 +1584,7 @@ sub _add_indexes_generic($self) {
         ,group_access => [
             "unique (id_domain,name,id_group)"
             ,"unique (id_domain,id_group,type)"
+            ,"unique (id_domain,name,type)"
             ,"index(id_domain)"
             ,"index(id_group)"
         ]
