@@ -473,6 +473,79 @@ sub test_maintenance() {
 
 }
 
+sub test_dupe($vm) {
+
+    my @domain;
+    for ( 1 ..3 ) {
+        my $domain = create_domain($vm);
+        push @domain,($domain);
+    }
+    my $g_name = new_domain_name();
+    my $group0 = Ravada::Auth::Group::add_group(name => $g_name);
+
+    my $g_name3 = new_domain_name();
+    my $group3 = Ravada::Auth::Group::add_group(name => $g_name3);
+
+    my $sth = connector->dbh->prepare(
+        "INSERT INTO group_access (id_domain, id_group, name, type) "
+        ." VALUES (?,?,?,?)"
+    );
+    my @data = ($domain[0]->id,$group0->id,undef,'local');
+    $sth->execute(@data);
+    eval {
+    $sth->execute(@data);
+    };
+    like($@,qr/UNIQUE constraint/i) if $@;
+
+    my @data2 = ($domain[1]->id,undef,new_domain_name(),'ldap');
+
+    $sth->execute(@data2);
+    eval { $sth->execute(@data2); };
+    like($@,qr/UNIQUE constraint/i) if $@;
+
+    my @data3 = ($domain[2]->id,$group3->id,new_domain_name(),'ldap');
+
+    $sth->execute(@data3);
+    eval { $sth->execute(@data3); };
+    like($@,qr/UNIQUE constraint/i) if $@;
+
+    $sth->finish;
+
+    my $sth_count = connector->dbh->prepare(
+        "SELECT count(*) FROM group_access WHERE id_domain=?"
+    );
+    for my $domain (@domain) {
+        $sth_count->execute($domain->id);
+        my ($count) = $sth_count->fetchrow;
+        is($count,1,"Expecting 1 entry for id_domain=".$domain->id);
+    }
+
+    my @data1b = ($domain[0]->id,$group3->id,undef,'local');
+    $sth->execute(@data1b);
+
+    my @data2b = ($domain[1]->id,undef,new_domain_name(),'ldap');
+    $sth->execute(@data2b);
+
+    my $g_name3b = new_domain_name();
+    my $group3b = Ravada::Auth::Group::add_group(name => $g_name3b);
+    my @data3b = ($domain[2]->id,$group3b->id,new_domain_name(),'ldap');
+    $sth->execute(@data3b);
+
+    for my $domain (@domain) {
+        $sth_count->execute($domain->id);
+        my ($count) = $sth_count->fetchrow;
+        is($count,2,"Expecting 2 entries for id_domain=".$domain->id);
+    }
+
+    remove_domain(@domain);
+    for my $domain (@domain) {
+        $sth_count->execute($domain->id);
+        my ($count) = $sth_count->fetchrow;
+        is($count,0,"Expecting 0 entries for id_domain=".$domain->id);
+    }
+
+}
+
 ###########################################################################
 
 for my $vm_name (reverse vm_names()) {
@@ -488,6 +561,7 @@ for my $vm_name (reverse vm_names()) {
         skip($msg,10)   if !$vm;
         diag("Testing access restrictions in domain for $vm_name");
 
+        test_dupe($vm);
         test_access_by_group_ldap($vm);
         test_access_by_group_ldap($vm,'group.ldap');
         test_access_by_group_sql($vm);
