@@ -1307,8 +1307,4 @@ sub config_files($self) {
     return $self->_config_file();
 }
 
-sub gpu_active($self) {
-    return 1;
-}
-
 1;

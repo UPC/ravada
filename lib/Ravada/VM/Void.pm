@@ -895,12 +895,21 @@ sub get_gpu_nvidia_status($self) {
             ($field,$value) = $line =~ /.*?(\w+)\s+\:\s+(\d+)\s+MiB/;
             $field = "Memory $field" if $field;
         }
-        $status{$current}->{$field} = $value if $field && defined $value;
+        $status{$current}->{$field} = $value if $field && defined $value
+        && $field =~ /Gpu|Memory/;
     }
 
     for my $name ( keys %status ) {
+        my $domain = $self->search_domain($name);
+        my $active_gpu = 0;
         for my $field (keys %{$status{$name}} ) {
-            $self->log_status($name, $field, $status{$name}->{$field});
+            $domain->log_status($field, $status{$name}->{$field}, 'vgpu');
+            $active_gpu++ if $field =~ /Gpu|Memory/ && $status{$name}->{$field};
+        }
+        if ($active_gpu) {
+            $domain->clean_status('gpu_inactive' );
+        } else {
+            $domain->log_status('gpu_inactive');
         }
     }
 }

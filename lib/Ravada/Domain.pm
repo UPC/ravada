@@ -3164,6 +3164,9 @@ sub _pre_shutdown {
         if ($check eq 'disconnected') {
             die "Virtual machine reconnected"
             if $self->client_status ne 'disconnected';
+        } elsif ($check eq 'gpu_inactive') {
+            die "Virtual machine GPU active again"
+            if $self->gpu_active;
         } elsif ($check) {
             confess "Error: unknown shutdown check '$check'";
         }
@@ -5834,9 +5837,10 @@ sub clean_status($self, $type) {
     my $h_status = {};
     if ($json_status) {
         eval { $h_status = decode_json($json_status) };
+        warn "$json_status : $@" if $@;
         $h_status = {} if $@;
     }
-    $h_status->{disconnected} = [];
+    $h_status->{$type} = [];
     $self->_data('log_status', encode_json($h_status));
 }
 
@@ -5854,9 +5858,9 @@ sub log_status($self, $type, $value=undef , $prefix=undef) {
     if (!defined $value) {
         push @{$h_status->{$type}},(time());
     } elsif ($prefix) {
-        push @{$h_status->{$prefix}->{$type}},({ time() => $value });
+        push @{$h_status->{$prefix}->{$type}},( [ time() => $value ]);
     } else {
-        push @{$h_status->{$type}},({ time() => $value });
+        push @{$h_status->{$type}},( [ time() => $value ]);
     }
 
     $self->_data('log_status', encode_json($h_status));
@@ -8063,6 +8067,29 @@ sub check_grace($self,$type) {
         $old = $current if !defined $old || $current<$old;
     }
     return 1 if time-$old >= 60*$self->_data('shutdown_grace_time');
+    return 0;
+}
+
+sub gpu_active($self) {
+    my $status_json = $self->_data('log_status');
+    return if !$status_json;
+    my $status;
+    eval {
+        $status = decode_json($status_json);
+    };
+    warn "Warning: I can't decode json '$status_json' $@"
+    if $@;
+
+    my $gpu_inactive = $status->{gpu_inactive};
+    return 1 if !$gpu_inactive || !ref($gpu_inactive);
+
+    my @times = sort @$gpu_inactive;
+    return 1 if !scalar(@times);
+
+    my $last = pop @times;
+
+    return undef if time - $last > 120;
+
     return 0;
 }
 
