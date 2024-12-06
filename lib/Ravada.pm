@@ -6664,6 +6664,7 @@ sub _req_method {
     ,manage_pools => \&_cmd_manage_pools
     ,list_host_devices => \&_cmd_list_host_devices
     ,remove_host_device => \&_cmd_remove_host_device
+    ,check_gpu_status => \&_cmd_check_gpu_status
 
     ,discover => \&_cmd_discover
     ,import_domain => \&_cmd_import
@@ -7308,6 +7309,28 @@ sub _cmd_move_volume($self, $request) {
     if ($volume !~ /\.iso$/) {
         $vm->remove_file($volume);
     }
+}
+
+sub _cmd_check_gpu_status($self, $request) {
+    my $vm = Ravada::VM->open($request->args('id_node'));
+
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized to check gpu status"
+        if !$user->is_admin;
+
+    my $found;
+    for my $n (1 .. 100) {
+        my $out = $vm->get_gpu_nvidia_status();
+        warn Dumper([$request->id, $n, $vm->name,$out]);
+        $found++ if $out;
+        last if !$found && $n>=10;
+        sleep 1;
+    }
+    Ravada::Request->check_gpu_status(
+        id_node => $vm->id
+        ,uid => $user->id
+        ,at => time + 60
+    ) if $found;
 }
 
 =head2 set_debug_value

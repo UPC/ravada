@@ -30,7 +30,10 @@ sub test_shutdown_inactive($vm, $connected=0) {
     my $name = new_domain_name();
     my $clone = $BASE->clone( name => $name, user => user_admin);
 
-    my $hd = create_host_devices($vm);
+    my $hd = create_host_devices($vm,3,"GPU Mediated");
+    die "I can't find mock GPU Mediated" if !$hd && $vm->type eq 'Void';
+
+    return if !$hd;
     $clone->add_host_device($hd);
 
     $clone->_data('shutdown_inactive_gpu' => 1);
@@ -49,7 +52,11 @@ sub test_shutdown_inactive_but_connected($vm) {
     test_shutdown_inactive($vm, 1);
 }
 
-sub _wait_shutdown($domain, $connected=0) {
+sub test_shutdown_inactive_but_connected_keep_up($vm) {
+    test_shutdown_inactive($vm, 1, 1);
+}
+
+sub _wait_shutdown($domain, $connected=0, $keep=0) {
     diag("Waiting for shutdown, connected=$connected ".$domain->name);
     my $req_shutdown;
     for my $n (0 .. 5 ) {
@@ -79,7 +86,11 @@ sub _wait_shutdown($domain, $connected=0) {
         );
         $sth->execute;
     }
-    ok(!$domain->is_active || $req_shutdown) or exit;
+    if ($keep ) {
+        ok($domain->is_active && !$req_shutdown, "Expecting kept up while connected");
+    } else {
+        ok(!$domain->is_active || $req_shutdown) or exit;
+    }
 
 }
 
@@ -98,11 +109,10 @@ sub _mock_inactive($domain, $minutes=2) {
 
 sub _mock_nvidia_load($vm, $value={}) {
 
-    my @domains = $vm->list_domains(active => 1);
-
     _rewind_vgpu_status($vm);
 
     if (ref($vm) =~ /Void/) {
+        my @domains = $vm->list_domains(active => 1);
         my $dir = Ravada::Front::Domain::Void::_config_dir()."/gpu";
         mkdir $dir or die "$! $dir" if ! -e $dir;
         my $file = "$dir/nvidia_smi.txt";
@@ -125,8 +135,6 @@ sub _mock_nvidia_load($vm, $value={}) {
             }
         }
         close $out;
-    } else {
-        die "TODO for ".ref($vm);
     }
     $vm->get_gpu_nvidia_status();
 }
@@ -196,7 +204,9 @@ sub _create_clones($BASE, $n=3) {
     return @clones;
 }
 
-sub test_status($vm) {
+sub _clean_mock_status($vm) {
+
+    return if $vm->type ne 'Void';
 
     my $dir = Ravada::Front::Domain::Void::_config_dir()."/gpu";
     mkdir $dir or die "$! $dir" if ! -e $dir;
@@ -206,6 +216,13 @@ sub test_status($vm) {
     my $out = $vm->get_gpu_nvidia_status();
 
     is($out, undef);
+}
+
+sub test_status($vm) {
+
+    return if !defined $vm->get_nvidia_smi();
+
+    _clean_mock_status($vm);
 
     my $grace_mins = 2;
     my $base = $BASE->clone(name => new_domain_name() , user => user_admin);
@@ -274,6 +291,9 @@ for my $vm_name ('KVM', 'Void' ) {
 
         test_shutdown_inactive($vm);
         test_shutdown_inactive_but_connected($vm);
+
+        # TODO
+        # test_shutdown_inactive_but_connected_keep_up($vm);
         test_status($vm);
 
     }

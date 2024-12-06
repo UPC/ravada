@@ -3234,4 +3234,11 @@ sub change_network($self, $data) {
     return $changed;
 }
 
+sub get_nvidia_smi($self) {
+    my $nvidia_smi = $self->_which("nvidia-smi");
+    return if !$nvidia_smi;
+    my ($out, $err) = $self->run($nvidia_smi,"vgpu","-q");
+    return $out;
+}
+
 1;

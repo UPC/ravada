@@ -161,6 +161,10 @@ our %VALID_ARG = (
         ,id_host_device => 1
         ,id_domain => 2
     }
+    ,check_gpu_status => {
+        uid => 1
+        ,id_node => 1
+    }
 
     ,discover => { uid => 1, id_vm => 1 }
     ,import_domain => { uid => 1, vm => 1, id_owner => 1, name => 1
@@ -269,6 +273,10 @@ our %COMMAND = (
         limit => 4
         ,priority => 2
         ,commands => ['open_exposed_ports']
+    }
+    ,daemon => {
+        limit => 10
+        ,commands => [ 'check_gpu_status' ]
     }
 );
 lock_hash %COMMAND;

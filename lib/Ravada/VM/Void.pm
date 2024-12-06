@@ -875,43 +875,19 @@ sub remove_storage_pool($self, $name) {
     $self->write_file($file_sp, Dump( \@sp2));
 }
 
-sub get_gpu_nvidia_status($self) {
+sub get_nvidia_smi($self) {
 
-    my $file = Ravada::Front::Domain::Void::_config_dir()."/gpu/nvidia_smi.txt";
+    my $dir = Ravada::Front::Domain::Void::_config_dir()."/gpu";
+    mkdir $dir or die "$! $dir" if ! -e $dir;
 
-    return undef if !$self->file_exists($file);
+    my $file = "$dir/nvidia_smi.txt";
+
+    return  '' if !$self->file_exists($file);
 
     my $text = $self->read_file($file);
 
-    my %status;
-    my $current;
-    for my $line (split /\n/,$text) {
-       if ($line =~ /^\s+(VM Name).*?: (.*)/) {
-            $current = $2;
-            next;
-        }
-        my ($field, $value) = $line =~ /.*?(\w+)\s+\:\s+(\d+)\s+\%/;
-        if (!$field) {
-            ($field,$value) = $line =~ /.*?(\w+)\s+\:\s+(\d+)\s+MiB/;
-            $field = "Memory $field" if $field;
-        }
-        $status{$current}->{$field} = $value if $field && defined $value
-        && $field =~ /Gpu|Memory/;
-    }
+    return $text;
 
-    for my $name ( keys %status ) {
-        my $domain = $self->search_domain($name);
-        my $active_gpu = 0;
-        for my $field (keys %{$status{$name}} ) {
-            $domain->log_status($field, $status{$name}->{$field}, 'vgpu');
-            $active_gpu++ if $field =~ /Gpu|Memory/ && $status{$name}->{$field};
-        }
-        if ($active_gpu) {
-            $domain->clean_status('gpu_inactive' );
-        } else {
-            $domain->log_status('gpu_inactive');
-        }
-    }
 }
 
 #########################################################################3

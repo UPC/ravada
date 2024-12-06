@@ -181,7 +181,7 @@
                     <%=l 'Virtual Machine will start on host start.' %></small>
                 </div>
             </div>
-            <div ng-class="{'mb-3 border': new_option.shutdown_disconnected }">
+            <div ng-class="{'mb-3 border': new_option.shutdown_disconnected || new_option.shutdown_inactive_gpu }">
             <div class="row">
                 <div class="col-lg-3 m-0" align="right">
                     <label class="small_row" for="shutdown_disconnected"><%=l 'Shutdown disconnected' %></label>
@@ -196,7 +196,22 @@
                     <%=l 'Virtual Machine will be shutdown when user disconnects.' %></small>
                 </div>
             </div>
-            <div class="row" ng-show="new_option.shutdown_disconnected">
+            <div class="row">
+                <div class="col-lg-3 m-0" align="right">
+                    <label class="small_row" for="shutdown_inactive_gpu"><%=l 'Shutdown when GPU inactive' %></label>
+                </div>
+                <div class="col-lg-2">
+                    <input type="checkbox" ng-model="new_option.shutdown_inactive_gpu" name="shutdown_inactive_gpu"
+                    ng-disabled="<%= !$USER->is_admin %>"
+                    ng-true-value="1" ng-false-value="0"
+                    >
+                </div>
+                <div class="col-md-7"><small class="text-secondary">
+                    <%=l 'Virtual Machine will be shutdown when GPU is inactive.' %></small>
+                </div>
+            </div>
+
+            <div class="row" ng-show="new_option.shutdown_disconnected || new_option.shutdown_inactive_gpu">
                 <div class="col-lg-3 mt-0 mb-2" align="right">
                     <label class="small" for="shutdown_grace_time"><%=l 'Shutdown grace time' %></label>
                 </div>
