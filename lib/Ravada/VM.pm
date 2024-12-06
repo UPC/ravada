@@ -3116,7 +3116,7 @@ sub get_gpu_nvidia_status($self) {
 
     for my $name ( keys %status ) {
         my $domain = $self->search_domain($name);
-        if ( !$domain ) {
+        if ( !$domain || !$domain->is_known) {
             delete $status{$name};
             next;
         }
