@@ -203,14 +203,24 @@ sub config_host_devices($type, $die=1) {
     }
     eval { $config = LoadFile($FILE_CONFIG_HOST_DEVICES) };
 
-    die "Error loading $FILE_CONFIG_HOST_DEVICES $@" if $@;
-
     $type = lc($type);
     $type = 'usb' if $type =~ /usb/i;
     $type = 'pci' if $type =~ /pci/i;
+
+    return $config->{$type} if exists $config->{$type} && $config->{$type};
+
+    if ( $type =~ /mediated/i ) {
+        for my $key (sort keys %$config) {
+            die "Error: missing key '$key'" if !exists $config->{$key}
+            || !defined $config->{$key};
+            return $config->{$key} if $key =~ /mediated/i;
+        }
+    }
+
     confess "Error: no host devices config in $FILE_CONFIG_HOST_DEVICES for $type"
-    if ( !exists $config->{$type} || !$config->{$type} ) && $die;
-    return $config->{$type};
+    if $die;
+
+    return undef;
 }
 
 sub user {
@@ -3385,9 +3395,9 @@ sub create_host_devices($node, $number=3, $type=undef) {
     my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
     my ($first) = $templates->[0];
     if ($type) {
-        ($first) = grep { $_->{name} =~ /$type/i } @$templates;
+        ($first) = grep {$_->{name} eq $type || $_->{name} =~ /$type/i } @$templates;
         return if !$first && $type && $vm->type eq 'Void';
-        die "Error no template $type found in ".Dumper($templates) if !$first;
+        die "Error no template $type found in ".Dumper([map { $_->{name} } @$templates]) if !$first;
     }
 
     $vm->add_host_device(template => $first->{name});
@@ -3397,7 +3407,7 @@ sub create_host_devices($node, $number=3, $type=undef) {
     my ($hd, $found);
     my @list_hostdev = $vm->list_host_devices();
     ($hd) = $list_hostdev[-1];
-    if ($config) {
+    if (defined $config) {
         $hd->_data('list_filter' => $config);
 
         my %devices_nodes = $hd->list_devices_nodes();

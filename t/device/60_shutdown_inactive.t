@@ -26,14 +26,56 @@ sub _vgpu_id() {
     return $VGPU_ID++;
 }
 
+sub _check_used_mdev($vm, $hd) {
+    return $hd->list_available_devices() if $vm->type eq 'Void';
+
+    my @active = $vm->vm->list_domains;
+    for my $dom (@active) {
+        my $doc = XML::LibXML->load_xml(string => $dom->get_xml_description);
+
+        my $hd_path = "/domain/devices/hostdev/source/address";
+        my ($hostdev) = $doc->findnodes($hd_path);
+        next if !$hostdev;
+
+        my $uuid = $hostdev->getAttribute('uuid');
+        if (!$uuid) {
+            warn "No uuid in ".$hostdev->toString;
+            next;
+        }
+        my $dom_imported = rvd_front->search_domain($dom->get_name);
+        $dom_imported = $vm->import_domain($dom->get_name,user_admin)
+        unless $dom_imported;
+
+        $dom_imported->_data('status' => 'active');
+
+        $dom_imported->add_host_device($hd->id);
+        my ($dev) = grep /^$uuid/, $hd->list_devices;
+        if (!$dev) {
+            warn "No $uuid found in mdevctl list";
+            next;
+        }
+
+        diag($dom_imported->name." imported");
+        $dom_imported->_lock_host_device($hd, $dev);
+    }
+    return $hd->list_available_devices();
+}
+
+
 sub test_shutdown_inactive($vm, $connected=0) {
     my $name = new_domain_name();
     my $clone = $BASE->clone( name => $name, user => user_admin);
 
-    my $hd = create_host_devices($vm,3,"GPU Mediated");
+    my $hd = create_host_devices($vm,3,"GPU Mediated Device (display)");
     die "I can't find mock GPU Mediated" if !$hd && $vm->type eq 'Void';
 
-    return if !$hd;
+    _check_used_mdev($vm, $hd);
+
+    if ( !$hd ) {
+        diag("Warning: I can't find GPU Mediated devices in ".$vm->name);
+        exit;
+        return;
+    }
     $clone->add_host_device($hd);
 
     $clone->_data('shutdown_inactive_gpu' => 1);
@@ -166,6 +208,7 @@ sub _test_gpu_load($vm , $clones, $load) {
             $data = decode_json($status);
         };
         my $info = $data->{vgpu}->{Gpu}->[-1];
+        is(ref($info),'ARRAY') or die Dumper([$name,$data]);
         my ($time, $value) = @{$info};
         ok($time,"expecting time in info ".Dumper($info)) or next;
 
@@ -200,7 +243,7 @@ sub _create_clones($BASE, $n=3) {
             ,start => 1
         );
     }
-    wait_request();
+    wait_request( debug => 0);
     return @clones;
 }
 
@@ -227,20 +270,33 @@ sub test_status($vm) {
     my $grace_mins = 2;
     my $base = $BASE->clone(name => new_domain_name() , user => user_admin);
     $base->_data('shutdown_inactive_gpu' => 1);
+    $base->_data('shutdown_disconnected' => 0);
     $base->_data('shutdown_grace_time' => $grace_mins);
+    my $hd = create_host_devices($vm,3,"GPU Mediated");
+    die "I can't find mock GPU Mediated" if !$hd && $vm->type eq 'Void';
+
+    return if !$hd;
+    $base->add_host_device($hd);
 
     my @clones = _create_clones($base, 3);
     _mock_nvidia_load($vm);
 
     my %load;
+    my @domains;
     for my $name ( @clones ) {
         $load{$name} = 0;
+        my $curr = $vm->search_domain($name);
+        is($curr->is_active,1) or die "Expecting $name active";
     }
 
     _test_gpu_load($vm , \@clones, \%load);
 
     _increase_load(\@clones, \%load);
     _mock_nvidia_load($vm, \%load);
+
+    for my $dom ( @domains ) {
+        is($dom->is_active,1,"Expecting ".$dom->name." active") or exit;
+    }
 
     _increase_load(\@clones, \%load);
     _mock_nvidia_load($vm, \%load);
@@ -254,6 +310,8 @@ sub test_status($vm) {
 
     my $domain = $vm->search_domain($second);
     my $status = decode_json($domain->_data('log_status'));
+    is($domain->is_active,1) or die $domain->name;
+
     _rewind_vgpu_status($vm,30);
 
     _mock_nvidia_load($vm, \%load);
