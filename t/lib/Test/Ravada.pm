@@ -3412,6 +3412,7 @@ sub create_host_devices($node, $number=3, $type=undef) {
         return $hd if $found;
 
     }
+    return $hd if $vm->type eq 'Void';
     if ( $type && !$found ) {
         $hd->remove;
         return;

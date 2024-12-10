@@ -155,8 +155,25 @@ sub clean_hds() {
     $sth->execute(base_domain_name().'%');
 
     while (my ($id) = $sth->fetchrow ) {
+        mojo_check_login($t);
         $t->get_ok('/node/host_device/remove/'.$id)->status_is(200);
     }
+}
+
+sub test_gpu_inactive($vm_name) {
+    my $req = Ravada::Request->check_gpu_status(
+        uid => user_admin->id
+        ,id_node => _id_vm($vm_name)
+    );
+    for ( 1 .. 10 ) {
+        last if $req->pid || $req->status eq 'done';
+        sleep 1;
+        diag("Waiting for ".$req->command." started.");
+    }
+    ok($req->pid);
+    is($req->status, 'working');
+    is($req->error, '');
+    diag($req->status);
 }
 
 #########################################################
@@ -190,6 +207,8 @@ for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
     diag("Testing host devices in $vm_name");
 
     _import_base($vm_name);
+
+    test_gpu_inactive($vm_name);
 
     my $hd = create_hd($vm_name);
     test_base_hd($vm_name, $hd) if $hd;

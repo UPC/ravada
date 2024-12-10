@@ -3093,6 +3093,53 @@ sub list_files($self, $dir, $pattern=undef) {
     return $self->_list_files_remote($dir, $pattern);
 }
 
+sub get_gpu_nvidia_status($self) {
+
+    my $text = $self->get_nvidia_smi();
+    return if !$text;
+
+    my %status;
+    my $current;
+    for my $line (split /\n/,$text) {
+       if ($line =~ /^\s+(VM Name).*?: (.*)/) {
+            $current = $2;
+            next;
+        }
+        next if !$current;
+        my ($field, $value) = $line =~ /.*?(\w+)\s+\:\s+(\d+)\s+\%/;
+        if (!$field) {
+            ($field,$value) = $line =~ /.*?(\w+)\s+\:\s+(\d+)\s+MiB/;
+            $field = "Memory $field" if $field;
+        }
+        $status{$current}->{$field} = $value if $field && defined $value
+        && $field =~ /Gpu|Memory/;
+    }
+
+    for my $name ( keys %status ) {
+        my $domain = $self->search_domain($name);
+        if ( !$domain ) {
+            delete $status{$name};
+            next;
+        }
+        my $active_gpu = 0;
+        for my $field (keys %{$status{$name}} ) {
+            $domain->log_status($field, $status{$name}->{$field}, 'vgpu');
+            $active_gpu++ if $field =~ /Gpu|Memory/ && $status{$name}->{$field};
+        }
+        if ($active_gpu) {
+            $domain->clean_status('gpu_inactive' );
+        } else {
+            $domain->log_status('gpu_inactive');
+        }
+    }
+    return if !keys %status;
+    return \%status;
+
+}
+
+sub get_nvidia_smi($self) {
+}
+
 1;
 
 
