@@ -3396,6 +3396,7 @@ sub create_host_devices($node, $number=3, $type=undef) {
     my ($first) = $templates->[0];
     if ($type) {
         ($first) = grep {$_->{name} eq $type || $_->{name} =~ /$type/i } @$templates;
+        confess Dumper([$type,[ map { $_->{name} } @$templates ]]) if !$first;
         return if !$first && $type && $vm->type eq 'Void';
         die "Error no template $type found in ".Dumper([map { $_->{name} } @$templates]) if !$first;
     }
@@ -3403,6 +3404,10 @@ sub create_host_devices($node, $number=3, $type=undef) {
     $vm->add_host_device(template => $first->{name});
 
     my $config = config_host_devices($first->{name},0);
+
+    if (!$config && $node->[0]->type eq 'Void') {
+        $config = '';
+    }
 
     my ($hd, $found);
     my @list_hostdev = $vm->list_host_devices();

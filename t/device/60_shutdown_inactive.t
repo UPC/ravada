@@ -27,6 +27,7 @@ sub _vgpu_id() {
 }
 
 sub _check_used_mdev($vm, $hd) {
+    return if !defined $hd;
     return $hd->list_available_devices() if $vm->type eq 'Void';
 
     my @active = $vm->vm->list_domains;
@@ -66,14 +67,13 @@ sub test_shutdown_inactive($vm, $connected=0) {
     my $name = new_domain_name();
     my $clone = $BASE->clone( name => $name, user => user_admin);
 
-    my $hd = create_host_devices($vm,3,"GPU Mediated Device (display)");
+    my $hd = create_host_devices($vm,3,"GPU Mediated Device");
     die "I can't find mock GPU Mediated" if !$hd && $vm->type eq 'Void';
 
     _check_used_mdev($vm, $hd);
 
     if ( !$hd ) {
         diag("Warning: I can't find GPU Mediated devices in ".$vm->name);
-        exit;
         return;
     }
     $clone->add_host_device($hd);
@@ -309,7 +309,6 @@ sub _mock_nvidia_load($vm, $value={}) {
     my @domains = $vm->list_domains(active => 1);
 
     if (ref($vm) =~ /Void/) {
-        my @domains = $vm->list_domains(active => 1);
         my $dir = Ravada::Front::Domain::Void::_config_dir()."/gpu";
         mkdir $dir or die "$! $dir" if ! -e $dir;
         my $file = "$dir/nvidia_smi.txt";
@@ -335,11 +334,11 @@ sub _mock_nvidia_load($vm, $value={}) {
     }
 
     ok($vm->get_nvidia_smi()) or exit;
+    $vm->get_gpu_nvidia_status();
 
     for my $dom (@domains) {
         ok($dom->_data('log_status'),"Expecting log status in ".$dom->name) or exit;
     }
-    $vm->get_gpu_nvidia_status();
 }
 
 sub _rewind_vgpu_status($vm, $seconds=1) {
@@ -434,7 +433,7 @@ sub test_status($vm) {
 
     my $grace_mins = 2;
     my $base = $BASE->clone(name => new_domain_name() , user => user_admin);
-    $base->_data('shutdown_inactive_gpu' => 1);
+    $base->_data('no_shutdown_active_gpu' => 1);
     $base->_data('shutdown_disconnected' => 0);
     $base->_data('shutdown_grace_time' => $grace_mins);
     my $hd = create_host_devices($vm,3,"GPU Mediated");
@@ -491,7 +490,7 @@ sub test_can_check_gpu_active($vm) {
     my $name = new_domain_name();
     my $clone = $BASE->clone( name => $name, user => user_admin);
 
-    my $hd = create_host_devices($vm,3,"GPU Mediated");
+    my $hd = create_host_devices($vm,3,"GPU Mediated Device");
     die "I can't find mock GPU Mediated" if !$hd && $vm->type eq 'Void';
 
     return if !$hd;
