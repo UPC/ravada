@@ -2943,7 +2943,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','shutdown_disconnected','int not null default 0');
     $self->_upgrade_table('domains','shutdown_grace_time','int not null default 10');
     $self->_upgrade_table('domains','shutdown_timeout','int default null');
-    $self->_upgrade_table('domains','shutdown_inactive_gpu','int not null default 0');
+    $self->_upgrade_table('domains','no_shutdown_active_gpu','int not null default 0');
     $self->_upgrade_table('domains','log_status','text');
     $self->_upgrade_table('domains','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
     $self->_upgrade_table('domains','balance_policy','int default 0');
@@ -6528,6 +6528,7 @@ sub _shutdown_disconnected($self) {
         } $domain->list_requests(1);
 
         if ($is_active && $domain->client_status eq 'disconnected') {
+            next if !$dom->{no_shutdown_active_gpu} && $domain->gpu_active;
             next if $self->_domain_just_started($domain) || $self->_verify_connection($domain);
             next if $req_shutdown;
             next if !$domain->check_grace('disconnected');
@@ -6539,35 +6540,6 @@ sub _shutdown_disconnected($self) {
             );
             my $user = Ravada::Auth::SQL->search_by_id($domain->id_owner);
             $user->send_message("The virtual machine has been disconnected for too long. Shutting down ".$dom->{name});
-        } elsif ($req_shutdown) {
-            $req_shutdown->status('done','Canceled') if $req_shutdown;
-        }
-    }
-}
-
-sub _shutdown_inactive_gpu($self) {
-    for my $dom ( $self->list_domains_data(status => 'active') ) {
-        next if !$dom->{shutdown_inactive_gpu};
-        my $domain = Ravada::Domain->open($dom->{id}) or next;
-        my $is_active = $domain->is_active;
-
-        my $shutdown_check = 'gpu_inactive';
-
-        my ($req_shutdown) = grep { $_->command eq 'shutdown'
-            && $_->defined_arg('check')
-            && $_->defined_arg('check') eq $shutdown_check
-        } $domain->list_requests(1);
-
-        if ($is_active && !$domain->gpu_active) {
-            next if $self->_domain_just_started($domain);
-            next if $req_shutdown;
-            next if !$domain->check_grace('gpu_inactive');
-            Ravada::Request->shutdown_domain(
-                uid => Ravada::Utils::user_daemon->id
-                ,id_domain => $domain->id
-                ,at => time + 120
-                ,check => $shutdown_check
-            );
         } elsif ($req_shutdown) {
             $req_shutdown->status('done','Canceled') if $req_shutdown;
         }
@@ -6809,7 +6781,6 @@ sub _cmd_enforce_limits($self, $request=undef) {
     _enforce_limits_active($self, $request);
     $self->_shutdown_disconnected();
     $self->_shutdown_bookings() if $self->setting('/backend/bookings');
-    $self->_shutdown_inactive_gpu();
 }
 
 sub _shutdown_bookings($self) {
@@ -7321,7 +7292,6 @@ sub _cmd_check_gpu_status($self, $request) {
     my $found;
     for my $n (1 .. 100) {
         my $out = $vm->get_gpu_nvidia_status();
-        warn Dumper([$request->id, $n, $vm->name,$out]);
         $found++ if $out;
         last if !$found && $n>=10;
         sleep 1;

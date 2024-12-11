@@ -3105,6 +3105,7 @@ sub get_gpu_nvidia_status($self) {
             $current = $2;
             next;
         }
+        next if !$current;
         my ($field, $value) = $line =~ /.*?(\w+)\s+\:\s+(\d+)\s+\%/;
         if (!$field) {
             ($field,$value) = $line =~ /.*?(\w+)\s+\:\s+(\d+)\s+MiB/;

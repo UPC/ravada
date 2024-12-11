@@ -198,16 +198,16 @@
             </div>
             <div class="row">
                 <div class="col-lg-3 m-0" align="right">
-                    <label class="small_row" for="shutdown_inactive_gpu"><%=l 'Shutdown when GPU inactive' %></label>
+                    <label class="small" for="no_shutdown_active_gpu"><%=l 'Ignore when GPU is active' %></label>
                 </div>
                 <div class="col-lg-2">
-                    <input type="checkbox" ng-model="new_option.shutdown_inactive_gpu" name="shutdown_inactive_gpu"
+                    <input type="checkbox" ng-model="new_option.no_shutdown_active_gpu" name="no_shutdown_active_gpu"
                     ng-disabled="<%= !$USER->is_admin %>"
                     ng-true-value="1" ng-false-value="0"
                     >
                 </div>
                 <div class="col-md-7"><small class="text-secondary">
-                    <%=l 'Virtual Machine will be shutdown when GPU is inactive.' %></small>
+                    <%=l 'Virtual Machine will not be shutdown when GPU is active.' %></small>
                 </div>
             </div>
 

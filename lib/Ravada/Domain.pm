@@ -2217,6 +2217,18 @@ sub info($self, $user) {
     $info->{host_devices} = [ $self->list_host_devices_attached() ];
     $info->{date_status_change} = $self->_date_status_change();
 
+    $info->{can_check_gpu_active}=0;
+    $info->{can_check_gpu_active}=1 if $self->_data('no_shutdown_active_gpu');
+    if ($info->{host_devices} && scalar (@{$info->{host_devices}})) {
+        my $log_status = $self->_data('log_status');
+        if ($log_status) {
+            my $h_log_status = {};
+            eval { $h_log_status = decode_json($log_status) };
+            $info->{can_check_gpu_active}=1
+            if exists $h_log_status->{gpu_inactive};
+        }
+    }
+
     Ravada::Front::_init_available_actions($user, $info);
 
     lock_hash(%$info);
@@ -5851,16 +5863,15 @@ sub log_status($self, $type, $value=undef , $prefix=undef) {
         eval { $h_status = decode_json($json_status) };
         $h_status = {} if $@;
     }
-    my $time = time();
-    for my $old ( @{$h_status->{$type}} ) {
-        return if $old >= $time-60;
+
+    my $entry = time();
+    if (defined ($value)) {
+        $entry = [ time() => $value ];
     }
-    if (!defined $value) {
-        push @{$h_status->{$type}},(time());
-    } elsif ($prefix) {
-        push @{$h_status->{$prefix}->{$type}},( [ time() => $value ]);
+    if (defined $prefix) {
+        push @{$h_status->{$prefix}->{$type}},( $entry );
     } else {
-        push @{$h_status->{$type}},( [ time() => $value ]);
+        push @{$h_status->{$type}},( $entry );
     }
 
     $self->_data('log_status', encode_json($h_status));
@@ -8071,6 +8082,8 @@ sub check_grace($self,$type) {
 }
 
 sub gpu_active($self) {
+    return 0 if !$self->is_active;
+
     my $status_json = $self->_data('log_status');
     return if !$status_json;
     my $status;
@@ -8080,8 +8093,10 @@ sub gpu_active($self) {
     warn "Warning: I can't decode json '$status_json' $@"
     if $@;
 
+    return undef if !exists $status->{gpu_inactive};
+
     my $gpu_inactive = $status->{gpu_inactive};
-    return 1 if !$gpu_inactive || !ref($gpu_inactive);
+    return 0 if !ref($status->{gpu_inactive});
 
     my @times = sort @$gpu_inactive;
     return 1 if !scalar(@times);

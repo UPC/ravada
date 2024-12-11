@@ -78,17 +78,118 @@ sub test_shutdown_inactive($vm, $connected=0) {
     }
     $clone->add_host_device($hd);
 
-    $clone->_data('shutdown_inactive_gpu' => 1);
+    $clone->_data('shutdown_disconnected' => 1);
+    $clone->_data('no_shutdown_active_gpu' => 1);
     $clone->_data('shutdown_grace_time' => 2);
     $clone->start(user => user_admin, remote_ip => '1.2.3.4');
 
-    _mock_inactive($clone, 1);
-    _mock_inactive($clone);
+    _mock_disconnected($clone);
+    _mock_nvidia_load($vm, $clone);
 
     _wait_shutdown($clone, $connected);
 
     remove_domain($clone);
 }
+
+sub test_no_shutdown_connected($vm) {
+    my $name = new_domain_name();
+    my $clone = $BASE->clone( name => $name, user => user_admin);
+
+    my $hd = create_host_devices($vm,3,"GPU Mediated");
+    die "I can't find mock GPU Mediated" if !$hd && $vm->type eq 'Void';
+
+    return if !$hd;
+    $clone->add_host_device($hd);
+
+    $clone->_data('shutdown_disconnected' => 1);
+    $clone->_data('no_shutdown_active_gpu' => 0);
+    $clone->_data('shutdown_grace_time' => 2);
+    $clone->start(user => user_admin, remote_ip => '1.2.3.4');
+
+    my $load = { $clone->name => 3};
+    _mock_nvidia_load($vm, $load);
+
+    _wait_shutdown_v2($clone , 0);
+
+    $load->{$clone->name} = 0;
+    _mock_nvidia_load($vm, $load);
+
+    _rewind_vgpu_status($vm, 120);
+
+    _mock_nvidia_load($vm, $load);
+
+    delete $clone->{_data};
+
+    is($clone->gpu_active,0);
+    like($clone->client_status(),qr/\d+\.\d+\.\d+\.\d+/);
+    _wait_shutdown_v2($clone , 0);
+
+    remove_domain($clone);
+}
+sub test_shutdown_disconnected($vm) {
+    my $name = new_domain_name();
+    my $clone = $BASE->clone( name => $name, user => user_admin);
+
+    my $hd = create_host_devices($vm,3,"GPU Mediated");
+    die "I can't find mock GPU Mediated" if !$hd && $vm->type eq 'Void';
+
+    return if !$hd;
+    $clone->add_host_device($hd);
+
+    $clone->_data('shutdown_disconnected' => 1);
+    $clone->_data('no_shutdown_active_gpu' => 0);
+    $clone->_data('shutdown_grace_time' => 2);
+    $clone->start(user => user_admin, remote_ip => '1.2.3.4');
+
+    my $load = { $clone->name => 3};
+    _mock_nvidia_load($vm, $load);
+
+    _mock_disconnected($clone);
+
+    _wait_shutdown_v2($clone , 0);
+
+    $load->{$clone->name} = 0;
+    _mock_nvidia_load($vm, $load);
+
+    _rewind_vgpu_status($vm, 120);
+    _mock_disconnected($clone);
+
+    _mock_nvidia_load($vm, $load);
+
+    delete $clone->{_data};
+
+    is($clone->gpu_active,0);
+    is($clone->client_status(),'disconnected');
+    _wait_shutdown_v2($clone , 1);
+
+    remove_domain($clone);
+}
+
+sub test_shutdown_disconnected_active_gpu($vm) {
+    my $name = new_domain_name();
+    my $clone = $BASE->clone( name => $name, user => user_admin);
+
+    my $hd = create_host_devices($vm,3,"GPU Mediated");
+    die "I can't find mock GPU Mediated" if !$hd && $vm->type eq 'Void';
+
+    return if !$hd;
+    $clone->add_host_device($hd);
+
+    $clone->_data('shutdown_disconnected' => 1);
+    $clone->_data('no_shutdown_active_gpu' => 1);
+    $clone->_data('shutdown_grace_time' => 2);
+    $clone->start(user => user_admin, remote_ip => '1.2.3.4');
+
+    _mock_inactive($clone, 1);
+    _mock_inactive($clone);
+    _mock_disconnected($clone);
+
+    _wait_shutdown($clone);
+
+    remove_domain($clone);
+}
+
+
 
 sub test_shutdown_inactive_but_connected($vm) {
     test_shutdown_inactive($vm, 1);
@@ -98,7 +199,7 @@ sub test_shutdown_inactive_but_connected_keep_up($vm) {
     test_shutdown_inactive($vm, 1, 1);
 }
 
-sub _wait_shutdown($domain, $connected=0, $keep=0) {
+sub _wait_shutdown($domain, $connected=0) {
     diag("Waiting for shutdown, connected=$connected ".$domain->name);
     my $req_shutdown;
     for my $n (0 .. 5 ) {
@@ -128,13 +229,65 @@ sub _wait_shutdown($domain, $connected=0, $keep=0) {
         );
         $sth->execute;
     }
-    if ($keep ) {
+    if ($connected) {
         ok($domain->is_active && !$req_shutdown, "Expecting kept up while connected");
     } else {
         ok(!$domain->is_active || $req_shutdown) or exit;
     }
 
 }
+
+sub _wait_shutdown_v2($domain, $expected_down=1) {
+    diag("Waiting for shutdown, expected_down=$expected_down ".$domain->name);
+    my $req_shutdown;
+    for my $n (0 .. 5 ) {
+        sleep 1 if $n;
+
+        if ($expected_down) {
+            is($domain->gpu_active,0)
+                or confess Dumper([$domain->name, time,$domain->is_active,$domain->_data('log_status')]);
+        }
+
+        my $req2=Ravada::Request->enforce_limits( _force => 1);
+
+        wait_request(request => $req2, skip => [],debug => 0);
+        is($req2->error,'');
+        ($req_shutdown) = grep { $_->command =~ /shutdown/ } $domain->list_requests(1);
+
+        last if (!$domain->is_active || $req_shutdown);
+
+        my $sth = connector->dbh->prepare(
+            "DELETE FROM requests where command='enforce_limits'"
+        );
+        $sth->execute;
+    }
+    if ($expected_down) {
+        ok(!$domain->is_active || $req_shutdown) or confess;
+    } else {
+        ok($domain->is_active && !$req_shutdown, "Expecting kept up while connected");
+    }
+
+}
+
+
+sub _mock_disconnected($domain, $minutes=2) {
+
+    delete $domain->{_data};
+    my $json_status = $domain->_data('log_status');
+    my $h_status = {};
+    if ($json_status) {
+        eval { $h_status = decode_json($json_status) };
+        die $json_status."\n".$@ if $@;
+        $h_status = {} if $@;
+    }
+    push @{$h_status->{'disconnected'}},(time()-$minutes*60);
+
+    $domain->_data('log_status', encode_json($h_status));
+    $domain->_data('client_status', 'disconnected');
+    $domain->_data('client_status_time_checked', time );
+
+}
+
 
 sub _mock_inactive($domain, $minutes=2) {
     my $json_status = $domain->_data('log_status');
@@ -152,6 +305,8 @@ sub _mock_inactive($domain, $minutes=2) {
 sub _mock_nvidia_load($vm, $value={}) {
 
     _rewind_vgpu_status($vm);
+
+    my @domains = $vm->list_domains(active => 1);
 
     if (ref($vm) =~ /Void/) {
         my @domains = $vm->list_domains(active => 1);
@@ -178,6 +333,12 @@ sub _mock_nvidia_load($vm, $value={}) {
         }
         close $out;
     }
+
+    ok($vm->get_nvidia_smi()) or exit;
+
+    for my $dom (@domains) {
+        ok($dom->_data('log_status'),"Expecting log status in ".$dom->name) or exit;
+    }
     $vm->get_gpu_nvidia_status();
 }
 
@@ -185,7 +346,10 @@ sub _rewind_vgpu_status($vm, $seconds=1) {
     my @domains = $vm->list_domains(active => 1);
     for my $domain (@domains) {
         my $status_json = $domain->_data('log_status');
-        my $status = decode_json($status_json);
+        next if !$status_json;
+        my $status = {};
+        eval { $status = decode_json($status_json) };
+        die Dumper([$status_json,$@]) if $@;
         next if !$status->{vgpu} || !$status->{vgpu}->{Gpu};
         for my $item (sort keys %{$status->{vgpu}}) {
             my $n_entries = scalar(@{$status->{vgpu}->{$item}})+$seconds;
@@ -194,6 +358,7 @@ sub _rewind_vgpu_status($vm, $seconds=1) {
                 $entry->[0] = $entry->[0]-$n_entries--;
             }
         }
+        confess Dumper($status) if exists $status->{Gpu};
         $domain->_data('log_status' => encode_json($status));
     }
 }
@@ -319,6 +484,35 @@ sub test_status($vm) {
     _rewind_vgpu_status($vm,$grace_mins*60);
 
     remove_domain($base);
+
+}
+
+sub test_can_check_gpu_active($vm) {
+    my $name = new_domain_name();
+    my $clone = $BASE->clone( name => $name, user => user_admin);
+
+    my $hd = create_host_devices($vm,3,"GPU Mediated");
+    die "I can't find mock GPU Mediated" if !$hd && $vm->type eq 'Void';
+
+    return if !$hd;
+    $clone->add_host_device($hd);
+
+    my $info = $clone->info(user_admin);
+
+    is($info->{can_check_gpu_active},0);
+
+    $clone->start(user_admin);
+    _mock_nvidia_load($vm, { $clone->name => 44 } );
+
+    $info = $clone->info(user_admin);
+    is($info->{can_check_gpu_active},1);
+
+    $clone->shutdown_now(user_admin);
+
+    $info = $clone->info(user_admin);
+    is($info->{can_check_gpu_active},1);
+
+    remove_domain($clone);
 }
 
 ####################################################################
@@ -346,6 +540,10 @@ for my $vm_name ('KVM', 'Void' ) {
         } else {
             $BASE = import_domain($vm);
         }
+
+        test_can_check_gpu_active($vm);
+
+        test_shutdown_disconnected($vm);
 
         test_shutdown_inactive($vm);
         test_shutdown_inactive_but_connected($vm);

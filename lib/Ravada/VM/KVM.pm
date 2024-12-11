@@ -3238,7 +3238,6 @@ sub get_nvidia_smi($self) {
     my $nvidia_smi = $self->_which("nvidia-smi");
     return if !$nvidia_smi;
     my ($out, $err) = $self->run_command($nvidia_smi,"vgpu","-q");
-    die $err if $err;
     return $out;
 }
 
