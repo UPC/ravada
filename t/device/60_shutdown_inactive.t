@@ -410,6 +410,36 @@ sub test_status($vm) {
     _mock_nvidia_load($vm, \%load);
     _test_gpu_load($vm , \@clones, \%load);
 
+    remove_domain($base);
+
+}
+
+sub test_can_check_gpu_active($vm) {
+    my $name = new_domain_name();
+    my $clone = $BASE->clone( name => $name, user => user_admin);
+
+    my $hd = create_host_devices($vm,3,"GPU Mediated");
+    die "I can't find mock GPU Mediated" if !$hd && $vm->type eq 'Void';
+
+    return if !$hd;
+    $clone->add_host_device($hd);
+
+    my $info = $clone->info(user_admin);
+
+    is($info->{can_check_gpu_active},0);
+
+    $clone->start(user_admin);
+    _mock_nvidia_load($vm, { $clone->name => 44 } );
+
+    $info = $clone->info(user_admin);
+    is($info->{can_check_gpu_active},1);
+
+    $clone->shutdown_now(user_admin);
+
+    $info = $clone->info(user_admin);
+    is($info->{can_check_gpu_active},1);
+
+    remove_domain($clone);
 }
 
 ####################################################################
@@ -437,6 +467,8 @@ for my $vm_name ('KVM', 'Void' ) {
         } else {
             $BASE = import_domain($vm);
         }
+
+        test_can_check_gpu_active($vm);
 
         test_shutdown_disconnected($vm);
 

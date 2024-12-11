@@ -2217,6 +2217,18 @@ sub info($self, $user) {
     $info->{host_devices} = [ $self->list_host_devices_attached() ];
     $info->{date_status_change} = $self->_date_status_change();
 
+    $info->{can_check_gpu_active}=0;
+    $info->{can_check_gpu_active}=1 if $self->_data('no_shutdown_gpu_active');
+    if ($info->{host_devices} && scalar (@{$info->{host_devices}})) {
+        my $log_status = $self->_data('log_status');
+        if ($log_status) {
+            my $h_log_status = {};
+            eval { $h_log_status = decode_json($log_status) };
+            $info->{can_check_gpu_active}=1
+            if exists $h_log_status->{gpu_inactive};
+        }
+    }
+
     Ravada::Front::_init_available_actions($user, $info);
 
     lock_hash(%$info);
