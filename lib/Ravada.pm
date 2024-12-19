@@ -2943,7 +2943,6 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','shutdown_disconnected','int not null default 0');
     $self->_upgrade_table('domains','shutdown_grace_time','int not null default 10');
     $self->_upgrade_table('domains','shutdown_timeout','int default null');
-    $self->_upgrade_table('domains','log_status','text');
     $self->_upgrade_table('domains','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
     $self->_upgrade_table('domains','balance_policy','int default 0');
 
@@ -6506,7 +6505,7 @@ sub _domain_just_started($self, $domain) {
     my $start_time = time - 300;
     $sth->execute($start_time);
     while ( my ($id, $command, $args) = $sth->fetchrow ) {
-        next if $command !~ /create|clone|start|open|shutdown/i;
+        next if $command !~ /create|clone|start|open/i;
         my $args_h = decode_json($args);
         return 1 if exists $args_h->{id_domain} && defined $args_h->{id_domain}
         && $args_h->{id_domain} == $domain->id;
@@ -6529,11 +6528,11 @@ sub _shutdown_disconnected($self) {
         if ($is_active && $domain->client_status eq 'disconnected') {
             next if $self->_domain_just_started($domain) || $self->_verify_connection($domain);
             next if $req_shutdown;
-            next if !$domain->check_grace('disconnected');
+            next if !$domain->check_grace('connected');
             Ravada::Request->shutdown_domain(
                 uid => Ravada::Utils::user_daemon->id
                 ,id_domain => $domain->id
-                ,at => time + 120
+                ,at => time + 60
                 ,check => 'disconnected'
             );
             my $user = Ravada::Auth::SQL->search_by_id($domain->id_owner);
