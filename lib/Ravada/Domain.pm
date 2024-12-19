@@ -24,6 +24,7 @@ use JSON::XS;
 use Moose::Role;
 use NetAddr::IP;
 use IPC::Run3 qw(run3);
+use RRDs;
 use Storable qw(dclone);
 use Time::Piece;
 
@@ -49,6 +50,7 @@ our $RETRY_SET_TIME=10;
 our $TTL_REMOVE_VOLATILE = 60;
 
 our $DEBUG_RSYNC = 0;
+our $DIR_RRD = "/var/lib/ravada_rrd";
 
 _init_connector();
 
@@ -396,7 +398,67 @@ sub _around_start($orig, $self, @arg) {
         die $error;
     }
     $self->_post_start(%arg);
+    $self->_rrd_create();
 
+}
+
+sub _rrd_dir($self) {
+    my $dir_rrd = $DIR_RRD;
+
+    $dir_rrd = $Ravada::CONFIG->{dir_rrd}
+    if defined $Ravada::CONFIG && exists $Ravada::CONFIG->{dir_rrd}
+    && defined $Ravada::CONFIG->{dir_rrd};
+
+    return $dir_rrd;
+}
+
+sub _rrd_file($self) {
+
+    my $file = $self->_rrd_dir."/".$self->name.".rrd";
+
+    return $file;
+}
+
+sub _rrd_remove($self) {
+
+    my $file = $self->_rrd_file();
+    return if ! -e $file;
+
+    unlink $file or die "$! $file";
+}
+
+
+sub _rrd_create($self , $start=time) {
+
+    my $file = $self->_rrd_file();
+    return if -e $file;
+
+    my ($path) = '';
+
+    for my $item (split m{/+}, $self->_rrd_dir) {
+        next if !defined $item || !length($item);
+        $path .= "/$item";
+
+        mkdir $path or die "$! $path" if !-e $path;
+    }
+
+    my $step = 60;
+    my $heartbeat = $step*2;
+    my ($min,$max) = (0,1);
+    my $name = 'connected';
+    $step = 1;
+    my $samples = (3600 / $step)*24*7;
+    my @cmd = ("rrdtool","create", $file
+         ,'--start', $start
+         ,"--step",$step
+         ,"DS:$name:GAUGE:$heartbeat:$min:$max"
+         ,"RRA:AVERAGE:0.5:1:$samples"
+     );
+
+     my ($in, $out, $err);
+     run3(\@cmd,\$in, \$out,\$err);
+     warn "@cmd\n".$err if $err;
+     warn $out if $out;
 }
 
 sub _request_set_base($self, $id_vm=$self->_vm->id) {
@@ -2447,6 +2509,7 @@ sub _check_active_node($self) {
 
 sub _after_remove_domain($self, $user, $cascade=undef) {
 
+    $self->_rrd_remove();
     $self->_remove_iptables( );
     $self->remove_expose();
     $self->_remove_domain_cascade($user)   if !$cascade;
@@ -2645,7 +2708,7 @@ sub is_locked {
 
     $self->_init_connector() if !defined $$CONNECTOR;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,at_time FROM requests "
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,at_time,command FROM requests "
         ." WHERE id_domain=? AND status <> 'done'"
         ."   AND command <> 'open_exposed_ports'"
         ."   AND command <> 'open_iptables' "
@@ -2657,11 +2720,13 @@ sub is_locked {
         ."   AND command <> 'add_hardware'"
     );
     $sth->execute($self->id);
-    my ($id, $at_time) = $sth->fetchrow;
+    while (my ($id, $at_time,$command) = $sth->fetchrow) {
+        next if $at_time && $at_time - time > 1;
+        return $id;
+    };
     $sth->finish;
 
-    return 0 if $at_time && $at_time - time > 1;
-    return ($id or 0);
+    return 0;
 }
 
 =head2 id_owner
@@ -3174,7 +3239,7 @@ sub _pre_shutdown {
     if ($request && $request->defined_arg('check')) {
         my $check = $request->defined_arg('check');
         if ($check eq 'disconnected') {
-            die "Virtual machine reconnected"
+            die "Virtual machine reconnected.\n"
             if $self->client_status ne 'disconnected';
         } elsif ($check eq 'gpu_inactive') {
             die "Virtual machine GPU active again"
@@ -3306,7 +3371,6 @@ sub _post_shutdown {
     $self->needs_restart(0) if $self->is_known()
                                 && $self->needs_restart()
                                 && !$is_active;
-    $self->clean_status('disconnected');
 }
 
 sub _schedule_compact($self) {
@@ -5826,55 +5890,46 @@ sub client_status($self, $force=0) {
         return $self->_data('client_status');
     }
     my $status = '';
-    if ( !$self->is_active || !$self->remote_ip ) {
+    if ( !$self->is_active) {
         $status = '';
     } else {
-        $status = $self->_client_connection_status( $force );
+        if($self->remote_ip ) {
+            $status = $self->_client_connection_status( $force );
+        } else {
+            $status = 'disconnected';
+        }
     }
     $self->_data('client_status', $status);
     $self->_data('client_status_time_checked', time );
 
-    if ($self->_data('shutdown_grace_time')) {
+    if ( $status && $self->_data('shutdown_grace_time')) {
+        my $value = 1;
         if ($status eq 'disconnected') {
-            $self->log_status($status);
-        } else {
-            $self->clean_status('disconnected');
+            $value = 0;
         }
+        $self->log_status('connected',$value);
     }
 
     return $status;
 }
+
 sub clean_status($self, $type) {
-    my $json_status = $self->_data('log_status');
-    my $h_status = {};
-    if ($json_status) {
-        eval { $h_status = decode_json($json_status) };
-        warn "$json_status : $@" if $@;
-        $h_status = {} if $@;
-    }
-    $h_status->{$type} = [];
-    $self->_data('log_status', encode_json($h_status));
+    confess;
 }
 
-sub log_status($self, $type, $value=undef , $prefix=undef) {
-    my $json_status = $self->_data('log_status');
-    my $h_status = {};
-    if ($json_status) {
-        eval { $h_status = decode_json($json_status) };
-        $h_status = {} if $@;
-    }
+sub log_status($self, $name, $value, $time='N') {
+    my $file = $self->_rrd_file();
+    $self->_rrd_create() if ! -e $file;
 
-    my $entry = time();
-    if (defined ($value)) {
-        $entry = [ time() => $value ];
-    }
-    if (defined $prefix) {
-        push @{$h_status->{$prefix}->{$type}},( $entry );
-    } else {
-        push @{$h_status->{$type}},( $entry );
-    }
+    my $time0 = $time;
+    $time0 = time() if$time0 eq 'N';
 
-    $self->_data('log_status', encode_json($h_status));
+    return if exists $self->{_log_status_time} &&  $self->{_log_status_time} == $time0;
+    $self->{_log_status_time} = $time0;
+
+    RRDs::update ($file , "--template", $name, "$time:$value");
+    my $err = RRDs::error;
+    confess $err if $err && $err !~ /illegal attempt to update/i;
 }
 
 sub _run_netstat($self, $force=undef) {
@@ -7750,17 +7805,6 @@ sub backup($self) {
     return $file_backup;
 }
 
-sub _confirm_restore($self) {
-    if ($ENV{TERM}) {
-            print "Virtual Machine ".$self->name." already exists."
-            ." All the data will be overwritten."
-            ." Are you sure you want to restore a backup ?";
-            my $answer = <STDIN>;
-            return 0 unless $answer =~ /^y/i;
-    }
-    return 1;
-}
-
 sub _parse_file($file) {
     CORE::open my $f,"<",$file or confess "$! $file";
     my $json = join "",<$f>;
@@ -7853,20 +7897,13 @@ sub _check_parent_base_volumes($data, $file) {
 
 }
 
-sub restore_backup($self, $backup, $interactive, $rvd_back=undef) {
+sub restore_backup($self, $backup) {
     my $file = $backup;
     $file = $backup->{file} if ref($backup);
 
     die "Error: missing file  '$file'" if ! -e $file;
 
     my ($name) = $file =~ m{.*/(.*?).\d{4}-\d\d-\d\d_\d\d-\d\d-};
-    if (!$self) {
-        $self = $rvd_back->search_domain($name);
-    }
-    die "Error: ".$self->name." is active, shut it down to restore.\n"
-    if $self && $self->is_active;
-
-    return if $self && $interactive && !$self->_confirm_restore();
 
     my $data = _extract_metadata($file,$name);
     _check_metadata_before_restore($data);
@@ -8059,26 +8096,53 @@ sub _volatile_active($self) {
 
 }
 
+=pod check_grace
+
+Argument: type of grace to check
+
+Returns: 1 if we reached the end of grace time
+         0 if dont
+
+=cut
+
 sub check_grace($self,$type) {
-    return 1 if !$self->_data('shutdown_grace_time');
-    my $log_status = $self->_data('log_status');
-    return if !$log_status;
-    my $hash_status;
-    eval {
-        $hash_status= decode_json($log_status);
-    };
-    if ($@) {
-        warn "$@ : '$log_status'";
+
+    my $grace_time = $self->_data('shutdown_grace_time');
+
+    return 1 if !$grace_time;
+
+    my $rrd_file = $self->_rrd_file();
+    return 1 if !-e $rrd_file;
+
+    my $start_req = time - 60*$grace_time;
+    my ($start,$step,$names,$data) = RRDs::fetch($rrd_file,'AVERAGE',"--start"
+        ,$start_req);
+    my $err=RRDs::error;
+    die $err if $err;
+
+    if ( $start>$start_req && $start - $start_req > int($grace_time*60/2) ) {
+        warn "No enough data";
         return;
     }
-    my $log = $hash_status->{$type};
-    return if !$log;
-    my $old;
-    for my $current (@$log) {
-        $old = $current if !defined $old || $current<$old;
+
+    my $index;
+    for my $n (0 .. scalar(@$names)-1) {
+        if ($names->[$n] eq $type) {
+            $index=$n;
+            last;
+        }
     }
-    return 1 if time-$old >= 60*$self->_data('shutdown_grace_time');
-    return 0;
+    if (!defined $index) {
+        warn "Error: $type not found in ".join(",",@$names)." $rrd_file";
+        return;
+    }
+
+    my $active=0;
+    for my $item (@$data) {
+        $active++ if $item && defined $item->[$index] && $item->[$index];
+    }
+    return 0 if $active;
+    return 1;
 }
 
 sub gpu_active($self) {

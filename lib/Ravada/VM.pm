@@ -627,7 +627,7 @@ sub _around_create_domain {
     $domain->display($owner)    if $domain->is_active;
 
     $domain->is_pool(1) if $add_to_pool;
-
+    $domain->_rrd_remove();
 
     return $domain;
 }

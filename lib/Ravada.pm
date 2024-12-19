@@ -2943,8 +2943,6 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','shutdown_disconnected','int not null default 0');
     $self->_upgrade_table('domains','shutdown_grace_time','int not null default 10');
     $self->_upgrade_table('domains','shutdown_timeout','int default null');
-    $self->_upgrade_table('domains','no_shutdown_active_gpu','int not null default 0');
-    $self->_upgrade_table('domains','log_status','text');
     $self->_upgrade_table('domains','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
     $self->_upgrade_table('domains','balance_policy','int default 0');
 
@@ -6507,7 +6505,7 @@ sub _domain_just_started($self, $domain) {
     my $start_time = time - 300;
     $sth->execute($start_time);
     while ( my ($id, $command, $args) = $sth->fetchrow ) {
-        next if $command !~ /create|clone|start|open|shutdown/i;
+        next if $command !~ /create|clone|start|open/i;
         my $args_h = decode_json($args);
         return 1 if exists $args_h->{id_domain} && defined $args_h->{id_domain}
         && $args_h->{id_domain} == $domain->id;
@@ -6531,11 +6529,11 @@ sub _shutdown_disconnected($self) {
             next if !$dom->{no_shutdown_active_gpu} && $domain->gpu_active;
             next if $self->_domain_just_started($domain) || $self->_verify_connection($domain);
             next if $req_shutdown;
-            next if !$domain->check_grace('disconnected');
+            next if !$domain->check_grace('connected');
             Ravada::Request->shutdown_domain(
                 uid => Ravada::Utils::user_daemon->id
                 ,id_domain => $domain->id
-                ,at => time + 120
+                ,at => time + 60
                 ,check => 'disconnected'
             );
             my $user = Ravada::Auth::SQL->search_by_id($domain->id_owner);
@@ -6607,6 +6605,8 @@ sub _req_method {
 ,set_time => \&_cmd_set_time
 ,compact => \&_cmd_compact
 ,purge => \&_cmd_purge
+,backup => \&_cmd_backup
+,restore_backup => \&_cmd_restore_backup
 
 ,list_storage_pools => \&_cmd_list_storage_pools
 ,active_storage_pool => \&_cmd_active_storage_pool
@@ -7303,6 +7303,30 @@ sub _cmd_check_gpu_status($self, $request) {
     ) if $found;
 }
 
+sub _cmd_backup($self, $request) {
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized to backup"
+        if !$user->is_admin;
+
+    my $domain = Ravada::Domain->open($request->args('id_domain'));
+    die "Error: I can not backup while machine is active".$domain->name."\n"
+    if $domain->is_active;
+
+    $request->output($domain->backup());
+}
+
+sub _cmd_restore_backup($self, $request) {
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized to backup"
+        if !$user->is_admin;
+
+    my $file = $request->args('file');
+    die "Error: missing file  '$file'" if ! -e $file;
+
+    $self->restore_backup($file,0);
+    $request->output();
+}
+
 =head2 set_debug_value
 
 Sets debug global variable from setting
@@ -7340,8 +7364,18 @@ sub restore_backup($self, $file, $interactive=undef) {
         $interactive = $ENV{TERM};
     }
 
-    return Ravada::Domain::restore_backup(undef, $file, $interactive, $self);
+    my ($name) = $file =~ m{.*/(.*?).\d{4}-\d\d-\d\d_\d\d-\d\d-};
+    my $domain = $self->search_domain($name);
+
+    die "Error: ".$domain->name." is active, shut it down to restore.\n"
+    if $domain && $domain->is_active;
+
+    return if $domain && $interactive && !$self->_confirm_restore();
+
+    return Ravada::Domain::restore_backup($domain, $file);
 }
+
+
 
 sub _restore_backup_data($self, $file_data, $file_data_extra
                             ,$file_data_owner) {
