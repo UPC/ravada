@@ -4186,4 +4186,18 @@ sub has_nat_interfaces($self) {
     return 0;
 }
 
+sub get_stats($self) {
+    return unless $self->domain && $self->domain->is_active;
+
+    my $mem;
+    my $cpu_time;
+    my $mem_stats = $self->domain->memory_stats();
+    if (exists $mem_stats->{rss} && exists $mem_stats->{actual_balloon}) {
+        $mem = int(($mem_stats->{rss}/$mem_stats->{actual_balloon})*100);
+    }
+    my @cpu_stats = $self->domain->get_cpu_stats(-1,1);
+    $cpu_time = int($cpu_stats[0]->{cpu_time}/1024/1024);
+    return ($cpu_time, $mem);
+}
+
 1;

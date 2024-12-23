@@ -339,8 +339,8 @@ sub test_auto_shutdown_disconnected($vm, $grace=0) {
 
     $clone->start(user => user_admin, remote_ip => '1.2.3.4');
     _mock_connected($clone);
-    ok(-e $clone->_rrd_file()) or die;
-    for (1 .. 60) {
+    ok(-e $clone->_rrd_file('status')) or die;
+    for (1 .. 2) {
         last if $clone->client_status(1) eq 'disconnected';
         sleep 1;
         diag("waiting for ".$clone->name." to disconnect "
@@ -363,9 +363,12 @@ sub test_auto_shutdown_disconnected($vm, $grace=0) {
         for my $n (0 .. 60 ) {
             if ($n) {
                 sleep 1;
+                my $grace_txt = $clone->check_grace('connected');
+                $grace_txt = "<UNDEF>" if !defined $grace_txt;
                 diag("[$n] Waiting for ".$clone->name." is down ".$clone->client_status()
                 ." grace_time = ".$clone->_data('shutdown_grace_time')
-                ." grace = ".$clone->check_grace('connected'));
+                ." grace = $grace_txt");
+                $clone->client_status(1);
             }
             my $req2=Ravada::Request->enforce_limits( _force => 1);
             wait_request(request => $req2, skip => [],debug => 0);
@@ -389,7 +392,7 @@ sub test_auto_shutdown_disconnected($vm, $grace=0) {
     is($req->error, '');
 
     like($req_shutdown->status,qr(done|requested)) if $req_shutdown;
-    my @info = RRDs::fetch($clone->_rrd_file,"AVERAGE","--start",time-120);
+    my @info = RRDs::fetch($clone->_rrd_file('status'),"AVERAGE","--start",time-120);
     my $active = 0;
     my $rows = $info[3];
     for my $item ( @$rows) {
@@ -427,16 +430,17 @@ sub _mock_disconnected($domain) {
 }
 
 sub _mock_connected($domain, $connected = 1) {
-    my $rrd_file = $domain->_rrd_file();
+    my $rrd_file = $domain->_rrd_file('status');
 
-    my $start = time()-120;
-    _create_rrd($rrd_file, $start);
+    my $step = 60;
+    my $start = time()-$step*10;
+    $domain->_rrd_create('status', $start);
 
     my $time = $start;
     for ( ;; ) {
-        $time++;
+        $time+=10;
         $domain->log_status('connected' => $connected, $time);
-        last if $time > time;
+        last if $time >= time;
     }
 
     my @info = RRDs::fetch($rrd_file,"AVERAGE","--start",$start);
@@ -447,7 +451,7 @@ sub _mock_connected($domain, $connected = 1) {
     for my $item ( @$rows) {
         $defined++ if defined($item) && defined $item->[0];
     }
-    ok($defined) or die "Expecting defined in $rows";
+    ok($defined) or die "Expecting defined in ".$rrd_file;
 }
 
 sub test_shutdown_paused_domain {

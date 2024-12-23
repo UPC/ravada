@@ -398,7 +398,7 @@ sub _around_start($orig, $self, @arg) {
         die $error;
     }
     $self->_post_start(%arg);
-    $self->_rrd_create();
+    $self->_rrd_create('status');
 
 }
 
@@ -412,27 +412,37 @@ sub _rrd_dir($self) {
     return $dir_rrd;
 }
 
-sub _rrd_file($self) {
+sub _rrd_file($self, $name) {
 
-    my $file = $self->_rrd_dir."/".$self->name.".rrd";
+    my $file = $self->_rrd_dir."/".$self->name."_$name.rrd";
 
     return $file;
 }
 
 sub _rrd_remove($self) {
 
-    my $file = $self->_rrd_file();
+    my $file = $self->_rrd_file('status');
     return if ! -e $file;
 
     unlink $file or die "$! $file";
 }
 
 
-sub _rrd_create($self , $start=time) {
+sub _rrd_create($self , $type, $start=time) {
 
-    my $file = $self->_rrd_file();
-    return if -e $file;
-
+    my $step = 60;
+    my $heartbeat = $step*2;
+    my @ds;
+    if ($type eq 'status') {
+        @ds = (
+            "DS:connected:GAUGE:$heartbeat:0:1"
+            ,"DS:cpu:COUNTER:$heartbeat:0:U"
+            ,"DS:memory:GAUGE:$heartbeat:0:100"
+        );
+    } else {
+        croak "Error: unknown $type";
+    }
+    my $file = $self->_rrd_file($type);
     my ($path) = '';
 
     for my $item (split m{/+}, $self->_rrd_dir) {
@@ -442,16 +452,11 @@ sub _rrd_create($self , $start=time) {
         mkdir $path or die "$! $path" if !-e $path;
     }
 
-    my $step = 60;
-    my $heartbeat = $step*2;
-    my ($min,$max) = (0,1);
-    my $name = 'connected';
-    $step = 1;
-    my $samples = (3600 / $step)*24*7;
+    my $samples = int(3600 / $step)*24*7;
     my @cmd = ("rrdtool","create", $file
          ,'--start', $start
          ,"--step",$step
-         ,"DS:$name:GAUGE:$heartbeat:$min:$max"
+         ,@ds
          ,"RRA:AVERAGE:0.5:1:$samples"
      );
 
@@ -5903,8 +5908,8 @@ sub clean_status($self, $type) {
 }
 
 sub log_status($self, $name, $value, $time='N') {
-    my $file = $self->_rrd_file();
-    $self->_rrd_create() if ! -e $file;
+    my $file = $self->_rrd_file('status');
+    $self->_rrd_create('status') if ! -e $file;
 
     my $time0 = $time;
     $time0 = time() if$time0 eq 'N';
@@ -5912,7 +5917,12 @@ sub log_status($self, $name, $value, $time='N') {
     return if exists $self->{_log_status_time} &&  $self->{_log_status_time} == $time0;
     $self->{_log_status_time} = $time0;
 
-    RRDs::update ($file , "--template", $name, "$time:$value");
+    my ($cpu_time, $mem) = $self->get_stats();
+    if ($cpu_time || $mem) {
+        RRDs::update ($file , "--template", "$name:cpu:memory", "$time:$value:$cpu_time:$mem");
+    } else {
+        RRDs::update ($file , "--template", $name, "$time:$value");
+    }
     my $err = RRDs::error;
     confess $err if $err && $err !~ /illegal attempt to update/i;
 }
@@ -8096,7 +8106,7 @@ sub check_grace($self,$type) {
 
     return 1 if !$grace_time;
 
-    my $rrd_file = $self->_rrd_file();
+    my $rrd_file = $self->_rrd_file('status');
     return 1 if !-e $rrd_file;
 
     my $start_req = time - 60*$grace_time;
@@ -8128,6 +8138,9 @@ sub check_grace($self,$type) {
     }
     return 0 if $active;
     return 1;
+}
+
+sub get_stats($self) {
 }
 
 1;
