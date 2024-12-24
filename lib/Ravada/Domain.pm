@@ -5954,7 +5954,7 @@ sub _run_iptstate($self, $force=undef) {
 sub _client_connection_status($self, $force=undef) {
 
     my $status = $self->_client_connection_status_display($force);
-    return $status if $status =~ /^connected/;
+    return $status if $status =~ /^connected/ || $status =~ /\d+\.\d+\.\d+\.\d+/;
 
     $status = $self->_client_connection_status_port($force);
     return $status;
@@ -5970,7 +5970,13 @@ sub _client_connection_status_display($self, $force) {
         for my $line (@out) {
             my @netstat_info = split(/\s+/,$line);
             if ( $netstat_info[2] =~ /:$port$/ ) {
-                return 'connected ('.$display->{driver}.")";
+                my $ip;
+                ($ip) = $netstat_info[3] =~ m{(\d+\.\d+\.\d+\.\d+)};
+                if ($ip) {
+                    return "$ip.".$display->{driver};
+                } else {
+                    return 'connected ('.$display->{driver}.")";
+                }
             }
         }
     }
