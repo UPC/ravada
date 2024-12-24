@@ -45,7 +45,7 @@ our $IPTABLES_CHAIN = 'RAVADA';
 
 our %PROPAGATE_FIELD = map { $_ => 1} qw( run_timeout shutdown_disconnected shutdown_grace_time);
 
-our $TIME_CACHE_NETSTAT = 60; # seconds to cache netstat data output
+our $TIME_CACHE_NETSTAT = 10; # seconds to cache netstat data output
 our $RETRY_SET_TIME=10;
 our $TTL_REMOVE_VOLATILE = 60;
 
@@ -5883,11 +5883,8 @@ sub client_status($self, $force=0) {
     if ( !$self->is_active) {
         $status = '';
     } else {
-        if($self->remote_ip ) {
-            $status = $self->_client_connection_status( $force );
-        } else {
-            $status = 'disconnected';
-        }
+        $status = $self->_client_connection_status( $force );
+        $status = 'disconnected' if !defined $status || !length($status);
     }
     $self->_data('client_status', $status);
     $self->_data('client_status_time_checked', time );
