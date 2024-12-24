@@ -34,7 +34,7 @@ sub test_change_owner {
     my $vm_name = shift;
     my $USER2 = create_user("foo2","bar2", 1);
     my $name = new_domain_name();
-    my $id_iso = search_id_iso('Debian');
+    my $id_iso = search_id_iso('Alpine');
     diag("Testing change owner");
     my $domain = rvd_back->search_vm($vm_name)->create_domain(
              name => $name
@@ -646,7 +646,7 @@ sub test_create_domain_nocd {
     my $vm = rvd_back->search_vm($vm_name, $host);
     my $name = new_domain_name();
 
-    my $id_iso = search_id_iso('Debian');
+    my $id_iso = search_id_iso('Alpine');
 
     my $sth = connector->dbh->prepare(
         "UPDATE iso_images set device=NULL WHERE id=?"
