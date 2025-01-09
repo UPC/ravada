@@ -1,4 +1,3 @@
-version: "2.2"
 services:
   ravada-mysql:
     container_name: ravada-mysql
@@ -7,10 +6,15 @@ services:
       - "/opt/ravada/log:/var/log/mysql"
     networks:
       - ravada_network
-    image: mysql:5.7
+    image: mariadb:11.4
     env_file: .env
     command: --default-authentication-plugin=mysql_native_password
     restart: unless-stopped
+    labels:
+      "docker_compose_diagram.icon": "mysql"
+      "docker_compose_diagram.description": "main database"
+
+
 
   ravada-front:
     container_name: ravada-front
@@ -29,9 +33,13 @@ services:
     #If you want to local build
     build: dockers/front/.
     restart: unless-stopped
-
     depends_on:
       - ravada-mysql
+#    labels:
+#      "docker_compose_diagram.icon": "mysql"
+#      "docker_compose_diagram.description": "front"
+
+
 
   ravada-back:
     container_name: ravada-back
@@ -56,9 +64,11 @@ services:
     build: dockers/back/.
     privileged: true
     restart: unless-stopped
-
     depends_on:
       - ravada-mysql
+#    labels:
+#      "docker_compose_diagram.icon": "mysql"
+#      "docker_compose_diagram.description": "backend"
 
 volumes:
   sshkeys:
