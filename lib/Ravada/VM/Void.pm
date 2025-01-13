@@ -92,7 +92,6 @@ sub create_domain {
     my $active = ( delete $args{active} or $volatile or $user->is_temporary or 0);
     my $listen_ip = delete $args{listen_ip};
     my $description = delete $args{description};
-    confess if $args{name} eq 'tst_vm_v20_volatile_clones_02' && !$listen_ip;
     my $remote_ip = delete $args{remote_ip};
     my $id = delete $args{id};
     my $storage = delete $args{storage};
@@ -125,6 +124,7 @@ sub create_domain {
     $domain->_set_default_info($listen_ip, $network);
     $domain->_store( autostart => 0 );
     $domain->_store( is_active => $active );
+    $domain->_store( is_volatile => ($volatile or 0 ));
     $domain->set_memory($args{memory}) if $args{memory};
 
     if ($args{id_base}) {
