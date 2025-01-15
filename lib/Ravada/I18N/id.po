@@ -5,8 +5,8 @@ msgstr ""
 "Project-Id-Version: ravada\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2024-09-23 06:08+0000\n"
-"Last-Translator: Anonymous <noreply@weblate.org>\n"
+"PO-Revision-Date: 2025-01-16 05:00+0000\n"
+"Last-Translator: Rayark <akhmadhabibie@gmail.com>\n"
 "Language-Team: Indonesian <https://hosted.weblate.org/projects/ravada/"
 "translation/id/>\n"
 "Language: id\n"
@@ -14,7 +14,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
-"X-Generator: Weblate 5.8-dev\n"
+"X-Generator: Weblate 5.10-dev\n"
 
 msgid "Ravada broker"
 msgstr "Ravada broker"
@@ -1002,9 +1002,8 @@ msgstr "Password"
 msgid "can change the settings of any virtual machine."
 msgstr "dapat mengubah pengaturan mesin virtual apa pun."
 
-#, fuzzy
 msgid "can change the settings of any virtual machine "
-msgstr "Dapat mengganti pengaturan virtual mesin apa saja "
+msgstr "Dapat mengganti pengaturan virtual mesin apa saja"
 
 msgid "Template selection is required"
 msgstr "Pemiliihan template diperlukan"
@@ -2335,3 +2334,37 @@ msgstr "Ulangi"
 
 msgid "volatile"
 msgstr "volatile"
+
+msgid "Host Devices"
+msgstr "Perangkat Host"
+
+msgid "Share"
+msgstr "Bagikan"
+
+msgid "Follow these steps for Spice client setup"
+msgstr "Ikuti langkah-langkah berikut untuk pengaturan klien Spice"
+
+#, fuzzy
+msgid "Mange Host Devices"
+msgstr "Kelola Perangkat Host"
+
+msgid "Auto Compact"
+msgstr "Compact Otomatis"
+
+msgid "Compact data volumes daily."
+msgstr "Volume data padat setiap hari."
+
+msgid "Clones will inherit this value unless defined in their options."
+msgstr "Klon akan membawa nilai ini kecuali ditentukan dalam opsinya."
+
+msgid "This must be enabled in global settings too."
+msgstr "Ini juga harus diaktifkan dalam pengaturan global."
+
+msgid "Allow users to clone this base"
+msgstr "Izinkan pengguna untuk mengkloning basis ini"
+
+msgid "Show the base when the user already created a clone"
+msgstr "Tampilkan basis saat pengguna sudah membuat klon"
+
+msgid "Show Clones"
+msgstr "Tampilkan Klon"
