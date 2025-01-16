@@ -473,7 +473,6 @@ sub _update_isos {
         ,ubuntu_noble => {
                     name => 'Ubuntu 24.04 Noble Nombat'
             ,description => 'Ubuntu 24.04 Noble Nombat 64 bits'
-                   ,arch => 'x86_64'
                     ,xml => 'focal_fossa-amd64.xml'
              ,xml_volume => 'focal_fossa64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/24.04/'
@@ -605,7 +604,6 @@ sub _update_isos {
             ,arch => 'x86_64'
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
-            ,sha256_url => '$url/../SHA256SUMS'
             ,url => 'https://ftp.lysator.liu.se/ubuntu-dvd/xubuntu/releases/24.04.*/release/'
             ,file_re => 'xubuntu.*desktop.*.iso'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
@@ -630,6 +628,7 @@ sub _update_isos {
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
             ,min_disk_size => '10'
+            ,arch => 'x86_64'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
         ,debian_jessie_32 => {
