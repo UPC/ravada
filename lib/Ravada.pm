@@ -511,8 +511,23 @@ sub _update_isos {
             ,sha256_url => '$url/Fedora-Workstation-28-.*-x86_64-CHECKSUM'
             ,min_disk_size => '10'
         }
+	      ,kubuntu_64_noble => {
+            name => 'Kubuntu 24.04 Noble Nombat'
+            ,description => 'Kubuntu 22.04 Noble Nombat 64 bits'
+            ,arch => 'x86_64'
+            ,xml => 'focal_fossa-amd64.xml'
+            ,xml_volume => 'focal_fossa64-volume.xml'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/24.04.*/release/'
+            ,file_re => 'kubuntu-24.04.*-desktop-amd64.iso'
+            ,rename_file => 'kubuntu_noble.iso'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+            ,min_ram => 3
+            ,min_disk_size => 11
+        }
+
 	      ,kubuntu_64_jammy => {
-            name => 'Kubuntu Jammy Jellyfish'
+            name => 'Kubuntu 22.04 Jammy Jellyfish'
             ,description => 'Kubuntu 22.04 Jammy Jellyfish 64 bits'
             ,arch => 'x86_64'
             ,xml => 'focal_fossa-amd64.xml'
@@ -526,7 +541,7 @@ sub _update_isos {
             ,min_disk_size => 11
         }
 	      ,kubuntu_64_focal_fossa => {
-            name => 'Kubuntu Focal Fossa 64 bits'
+            name => 'Kubuntu 20.04 Focal Fossa 64 bits'
             ,description => 'Kubuntu 20.04 Focal Fossa 64 bits'
             ,arch => 'x86_64'
             ,xml => 'focal_fossa-amd64.xml'
@@ -538,28 +553,6 @@ sub _update_isos {
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
                 ,min_ram => 1
         }
-        ,kubuntu_64 => {
-            name => 'Kubuntu Bionic Beaver 64 bits'
-            ,description => 'Kubuntu 18.04 Bionic Beaver 64 bits'
-            ,arch => 'x86_64'
-            ,xml => 'bionic-amd64.xml'
-            ,xml_volume => 'bionic64-volume.xml'
-            ,sha256_url => '$url/SHA256SUMS'
-            ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/18.04/release/'
-            ,file_re => 'kubuntu-18.04.\d+-desktop-amd64.iso'
-            ,rename_file => 'kubuntu_bionic_64.iso'
-        }
-        ,kubuntu_32 => {
-            name => 'Kubuntu Bionic Beaver 32 bits'
-            ,description => 'Kubuntu 18.04 Bionic Beaver 32 bits'
-            ,arch => 'i686'
-            ,xml => 'bionic-i386.xml'
-            ,xml_volume => 'bionic32-volume.xml'
-            ,sha256_url => '$url/SHA256SUMS'
-            ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/18.04/release/'
-            ,file_re => 'kubuntu-18.04.\d+-desktop-i386.iso'
-            ,rename_file => 'kubuntu_bionic_32.iso'
-        }
         ,suse_15 => {
             name => "openSUSE Leap 15"
             ,description => "openSUSE Leap 15 64 bits"
@@ -570,18 +563,18 @@ sub _update_isos {
             ,file_re => 'openSUSE-Leap-15.\d-NET-x86_64-Current.iso'
 
         }
-        ,xubuntu_beaver_64 => {
-            name => 'Xubuntu Bionic Beaver 64 bits'
-            ,description => 'Xubuntu 18.04 Bionic Beaver 64 bits'
+        ,xubuntu_noble => {
+            name => 'Xubuntu 24.04 Noble Nombat 64 bits'
+            ,description => 'Xubuntu 24.04 Noble Nombat 64 bits'
             ,arch => 'x86_64'
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
             ,sha256_url => '$url/../SHA256SUMS'
-            ,url => 'http://archive.ubuntu.com/ubuntu/dists/bionic/main/installer-amd64/current/images/netboot/'
+            ,url => 'http://archive.ubuntu.com/ubuntu/dists/noble/main/installer-amd64/current/images/netboot/'
             ,file_re => 'mini.iso'
-            ,rename_file => 'xubuntu_bionic_64.iso'
+            ,rename_file => 'xubuntu_noble.iso'
         }
-        ,xubuntu_beaver_32 => {
+        ,xubuntu_noble => {
             name => 'Xubuntu Bionic Beaver 32 bits'
             ,description => 'Xubuntu 18.04 Bionic Beaver 32 bits'
             ,arch => 'i686'
@@ -592,38 +585,11 @@ sub _update_isos {
             ,file_re => 'mini.iso'
             ,rename_file => 'xubuntu_bionic_32.iso'
         }
-        ,xubuntu_xenial => {
-            name => 'Xubuntu Xenial Xerus'
-            ,description => 'Xubuntu 16.04 Xenial Xerus 64 bits (LTS)'
-            ,url => 'http://archive.ubuntu.com/ubuntu/dists/xenial/main/installer-amd64/current/images/netboot/mini.iso'
-           ,xml => 'yakkety64-amd64.xml'
-            ,xml_volume => 'yakkety64-volume.xml'
-            ,md5 => 'fe495d34188a9568c8d166efc5898d22'
-            ,rename_file => 'xubuntu_xenial_mini.iso'
-            ,min_disk_size => '10'
-        }
-	,lubuntu_bionic_64 => {
-             name => 'Lubuntu Bionic Beaver 64 bits'
-             ,description => 'Lubuntu 18.04 Bionic Beaver 64 bits'
-             ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/18.04.*/release/lubuntu-18.04.*-desktop-amd64.iso'
-             ,sha256_url => '$url/SHA256SUMS'
-             ,xml => 'bionic-amd64.xml'
-             ,xml_volume => 'bionic64-volume.xml'
-         }
-         ,lubuntu_bionic_32 => {
-             name => 'Lubuntu Bionic Beaver 32 bits'
-             ,description => 'Lubuntu 18.04 Bionic Beaver 32 bits'
-             ,arch => 'i686'
-             ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/18.04.*/release/lubuntu-18.04.*-desktop-i386.iso'
-             ,sha256_url => '$url/SHA256SUMS'
-             ,xml => 'bionic-i386.xml'
-             ,xml_volume => 'bionic32-volume.xml'
-        }
-        ,lubuntu_xenial => {
-            name => 'Lubuntu Xenial Xerus'
-            ,description => 'Xubuntu 16.04 Xenial Xerus 64 bits (LTS)'
-            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/16.04.*/release/'
-            ,file_re => 'lubuntu-16.04.*-desktop-amd64.iso'
+        ,lubuntu_noble => {
+            name => 'Lubuntu 24.04 Noble Nombat'
+            ,description => 'Xubuntu 24.04 Noble Nombat 64 bits (LTS)'
+            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/24.04.*/release/'
+            ,file_re => 'lubuntu-24.04.*-desktop-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
@@ -720,7 +686,7 @@ sub _update_isos {
             ,options => { machine => 'pc-i440fx' }
         }
         ,debian_bookworm_64 => {
-            name =>'Debian Bookworm 64 bits'
+            name =>'Debian 12 Bookworm 64 bits'
             ,arch => 'x86_64'
             ,description => 'Debian 12 Bookworm 64 bits (netinst)'
             ,url => 'https://cdimage.debian.org/debian-cd/12[\.\d]+/amd64/iso-cd/'
@@ -733,7 +699,7 @@ sub _update_isos {
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
         ,debian_bookworm_32 => {
-            name =>'Debian Bookworm 32 bits'
+            name =>'Debian 12 Bookworm 32 bits'
             ,arch => 'i686'
             ,description => 'Debian 12 Bookworm 32 bits (netinst)'
             ,url => 'https://cdimage.debian.org/debian-cd/12[\.\d]+/i386/iso-cd/'
