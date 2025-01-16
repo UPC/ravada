@@ -1,8 +1,10 @@
 use warnings;
 use strict;
 
+use Carp qw(confess);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
+use IPC::Run3 qw(run3);
 use JSON::XS;
 use Test::More;
 
@@ -32,7 +34,7 @@ sub test_change_owner {
     my $vm_name = shift;
     my $USER2 = create_user("foo2","bar2", 1);
     my $name = new_domain_name();
-    my $id_iso = search_id_iso('Debian');
+    my $id_iso = search_id_iso('Alpine');
     diag("Testing change owner");
     my $domain = rvd_back->search_vm($vm_name)->create_domain(
              name => $name
@@ -233,7 +235,6 @@ sub test_shutdown_start($domain) {
         ,timeout => 10
     );
     wait_request(debug => 0);
-    wait_request(debug => 0);
     my $domain2 = Ravada::Front::Domain->open($domain->id);
     is($domain2->needs_restart,0);
     is($domain2->is_active,1);
@@ -331,13 +332,15 @@ sub test_auto_shutdown_disconnected($vm, $grace=0) {
     my $clone = $base->clone(name => new_domain_name, user => user_admin);
     is($clone->_data('shutdown_disconnected'),1);
     if ($grace) {
-        $clone->_data('shutdown_grace_time',2);
+        $clone->_data('shutdown_grace_time',1);
     } else {
         $clone->_data('shutdown_grace_time',0);
     }
 
     $clone->start(user => user_admin, remote_ip => '1.2.3.4');
-    for (1 .. 60) {
+    _mock_connected($clone);
+    ok(-e $clone->_rrd_file('status')) or die;
+    for (1 .. 2) {
         last if $clone->client_status(1) eq 'disconnected';
         sleep 1;
         diag("waiting for ".$clone->name." to disconnect "
@@ -352,17 +355,27 @@ sub test_auto_shutdown_disconnected($vm, $grace=0) {
 
     my ($req_shutdown) = grep { $_->command =~ /shutdown/ } $clone->list_requests(1);
 
+    _mock_disconnected($clone);
     if ($grace) {
-        ok($clone->is_active && !$req_shutdown);
+        ok($clone->is_active && !$req_shutdown) or exit;
+    }
+    {
         for my $n (0 .. 60 ) {
-            sleep 1 if $n;
+            if ($n) {
+                sleep 1;
+                my $grace_txt = $clone->check_grace('connected');
+                $grace_txt = "<UNDEF>" if !defined $grace_txt;
+                diag("[$n] Waiting for ".$clone->name." is down ".$clone->client_status()
+                ." grace_time = ".$clone->_data('shutdown_grace_time')
+                ." grace = $grace_txt");
+                $clone->client_status(1);
+            }
             my $req2=Ravada::Request->enforce_limits( _force => 1);
-            wait_request(request => $req2, skip => [],debug => 1);
+            wait_request(request => $req2, skip => [],debug => 0);
             is($req2->error,'');
             ($req_shutdown) = grep { $_->command =~ /shutdown/ } $clone->list_requests(1);
 
             last if (!$clone->is_active || $req_shutdown);
-            _mock_disconnected($clone);
             my $sth = connector->dbh->prepare(
                 "DELETE FROM requests where command='enforce_limits'"
             );
@@ -379,26 +392,66 @@ sub test_auto_shutdown_disconnected($vm, $grace=0) {
     is($req->error, '');
 
     like($req_shutdown->status,qr(done|requested)) if $req_shutdown;
-    my $json_log=$clone->_data('log_status');
-    my $log = decode_json($json_log);
-    my $disconnected = $log->{disconnected};
-    is_deeply($disconnected,[]);
+    my @info = RRDs::fetch($clone->_rrd_file('status'),"AVERAGE","--start",time-120);
+    my $active = 0;
+    my $rows = $info[3];
+    for my $item ( @$rows) {
+        $active++ if defined($item) && defined $item->[0] && $item->[0];
+    }
+    is($active,0,"Expecting no active in ".Dumper($rows)) or exit;
 
     $clone->remove(user_admin);
     $base->remove(user_admin);
 }
 
-sub _mock_disconnected($domain, $minutes=2) {
-    my $json_status = $domain->_data('log_status');
-    my $h_status = {};
-    if ($json_status) {
-        eval { $h_status = decode_json($json_status) };
-        $h_status = {} if $@;
+sub _create_rrd($file, $start) {
+
+    my $step = 1;
+    my $heartbeat = $step*2;
+    my $min = 0;
+    my $max = 1;
+    my $name = 'connected';
+
+    my @cmd = ("rrdtool","create", $file
+        ,'--start', $start
+        ,"--step",$step
+        ,"DS:$name:GAUGE:$heartbeat:$min:$max"
+        ,"RRA:AVERAGE:0.5:12:24"
+    );
+
+    my ($in, $out, $err);
+    run3(\@cmd,\$in, \$out,\$err);
+    die "@cmd\n".$err if $err;
+    warn $out if $out;
+}
+
+sub _mock_disconnected($domain) {
+    _mock_connected($domain,0);
+}
+
+sub _mock_connected($domain, $connected = 1) {
+    my $rrd_file = $domain->_rrd_file('status');
+
+    my $step = 60;
+    my $start = time()-$step*10;
+    $domain->_rrd_create('status', $start);
+
+    my $time = $start;
+    for ( ;; ) {
+        $time+=10;
+        $domain->log_status('connected' => $connected, $time);
+        last if $time >= time;
     }
-    push @{$h_status->{'disconnected'}},(time()-$minutes*60);
 
-    $domain->_data('log_status', encode_json($h_status));
+    my @info = RRDs::fetch($rrd_file,"AVERAGE","--start",$start);
+    warn RRDs::error if RRDs::error;
 
+    my $defined = 0;
+    my $rows = $info[3];
+    for my $item ( @$rows) {
+        $defined++ if defined($item) && defined $item->[0];
+    }
+    ok($defined) or die "Expecting defined in ".$rrd_file;
 }
 
 sub test_shutdown_paused_domain {
@@ -593,7 +646,7 @@ sub test_create_domain_nocd {
     my $vm = rvd_back->search_vm($vm_name, $host);
     my $name = new_domain_name();
 
-    my $id_iso = search_id_iso('Debian');
+    my $id_iso = search_id_iso('Alpine');
 
     my $sth = connector->dbh->prepare(
         "UPDATE iso_images set device=NULL WHERE id=?"
