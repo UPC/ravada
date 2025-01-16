@@ -15,12 +15,16 @@ use feature qw(signatures);
 
 $Ravada::DEBUG=0;
 
-sub test_download($vm, $id_iso, $test=0) {
-    my $iso = $vm->_search_iso($id_iso);
+sub test_download($vm, $iso0, $test=0) {
+    diag("Testing $iso0->{name}");
+    my $iso;
+    eval { $iso = $vm->_search_iso($iso0->{id}) };
+    is($@,'',$iso0->{name});
+    ok($iso) or return;
     #    unlink($iso->{device}) or die "$! $iso->{device}"
     #    if $iso->{device} && -e $iso->{device};
     my $req1 = Ravada::Request->download(
-             id_iso => $id_iso
+             id_iso => $iso->{id}
             , id_vm => $vm->id
             #            , delay => 4
             , test => $test
@@ -45,7 +49,7 @@ sub search_id_isos {
     my @id_iso;
     while ( my $row = $sth->fetchrow_hashref ) {
         next if !$row->{url};
-        push @id_iso,($row->{id});
+        push @id_iso,($row);
     }
     return @id_iso;
 }
@@ -85,8 +89,8 @@ for my $vm_name ('KVM') {
         ################################################
         #
         # Request for Debian Streth ISO
-        for my $id_iso (search_id_isos) {
-            test_download($vm, $id_iso,1);
+        for my $iso (search_id_isos) {
+            test_download($vm, $iso,1);
         }
     #test_download($vm, $id_iso,0);
 }
