@@ -777,6 +777,7 @@ sub _update_isos {
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
         ,devuan_daedalus_i386=> {
             name =>'Devuan 12 Daedalus 32 bits'

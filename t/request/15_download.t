@@ -21,6 +21,7 @@ sub test_download($vm, $iso0, $test=0) {
     eval { $iso = $vm->_search_iso($iso0->{id}) };
     is($@,'',$iso0->{name});
     ok($iso) or return;
+    diag(Dumper([$iso->{url}, $iso->{file_re}]));
     #    unlink($iso->{device}) or die "$! $iso->{device}"
     #    if $iso->{device} && -e $iso->{device};
     my $req1 = Ravada::Request->download(
@@ -90,11 +91,14 @@ for my $vm_name ('KVM') {
         #
         # Request for Debian Streth ISO
         for my $iso (search_id_isos) {
-            next unless $iso->{name} =~ /Ubuntu.*24/
-                        || $iso->{name} =~ /De.an 12/;
+            diag( "*** ".$iso->{name});
+            next unless $iso->{name} =~ /Ubuntu.*24/i
+                        || $iso->{name} =~ /Mint.*22/i
+                        || $iso->{name} =~ /Mate.* 2/i
+                        || $iso->{name} =~ /De.*an.*12/i;
+            next unless $iso->{name} =~ /Dev.*an.*12/i;
             test_download($vm, $iso,1);
         }
-    #test_download($vm, $id_iso,0);
 }
 end();
 }
