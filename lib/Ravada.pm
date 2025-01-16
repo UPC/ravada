@@ -373,7 +373,7 @@ sub _update_isos {
                     ,md5 => '1d6bdf5cbc6ca98c31f02d23e418dd96'
         },
 	mate_focal_fossa => {
-                    name => 'Ubuntu Mate Focal Fossa 64 bits'
+                    name => 'Ubuntu Mate 20.04 Focal Fossa 64 bits'
             ,description => 'Ubuntu Mate 20.04 (Focal Fossa) 64 bits'
                    ,arch => 'x86_64'
                     ,xml => 'focal_fossa-amd64.xml'
@@ -384,7 +384,7 @@ sub _update_isos {
                 ,min_ram => 1
         },
         mate_bionic => {
-                    name => 'Ubuntu Mate Bionic 64 bits'
+                    name => 'Ubuntu Mate 18.04 Bionic 64 bits'
             ,description => 'Ubuntu Mate 18.04 (Bionic Beaver) 64 bits'
                    ,arch => 'x86_64'
                     ,xml => 'bionic-amd64.xml'
@@ -394,7 +394,7 @@ sub _update_isos {
                 ,min_ram => 1
         },
         mate_bionic_i386 => {
-                    name => 'Ubuntu Mate Bionic 32 bits'
+                    name => 'Ubuntu Mate 18.04 Bionic 32 bits'
             ,description => 'Ubuntu Mate 18.04 (Bionic Beaver) 32 bits'
                    ,arch => 'i686'
                     ,xml => 'bionic-i386.xml'
@@ -403,29 +403,8 @@ sub _update_isos {
                 ,sha256_url => '$url/SHA256SUMS'
                 ,min_ram => 1
         },
-        ubuntu_xenial => {
-                    name => 'Ubuntu Xenial Xerus 64 bits'
-            ,description => 'Ubuntu 16.04 LTS Xenial Xerus 64 bits'
-                   ,arch => 'x86_64'
-                    ,xml => 'xenial64-amd64.xml'
-             ,xml_volume => 'xenial64-volume.xml'
-                    ,url => 'http://releases.ubuntu.com/16.04/ubuntu-16.04.*-desktop-amd64.iso'
-                ,sha256_url => '$url/SHA256SUMS'
-                ,min_disk_size => '10'
-        },
-
-        mate_xenial => {
-                    name => 'Ubuntu Mate Xenial'
-            ,description => 'Ubuntu Mate 16.04.3 (Xenial) 64 bits'
-                   ,arch => 'x86_64'
-                    ,xml => 'yakkety64-amd64.xml'
-             ,xml_volume => 'yakkety64-volume.xml'
-                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/16.04.*/release/ubuntu-mate-16.04.*-desktop-amd64.iso'
-                ,sha256_url => '$url/SHA256SUMS'
-                ,min_disk_size => '10'
-        },
 	,focal_fossa=> {
-                    name => 'Ubuntu Focal Fossa'
+                    name => 'Ubuntu 20.04 Focal Fossa'
             ,description => 'Ubuntu 20.04 Focal Fossa 64 bits'
                    ,arch => 'x86_64'
                     ,xml => 'focal_fossa-amd64.xml'
@@ -439,7 +418,7 @@ sub _update_isos {
                    ,arch => 'x86_64'
         }
         ,jammy_jellyfish => {
-                    name => 'Ubuntu Jammy Jellyfish'
+                    name => 'Ubuntu 22.04 Jammy Jellyfish'
             ,description => 'Ubuntu 22.04 Jammy Jellyfish 64 bits'
                    ,arch => 'x86_64'
                     ,xml => 'focal_fossa-amd64.xml'
@@ -455,7 +434,7 @@ sub _update_isos {
         }
 
         ,bionic=> {
-                    name => 'Ubuntu Bionic Beaver'
+                    name => 'Ubuntu 18.04 Bionic Beaver'
             ,description => 'Ubuntu 18.04 Bionic Beaver 64 bits'
                    ,arch => 'x86_64'
                     ,xml => 'bionic-amd64.xml'
@@ -467,6 +446,22 @@ sub _update_isos {
                 ,min_ram => 1
             ,arch => 'x86_64'
         }
+        ,ubuntu_noble => {
+                    name => 'Ubuntu 24.04 Noble Nombat'
+            ,description => 'Ubuntu 24.04 Noble Nombat 64 bits'
+                   ,arch => 'x86_64'
+                    ,xml => 'focal_fossa-amd64.xml'
+             ,xml_volume => 'focal_fossa64-volume.xml'
+                    ,url => 'http://releases.ubuntu.com/24.04/'
+                ,file_re => '^ubuntu-24.04.*-desktop-amd64.iso'
+                ,sha256_url => '$url/SHA256SUMS'
+          ,min_disk_size => '14'
+          ,min_ram => 4
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+                   ,arch => 'x86_64'
+
+        }
+
 
         
         ,mint20_64 => {
@@ -751,7 +746,7 @@ sub _update_isos {
         }
 
         ,devuan_beowulf_amd64=> {
-            name =>'Devuan Beowulf 64 bits'
+            name =>'Devuan 10 Beowulf 64 bits'
             ,description => 'Devuan Beowulf Desktop Live (amd64)'
             ,arch => 'x86_64'
             ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_beowulf/desktop-live/'
@@ -762,7 +757,7 @@ sub _update_isos {
             ,min_disk_size => '10'
         }
         ,devuan_beowulf_i386=> {
-            name =>'Devuan Beowulf 32 bits'
+            name =>'Devuan 10 Beowulf 32 bits'
             ,description => 'Devuan Beowulf Desktop Live (i386)'
             ,arch => 'i686'
             ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_beowulf/desktop-live/'
@@ -772,6 +767,29 @@ sub _update_isos {
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
         }
+        ,devuan_daedalus_amd64=> {
+            name =>'Devuan 12 Daedalus 64 bits'
+            ,description => 'Devuan Daedalus Desktop Live (amd64)'
+            ,arch => 'x86_64'
+            ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_daedalus/desktop-live/'
+            ,file_re => 'devuan_daedalus_.*_amd64_desktop-live.iso'
+            ,sha256_url => '$url/SHASUMS.txt'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+        }
+        ,devuan_daedalus_i386=> {
+            name =>'Devuan 12 Daedalus 32 bits'
+            ,description => 'Devuan Daedalus Desktop Live (i386)'
+            ,arch => 'i686'
+            ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_daedalus/desktop-live/'
+            ,file_re => 'devuan_daedalus_.*_i386_desktop-live.iso'
+            ,sha256_url => '$url/SHASUMS.txt'
+            ,xml => 'jessie-i386.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+        }
+
         ,parrot_xfce_amd64 => {
             name => 'Parrot Home Edition XFCE'
             ,description => 'Parrot Home Edition XFCE 64 Bits'

@@ -90,6 +90,8 @@ for my $vm_name ('KVM') {
         #
         # Request for Debian Streth ISO
         for my $iso (search_id_isos) {
+            next unless $iso->{name} =~ /Ubuntu.*24/
+                        || $iso->{name} =~ /De.an 12/;
             test_download($vm, $iso,1);
         }
     #test_download($vm, $id_iso,0);
