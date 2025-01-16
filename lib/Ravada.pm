@@ -373,6 +373,29 @@ sub _update_isos {
                     ,md5_url => ''
                     ,md5 => '1d6bdf5cbc6ca98c31f02d23e418dd96'
         },
+	mate_noble => {
+                    name => 'Ubuntu Mate 24.04 Noble Numbat 64 bits'
+            ,description => 'Ubuntu Mate 24.04 Noble Nubat m64 bits'
+                   ,arch => 'x86_64'
+                    ,xml => 'focal_fossa-amd64.xml'
+             ,xml_volume => 'focal_fossa64-volume.xml'
+                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/24.04.*/release/ubuntu-mate-24.04.*-desktop-amd64.iso'
+                ,sha256_url => '$url/SHA256SUMS'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+                ,min_ram => 1
+        },
+	mate_jammy=> {
+                    name => 'Ubuntu Mate 22.04 Jammy Jellyfish 64 bits'
+            ,description => 'Ubuntu Mate 22.04 Jammy Jellyfish 64 bits'
+                   ,arch => 'x86_64'
+                    ,xml => 'focal_fossa-amd64.xml'
+             ,xml_volume => 'focal_fossa64-volume.xml'
+                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/22.04.*/release/ubuntu-mate-22.04.*-desktop-amd64.iso'
+                ,sha256_url => '$url/SHA256SUMS'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+                ,min_ram => 1
+        },
+
 	mate_focal_fossa => {
                     name => 'Ubuntu Mate 20.04 Focal Fossa 64 bits'
             ,description => 'Ubuntu Mate 20.04 (Focal Fossa) 64 bits'
@@ -467,15 +490,27 @@ sub _update_isos {
         
         ,mint20_64 => {
             name => 'Mint 20 Mate 64 bits'
-    ,description => 'Mint Ulyana 20 with Mate Desktop 64 bits'
+    ,description => 'Mint 20 Ulyana with Mate Desktop 64 bits'
            ,arch => 'x86_64'
             ,xml => 'xenial64-amd64.xml'
      ,xml_volume => 'xenial64-volume.xml'
-            ,url => 'https://mirrors.edge.kernel.org/linuxmint/stable/20.2'
+            ,url => 'https://mirrors.edge.kernel.org/linuxmint/stable/20.*'
         ,file_re => 'linuxmint-20.2-mate-64bit.iso'
         ,sha256_url => '$url/sha256sum.txt'
             ,min_disk_size => '15'
         }
+        ,mint22_64 => {
+            name => 'Mint 22 Mate 64 bits'
+    ,description => 'Mint 22 Wilma with Mate Desktop 64 bits'
+           ,arch => 'x86_64'
+            ,xml => 'xenial64-amd64.xml'
+     ,xml_volume => 'xenial64-volume.xml'
+            ,url => 'https://mirrors.edge.kernel.org/linuxmint/stable/22.*'
+        ,file_re => 'linuxmint-22.*-mate-64bit.iso'
+        ,sha256_url => '$url/sha256sum.txt'
+            ,min_disk_size => '15'
+        }
+
         ,alpine381_64 => {
             name => 'Alpine 3.16 64 bits'
     ,description => 'Alpine Linux 3.16 64 bits ( Minimal Linux Distribution )'
@@ -570,11 +605,10 @@ sub _update_isos {
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
             ,sha256_url => '$url/../SHA256SUMS'
-            ,url => 'http://archive.ubuntu.com/ubuntu/dists/noble/main/installer-amd64/current/images/netboot/'
-            ,file_re => 'mini.iso'
-            ,rename_file => 'xubuntu_noble.iso'
+            ,url => 'https://ftp.lysator.liu.se/ubuntu-dvd/xubuntu/releases/24.04.*/release/'
+            ,file_re => 'xubuntu.*desktop.*.iso'
         }
-        ,xubuntu_noble => {
+        ,xubuntu_bionic => {
             name => 'Xubuntu Bionic Beaver 32 bits'
             ,description => 'Xubuntu 18.04 Bionic Beaver 32 bits'
             ,arch => 'i686'
@@ -740,7 +774,6 @@ sub _update_isos {
             ,arch => 'x86_64'
             ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_daedalus/desktop-live/'
             ,file_re => 'devuan_daedalus_.*_amd64_desktop-live.iso'
-            ,sha256_url => '$url/SHASUMS.txt'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
@@ -751,7 +784,6 @@ sub _update_isos {
             ,arch => 'i686'
             ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_daedalus/desktop-live/'
             ,file_re => 'devuan_daedalus_.*_i386_desktop-live.iso'
-            ,sha256_url => '$url/SHASUMS.txt'
             ,xml => 'jessie-i386.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
