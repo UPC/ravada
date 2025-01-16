@@ -1417,7 +1417,7 @@ sub _iso_name($self, $iso, $req=undef, $verbose=1) {
             $verified++;
         }
         return if $test;
-        die "WARNING: $device signature not verified ".Dumper($iso)    if !$verified;
+        warn "WARNING: $device signature not verified ".Dumper($iso)    if !$verified;
 
         $req->status("done","File $iso->{filename} downloaded") if $req;
         $downloaded = 1;

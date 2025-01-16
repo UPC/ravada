@@ -509,6 +509,7 @@ sub _update_isos {
         ,file_re => 'linuxmint-22.*-mate-64bit.iso'
         ,sha256_url => '$url/sha256sum.txt'
             ,min_disk_size => '15'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
 
         ,alpine381_64 => {
@@ -607,6 +608,7 @@ sub _update_isos {
             ,sha256_url => '$url/../SHA256SUMS'
             ,url => 'https://ftp.lysator.liu.se/ubuntu-dvd/xubuntu/releases/24.04.*/release/'
             ,file_re => 'xubuntu.*desktop.*.iso'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
         ,xubuntu_bionic => {
             name => 'Xubuntu Bionic Beaver 32 bits'
@@ -778,7 +780,7 @@ sub _update_isos {
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
-            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+            ,options => { machine => 'pc-q35'}
         }
         ,devuan_daedalus_i386=> {
             name =>'Devuan 12 Daedalus 32 bits'
