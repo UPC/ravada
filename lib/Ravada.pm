@@ -382,7 +382,7 @@ sub _update_isos {
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/24.04.*/release/ubuntu-mate-24.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
-                ,min_ram => 1
+                ,min_ram => 2
         },
 	mate_jammy=> {
                     name => 'Ubuntu Mate 22.04 Jammy Jellyfish 64 bits'
@@ -508,6 +508,7 @@ sub _update_isos {
         ,file_re => 'linuxmint-22.*-mate-64bit.iso'
         ,sha256_url => '$url/sha256sum.txt'
             ,min_disk_size => '15'
+            ,min_ram => 2
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
 
