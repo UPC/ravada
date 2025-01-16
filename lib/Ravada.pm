@@ -628,6 +628,7 @@ sub _update_isos {
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
             ,min_disk_size => '10'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
         ,debian_jessie_32 => {
             name =>'Debian Jessie 32 bits'
