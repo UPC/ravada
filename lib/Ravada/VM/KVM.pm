@@ -1598,7 +1598,8 @@ sub _download($self, $url) {
     }
     die $@ if $@;
     confess "ERROR ".($res->code or '<UNDEF>')." ".$res->message." : $url"
-        unless defined $res->code && $res->code == 200 || $res->code == 301 || $res->code == 302;
+        unless defined $res->code
+        && ( $res->code == 200 || $res->code == 301 || $res->code == 302 );
 
     return $self->_cache_store($url,$res->body);
 }

@@ -537,16 +537,6 @@ sub _update_isos {
         ,sha256_url => '$url/alpine-standard-3.16.*.iso.sha256'
             ,min_disk_size => '1'
         }
-        ,fedora_28 => {
-            name => 'Fedora 28'
-            ,description => 'RedHat Fedora 28 Workstation 64 bits'
-            ,url => 'https://archives.fedoraproject.org/pub/archive/fedora/linux/releases/28/Workstation/x86_64/iso/Fedora-Workstation-netinst-x86_64-28-.*\.iso'
-            ,arch => 'x86_64'
-            ,xml => 'xenial64-amd64.xml'
-            ,xml_volume => 'xenial64-volume.xml'
-            ,sha256_url => '$url/Fedora-Workstation-28-.*-x86_64-CHECKSUM'
-            ,min_disk_size => '10'
-        }
 	      ,kubuntu_64_noble => {
             name => 'Kubuntu 24.04 Noble Nombat'
             ,description => 'Kubuntu 22.04 Noble Nombat 64 bits'
@@ -610,7 +600,7 @@ sub _update_isos {
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
         ,xubuntu_bionic => {
-            name => 'Xubuntu Bionic Beaver 32 bits'
+            name => 'Xubuntu 18.04 Bionic Beaver 32 bits'
             ,description => 'Xubuntu 18.04 Bionic Beaver 32 bits'
             ,arch => 'i686'
             ,xml => 'bionic-i386.xml'
@@ -633,7 +623,7 @@ sub _update_isos {
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
         ,debian_jessie_32 => {
-            name =>'Debian Jessie 32 bits'
+            name =>'Debian 8 Jessie 32 bits'
             ,description => 'Debian 8 Jessie 32 bits'
             ,url => 'http://cdimage.debian.org/cdimage/archive/^8\.1\d+\.\d$/i386/iso-cd/'
             ,file_re => 'debian-8.[\d\.]+-i386-xfce-CD-1.iso'
@@ -644,7 +634,7 @@ sub _update_isos {
             ,arch => 'i686'
         }
         ,debian_jessie_64 => {
-            name =>'Debian Jessie 64 bits'
+            name =>'Debian 8 Jessie 64 bits'
             ,description => 'Debian 8 Jessie 64 bits'
             ,url => 'http://cdimage.debian.org/cdimage/archive/^8\.1\d+.*\d$/amd64/iso-cd/'
             ,file_re => 'debian-8.[\d\.]+-amd64-xfce-CD-1.iso'
@@ -655,7 +645,7 @@ sub _update_isos {
             ,arch => 'x86_64'
         }
        ,debian_stretch_32 => {
-            name =>'Debian Stretch 32 bits'
+            name =>'Debian 9 Stretch 32 bits'
             ,description => 'Debian 9 Stretch 32 bits (XFCE desktop)'
             ,url => 'https://cdimage.debian.org/cdimage/archive/^9\.1\d.*\d$/i386/iso-cd/'
             ,file_re => 'debian-9.[\d\.]+-i386-xfce-CD-1.iso'
@@ -665,19 +655,8 @@ sub _update_isos {
             ,min_disk_size => '10'
             ,arch => 'i686'
         }
-        ,debian_stretch_64 => {
-            name =>'Debian Stretch 64 bits'
-            ,description => 'Debian 9 Stretch 64 bits (XFCE desktop)'
-            ,url => 'https://cdimage.debian.org/cdimage/archive/^9\.1\d.*/amd64/iso-cd/'
-            ,file_re => 'debian-9.[\d\.]+-amd64-xfce-CD-1.iso'
-            ,md5_url => '$url/MD5SUMS'
-            ,xml => 'jessie-amd64.xml'
-            ,xml_volume => 'jessie-volume.xml'
-            ,min_disk_size => '10'
-            ,arch => 'x86_64'
-        }
         ,debian_buster_64=> {
-            name =>'Debian Buster 64 bits'
+            name =>'Debian 10 Buster 64 bits'
             ,description => 'Debian 10 Buster 64 bits (XFCE desktop)'
             ,url => 'https://cdimage.debian.org/cdimage/archive/^10\.1\d+.*\d$/amd64/iso-cd/'
             ,file_re => 'debian-10.[\d\.]+-amd64-xfce-CD-1.iso'
@@ -688,7 +667,7 @@ sub _update_isos {
             ,arch => 'x86_64'
         }
         ,debian_buster_32=> {
-            name =>'Debian Buster 32 bits'
+            name =>'Debian 10 Buster 32 bits'
             ,description => 'Debian 10 Buster 32 bits (XFCE desktop)'
             ,url => 'https://cdimage.debian.org/cdimage/archive/^10\.1\d+.*\d$/i386/iso-cd/'
             ,file_re => 'debian-10.[\d\.]+-i386-(netinst|xfce-CD-1).iso'
@@ -699,7 +678,7 @@ sub _update_isos {
             ,arch => 'i686'
         }
         ,debian_bullseye_64=> {
-            name =>'Debian Bullseye 64 bits'
+            name =>'Debian 11 Bullseye 64 bits'
             ,arch => 'x86_64'
             ,description => 'Debian 11 Bullseye 64 bits (netinst)'
             ,url => 'https://cdimage.debian.org/cdimage/archive/11.[\d\.]+/amd64/iso-cd/'
@@ -711,7 +690,7 @@ sub _update_isos {
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
         ,debian_bullseye_32=> {
-            name =>'Debian Bullseye 32 bits'
+            name =>'Debian 11 Bullseye 32 bits'
             ,arch => 'i686'
             ,description => 'Debian 11 Bullseye 32 bits (netinst)'
             ,url => 'https://cdimage.debian.org/cdimage/archive/11[\d\.]+/i386/iso-cd/'
