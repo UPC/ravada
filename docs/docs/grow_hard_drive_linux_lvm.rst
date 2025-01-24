@@ -1,5 +1,5 @@
-How to extend a Ravada Linux guest's disk space without deleting
-================================================================
+How to extend a Linux LVM guest disk space
+==========================================
 
 Extending a Linux disk drive that is LVM in a virtual machine is a straightforward
 process. Follow this guide carefully.

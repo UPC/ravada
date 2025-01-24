@@ -157,6 +157,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/install_guest_windows11
    docs/resize_hard_drive_windows
    docs/resize_hard_drive_linux_machine
+   docs/grow_hard_drive_linux_lvm
    docs/config_console
    docs/reduce-size-image
    docs/qemu_ga
