@@ -1813,8 +1813,9 @@ sub set_memory {
     my $value = shift;
 
     my $max_mem = $self->get_max_mem();
-    confess "ERROR: invalid argument '$value': cannot set memory higher than max memory"
+    die "ERROR: invalid argument '$value': cannot set memory higher than max memory"
             ." ($max_mem)"
+            ."\n"
         if $value > $max_mem;
 
     $self->_set_memory_xml($value);
@@ -3079,7 +3080,7 @@ sub _change_hardware_vcpus($self, $index, $data) {
 
         };
         if ($@) {
-            warn $@;
+            warn "Error on set current ".$@;
             $self->_data('needs_restart' => 1) if $self->is_active;
         }
         my ($vcpus) = $doc->findnodes('/domain/vcpu');
@@ -4183,6 +4184,20 @@ sub has_nat_interfaces($self) {
         return 1 if $if->getAttribute('network');
     }
     return 0;
+}
+
+sub get_stats($self) {
+    return unless $self->domain && $self->domain->is_active;
+
+    my $mem;
+    my $cpu_time;
+    my $mem_stats = $self->domain->memory_stats();
+    if (exists $mem_stats->{rss} && exists $mem_stats->{actual_balloon}) {
+        $mem = int(($mem_stats->{rss}/$mem_stats->{actual_balloon})*100);
+    }
+    my @cpu_stats = $self->domain->get_cpu_stats(-1,1);
+    $cpu_time = int($cpu_stats[0]->{cpu_time}/1024/1024);
+    return ($cpu_time, $mem);
 }
 
 1;

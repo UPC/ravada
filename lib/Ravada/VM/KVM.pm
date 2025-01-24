@@ -1417,7 +1417,7 @@ sub _iso_name($self, $iso, $req=undef, $verbose=1) {
             $verified++;
         }
         return if $test;
-        die "WARNING: $device signature not verified ".Dumper($iso)    if !$verified;
+        warn "WARNING: $device signature not verified ".Dumper($iso)    if !$verified;
 
         $req->status("done","File $iso->{filename} downloaded") if $req;
         $downloaded = 1;
@@ -1597,8 +1597,9 @@ sub _download($self, $url) {
         last if $res;
     }
     die $@ if $@;
-    confess "ERROR ".$res->code." ".$res->message." : $url"
-        unless $res->code == 200 || $res->code == 301 || $res->code == 302;
+    confess "ERROR ".($res->code or '<UNDEF>')." ".$res->message." : $url"
+        unless defined $res->code
+        && ( $res->code == 200 || $res->code == 301 || $res->code == 302 );
 
     return $self->_cache_store($url,$res->body);
 }

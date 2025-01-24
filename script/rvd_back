@@ -375,6 +375,11 @@ sub add_user_file($ADD_USER_FILE) {
     die "Error: File $ADD_USER_FILE does not exist\n"
     if !-e $ADD_USER_FILE;
 
+    if ($ADD_USER_FILE =~ /json$/) {
+        return upload_group_members_json($ADD_USER_FILE);
+    }
+
+
     open my $in,"<",$ADD_USER_FILE or die "$! $ADD_USER_FILE\n";
     my $users = join("",<$in>);
     close $in;
@@ -983,6 +988,8 @@ sub backup($rvd_back) {
     die "Error: please provide the virtual machine name to backup.\n"
     unless scalar(@ARGV);
 
+    my @reqs;
+    my %dupe;
     for my $name (@ARGV) {
         my $dom;
         if ( $name =~ /^\d+$/ ) {
@@ -990,31 +997,96 @@ sub backup($rvd_back) {
         } else {
             $dom = $rvd_back->search_domain($name);
         }
+        if (!$dom) {
+            warn "Error: Unknown domain $name\n";
+            next;
+        }
+        if ($dupe{$dom->name}++) {
+            warn "Warning: Backup of ".$dom->name." duplicated, requested only one.\n";
+        }
         if ($dom->is_active) {
             warn "Error: $name is active, not backing up.\n";
             next;
         }
-        print $dom->backup()."\n";
+        print "Requesting backup of ".$dom->name."\n";
+        my $req = Ravada::Request->backup(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_domain => $dom->id
+        );
+        push @reqs,($req);
     }
+
+    _wait_request(@reqs);
     exit 0;
 }
+
+sub _wait_request(@reqs) {
+    my $t0 = time;
+    for (;;) {
+        last if !@reqs;
+        my $pending = 0;
+        my @reqs2;
+        for my $req (@reqs) {
+            if ($req->status eq 'done') {
+                print "Finished ".$req->command;
+                if ($req->error) {
+                    warn $req->error."\n";
+                }
+                print "\n\t".$req->output if $req->output;
+                print "\n";
+            } else {
+                push @reqs2,($req);
+            }
+        }
+        last if !@reqs2;
+        @reqs = @reqs2;
+        sleep 1;
+        if (time - $t0 > 10 ) {
+            print "Waiting for ".scalar(@reqs)." requests to finish\n";
+            $t0 = time;
+        }
+    }
+
+}
+
+sub _confirm_restore($name) {
+    if ($ENV{TERM}) {
+            print "Virtual Machine $name already exists."
+            ." All the data will be overwritten."
+            ." Are you sure you want to restore a backup ?";
+            my $answer = <STDIN>;
+            return 0 unless $answer =~ /^y/i;
+    }
+    return 1;
+}
+
 
 sub restore($rvd_back) {
     die "Error: please provide the file to restore.\n"
     unless scalar(@ARGV);
 
+    my @reqs;
     for my $item (@ARGV) {
         if ($item =~ m{/}) {
-            my $dom = $rvd_back->restore_backup($item,1);
-            if ($dom) {
-                print $dom->name." restored successfuly.\n";
-            } else {
-                print "backup for $item aborted.\n";
-            }
+
+            my ($name) = $item =~ m{.*/(.*?).\d{4}-\d\d-\d\d_\d\d-\d\d-};
+            my $dom = $rvd_back->search_domain($name);
+            next if $dom && !_confirm_restore($name);
+            my $id_domain;
+            $id_domain = $dom->id if $dom;
+
+            push @reqs,(Ravada::Request->restore_backup(
+                    id_domain => $id_domain
+                    ,file => $item
+                    ,uid => Ravada::Utils::user_daemon->id
+                ));
         } else {
             warn "Error: I can't find '$item'. Plese pass the path with the backed up filename.\n";
         }
     }
+
+    _wait_request(@reqs);
+    exit(0);
 }
 
 sub _list_domains($rvd_back
@@ -1173,7 +1245,29 @@ sub show_volume($rvd_back) {
     }
 }
 
+sub upload_group_members_json($file) {
+    open my $in,"<",$file or die "$! $file\n";
+    my $users = join("",<$in>);
+    close $in;
+
+    my $ravada = Ravada::Front->new();
+
+    my ($result, $error)=$ravada->upload_users_json($users);
+    print Dumper($result)."\n" if $VERBOSE;
+    if (scalar (@$error)) {
+        print "Errors:\n" if $VERBOSE;
+        for (sort @$error) {
+            next if !$VERBOSE && /already a member/;
+            print "  - $_\n";
+        }
+    }
+
+}
+
 sub upload_group_members_file($file) {
+    if ($file =~ /json$/) {
+        return upload_group_members_json($file);
+    }
     if (!$GROUP) {
         ($GROUP) = $file =~ m{.*/(.*)\.};
         ($GROUP) = $file =~ m{(.*)\.} unless $GROUP;

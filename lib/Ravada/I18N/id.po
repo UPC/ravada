@@ -2303,6 +2303,7 @@ msgstr ""
 msgid "Prepare Base"
 msgstr "Siapkan base"
 
+#, fuzzy
 msgid ""
 "This server has reservations for today. Machines from users out of\n"
 "    the booking list will be shutdown."

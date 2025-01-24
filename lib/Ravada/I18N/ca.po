@@ -1853,7 +1853,13 @@ msgid "Virtual Machine will start on host start."
 msgstr "La màquina virtual s'iniciarà a l'inici de l'amfitrió."
 
 msgid "Shutdown disconnected"
-msgstr "L'apagat s'ha desconnectat"
+msgstr "Atura quan es desconnecti"
+
+msgid "Shutdown grace time"
+msgstr "Temps de gràcia d'aturada"
+
+msgid "Minutes of grace time before shutdown."
+msgstr "Minuts que esperarem abans d'aturar."
 
 msgid "Virtual Machine will be shutdown when user disconnects."
 msgstr "La màquina virtual s'apagarà quan l'usuari es desconnecti."

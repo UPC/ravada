@@ -352,6 +352,13 @@
             $scope.shared_user_count = -1
             $scope.access_groups=[];
 
+            var fields_option=[ 'volatile_clones','autostart'
+                               ,'shutdown_disconnected','balance_policy'
+                               ,'auto_compact','shutdown_grace_time'
+                               ,'id_owner'
+            ];
+
+
             $scope.getUnixTimeFromDate = function(date) {
                 date = (date instanceof Date) ? date : date ? new Date(date) : new Date();
                 return date.getTime() / 1000;
@@ -470,7 +477,10 @@
                             //subscribe_bases(url);
                         }
                         if ($scope.edit) { $scope.lock_info = true }
-                        update_info_settings();
+
+                        if (!$scope.form_options.$pristine) {
+                            update_info_settings();
+                        }
                     });
                     _select_new_base();
                 }
@@ -591,13 +601,54 @@
           var url_ws;
 
           var update_info_settings = function() {
-            $scope.new_n_virt_cpu= 0+$scope.showmachine.n_virt_cpu;
-            $scope.new_max_virt_cpu= 0+$scope.showmachine.max_virt_cpu;
-            $scope.new_memory = ($scope.showmachine.memory / 1024);
-            $scope.new_max_mem = ($scope.showmachine.max_mem / 1024);
+            $scope.new_option.n_virt_cpu= 0+$scope.showmachine.n_virt_cpu;
+            $scope.new_option.max_virt_cpu= 0+$scope.showmachine.max_virt_cpu;
+            $scope.new_option.memory = Math.floor($scope.showmachine.memory / 1024);
+            $scope.new_option.max_mem = Math.floor($scope.showmachine.max_mem / 1024);
+
+            $scope.new_option.run_timeout = Math.floor($scope.showmachine.run_timeout / 60);
+            if (!$scope.new_option.run_timeout) $scope.new_option.run_timeout = undefined;
+
+            $scope.new_option.shutdown_timeout = Math.floor($scope.showmachine.shutdown_timeout / 60);
+            if (!$scope.new_option.shutdown_timeout) $scope.new_option.shutdown_timeout = undefined;
+            for ( var n_key=0 ; n_key<fields_option.length ; n_key++) {
+                                    var field=fields_option[n_key];
+                                    $scope.new_option[field] = $scope.showmachine[field];
+            }
+            $scope.new_balance_policy=$scope.showmachine.balance_policy;
+
+          };
+
+          $scope.reset_options = function() {
+              update_info_settings();
+              set_new_owner();
+              $scope.form_options.$setPristine();
+          };
+
+          $scope.update_options = function () {
+              if(!$scope.topology) {
+                if (!$scope.showmachine.is_active) {
+                    $scope.new_option.n_virt_cpu = $scope.new_option.max_virt_cpu;
+
+                }
+                $scope.showmachine.hardware.cpu[0].vcpu['#text'] = $scope.new_option.max_virt_cpu;
+                $scope.showmachine.hardware.cpu[0].vcpu.current = $scope.new_option.n_virt_cpu;
+              }
+            $http.post("/machine/set/"
+                      , JSON.stringify({
+                          'id': $scope.showmachine.id
+                          ,options: $scope.new_option
+                      })
+            );
+
           };
 
           $scope.init = function(id, url,is_admin) {
+                $scope.is_admin = is_admin;
+                if (!is_admin) {
+                    fields_minutes = [];
+                }
+
                 url_ws = url;
                 $scope.showmachineId=id;
                 $scope.tab_access=['group']
@@ -605,6 +656,7 @@
                    , 'Accept', 'Connection', 'Accept-Language', 'DNT', 'Host'
                    , 'Accept-Encoding', 'Cache-Control', 'X-Forwarded-For'
                 ];
+                $scope.new_option={};
 
                 subscribe_ws(url_ws, is_admin);
                 $http.get('/machine/info/'+$scope.showmachineId+'.json')
@@ -613,17 +665,9 @@
                             if (typeof $scope.new_name == 'undefined' ) {
                                 $scope.new_name=$scope.showmachine.alias+"-2";
                                 $scope.validate_new_name($scope.showmachine.alias);
-                                update_info_settings();
-                                $scope.new_run_timeout = ($scope.showmachine.run_timeout / 60);
-                                if (!$scope.new_run_timeout) $scope.new_run_timeout = undefined;
 
-                                $scope.new_volatile_clones = $scope.showmachine.volatile_clones;
-                                $scope.new_autostart = $scope.showmachine.autostart;
-                                $scope.new_shutdown_disconnected
-                                    = $scope.showmachine.shutdown_disconnected;
-                                $scope.new_balance_policy=$scope.showmachine.balance_policy;
-                                $scope.new_auto_compact
-                                    = $scope.showmachine.auto_compact;
+                                update_info_settings();
+
                                 load_balance_options();
                                 get_node_info($scope.showmachine.id_vm);
                                 if (is_admin) {
@@ -649,6 +693,8 @@
                                 list_host_devices();
                                 list_access_groups('ldap');
                                 list_access_groups('local');
+                            } else {
+                                $scope.list_users=[ 'NULL' ];
                             }
                             $scope.copy_ram = $scope.showmachine.max_mem / 1024 / 1024;
                 });
@@ -660,7 +706,7 @@
           };
 
           var list_interfaces = function() {
-            if (! $scope.network_nats) {
+            if (! $scope.network_nats && $scope.can_list_networks) {
                 $http.get('/v2/vm/list_networks/'+$scope.showmachine.id_vm)
                     .then(function(response) {
                         $scope.network_nats= [];
@@ -1076,8 +1122,14 @@
                     new_settings.capacity=undefined;
                 }
                 if (hardware=='memory') {
+                    $scope.new_option.memory=new_settings.memory;
+                    $scope.new_option.max_mem=new_settings.max_mem;
                     new_settings.memory *= 1024;
                     new_settings.max_mem *= 1024;
+                }
+                if (hardware == 'cpu') {
+                    $scope.new_option.max_virt_cpu = new_settings.vcpu['#text'];
+                    $scope.new_option.n_virt_cpu = new_settings.vcpu.current;
                 }
                 $scope.request('change_hardware',
                     {'id_domain': $scope.showmachine.id
@@ -1107,14 +1159,20 @@
                 $http.get('/list_users.json')
                     .then(function(response) {
                         $scope.list_users=response.data;
-                        for (var i = 0; i < response.data.length; i++) {
-                            if (response.data[i].id == $scope.showmachine.id_owner) {
-                                $scope.copy_owner = response.data[i].id;
-                                $scope.new_owner = response.data[i];
-                            }
-                        }
+                        set_new_owner();
                     });
             }
+
+            var set_new_owner = function() {
+                for (var i = 0; i < $scope.list_users.length; i++) {
+                    if ($scope.list_users[i].id == $scope.showmachine.id_owner) {
+                        $scope.copy_owner = $scope.list_users[i].id;
+                        $scope.new_owner = $scope.list_users[i];
+                        $scope.new_option.owner = $scope.list_users[i];
+                        return;
+                    }
+                }
+            };
             var list_groups = function() {
                 $http.get('/group/ldap/list')
                     .then(function(response) {

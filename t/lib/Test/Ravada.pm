@@ -615,7 +615,12 @@ sub _clean_old_users() {
 }
 
 sub _clean_old_groups() {
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM groups_local WHERE name like ? ");
+    my $sth = $CONNECTOR->dbh->table_info('%',undef,'groups_local','TABLE');
+    my $info = $sth->fetchrow_hashref();
+    $sth->finish;
+    return if !keys %$info;
+
+    $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM groups_local WHERE name like ? ");
     $sth->execute(base_domain_name().'%');
     while ( my ($id,$name) = $sth->fetchrow ) {
         my $g = Ravada::Auth::Group->open($id);
@@ -1599,6 +1604,8 @@ sub remove_void_networks($vm=undef) {
         eval { $vm = rvd_back->search_vm('Void') };
         die $@ if $@;
     }
+    return if $< != $>;
+
     my $dir_net = $vm->dir_img()."/networks";
     return if ! -e $dir_net;
     my $base = base_domain_name();
@@ -1838,15 +1845,18 @@ sub _clean_remote_nodes {
     }
 }
 
-sub clean_remote_node {
-    my $node = shift;
+sub clean_remote_node(@node) {
 
-    start_node($node) if !$node->is_local();
-    _remove_old_domains_vm($node);
-    wait_request(debug => 0);
-    _remove_old_disks($node);
-    flush_rules_node($node)  if !$node->is_local() && $node->is_active;
-    remove_qemu_pools($node);
+    for my $node (@node) {
+        next if !$node;
+
+        start_node($node) if !$node->is_local();
+        _remove_old_domains_vm($node);
+        wait_request(debug => 0);
+        _remove_old_disks($node);
+        flush_rules_node($node)  if !$node->is_local() && $node->is_active;
+        remove_qemu_pools($node);
+    }
 }
 
 sub _remove_old_disks {

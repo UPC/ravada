@@ -723,6 +723,20 @@ sub _do_test_upload_json_users_pass($mojo) {
     }
 }
 
+sub test_upload_html() {
+
+        $t->get_ok('/admin/users/upload.html')->status_is(200);
+
+        my $users = new_domain_name();
+
+        $t->post_ok('/admin/users/upload.html' => form => {
+                type => 'openid'
+                ,create => 0
+                ,users => { content => $users, filename => 'users.txt', 'Content-Type' => 'text/csv' },
+            }
+        )->status_is(200);
+}
+
 ################################################################################
 
 $ENV{MOJO_MODE} = 'development';
@@ -738,6 +752,7 @@ test_upload_no_admin($t);
 
 _login($t);
 
+test_upload_html();
 test_upload_json_fail();
 
 test_upload_json();

@@ -15,7 +15,7 @@ use feature qw(signatures);
 ########################################################################
 
 sub test_create($vm, $with_iso_file=1, $no_cd=0) {
-    my $iso = _load_iso($vm, 'Debian%');
+    my $iso = _load_iso($vm, 'Alpine%');
     $iso = _load_iso($vm, 'Empty Machine 32 bits') if $no_cd;
 
     my $name = new_domain_name();
