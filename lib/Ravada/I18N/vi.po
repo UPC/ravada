@@ -24,7 +24,7 @@ msgid "Ravada broker"
 msgstr "Ravada broker"
 
 msgid "Machine Name"
-msgstr "Tên may moc"
+msgstr "Tên máy"
 
 msgid "Tools"
 msgstr "Công cụ"
@@ -39,16 +39,16 @@ msgid "Stop"
 msgstr "Dừng lại"
 
 msgid "View"
-msgstr "Lượt xem"
+msgstr "Xem"
 
 msgid "Prepare base"
 msgstr "Chuẩn bị cơ sở"
 
 msgid "Clone"
-msgstr "Dòng vô tính"
+msgstr "Nhân bản"
 
 msgid "Clone/s"
-msgstr "Nhân bản / s"
+msgstr "Nhân bản /s"
 
 msgid "Users List"
 msgstr "Danh sách người dùng"
@@ -63,7 +63,7 @@ msgid "Available Machines"
 msgstr "Máy có sẵn"
 
 msgid "Help"
-msgstr "Cứu giúp"
+msgstr "Trợ giúp"
 
 msgid "Requirements"
 msgstr "Yêu cầu"
@@ -72,7 +72,7 @@ msgid "About"
 msgstr "Về"
 
 msgid "Mark all as read"
-msgstr "đánh dấu tất cả như đã đọc"
+msgstr "Đánh dấu tất cả như đã đọc"
 
 msgid "Settings"
 msgstr "Cài đặt"
@@ -93,31 +93,31 @@ msgid "English"
 msgstr "Tiếng Anh"
 
 msgid "Spanish"
-msgstr "người Tây Ban Nha"
+msgstr "Tiếng Tây Ban Nha"
 
 msgid "Catalan"
-msgstr "Catalan"
+msgstr "Tiếng Catalan"
 
 msgid "Galician"
-msgstr "Galicia"
+msgstr "Tiếng Galicia"
 
 msgid "French"
-msgstr "người Pháp"
+msgstr "Tiếng Pháp"
 
 msgid "Hindi"
 msgstr "Tiếng Hindi"
 
 msgid "Indonesian"
-msgstr "Người Indonesia"
+msgstr "Tiếng Indonesia"
 
 msgid "Persian"
-msgstr "Tiếng ba tư"
+msgstr "Tiếng Ba Tư"
 
 msgid "Japanese"
-msgstr "tiếng Nhật"
+msgstr "Tiếng Nhật"
 
 msgid "German"
-msgstr "tiếng Đức"
+msgstr "Tiếng Đức"
 
 msgid "New Password:"
 msgstr "Mật khẩu mới:"
@@ -180,7 +180,7 @@ msgid "Error"
 msgstr "Lỗi"
 
 msgid "Backend not available!"
-msgstr "Chương trình phụ trợ không khả dụng!"
+msgstr "Backend không khả dụng!"
 
 msgid "Subject"
 msgstr "Môn học"
@@ -189,10 +189,10 @@ msgid "Date"
 msgstr "Ngày"
 
 msgid "Mark as read"
-msgstr "đánh dấu là đã đọc"
+msgstr "Đánh dấu là đã đọc"
 
 msgid "Mark as unread"
-msgstr "đánh dấu là chưa đọc"
+msgstr "Đánh dấu là chưa đọc"
 
 msgid "No messages to show"
 msgstr "Không có tin nhắn nào để hiển thị"
@@ -291,7 +291,7 @@ msgid "Login"
 msgstr "Đăng nhập"
 
 msgid "SSO/CAS Login"
-msgstr "Đăng nhập SSO / CAS"
+msgstr "Đăng nhập SSO/CAS"
 
 msgid "Welcome"
 msgstr "Chào mừng"
@@ -321,7 +321,7 @@ msgid "Permissions"
 msgstr "Quyền"
 
 msgid "can change the settings of owned virtual machines."
-msgstr "có thể thay đổi cài đặt của máy ảo sở hữu."
+msgstr "có thể thay đổi cài đặt của máy ảo thuộc sở hữu."
 
 msgid "can change the settings of any virtual machine."
 msgstr "có thể thay đổi cài đặt của bất kỳ máy ảo nào."
@@ -391,13 +391,13 @@ msgid "From Machine"
 msgstr "Từ máy"
 
 msgid "Backend"
-msgstr "Phụ trợ"
+msgstr "Backend"
 
 msgid "Select Template"
 msgstr "Chọn mẫu"
 
 msgid "This ISO image has not been downloaded yet. It may take some minutes, even hours until the file is fetched from the Internet."
-msgstr "Ảnh ISO này chưa được tải xuống. Có thể mất vài phút, thậm chí vài giờ cho đến khi tệp được tìm nạp từ Internet."
+msgstr "Tệp ISO này chưa được tải xuống. Có thể mất vài phút, thậm chí vài giờ cho đến khi tệp được tìm nạp từ Internet."
 
 msgid "Download now"
 msgstr "Tải ngay"
@@ -427,7 +427,7 @@ msgid "Backend selection is required."
 msgstr "Lựa chọn phụ trợ là bắt buộc."
 
 msgid "ISO image selection is required."
-msgstr "Lựa chọn hình ảnh ISO là bắt buộc."
+msgstr "Lựa chọn tệp ISO là bắt buộc."
 
 msgid "Template selection is required"
 msgstr "Lựa chọn mẫu là bắt buộc"
@@ -493,7 +493,7 @@ msgid "Hibernating ..."
 msgstr "Đang ngủ đông…"
 
 msgid "Description"
-msgstr "Sự mô tả"
+msgstr "Mô tả"
 
 msgid "Rename"
 msgstr "Đổi tên"
@@ -643,7 +643,7 @@ msgid "and"
 msgstr "và"
 
 msgid "Memory"
-msgstr "Kỉ niệm"
+msgstr "Bộ nhớ"
 
 msgid "MB available"
 msgstr "MB còn trống"
@@ -670,7 +670,7 @@ msgid "Confirm Password"
 msgstr "Xác nhận mật khẩu"
 
 msgid "Username is required"
-msgstr "tên người dùng là bắt buộc"
+msgstr "Tên người dùng là bắt buộc"
 
 msgid "Username can not exceed 20 characters"
 msgstr "Tên người dùng không được vượt quá 20 ký tự"
@@ -709,7 +709,7 @@ msgid "This information will be available to the users"
 msgstr "Thông tin này sẽ có sẵn cho người dùng"
 
 msgid "Volatile Clones"
-msgstr "Nhân bản dễ bay hơi"
+msgstr "Nhân bản bay hơi"
 
 msgid "Owner"
 msgstr "Người sở hữu"
@@ -730,7 +730,7 @@ msgid "copied to clipboard"
 msgstr "sao chép vào clipboard"
 
 msgid "Portuguese"
-msgstr "Người Bồ Đào Nha"
+msgstr "Tiếng Bồ Đào Nha"
 
 msgid "Read more."
 msgstr "Đọc thêm."
@@ -739,7 +739,7 @@ msgid "The password for this virtual machine connection is :"
 msgstr "Mật khẩu cho kết nối máy ảo này là:"
 
 msgid "view"
-msgstr "lượt xem"
+msgstr "xem"
 
 msgid "Start again"
 msgstr "Bắt đầu lại"
@@ -772,7 +772,7 @@ msgid "You need a screenshot in order to copy it to the base machine."
 msgstr "Bạn cần một ảnh chụp màn hình để sao chép nó vào máy cơ bản."
 
 msgid "Add"
-msgstr "cộng"
+msgstr "thêm"
 
 msgid "The changes will apply on next restart"
 msgstr "Các thay đổi sẽ áp dụng vào lần khởi động lại tiếp theo"
@@ -790,7 +790,7 @@ msgid "New Node"
 msgstr "Nút mới"
 
 msgid "Address"
-msgstr "Địa chỉ nhà"
+msgstr "Địa chỉ"
 
 msgid "A node with that name already exists."
 msgstr "Một nút có tên đó đã tồn tại."
@@ -823,7 +823,7 @@ msgid "Vietnamese"
 msgstr "Tiếng Việt"
 
 msgid "Italian"
-msgstr "người Ý"
+msgstr "Tiếng Ý"
 
 msgid "Type a typical LDAP user name to fetch the attribute list"
 msgstr "Nhập tên người dùng LDAP điển hình để tìm nạp danh sách thuộc tính"
@@ -859,7 +859,7 @@ msgid "verify"
 msgstr "kiểm chứng"
 
 msgid "save"
-msgstr "tiết kiệm"
+msgstr "lưu"
 
 msgid "Verifying"
 msgstr "Đang xác minh"
@@ -985,7 +985,7 @@ msgid "Users from this network can run no virtual machines"
 msgstr "Người dùng từ mạng này không thể chạy máy ảo"
 
 msgid "Anonymous"
-msgstr "Vô danh"
+msgstr "Ẩn danh"
 
 msgid "Warning: anonymous machines won't show up unless you enable allowed."
 msgstr "Cảnh báo: các máy ẩn danh sẽ không hiển thị trừ khi bạn bật cho phép."
@@ -997,10 +997,10 @@ msgid "This name is duplicated"
 msgstr "Tên này bị trùng lặp"
 
 msgid "host"
-msgstr "chủ nhà"
+msgstr "máy chủ"
 
 msgid "base storage"
-msgstr "kho lưu trữ cơ sở"
+msgstr "lưu trữ cơ sở"
 
 msgid "clone storage"
 msgstr "lưu trữ nhân bản"
@@ -1012,7 +1012,7 @@ msgid "This virtual machine has no backups to purge"
 msgstr "Máy ảo này không có bản sao lưu nào để xóa"
 
 msgid "End"
-msgstr "Chấm dứt"
+msgstr "Kết thúc"
 
 msgid "Time"
 msgstr "Thời gian"
@@ -1027,10 +1027,10 @@ msgid "Assign this virtual machine to the pre-started pool"
 msgstr "Gán máy ảo này cho nhóm khởi động trước"
 
 msgid "Virtual machines in the pool."
-msgstr "Máy ảo trong hồ bơi."
+msgstr "Máy ảo trong nhóm."
 
 msgid "Pool"
-msgstr "Hồ bơi"
+msgstr "Nhóm"
 
 msgid "Prepare this machine as a base to create clones from it."
 msgstr "Chuẩn bị máy này như một cơ sở để tạo ra các bản sao từ nó."
@@ -1042,7 +1042,7 @@ msgid "reload list"
 msgstr "tải lại danh sách"
 
 msgid "Group"
-msgstr "Tập đoàn"
+msgstr "Nhóm"
 
 msgid "New group member"
 msgstr "Thành viên nhóm mới"
@@ -1126,13 +1126,13 @@ msgid "Type"
 msgstr "Loại hình"
 
 msgid "Bases"
-msgstr "Căn cứ"
+msgstr "Cơ sở"
 
 msgid "Action"
-msgstr "Hoạt động"
+msgstr "Hành động"
 
 msgid "Active"
-msgstr "Tích cực"
+msgstr "Kích hoạt"
 
 msgid "Disabled"
 msgstr "Vô hiệu hóa"
@@ -1156,7 +1156,7 @@ msgid "Disabling this node will shut all the"
 msgstr "Vô hiệu hóa nút này sẽ đóng tất cả"
 
 msgid "machines down."
-msgstr "máy móc xuống."
+msgstr "tắt máy."
 
 msgid "Global Settings"
 msgstr "Thiết lập toàn cầu"
@@ -1168,7 +1168,7 @@ msgid "Fallback"
 msgstr "Dự phòng"
 
 msgid "Maintenance"
-msgstr "Sự bảo trì"
+msgstr "Bảo trì"
 
 msgid "Admin users can still log in from"
 msgstr "Người dùng quản trị vẫn có thể đăng nhập từ"
@@ -1207,13 +1207,13 @@ msgid "Number of virtual machines that normal users can have running at the same
 msgstr "Số lượng máy ảo mà người dùng bình thường có thể chạy cùng một lúc"
 
 msgid "Port expose"
-msgstr "Cổng lộ"
+msgstr "Mở cổng"
 
 msgid "Minimum port number to expose virtual machine services."
 msgstr "Số cổng tối thiểu để hiển thị các dịch vụ máy ảo."
 
 msgid "cancel"
-msgstr "sự hủy bỏ"
+msgstr "hủy bỏ"
 
 msgid "New user"
 msgstr "Người dùng mới"
@@ -1243,10 +1243,10 @@ msgid "Display IP :"
 msgstr "IP hiển thị:"
 
 msgid "Display Port :"
-msgstr "Cổng hiển thị:"
+msgstr "Hiển thị Cổng:"
 
 msgid "Display Port secure :"
-msgstr "Cổng hiển thị an toàn:"
+msgstr "Hiển thị cổng an toàn:"
 
 msgid "Sorry"
 msgstr "Xin lỗi"
@@ -1258,16 +1258,16 @@ msgid "vCPU allocation"
 msgstr "phân bổ vCPU"
 
 msgid "mode"
-msgstr "cách thức"
+msgstr "chế độ"
 
 msgid "check"
 msgstr "kiểm tra"
 
 msgid "match"
-msgstr "cuộc thi đấu"
+msgstr "phù hợp"
 
 msgid "model"
-msgstr "người mẫu"
+msgstr "mô hình"
 
 msgid "fallback"
 msgstr "dự phòng"
@@ -1279,10 +1279,10 @@ msgid "New feature"
 msgstr "Tính năng mới"
 
 msgid "add"
-msgstr "cộng"
+msgstr "thêm"
 
 msgid "bus"
-msgstr "xe buýt"
+msgstr "đường truyền"
 
 msgid "capacity"
 msgstr "dung tích"
@@ -1294,25 +1294,25 @@ msgid "boot order"
 msgstr "lệnh khởi động"
 
 msgid "state"
-msgstr "tiểu bang"
+msgstr "trạng thái"
 
 msgid "on"
-msgstr "trên"
+msgstr "bật"
 
 msgid "off"
 msgstr "tắt"
 
 msgid "hidden"
-msgstr "ẩn giấu"
+msgstr "ẩn"
 
 msgid "nat"
 msgstr "nat"
 
 msgid "bridge"
-msgstr "cầu"
+msgstr "cầu nối"
 
 msgid "primary"
-msgstr "sơ đẳng"
+msgstr "sơ cấp"
 
 msgid "Primary video devices will move to first"
 msgstr "Các thiết bị video chính sẽ chuyển sang đầu tiên"
@@ -1321,7 +1321,7 @@ msgid "Primary can not be unset, enable it in another video device"
 msgstr "Không thể bỏ đặt chính, hãy bật nó trong một thiết bị video khác"
 
 msgid "ram"
-msgstr "đập"
+msgstr "ram"
 
 msgid "vram"
 msgstr "vram"
@@ -1348,7 +1348,7 @@ msgid "size"
 msgstr "kích thước"
 
 msgid "allocation"
-msgstr "sự phân bổ"
+msgstr "sự cấp phát"
 
 msgid "Add new Display"
 msgstr "Thêm màn hình mới"
@@ -1387,7 +1387,7 @@ msgid "This user has never logged in the Ravada server."
 msgstr "Người dùng này chưa bao giờ đăng nhập vào máy chủ Ravada."
 
 msgid "Import"
-msgstr "Nhập khẩu"
+msgstr "Nhập"
 
 msgid "Error: the LDAP entry for this user has been removed."
 msgstr "Lỗi: mục nhập LDAP cho người dùng này đã bị xóa."
@@ -1402,7 +1402,7 @@ msgid "New network"
 msgstr "Mạng mới"
 
 msgid "name"
-msgstr "Tên"
+msgstr "tên"
 
 msgid "address"
 msgstr "địa chỉ"
@@ -1447,7 +1447,7 @@ msgid "Are you sure you want to remove the"
 msgstr "Bạn có chắc chắn muốn xóa"
 
 msgid "yes"
-msgstr "Vâng"
+msgstr "dồng ý"
 
 msgid "Choose the virtualization type of the Node."
 msgstr "Chọn loại ảo hóa của Node."
@@ -1459,13 +1459,13 @@ msgid "A node with that address already exists."
 msgstr "Một nút có địa chỉ đó đã tồn tại."
 
 msgid "Save"
-msgstr "Tiết kiệm"
+msgstr "Lưu"
 
 msgid "Testing connection to"
 msgstr "Đang kiểm tra kết nối với"
 
 msgid "No bases found"
-msgstr "Không tìm thấy căn cứ"
+msgstr "Không tìm thấy cơ sở"
 
 msgid "This base has"
 msgstr "Căn cứ này có"
@@ -1483,7 +1483,7 @@ msgid "This node has"
 msgstr "Nút này có"
 
 msgid "bases."
-msgstr "các căn cứ."
+msgstr "các cơ sở."
 
 msgid "Remove bases in node"
 msgstr "Loại bỏ các cơ sở trong nút"
@@ -1525,13 +1525,13 @@ msgid "Max Memory"
 msgstr "Bộ nhớ tối đa"
 
 msgid "CPUs"
-msgstr "CPU"
+msgstr "CPUs"
 
 msgid "reopen"
 msgstr "mở lại"
 
 msgid "down"
-msgstr "xuống"
+msgstr "tắt"
 
 msgid "I don't know settings tabs for:"
 msgstr "Tôi không biết các tab cài đặt cho:"
@@ -1564,16 +1564,16 @@ msgid "Force Reboot"
 msgstr "Buộc khởi động lại"
 
 msgid "Compact"
-msgstr "gọn nhẹ"
+msgstr "nén"
 
 msgid "Compact disk volumes"
-msgstr "Ổ đĩa nhỏ gọn"
+msgstr "Nén ổ đĩa"
 
 msgid "This virtual machine has already been compacted"
 msgstr "Máy ảo này đã được nén"
 
 msgid "Purge"
-msgstr "Thanh trừng"
+msgstr "Xóa"
 
 msgid "Purge disk volumes"
 msgstr "Xóa khối lượng đĩa"
@@ -1588,7 +1588,7 @@ msgid "This base can't be removed because the domain has clones."
 msgstr "Không thể xóa cơ sở này vì miền có bản sao."
 
 msgid "Loading machine"
-msgstr "Máy tải"
+msgstr "Đang tải máy"
 
 msgid "waiting for requests"
 msgstr "chờ đợi yêu cầu"
@@ -1597,13 +1597,13 @@ msgid "Loading nodes"
 msgstr "Đang tải các nút"
 
 msgid "Node down"
-msgstr "Node down"
+msgstr "Tắt Node"
 
 msgid "Node disabled"
 msgstr "Nút bị vô hiệu hóa"
 
 msgid "This base has clones"
-msgstr "Căn cứ này có hàng nhái"
+msgstr "Căn cứ này có nhân bản"
 
 msgid "today"
 msgstr "hôm nay"
@@ -1612,7 +1612,7 @@ msgid "New Booking"
 msgstr "Đặt chỗ mới"
 
 msgid "Exec. time"
-msgstr "Thực thi. thời gian"
+msgstr "Thời gian thực thi"
 
 msgid "Exec clones sequentially"
 msgstr "Thực thi các bản sao tuần tự"
@@ -1627,7 +1627,7 @@ msgid "I can't find"
 msgstr "Tôi không thể tìm thấy"
 
 msgid "driver"
-msgstr "người lái xe"
+msgstr "trình điều khiển"
 
 msgid "This machine is running and can't be modified."
 msgstr "Máy này đang chạy và không thể sửa đổi."
@@ -1708,13 +1708,13 @@ msgid "clones defined."
 msgstr "vô tính xác định."
 
 msgid "Port"
-msgstr "Hải cảng"
+msgstr "Cổng"
 
 msgid "Restricted"
 msgstr "Hạn chế"
 
 msgid "Public Port"
-msgstr "Cảng công cộng"
+msgstr "Cổng công cộng"
 
 msgid "Only remote client can access this port if restricted"
 msgstr "Chỉ ứng dụng khách từ xa mới có thể truy cập cổng này nếu bị hạn chế"
@@ -1732,13 +1732,13 @@ msgid "Prepare Base"
 msgstr "Chuẩn bị cơ sở"
 
 msgid "Change"
-msgstr "Biến đổi"
+msgstr "Thay đổi"
 
 msgid "Rebase all the clones to a new base"
-msgstr "Căn cứ lại tất cả các bản sao sang một cơ sở mới"
+msgstr "Đặt lại cơ sở của tất cả các nhánh sao chép về một cơ sở mới"
 
 msgid "Rebase this machine to another virtual machine"
-msgstr "Căn cứ lại máy này với một máy ảo khác"
+msgstr "Đặt lại cơ sở của máy này sang một máy ảo khác"
 
 msgid "Warning"
 msgstr "Cảnh báo"
@@ -1750,13 +1750,13 @@ msgid "No, cancel"
 msgstr "Không, hủy bỏ"
 
 msgid "Yes, rebase"
-msgstr "Có, rebase"
+msgstr "Có, đặt lại cơ sở"
 
 msgid "Rebase"
-msgstr "Rebase"
+msgstr "Đặt lại cơ sở"
 
 msgid "Remove the base prepared from this machine"
-msgstr "Tháo phần đế đã chuẩn bị khỏi máy này"
+msgstr "Xóa phần cơ sở đã chuẩn bị khỏi máy này"
 
 msgid "Remove Clones"
 msgstr "Loại bỏ các bản sao"
@@ -1903,7 +1903,7 @@ msgid "Support Contact"
 msgstr "Liên hệ hỗ trợ"
 
 msgid "If you have any issue, you can contact the Suport crew and we will try to help you. Please, only contact Support Center if it is strictly necessary."
-msgstr "Nếu bạn gặp bất kỳ vấn đề gì, bạn có thể liên hệ với phi hành đoàn Suport và chúng tôi sẽ cố gắng giúp bạn. Vui lòng chỉ liên hệ với Trung tâm hỗ trợ nếu thực sự cần thiết."
+msgstr "Nếu bạn gặp bất kỳ vấn đề gì, bạn có thể liên hệ với đội ngũ Suport và chúng tôi sẽ cố gắng giúp bạn. Vui lòng chỉ liên hệ với Trung tâm hỗ trợ nếu thực sự cần thiết."
 
 msgid "Email"
 msgstr "E-mail"
@@ -1930,19 +1930,19 @@ msgid "volatile"
 msgstr "bay hơi"
 
 msgid "hide"
-msgstr "ẩn giấu"
+msgstr "ẩn"
 
 msgid "Hide active"
 msgstr "Ẩn hoạt động"
 
 msgid "filter"
-msgstr "lọc"
+msgstr "bộ lọc"
 
 msgid "Reload"
-msgstr "Nạp lại"
+msgstr "Tải lại"
 
 msgid "Congrats"
-msgstr "chúc mừng"
+msgstr "Chúc mừng"
 
 msgid "The new user"
 msgstr "Người dùng mới"
@@ -1966,7 +1966,7 @@ msgid "groups"
 msgstr "các nhóm"
 
 msgid "nodes"
-msgstr "điểm giao"
+msgstr "các nút"
 
 msgid "networks"
 msgstr "mạng lưới"
@@ -2056,7 +2056,7 @@ msgid "Color"
 msgstr "Màu sắc"
 
 msgid "Repeat"
-msgstr "Nói lại"
+msgstr "Lặp lại"
 
 msgid "Weekly"
 msgstr "Hàng tuần"
@@ -2089,7 +2089,7 @@ msgid "can change the settings of any virtual machine cloned from one base owned
 msgstr "có thể thay đổi cài đặt của bất kỳ máy ảo nào được nhân bản từ một cơ sở do người dùng sở hữu."
 
 msgid "Balance"
-msgstr "THĂNG BẰNG"
+msgstr "Cân bằng"
 
 msgid "Node with more free memory"
 msgstr "Nút có nhiều bộ nhớ trống hơn"
