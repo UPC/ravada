@@ -107,6 +107,9 @@ msgstr "Hindi"
 msgid "Indonesian"
 msgstr "Indonesian"
 
+msgid "Korean"
+msgstr "Korean"
+
 msgid "Persian"
 msgstr "Persian"
 
