@@ -2770,12 +2770,12 @@ sub _which_cache_set($self, $command, $path) {
         $sth->execute($self->id, $command, $path);
     };
     warn("Warning: $@ vm_which = ( ".$self->id.", $command, $path )")
-    if $@ && $@ !~ /Duplicate entry/i;
-
+    if $@ && $@ !~ /Duplicate entry/i
+          && $@ !~ /UNIQUE constraint failed/i
+    ;
 }
 
 sub _which_cache_flush($self) {
-    warn $self->id." flush which cache";
     my $sth = $self->_dbh->prepare(
         "DELETE FROM vm_which where id_vm=?"
     );
