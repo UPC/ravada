@@ -6507,7 +6507,7 @@ sub _domain_just_started($self, $domain) {
     $sth->execute($start_time);
     while ( my ($id, $command, $id_domain, $args) = $sth->fetchrow ) {
         next if $command !~ /create|clone|start|open/i;
-        return 1 if $id_domain == $domain->id;
+        return 1 if defined $id_domain && $id_domain == $domain->id;
         my $args_h = decode_json($args);
         return 1 if exists $args_h->{id_domain} && defined $args_h->{id_domain}
         && $args_h->{id_domain} == $domain->id;
