@@ -329,7 +329,7 @@ sub _around_start($orig, $self, @arg) {
     $enable_host_devices = 1 if !defined $enable_host_devices;
     my $is_volatile = ($self->is_volatile || $arg{is_volatile});
 
-    for (1 .. 5) {
+    for (1 .. 2) {
         eval { $self->_start_checks(%arg, enable_host_devices => $enable_host_devices) };
         my $error = $@;
         if ($error) {
@@ -579,16 +579,11 @@ sub _start_checks($self, @args) {
     my $id_base = $self->id_base;
     if ($id_base && !$is_volatile) {
         $self->_check_tmp_volumes();
-#        $self->_set_last_vm(1)
-        if ( !$self->is_local
-            && ( !$self->_vm->enabled || !base_in_vm($id_base,$self->_vm->id)
-                || !$self->_vm->ping) ) {
-            $self->_set_vm($vm_local, 1);
-        }
         if ( !$vm->is_alive ) {
             $vm->disconnect();
             $vm->connect;
             $vm = $vm_local if !$vm->is_local && !$vm->is_alive;
+            die "Error: node ".$vm->name." is not alive" if !$vm->is_alive;
         };
         if ($id_vm) {
             $self->_set_vm($vm);
@@ -1185,10 +1180,9 @@ sub _check_free_vm_memory {
 sub _check_tmp_volumes($self) {
     confess "Error: only clones temporary volumes can be checked."
         if !$self->id_base;
-    my $vm_local = $self->_vm->new( host => 'localhost' );
+    my $vm = $self->_vm;
     for my $vol ( $self->list_volumes_info) {
         next unless $vol->file && $vol->file =~ /\.(TMP|SWAP)\./;
-        next if $vm_local->file_exists($vol->file);
         $vol->delete();
 
         my $base = Ravada::Domain->open($self->id_base);
@@ -1200,7 +1194,7 @@ sub _check_tmp_volumes($self) {
         }
         my $vol_base = Ravada::Volume->new( file => $file_base->[0]
             , is_base => 1
-            , vm => $vm_local
+            , vm => $vm
         );
         $vol_base->clone(file => $vol->file);
     }
