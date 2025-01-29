@@ -2769,6 +2769,7 @@ sub _which_cache_set($self, $command, $path) {
         );
         $sth->execute($self->id, $command, $path);
     };
+    warn("Warning: $@ vm_which = ( ".$self->id.", $command, $path )")
     if $@ && $@ !~ /Duplicate entry/i
           && $@ !~ /UNIQUE constraint failed/i
     ;
