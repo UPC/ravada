@@ -2631,7 +2631,6 @@ sub DESTROY {
     shutdown_nodes();
     remove_old_user_ldap() if $CONNECTOR;
     remove_old_users()      if $CONNECTOR;
-    _unlock_all();
 }
 
 sub _check_leftovers {
@@ -2744,7 +2743,6 @@ sub end($ldap=undef) {
     _check_iptables();
     clean($ldap);
     remove_old_users()      if $CONNECTOR;
-    _unlock_all();
     if ($FILE_DB) {
         _file_db();
         rmdir _dir_db();
