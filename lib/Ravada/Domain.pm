@@ -213,8 +213,7 @@ after 'screenshot' => \&_post_screenshot;
 
 after '_select_domain_db' => \&_post_select_domain_db;
 
-before 'migrate' => \&_pre_migrate;
-after 'migrate' => \&_post_migrate;
+around 'migrate' => \&_around_migrate;
 
 around 'get_info' => \&_around_get_info;
 around 'set_max_mem' => \&_around_set_max_mem;
@@ -5329,6 +5328,14 @@ sub _post_migrate($self, $node, $request = undef) {
     # TODO: update db instead set this value
     $self->{_migrated} = 1;
 
+}
+
+sub _around_migrate($orig, $self, $node, $request=undef) {
+    return if $self->_vm->id == $node->id;
+
+    $self->_pre_migrate($node, $request);
+    $self->$orig($node, $request);
+    $self->_post_migrate($node, $request);
 }
 
 sub _id_base_in_vm($self, $id_vm) {
