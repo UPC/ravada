@@ -553,15 +553,20 @@ sub _around_create_domain {
 
     return $base->_search_pool_clone($owner) if $from_pool;
 
-    if ($self->is_local && $base && $base->is_base && $args_create{volatile} && !$base->list_host_devices) {
+    if ($self->is_local && $base && $base->is_base ) {
         $request->status("balancing")                       if $request;
         my $vm = $self->balance_vm($owner->id, $base);
 
         if (!$vm) {
             die "Error: No free nodes available.\n";
         }
+        if (!$vm->is_local) {
+            if ( $base->_base_files_in_vm($vm)
+                 && $base->_check_all_parents_in_node($vm)) {
+                $self = $vm;
+            }
+        }
         $request->status("creating machine on ".$vm->name)  if $request;
-        $self = $vm;
         $args_create{listen_ip} = $self->listen_ip($remote_ip);
     }
 
