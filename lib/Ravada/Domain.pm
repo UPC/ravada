@@ -1181,17 +1181,15 @@ sub _check_tmp_volumes($self) {
     confess "Error: only clones temporary volumes can be checked."
         if !$self->id_base;
     my $vm = $self->_vm;
-    for my $vol ( $self->list_volumes_info) {
-        next unless $vol->file && $vol->file =~ /\.(TMP|SWAP)\./;
-        $vol->delete();
 
-        my $base = Ravada::Domain->open($self->id_base);
-        my @volumes = $base->list_files_base_target;
+    my $base = Ravada::Domain->open($self->id_base);
+    my @volumes = $base->list_files_base_target;
+    for my $vol ( $self->list_volumes_info) {
+        next unless $vol->file && $vol->file =~ /\.(TMP|SWAP)\.\w+$/;
         my ($file_base) = grep { $_->[1] eq $vol->info->{target} } @volumes;
-        if (!$file_base) {
-            warn "Error: I can't find base volume for target ".$vol->info->{target}
-                .Dumper(\@volumes);
-        }
+        next if !$file_base;
+
+        $vol->delete();
         my $vol_base = Ravada::Volume->new( file => $file_base->[0]
             , is_base => 1
             , vm => $vm
