@@ -2,13 +2,16 @@
 
 **Implemented enhancements:**
 
-- Users can share virtual machines [\#2021]
-- Virtual networks management [\#1984]
-- GPU Mediated devices [\#1955]
-- Allow remove users via GUI [\#2023]
+- Update iso images year 2025 [\#2131]
+- Feature disconnected grace [\#2116]
+- Update Vietnamese [\#2112]
 
 **Bugfixes**
 
-- Node Option Not Available [\#2032]
+- Fix backup lock [\#2120]
+- Fix clone hostdev balance [\#2113]
+- Properly backup and restore machines with "auto start" [\#2097]
 
 **Refactors**
+
+- Connected clients status with RRD [\#2126]
