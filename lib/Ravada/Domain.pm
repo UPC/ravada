@@ -374,6 +374,8 @@ sub _around_start($orig, $self, @arg) {
         warn $error if $error;
         last if !$error;
 
+        $self->_dettach_host_devices() if $enable_host_devices && !$self->is_active();
+
         my $vm_name = Ravada::VM::_get_name_by_id($self->_data('id_vm'));
 
         die "Error: starting ".$self->name." on ".$vm_name." $error"
@@ -388,12 +390,10 @@ sub _around_start($orig, $self, @arg) {
         && $error !~ /Could not run .*swtpm/i
         && $error !~ /virtiofs/
         && $error !~ /child process/i
+        && $error !~ /host doesn.t support/
+        && $error !~ /device not found/
         ;
 
-        if ($error && $self->is_known && $self->id_base && !$self->is_local && $self->_vm->enabled) {
-            $self->_request_set_base();
-            next;
-        }
         die $error;
     }
     $self->_post_start(%arg);
