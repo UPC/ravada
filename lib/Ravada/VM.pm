@@ -553,7 +553,7 @@ sub _around_create_domain {
 
     return $base->_search_pool_clone($owner) if $from_pool;
 
-    if ($self->is_local && $base && $base->is_base ) {
+    if ($self->is_local && $base && $base->is_base && $args_create{volatile} && !$base->list_host_devices ) {
         $request->status("balancing")                       if $request;
         my $vm = $self->balance_vm($owner->id, $base);
 
@@ -1411,8 +1411,9 @@ sub is_locked($self) {
         next if defined $at && $at < time + 2;
         next if !$args;
         my $args_d = decode_json($args);
-        if ( exists $args_d->{id_vm} && $args_d->{id_vm} == $self->id ) {
-            warn "locked by $command\n";
+        if ( exists $args_d->{id_vm}
+            && $args_d->{id_vm} =~ /^\d+$/
+            && $args_d->{id_vm} == $self->id ) {
             return 1;
         }
     }
