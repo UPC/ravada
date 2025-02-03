@@ -5,12 +5,13 @@
     %= include 'bootstrap/navigation'
      <header id="page-top" class="intro">
         <div class="intro-body" ng-controller="login">
-            <div class="container">
+            <div class="container" ng-cloak="1">
 
                 <h2 class="form-signin-heading"><%=l($login_header) %></h2>
                 <p><%= $login_message %></p>
 
-                <div ng-show="<%= $openid_available or 0 %>">
+                % if ($openid_available) {
+                <div>
                     <a type="button" class="btn btn-success" href="/login_openid"><b><%=l 'Login Single Sign On' %></b></a>
 
                 <hr class="my-4">
@@ -29,8 +30,9 @@
                     </small>
 
                 </div>
+                % }
 
-                <div ng-show="local_login || <%= (!$openid_available or 0 ) %>" class="border mb-4" ng-cloak>
+                <div ng-hide="<%= ($openid_available or 0 ) %> && !local_login" class="border mb-4">
                     <form method="post" action="/" class="form-singin">
 
                 <input class="form-control mb-4" id="user" name="login" value ="<%= $login %>" type="text" placeholder="<%=l 'User' %>" required autofocus>
