@@ -88,6 +88,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/windows_clients
    docs/mac_clients
    docs/macos_spice_client
+   docs/linux_spice_client
    docs/RDP_connection
    docs/change_windows_driver_to_virtio
    docs/Backup
