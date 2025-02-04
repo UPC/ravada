@@ -94,7 +94,7 @@ If you are using a *custom* login page make sure you have a section
 pointing to the openid login.
 
 First of all enable the *ravada app* in the login template.
-Make sure you have *ng-app* and *ng-controller* configured:
+Make sure you have *ng-app* , *ng-controller* and *ng-init* configured:
 
 ::
 
@@ -104,13 +104,53 @@ Make sure you have *ng-app* and *ng-controller* configured:
     <body role="document">
         %= include 'bootstrap/navigation'
          <header id="page-top" class="intro">
-            <div class="intro-body" ng-controller="login">
+            <div class="intro-body" ng-controller="login"
+                ng-init="hide_local_login='<%= ($openid_available or 0) %>'"
+            >
 
 Then add a link to the *OpenID login* like this:
 
 ::
 
-    <div ng-show="<%= $openid_available or 0 %>">
-    <a type="button" class="btn btn-success" href="/login_openid"><b><%=l 'Login Single Sign On' %></b></a>
-    </div>
+  % if ($openid_available) {
+      <div>
+          <a type="button" class="btn btn-success" href="/login_openid">
+            <b><%=l 'Login Single Sign On' %></b>
+          </a>
+          <hr class="my-4">
+          <a data-toggle="collapse"
+              ng-click="hide_local_login=!hide_local_login"
+              >
+              <%= "Other Authentication methods" %>
+          </a>
+          <small>
+              <a
+              ng-click="hide_local_login=!hide_local_login"
+                  type="button" class="badge btn btn-secondary btn-outline-dark btn-sm">
+                  <i ng-show="hide_local_login" class="fa fa-caret-right" aria-hidden="true"></i>
+                  <i ng-hide="hide_local_login" class="fa fa-caret-up" aria-hidden="true"></i>
+              </a>
+          </small>
+      </div>
+  % }
+
+
+You should keep a section for plain login available just in case:
+
+::
+
+ <div ng-hide="<%= ($openid_available or 0 ) %> && hide_local_login"
+         class="border mb-4">
+     <form method="post" action="/" class="form-singin">
+         <input class="form-control mb-4" id="user" name="login" value ="<%= $login %>"
+            type="text" placeholder="<%=l 'User' %>" required autofocus>
+         <input class="form-control mb-4" id="pssw" type="password" name="password"
+            value="" placeholder="<%=l 'Password' %>" required>
+
+         <input type="hidden" name="url" value="<%= $url %>">
+         <input id="submit"
+            class="btn btn-success btn-lg btn-block" type="submit" name="submit"
+            value="<%=l 'Login' %>"/>
+      </form>
+ </div>
 
