@@ -4,7 +4,9 @@
 <body role="document">
     %= include 'bootstrap/navigation'
      <header id="page-top" class="intro">
-        <div class="intro-body" ng-controller="login">
+        <div class="intro-body" ng-controller="login"
+                                ng-init="hide_local_login='<%= ($openid_available or 0) %>'"
+            >
             <div class="container" ng-cloak="1">
 
                 <h2 class="form-signin-heading"><%=l($login_header) %></h2>
@@ -16,23 +18,24 @@
 
                 <hr class="my-4">
 					<a data-toggle="collapse"
-                        ng-click="local_login=!local_login"
+                        ng-click="hide_local_login=!hide_local_login"
                         >
                         <%= "Other Authentication methods" %>
                     </a>
                     <small>
                         <a
-                        ng-click="local_login=!local_login"
-                            type="button" class="btn btn-secondary btn-outline-dark btn-sm">
-                            <i ng-hide="local_login" class="fa fa-caret-right" aria-hidden="true"></i>
-                            <i ng-show="local_login" class="fa fa-caret-up" aria-hidden="true"></i>
+                        ng-click="hide_local_login=!hide_local_login"
+                            type="button" class="badge btn btn-secondary btn-outline-dark btn-sm">
+                            <i ng-show="hide_local_login" class="fa fa-caret-right" aria-hidden="true"></i>
+                            <i ng-hide="hide_local_login" class="fa fa-caret-up" aria-hidden="true"></i>
                         </a>
                     </small>
 
                 </div>
                 % }
 
-                <div ng-hide="<%= ($openid_available or 0 ) %> && !local_login" class="border mb-4">
+                <div ng-hide="<%= ($openid_available or 0 ) %> && hide_local_login"
+                        class="border mb-4">
                     <form method="post" action="/" class="form-singin">
 
                 <input class="form-control mb-4" id="user" name="login" value ="<%= $login %>" type="text" placeholder="<%=l 'User' %>" required autofocus>
