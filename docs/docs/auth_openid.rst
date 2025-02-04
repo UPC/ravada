@@ -43,6 +43,14 @@ At least you will need these provided by your organization openid server:
      Require valid-user
   </Location>
 
+
+Make the configuration for openid enabled
+
+::
+
+ sudo a2enmod auth_openidc
+
+
 Restart Apache
 ~~~~~~~~~~~~~~
 
