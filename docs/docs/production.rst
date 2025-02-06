@@ -75,6 +75,12 @@ You have to restart libvirt after changing this file:
 
     sudo systemctl restart libvirtd
 
+SPICE-TLS
+---------
+
+The default visualization protocol, SPICE, can be hardened
+`installing a TLS certificate <spice_tls.html>`__.
+
 Apache
 ------
 
