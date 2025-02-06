@@ -5950,7 +5950,8 @@ sub _client_connection_status_display($self, $force) {
         for my $line (@out) {
             my @netstat_info = split(/\s+/,$line);
             if ( $netstat_info[2] =~ /:$port$/ ) {
-                return 'connected ('.$display->{driver}.")";
+                my ($ip_src) = $netstat_info[3] =~ /(\d+\.\d+\.\d+\.\d+)/;
+                return "connected ($ip_src:".$display->{driver}.")";
             }
         }
     }
@@ -5964,10 +5965,10 @@ sub _client_connection_status_port($self, $force) {
     for my $port ( $self->list_ports ) {
         my $public_port = $port->{public_port} or next;
         for my $line (split /\n/,$iptstate_out) {
-            my ($ip_port,$status) = $line =~/^[0-9.:]+\s+\d+\.\d+\.\d+\.\d+:(\d+)\s+\w+\s+(\w+)/;
+            my ($ip_src,$ip_port,$status) = $line =~/^(\d+\.\d+\.\d+\.\d+)\:\d+\s+\d+\.\d+\.\d+\.\d+:(\d+)\s+\w+\s+(\w+)/;
             next if !defined $ip_port || $public_port != $ip_port;
             last if $status ne 'ESTABLISHED';
-            return 'connected ('.($port->{name} or $port->{internal_port}).")";
+            return "connected ($ip_src:".($port->{name} or $port->{internal_port}).")";
         }
     }
     return 'disconnected';
