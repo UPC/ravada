@@ -376,8 +376,10 @@ sub list_domains($self, %args) {
                 $row->{is_paused} = 1 if $row->{status} eq 'paused';
             }
             $row->{node} = $self->_node_name($row->{id_vm});
-            ($row->{remote_ip}) = $row->{client_status} =~ /onnected.*?\((.*)\)/;
-            $row->{remote_ip} = $row->{client_status} if ! $row->{remote_ip};
+            if (defined $row->{client_status}) {
+                ($row->{remote_ip}) = $row->{client_status} =~ /onnected.*?\((.*)\)/;
+                $row->{remote_ip} = $row->{client_status} if ! $row->{remote_ip};
+            }
             if (!$row->{status} ) {
                 if ($row->{is_active}) {
                     $row->{status} = 'active';
