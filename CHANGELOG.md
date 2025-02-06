@@ -11,6 +11,7 @@
 - Fix backup lock [\#2120]
 - Fix clone hostdev balance [\#2113]
 - Properly backup and restore machines with "auto start" [\#2097]
+- Login openid cached [\#2139]
 
 **Refactors**
 
