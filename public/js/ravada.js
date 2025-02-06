@@ -482,7 +482,7 @@
                             update_info_settings();
                         }
                     });
-                    _select_new_base();
+                    //_select_new_base();
                 }
             };
 
@@ -561,6 +561,7 @@
                 }
             };
             var _select_new_base = function() {
+                console.log($scope.new_base +" typeof="+ typeof($scope.new_base));
                 if(typeof($scope.new_base) != 'undefined'
                     || typeof($scope.showmachine) == 'undefined'
                     || typeof($scope.bases) == 'undefined'
@@ -576,6 +577,7 @@
                     }
                 }
                 $scope.current_base = $scope.new_base;
+                console.log($scope.new_base);
             };
 
             var subscribe_bases = function(url, type) {
