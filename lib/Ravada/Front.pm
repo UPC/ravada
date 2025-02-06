@@ -329,6 +329,8 @@ sub list_domains($self, %args) {
     my $query = "SELECT d.name,d.alias, d.id, id_base, is_base, id_vm, status, is_public "
         ."      ,vms.name as node , is_volatile, client_status, id_owner "
         ."      ,comment, is_pool, show_clones"
+        ."      ,d.has_clones, d.is_locked"
+        ."      ,d.client_status, d.date_status_change, d.autostart "
         ."      ,d.date_changed"
         ." FROM domains d LEFT JOIN vms "
         ."  ON d.id_vm = vms.id ";
@@ -341,7 +343,9 @@ sub list_domains($self, %args) {
             delete $args{$field};
             next;
         }
-        $where .= " d.$field=?"
+        my $operation = "=";
+        $operation = ">=" if $field eq 'date_changed';
+        $where .= " d.$field $operation ?";
     }
     $where = "WHERE $where" if $where;
 
@@ -350,50 +354,29 @@ sub list_domains($self, %args) {
 
     my @domains = ();
     while ( my $row = $sth->fetchrow_hashref) {
-        for (qw(is_locked is_hibernated is_paused
-                has_clones )) {
+        for (qw(is_hibernated is_paused)) {
             $row->{$_} = 0;
         }
-        my $domain ;
-        my $t0 = time;
-        eval { $domain   = $self->search_domain($row->{name}) };
-        warn $@ if $@;
         $row->{remote_ip} = undef;
-        if ( $row->{is_volatile} && !$domain ) {
-            $self->_remove_domain_db($row->{id});
-            next;
-        }
 
         $row->{name}=Encode::decode_utf8($row->{alias})
         if defined $row->{alias} && length($row->{alias});
 
-        $row->{has_clones} = 0 if !exists $row->{has_clones};
-        $row->{is_locked} = 0 if !exists $row->{is_locked};
         $row->{is_active} = 0;
         $row->{remote_ip} = undef;
-        if ( $domain ) {
-            $row->{is_locked} = $domain->is_locked;
+        {
             if ($row->{status} =~ /active|starting/) {
                 $row->{is_active} = 1;
                 $row->{is_hibernated} = 0;
                 $row->{is_paused} = 0;
+                $row->{remote_ip} = Ravada::Domain::remote_ip($row->{id});
             } else {
                 $row->{is_active} = 0;
-                $row->{is_hibernated} = ( $domain->is_hibernated or 0);
-                $row->{is_paused} = 1 if $domain->is_paused;
+                $row->{is_hibernated} = 1 if $row->{status} eq 'hibernated';
+                $row->{is_paused} = 1 if $row->{status} eq 'paused';
             }
-            $row->{has_clones} = $domain->has_clones;
-#            $row->{disk_size} = ( $domain->disk_size or 0);
-#            $row->{disk_size} /= (1024*1024*1024);
-#            $row->{disk_size} = 1 if $row->{disk_size} < 1;
-            $row->{remote_ip} = $domain->remote_ip if $row->{is_active};
-            $row->{node} = $domain->_vm->name if $domain->_vm;
-            $row->{remote_ip} = $domain->client_status
-                if $domain->client_status && $domain->client_status !~ /^connected/;
-            if  ($domain->remote_ip && $domain->client_status && $domain->client_status =~ /^connected \((.*?)\)/ ) {
-                $row->{remote_ip} = $domain->remote_ip.".$1";
-            }
-            $row->{autostart} = $domain->_data('autostart');
+            $row->{node} = $self->_node_name($row->{id_vm});
+            $row->{remote_ip} = $row->{client_status};
             if (!$row->{status} ) {
                 if ($row->{is_active}) {
                     $row->{status} = 'active';
@@ -403,7 +386,7 @@ sub list_domains($self, %args) {
                     $row->{status} = 'down';
                 }
             }
-            $row->{date_status_change} = $domain->_date_status_change();
+            $row->{date_status_change} = Ravada::Domain::_date_status_change($row->{date_status_change});
         }
         delete $row->{spice_password};
         push @domains, ($row);
@@ -411,6 +394,20 @@ sub list_domains($self, %args) {
     $sth->finish;
 
     return \@domains;
+}
+
+sub _node_name($self, $id_vm) {
+    return $self->{_node_name}->{$id_vm}
+    if $self->{_node_name}->{$id_vm};
+
+    my $sth = $self->_dbh->prepare("SELECT name FROM vms "
+        ." WHERE id=?"
+    );
+    $sth->execute($id_vm);
+    my ($name) = $sth->fetchrow;
+    $self->{_node_name}->{$id_vm} = $name;
+
+    return $name;
 }
 
 =head2 filter_base_without_clones

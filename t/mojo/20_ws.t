@@ -143,11 +143,24 @@ sub test_bases_non_admin($t,$bases) {
     }
 }
 
+sub _prepare_base($base) {
+
+    $base->is_public(1) unless $base->is_public();
+
+    return if $base->is_base();
+    Ravada::Request->prepare_base( uid => user_admin->id
+        ,id_domain => $base->id
+    );
+    wait_request();
+}
+
 sub test_list_machines_non_admin($t, $bases) {
     _login_non_admin($t);
+    _prepare_base($bases->[0]);
+
     my $url = "/machine/clone/".$bases->[0]->id.".html";
-    $t->get_ok($url)->status_is(200);
-    wait_request(background => 1);
+    $t->get_ok($url)->status_is(200) or die $url;
+    wait_request(background => 1, debug => 1);
     my @list_bases = list_machines_user($t);
     my $clone;
     for my $base (@list_bases) {
@@ -158,6 +171,7 @@ sub test_list_machines_non_admin($t, $bases) {
         }
         last if $clone;
     }
+    $clone = _clone($bases->[0], $USER) if !$clone;
 
     my @list_machines = list_machines($t);
     is(scalar(@list_machines),0) or die Dumper([map {[$_->{id_base},$_->{name}]} @list_machines]);
@@ -172,6 +186,8 @@ sub test_list_machines_non_admin($t, $bases) {
     );
     wait_request(background => 1);
     user_admin->grant($USER,'shutdown_clones');
+    is($USER->is_operator,1);
+    is($USER->can_list_clones_from_own_base(),1);
 
     for ( 1 .. 5 ) {
         @list_machines = list_machines($t);
@@ -180,7 +196,57 @@ sub test_list_machines_non_admin($t, $bases) {
         wait_request($req->id);
     }
     is(scalar(@list_machines),1,$USER->name." / $$ should see one machine") or exit;
+    my ($base) = $list_machines[0];
+
+    my $user2 = create_user();
+    _clone($base, $user2);
+    @list_machines = list_machines($t);
+    is(scalar(@list_machines),2,$USER->name." / $$ should see 2 machines") or exit;
+
+    my ($clone2) = grep { $_->{id_owner} == $user2->id } @list_machines;
+    ok($clone2);
+
+    test_shutdown($USER, $clone2);
     user_admin->revoke($USER,'shutdown_clones');
+    remove_domain_and_clones_req($base);
+}
+
+sub test_shutdown($user, $clone) {
+    if (!$clone->{status} eq 'active') {
+        my $req = Ravada::Request->shutdown(
+            uid => $user->id
+            ,id_domain => $clone->{id}
+        );
+        wait_request();
+    }
+    my $req = Ravada::Request->shutdown(
+        uid => $user->id
+        ,id_domain => $clone->{id}
+    );
+    wait_request();
+    is($req->error,'');
+    my $clone2 = Ravada::Front::Domain->open($clone->{id});
+    is($clone2->_data('status'),'shutdown');
+}
+
+sub _clone($base0, $user) {
+    my $base = $base0;
+    $base = Ravada::Front::Domain->open($base0->{id})
+    if ref($base) !~ /^Ravada/;
+    
+    _prepare_base($base);
+    
+    my $clone;
+    my $req = Ravada::Request->clone(
+        uid => $user->id
+        ,id_domain => $base->id
+    );
+    wait_request(debug => 1);
+    is($req->error,'') or exit;
+    is($req->status,'done') or exit;
+    ($clone) = $base->clones();
+    die "Error: no clone found for base ".$base->name if !$clone;
+    return $clone;
 }
 
 sub test_bases_access($t,$bases) {
@@ -423,6 +489,7 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
 
     mojo_login($t, $USERNAME, $PASSWORD);
     test_bases($t,\@bases);
+    test_list_machines_non_admin($t,\@bases);
 
     _login_non_admin($t);
     test_bases_access($t,\@bases);

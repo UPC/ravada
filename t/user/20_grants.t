@@ -233,6 +233,47 @@ sub test_view_clones {
     $user->remove();
 }
 
+sub test_list_clones($user, $action, $base, $clone) {
+    is($user->can_list_clones_from_own_base(),1);
+
+    my $list = rvd_front->list_machines($user);
+
+    my ($found_base) = grep { $_->{name} eq $base->name} @$list;
+    ok($found_base,"Expecting ".$base->name);
+    my ($found_clone) = grep { $_->{name} eq $clone->name} @$list;
+    ok($found_clone,"Expecting ".$clone->name);
+
+    is($found_clone->{can_manage},0);
+
+    my $found_action=0;
+    for my $key (keys %$found_clone) {
+        next unless $key =~ /^can_/;
+        diag($key);
+        if ($key eq "can_$action") {
+            $found_action++;
+            is($found_clone->{$key},1,"Expecting $key allowed");
+        } else {
+            is($found_clone->{$key},0,"Expecting $key not allowed");
+        }
+    }
+    ok($found_action,"Expecting can_$action found in ".Dumper($found_clone));
+
+    return $found_clone;
+}
+
+sub test_list_requests($user) {
+
+    my $requests = rvd_front->list_requests;
+    my @found = grep { $_->{command} =~ /base/ } @$requests;
+    ok(!@found,"Expecting no other requests found");
+    for my $req_data (@$requests) {
+        next if $req_data->{uid} == $user->id;
+        my $req = Ravada::Request->open($req_data->{id});
+        die $req->uid." != ".$user->id;
+
+    }
+}
+
 sub test_shutdown_clone {
     my $vm_name = shift;
 
@@ -262,6 +303,9 @@ sub test_shutdown_clone {
 
     $usera->grant($user,'shutdown_clones');
     is($user->can_shutdown_clones,1);
+
+    my $front_clone = test_list_clones($user,"shutdown", $domain, $clone);
+    test_list_requests($user);
 
     eval { $clone->shutdown_now($user); };
     is($@,'');

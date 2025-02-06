@@ -596,6 +596,7 @@ sub _around_create_domain {
             $domain->_store_display($display);
         }
         $domain->_chroot_filesystems();
+        $base->has_clones(1);
     }
     my $user = Ravada::Auth::SQL->search_by_id($id_owner);
 

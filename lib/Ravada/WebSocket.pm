@@ -55,7 +55,6 @@ my %SUB = (
 our %TABLE_CHANNEL = (
     list_alerts => 'messages'
     ,list_machines => 'domains'
-    ,list_machines_tree => 'domains'
     ,list_machines_user_including_privates => ['domains','bookings','booking_entries'
         ,'booking_entry_ldap_groups', 'booking_entry_users','booking_entry_bases']
     ,list_requests => 'requests'
@@ -64,15 +63,19 @@ our %TABLE_CHANNEL = (
     ,list_networks => 'virtual_networks'
 );
 
+lock_hash(%TABLE_CHANNEL);
+
 my $A_WHILE;
 my %A_WHILE;
-my $LIST_MACHINES_FIRST_TIME = 1;
+my $LIST_MACHINES_TIME = 0;
+my $LIST_MACHINES_LAST = 0;
+my $LIST_MACHINES_TIME_COUNT = 0;
 my $TZ;
 my %TIME0;
 ######################################################################
 
 
-sub _list_alerts($rvd, $args) {
+sub _list_alerts($self, $rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my $user = Ravada::Auth::SQL->new(name => $login) or die "Error: uknown user $login";
 
@@ -89,7 +92,7 @@ sub _list_alerts($rvd, $args) {
     return [@ret2,@ret];
 }
 
-sub _list_bases($rvd, $args) {
+sub _list_bases($self, $rvd, $args) {
     my $domains = $rvd->list_bases();
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my $user = Ravada::Auth::SQL->new(name => $login) or die "Error: uknown user $login";
@@ -103,14 +106,14 @@ sub _list_bases($rvd, $args) {
     return \@domains_show;
 }
 
-sub _list_isos($rvd, $args) {
+sub _list_isos($self, $rvd, $args) {
     my ($type) = $args->{channel} =~ m{/(.*)};
     $type = 'KVM' if !defined $type;
 
     return $rvd->iso_file($type);
 }
 
-sub _list_iso_images($rvd, $args) {
+sub _list_iso_images($self, $rvd, $args) {
     my ($type) = $args->{channel} =~ m{/(.*)};
     $type = 'KVM' if !defined $type;
 
@@ -118,7 +121,7 @@ sub _list_iso_images($rvd, $args) {
     return $images;
 }
 
-sub _list_nodes($rvd, $args) {
+sub _list_nodes($self, $rvd, $args) {
     my ($type) = $args->{channel} =~ m{/(.*)};
     my @nodes = $rvd->list_vms($type);
     return \@nodes;
@@ -134,7 +137,7 @@ sub _request_exists($rvd, $id_request) {
     return $id_found;
 }
 
-sub _request($rvd, $args) {
+sub _request($self, $rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my $user = Ravada::Auth::SQL->new(name => $login);
 
@@ -150,11 +153,11 @@ sub _request($rvd, $args) {
     return $info;
 }
 
-sub _list_machines($rvd, $args) {
+sub _list_machines($self, $rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my $user = Ravada::Auth::SQL->new(name => $login)
         or die "Error: uknown user $login";
-    return []
+    return (0,[])
         unless (
             $user->can_list_machines
             || $user->can_list_own_machines()
@@ -163,12 +166,24 @@ sub _list_machines($rvd, $args) {
             || $user->is_admin()
         );
 
-    if ($LIST_MACHINES_FIRST_TIME) {
-        $LIST_MACHINES_FIRST_TIME = 0;
-        return $rvd->list_machines($user, id_base => undef);
+    $LIST_MACHINES_TIME++;
+    if ($LIST_MACHINES_TIME == 1 ) {
+        return (0, $rvd->list_machines($user, id_base => undef));
+    } elsif( $LIST_MACHINES_TIME <= 2 || $LIST_MACHINES_TIME_COUNT++ > 60
+        || $self->_count_different('domains')) {
+        $LIST_MACHINES_TIME_COUNT=0;
+        return (0,$rvd->list_machines($user));
     }
 
-    return $rvd->list_machines($user);
+    my $seconds = time - $LIST_MACHINES_LAST + 60;
+    my $list_changed = $rvd->list_machines($user
+        , date_changed => Ravada::Utils::now($seconds));
+    for my $item (@$list_changed) {
+        return (0,$rvd->list_machines($user))
+        if $item->{is_base};
+    }
+    return (1,$list_changed);
+
 }
 sub _list_children($list_orig, $list, $level=0) {
     my @list2;
@@ -181,24 +196,29 @@ sub _list_children($list_orig, $list, $level=0) {
         if ( scalar(@children) ) {
             my @children2 = _list_children($list_orig,\@children, $level+1);
             push @list2,(@children2);
-            $item->{has_clones} = scalar @children2;
-        } else {
-            $item->{has_clones} = 0;
         }
         lock_hash(%$item);
     }
     return @list2;
 }
 
-sub _list_machines_tree($rvd, $args) {
-    my $list_orig = _list_machines($rvd, $args);
+sub _list_machines_tree($self, $rvd, $args) {
+    my ($refresh,$list_orig) = $self->_list_machines($rvd, $args);
+
+    return if $refresh && !scalar(@$list_orig) && $LIST_MACHINES_TIME % 10;
+
+    $LIST_MACHINES_LAST = time;
+
+    return {action => 'refresh', data => $list_orig} if $refresh;
+
     my @list = sort { lc($a->{name}) cmp lc($b->{name}) }
                 grep {!exists($_->{id_base}) || !$_->{id_base} }
                 @$list_orig;
-    return [_list_children($list_orig, \@list)];
+    my @ordered = _list_children($list_orig, \@list);
+    return { 'action' => 'new', data => \@ordered };
 }
 
-sub _list_machines_user($rvd, $args) {
+sub _list_machines_user($self, $rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my $user = Ravada::Auth::SQL->new(name => $login)
         or die "Error: uknown user $login";
@@ -208,7 +228,7 @@ sub _list_machines_user($rvd, $args) {
     return $ret;
 }
 
-sub _list_machines_user_including_privates($rvd, $args) {
+sub _list_machines_user_including_privates($self, $rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my $user = Ravada::Auth::SQL->new(name => $login)
         or die "Error: uknown user $login";
@@ -219,12 +239,12 @@ sub _list_machines_user_including_privates($rvd, $args) {
     return $ret;
 }
 
-sub _list_bases_anonymous($rvd, $args) {
+sub _list_bases_anonymous($self, $rvd, $args) {
     my $remote_ip = $args->{remote_ip} or die "Error: no remote_ip arg ".Dumper($args);
     return $rvd->list_bases_anonymous($remote_ip);
 }
 
-sub _list_host_devices($rvd, $args) {
+sub _list_host_devices($self, $rvd, $args) {
     my ($id_vm) = $args->{channel} =~ m{/(\d+)};
 
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
@@ -369,14 +389,14 @@ sub _get_domain_with_device($rvd, $dev) {
     }
 }
 
-sub _list_requests($rvd, $args) {
+sub _list_requests($self, $rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my $user = Ravada::Auth::SQL->new(name => $login) or die "Error: uknown user $login";
     return [] unless $user->is_operator || $user->is_admin;
     return $rvd->list_requests;
 }
 
-sub _get_machine_info($rvd, $args) {
+sub _get_machine_info($self, $rvd, $args) {
     my ($id_domain) = $args->{channel} =~ m{/(\d+)};
     my $domain = $rvd->search_domain_by_id($id_domain) or do {
         warn "Error: domain $id_domain not found.";
@@ -397,7 +417,7 @@ sub _get_machine_info($rvd, $args) {
     return $info;
 }
 
-sub _get_node_info($rvd, $args) {
+sub _get_node_info($self, $rvd, $args) {
     my ($id_node) = $args->{channel} =~ m{/(\d+)};
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my $user = Ravada::Auth::SQL->new(name => $login) or die "Error: uknown user $login";
@@ -457,7 +477,7 @@ sub _list_recent_requests($rvd, $seconds) {
     return @reqs;
 }
 
-sub _ping_backend($rvd, $args) {
+sub _ping_backend($self, $rvd, $args) {
     my @reqs = _list_recent_requests($rvd, 120);
 
     my $requested = scalar( grep { $_->{status} eq 'requested' } @reqs );
@@ -542,41 +562,8 @@ sub _its_been_a_while($reset=0) {
     return time - $A_WHILE > 5;
 }
 
-sub _different_list($list1, $list2) {
-    return 1 if scalar(@$list1) != scalar (@$list2);
-    for my $i (0 .. scalar(@$list1)-1) {
-        my $h1 = $list1->[$i];
-        my $h2 = $list2->[$i];
-        return 1 if _different($h1, $h2);
-   }
-    return 0;
-}
-
-sub _different_hash($h1,$h2) {
-    for my $key (keys %$h1) {
-        next if exists $h1->{$key} && exists $h2->{$key}
-        && !defined $h1->{$key} && !defined $h2->{$key};
-        if (!exists $h2->{$key}
-            || !defined $h1->{$key} && defined $h2->{$key}
-            || defined $h1->{$key} && !defined $h2->{$key}
-            || _different($h1->{$key}, $h2->{$key})) {
-            unlock_hash(%$h1);
-            lock_hash(%$h1);
-            return 1;
-        }
-    }
-    return 0;
-}
 sub _different($var1, $var2) {
-    return 1 if !defined $var1 &&  defined $var2;
-    return 1 if  defined $var1 && !defined $var2;
-    return 1 if ref($var1) ne ref($var2);
-    return _different_list($var1, $var2) if ref($var1) eq 'ARRAY';
-    return _different_hash($var1, $var2) if ref($var1) eq 'HASH';
-    return 1 if !defined $var1 && defined $var2
-                || defined $var1 && !defined $var2;
-    return 0 if !defined $var1 && !defined $var2;
-    return $var1 ne $var2;
+    return Ravada::Utils::_different($var1, $var2);
 }
 
 sub BUILD {
@@ -594,6 +581,18 @@ sub BUILD {
             }
         });
 
+}
+
+sub _count_different($self, $table) {
+    my $count = $self->_count_table($table);
+    my $key = "_count".$table;
+    if (!defined $self->{$key}
+        || $self->{$key} != $count ) {
+
+        $self->{$key} = $count;
+        return 1;
+    }
+    return 0;
 }
 
 sub _old_info($self, $key, $new_count=undef, $new_changed=undef) {
@@ -666,7 +665,8 @@ sub _send_answer($self, $ws_client, $channel, $key = $ws_client) {
     my $exec = $SUB{$channel} or die "Error: unknown channel $channel";
 
     my $old_ret;
-    if (defined $TIME0{$channel} && time < $TIME0{$channel}+60) {
+    if (exists $TABLE_CHANNEL{$channel} && $TABLE_CHANNEL{$channel}
+            && defined $TIME0{$channel} && time < $TIME0{$channel}+60) {
         my ($old_count, $old_changed) = $self->_old_info($key);
         my ($new_count, $new_changed) = $self->_new_info($key);
 
@@ -682,19 +682,19 @@ sub _send_answer($self, $ws_client, $channel, $key = $ws_client) {
     $TIME0{$channel} = time;
 
     my $ret;
-    eval { $ret = $exec->($self->ravada, $self->clients->{$key}) };
+    eval { $ret = $exec->($self, $self->ravada, $self->clients->{$key}) };
     warn $@ if $@;
 
-    if ( defined $ret && _different($ret, $old_ret )) {
+    if ( defined $ret && (!defined $old_ret || _different($ret, $old_ret ))) {
 
         warn localtime(time)." WS: send $channel " if $DEBUG;
         $ws_client->send( {json => $ret} );
         $self->clients->{$key}->{ret} = $ret;
     }
     $self->unsubscribe($key) if $channel eq 'ping_backend' && $ret eq 2;
-    if (!$ret) {
-        $self->unsubscribe($key);
-    }
+    # if (!$ret && $channel !~ /list_machines/) {
+    #    $self->unsubscribe($key);
+    # }
 }
 
 sub subscribe($self, %args) {
@@ -708,7 +708,7 @@ sub subscribe($self, %args) {
         , ret => undef
     };
     if ($args{channel} =~ /list_machines/) {
-        $LIST_MACHINES_FIRST_TIME = 1 ;
+        $LIST_MACHINES_TIME = 0 ;
     }
     $self->_clean_info($ws);
     $self->_send_answer($ws,$args{channel});

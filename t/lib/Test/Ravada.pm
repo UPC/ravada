@@ -34,7 +34,7 @@ require Exporter;
 
 @EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin rvd_front init init_vm clean new_pool_name new_volume_name
 create_domain
-    create_domain_v2
+    create_domain_v2 create_base
     import_domain
     test_chain_prerouting
     find_ip_rule
@@ -299,6 +299,12 @@ sub import_domain($vm, $name=$BASE_NAME, $import_base=1) {
         ,spinoff_disks => 0
         ,import_base => $import_base
     );
+    return $domain;
+}
+
+sub create_base($vm) {
+    my $domain = create_domain_v2(vm => $vm);
+    $domain->prepare_base(user_admin);
     return $domain;
 }
 
@@ -832,6 +838,11 @@ sub remove_domain(@bases) {
 
         $base = Ravada::Domain->open($id)
         unless ref($base) =~ /^Ravada::/;
+
+        if (!defined $base) {
+            warn "I can't find base '$id'";
+            next;
+        }
 
         for my $clone ($base->clones) {
             my $d_clone = Ravada::Domain->open($clone->{id});
@@ -3161,7 +3172,7 @@ sub ping_backend() {
         $now[1]--;
         my $now2 = "".($now[5]+1900)."-$now[4]-$now[3] $now[2]:$now[1]";
         my $sth = rvd_back->connector->dbh->prepare(
-            "SELECT date_changed,status FROM requests ORDER BY date_changed DESC LIMIT 10"
+            "SELECT id,command,date_changed,status FROM requests ORDER BY date_changed DESC LIMIT 10"
         );
         $sth->execute();
         my $n = 100;
@@ -3170,7 +3181,8 @@ sub ping_backend() {
             return 1 if $date_changed =~ /^($now|$now2)/;
             last if $n--<0;
         }
-        rvd_front->ping_backend();
+        my $ping = rvd_front->ping_backend();
+        return $ping if $ping;
     }
 
     return rvd_front->ping_backend();
