@@ -604,7 +604,7 @@ get '/list_nodes_by_id.json' => sub {
 };
 
 get '/list_host_devices/(:id_vm)' => sub($c) {
-    $c->render(json => Ravada::WebSocket::_list_host_devices($RAVADA
+    $c->render(json => Ravada::WebSocket::_list_host_devices(undef,$RAVADA
             , {
                 channel => '/'.$c->stash('id_vm')
                 ,login => $USER->name
