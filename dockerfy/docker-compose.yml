@@ -1,4 +1,3 @@
-version: "2.2"
 services:
   ravada-mysql:
     container_name: ravada-mysql
@@ -7,7 +6,7 @@ services:
       - "/opt/ravada/log:/var/log/mysql"
     networks:
       - ravada_network
-    image: mysql:5.7
+    image: mariadb:11.4
     env_file: .env
     command: --default-authentication-plugin=mysql_native_password
     restart: unless-stopped
@@ -29,7 +28,6 @@ services:
     #If you want to local build
     build: dockers/front/.
     restart: unless-stopped
-
     depends_on:
       - ravada-mysql
 
@@ -56,7 +54,6 @@ services:
     build: dockers/back/.
     privileged: true
     restart: unless-stopped
-
     depends_on:
       - ravada-mysql
 

@@ -3011,6 +3011,7 @@ sub _languages() {
         ,id => 'Indonesian'
         ,it => 'Italian'
         ,ja => 'Japanese'
+        ,ko => 'Korean'
         ,my => 'Melayu'
         ,nb_NO => 'Norwegian'
         ,pt => 'Portuguese'

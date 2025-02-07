@@ -4,7 +4,6 @@ use warnings;
 
 use  Carp qw(carp confess croak);
 use Data::Dumper;
-use Fcntl qw(:flock SEEK_END);
 use File::Path qw(make_path remove_tree);
 use YAML qw(DumpFile);
 use Hash::Util qw(lock_hash unlock_hash);
@@ -2037,39 +2036,6 @@ sub search_iptable_remote {
     return $found[0];
 }
 
-sub _lock_fh($fh) {
-    flock($fh, LOCK_EX);
-    seek($fh, 0, SEEK_END) or die "Cannot seek - $!\n";
-    print $fh,$$." ".localtime(time)." $0\n";
-    $fh->flush();
-    $LOCKED_FH{$fh} = $fh;
-}
-
-sub _unlock_fh($fh) {
-    flock($fh,LOCK_UN) or die "Cannot unlock - $!\n";
-    close $fh;
-}
-
-sub _lock_fw {
-    return if $FH_FW;
-    open $FH_FW,">>","/var/tmp/fw.lock" or die "$!";
-    _lock_fh($FH_FW);
-}
-
-sub _lock_node {
-    return if $FH_NODE;
-    open $FH_NODE,">>","/var/tmp/node.lock" or die "$!";
-    _lock_fh($FH_NODE);
-}
-
-
-sub _unlock_all {
-    for my $key (keys %LOCKED_FH) {
-        _unlock_fh($LOCKED_FH{$key});
-        delete $LOCKED_FH{$key};
-    }
-}
-
 sub _clean_iptables_ravada($node) {
     my ($out, $err) = $node->run_command("iptables-save","-t","filter");
     is($err,'');
@@ -2110,7 +2076,6 @@ sub _flush_forward($node=undef) {
 }
 
 sub flush_rules_node($node) {
-    _lock_fw();
     _clean_iptables_ravada($node);
     $node->create_iptables_chain($CHAIN);
     my ($out, $err) = $node->run_command("iptables","-F", $CHAIN);
@@ -2130,7 +2095,6 @@ sub flush_rules_node($node) {
 sub flush_rules {
     return if $>;
 
-    _lock_fw();
     my @cmd = ('iptables','-t','nat','-F','PREROUTING');
     my ($in,$out,$err);
     run3(\@cmd, \$in, \$out, \$err);
@@ -2489,7 +2453,6 @@ sub _clean_file_config {
 }
 
 sub remote_node($vm_name) {
-    _lock_node();
     my $remote_config = remote_config($vm_name);
     SKIP: {
         if (!keys %$remote_config) {
@@ -2503,7 +2466,6 @@ sub remote_node($vm_name) {
 }
 
 sub remote_node_2($vm_name) {
-    _lock_node();
     my $remote_config = _load_remote_config();
 
     my @nodes;
@@ -2680,7 +2642,6 @@ sub DESTROY {
     shutdown_nodes();
     remove_old_user_ldap() if $CONNECTOR;
     remove_old_users()      if $CONNECTOR;
-    _unlock_all();
 }
 
 sub _check_leftovers {
@@ -2793,7 +2754,6 @@ sub end($ldap=undef) {
     _check_iptables();
     clean($ldap);
     remove_old_users()      if $CONNECTOR;
-    _unlock_all();
     if ($FILE_DB) {
         _file_db();
         rmdir _dir_db();

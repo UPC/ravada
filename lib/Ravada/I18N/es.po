@@ -10,7 +10,7 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2024-09-22 15:40+0000\n"
+"PO-Revision-Date: 2024-10-08 15:16+0000\n"
 "Last-Translator: gallegonovato <fran-carro@hotmail.es>\n"
 "Language-Team: Spanish <https://hosted.weblate.org/projects/ravada/"
 "translation/es/>\n"
@@ -110,6 +110,9 @@ msgstr "Hindi"
 
 msgid "Indonesian"
 msgstr "Indonesio"
+
+msgid "Korean"
+msgstr "Coreano"
 
 msgid "Persian"
 msgstr "Persa"
@@ -2292,3 +2295,24 @@ msgstr "Dispositivos anfitriones"
 
 msgid "Mange Host Devices"
 msgstr "Administrar anfitriones"
+
+msgid "Clones will inherit this value unless defined in their options."
+msgstr "Los clones tomarán este valor a menos que se defina en sus opciones."
+
+msgid "Allow users to clone this base"
+msgstr "Permitir a los usuarios clonar esta base"
+
+msgid "Show the base when the user already created a clone"
+msgstr "Mostrar la base cuando el usuario ya ha creado un clon"
+
+msgid "Compact data volumes daily."
+msgstr "Compactar diariamente los volúmenes de datos."
+
+msgid "This must be enabled in global settings too."
+msgstr "También debe activarse en la configuración global."
+
+msgid "Auto Compact"
+msgstr "Compresión automática"
+
+msgid "Show Clones"
+msgstr "Mostrar clones"
