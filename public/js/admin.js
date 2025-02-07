@@ -352,7 +352,9 @@ ravadaApp.directive("solShowMachine", swMach)
           };
           ws.onclose = function() {
               $scope.$apply(function() {
-                $scope.ws_connection_lost = true;
+                  $timeout(function() {
+                    $scope.ws_connection_lost = true;
+                  }, 5*1000);
               });
           };
           ws.onmessage = function (event) {
