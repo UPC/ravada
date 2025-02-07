@@ -6016,20 +6016,13 @@ sub _client_connection_status_display($self, $force) {
         for my $line (@out) {
             my @netstat_info = split(/\s+/,$line);
             if ( $netstat_info[2] =~ /:$port$/ ) {
-<<<<<<< HEAD
                 my ($ip_src) = $netstat_info[3] =~ /(\d+\.\d+\.\d+\.\d+)/;
-                return "connected ($ip_src:".$display->{driver}.")";
-||||||| a360ccbb
-                return 'connected ('.$display->{driver}.")";
-=======
-                my $ip;
-                ($ip) = $netstat_info[3] =~ m{(\d+\.\d+\.\d+\.\d+)};
-                if ($ip) {
-                    return "$ip.".$display->{driver};
+                if($ip_src) {
+                    $ip_src.=":";
                 } else {
-                    return 'connected ('.$display->{driver}.")";
+                    $ip_src = '';
                 }
->>>>>>> main
+                return "connected ($ip_src".$display->{driver}.")";
             }
         }
     }
