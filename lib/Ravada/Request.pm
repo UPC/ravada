@@ -459,6 +459,24 @@ Mandatory arguments: one of those must be passed:
 
 =cut
 
+
+sub is_valid_ip {
+    my ($ip) = @_;
+
+    # Check for IPv4 address
+    if ($ip =~ /^(localhost|\d+\.\d+\.\d+\.\d+)$/) {
+        return 1;
+    }
+
+    # Check for IPv6 address
+    if ($ip =~ /^(?:(?:(?:[0-9A-Fa-f]{1,4}:){6}(?:[0-9A-Fa-f]{1,4})?|(?=(?:[0-9A-Fa-f]{0,4}:){0,6}(?:[0-9A-Fa-f]{0,4})?$)(?:(?:(?!0000:)[0-9A-Fa-f]{1,4}:?){0,5}[0-9A-Fa-f]{0,4})?::(?:[0-9A-Fa-f]{1,4}:?){0,5}[0-9A-Fa-f]{0,4}|(?:[0-9A-Fa-f]{1,4}:){0,5}:|[0-9A-Fa-f]{1,4}:){1,7}:[0-9A-Fa-f]{0,4})$/i) {
+        return 1;
+    }
+
+    return 0;
+}
+
+
 sub start_domain {
     my $proto = shift;
     my $class=ref($proto) || $proto;
@@ -469,7 +487,7 @@ sub start_domain {
         if $args->{id_domain} && $args->{name};
 
     confess "Error: remote ip invalid '$args->{remote_ip}'"
-    if $args->{remote_ip} && $args->{remote_ip} !~ /^(localhost|\d+\.\d+\.\d+\.\d+)$/;
+    if ($args->{remote_ip} && !is_valid_ip($args->{remote_ip}));
 
     _remove_low_priority_requests($args->{id_domain} or $args->{name});
 
