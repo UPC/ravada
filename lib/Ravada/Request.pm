@@ -855,6 +855,12 @@ sub id_domain($self, $value=undef) {
     return $id_domain;
 }
 
+=head2 lock_domain
+
+  Checks if that request belongs to a virtual machine and sets it as locked
+
+=cut
+
 sub lock_domain($self) {
     my $id_domain = $self->id_domain;
     if (!defined $id_domain) {
@@ -868,6 +874,12 @@ sub lock_domain($self) {
     );
     $sth->execute($self->id, $id_domain);
 }
+
+=head2 unlock_domain
+
+  Checks if that request belongs to a virtual machine and unlocks it
+
+=cut
 
 sub unlock_domain($self) {
     my $id_domain = $self->id_domain;
