@@ -245,15 +245,20 @@ sub test_list_clones($user, $action, $base, $clone) {
 
     is($found_clone->{can_manage},0);
 
+    is($user->can_do_domain( $action, $found_clone->{id}),1,"Expecting user can $action") or confess;
+
     my $found_action=0;
     for my $key (keys %$found_clone) {
         next unless $key =~ /^can_/;
         diag($key);
-        if ($key eq "can_$action") {
+        if ($key eq "can_$action"
+            || ( $action eq 'shutdown' && $key eq 'can_hibernate' && $user->can_shutdown($found_clone->{id}) )
+        ) {
             $found_action++;
             is($found_clone->{$key},1,"Expecting $key allowed");
         } else {
-            is($found_clone->{$key},0,"Expecting $key not allowed");
+            is($found_clone->{$key},0,"Expecting $key not allowed")
+                or confess;
         }
     }
     ok($found_action,"Expecting can_$action found in ".Dumper($found_clone));
@@ -267,6 +272,7 @@ sub test_list_requests($user) {
     my @found = grep { $_->{command} =~ /base/ } @$requests;
     ok(!@found,"Expecting no other requests found");
     for my $req_data (@$requests) {
+        confess Dumper($req_data) if !$req_data->{uid};
         next if $req_data->{uid} == $user->id;
         my $req = Ravada::Request->open($req_data->{id});
         die $req->uid." != ".$user->id;
@@ -1043,6 +1049,7 @@ for my $vm_name (vm_names()) {
     next if !$vm;
 
     diag("Testing VM $vm_name");
+    test_shutdown_clone($vm_name);
     test_view_all($vm);
     test_expose_ports($vm_name);
     test_change_settings($vm_name);
