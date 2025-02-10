@@ -615,6 +615,7 @@ sub file_exists($self, $file) {
 }
 
 sub _file_exists_remote($self, $file) {
+    return 1 if $self->search_volume($file);
     $file = $self->_follow_link($file) unless $file =~ /which$/;
     return if !$self->vm;
     for my $pool ($self->vm->list_all_storage_pools ) {
