@@ -178,10 +178,10 @@ sub _list_machines($self, $rvd, $args) {
     my $seconds = time - $LIST_MACHINES_LAST + 60;
     my $list_changed = $rvd->list_machines($user
         , date_changed => Ravada::Utils::now($seconds));
-    for my $item (@$list_changed) {
-        return (0,$rvd->list_machines($user))
-        if $item->{is_base};
-    }
+    #    for my $item (@$list_changed) {
+    #    return (0,$rvd->list_machines($user))
+    #    if $item->{is_base};
+    #}
     return (1,$list_changed);
 
 }
@@ -205,7 +205,7 @@ sub _list_children($list_orig, $list, $level=0) {
 sub _list_machines_tree($self, $rvd, $args) {
     my ($refresh,$list_orig) = $self->_list_machines($rvd, $args);
 
-    return if $refresh && !scalar(@$list_orig) && $LIST_MACHINES_TIME % 10;
+    return if $refresh && !scalar(@$list_orig);
 
     $LIST_MACHINES_LAST = time;
 

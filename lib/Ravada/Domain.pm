@@ -2736,6 +2736,7 @@ sub is_locked {
         ."   AND command <> 'refresh_machine_ports'"
         ."   AND command <> 'screenshot'"
         ."   AND command <> 'add_hardware'"
+        ."   AND command <> 'refresh_machine'"
     );
     $sth->execute($self->id);
     my $found=0;

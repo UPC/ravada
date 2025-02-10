@@ -3831,6 +3831,7 @@ sub _show_request {
     if (!$domain) {
         return $c->render(data => "Request ".$request->status." , but I can't find domain $name");
     }
+    $c->stash('id_base' => $domain->_data('id_base'));
     return view_machine($c,$domain);
 }
 
