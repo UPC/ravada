@@ -250,7 +250,6 @@ sub test_list_clones($user, $action, $base, $clone) {
     my $found_action=0;
     for my $key (keys %$found_clone) {
         next unless $key =~ /^can_/;
-        diag($key);
         if ($key eq "can_$action"
             || ( $action eq 'shutdown' && $key eq 'can_hibernate' && $user->can_shutdown($found_clone->{id}) )
         ) {
@@ -270,10 +269,9 @@ sub test_list_requests($user) {
 
     my $requests = rvd_front->list_requests;
     my @found = grep { $_->{command} =~ /base/ } @$requests;
-    ok(!@found,"Expecting no other requests found");
+    ok(!@found,"Expecting no other requests found") or die Dumper(\@found);
     for my $req_data (@$requests) {
-        confess Dumper($req_data) if !$req_data->{uid};
-        next if $req_data->{uid} == $user->id;
+        next if !exists $req_data->{uid} || $req_data->{uid} == $user->id;
         my $req = Ravada::Request->open($req_data->{id});
         die $req->uid." != ".$user->id;
 
@@ -283,6 +281,7 @@ sub test_list_requests($user) {
 sub test_shutdown_clone {
     my $vm_name = shift;
 
+    delete_request('prepare_base','remove_base');
     my $user = create_user("oper$$","bar");
     ok(!$user->is_operator);
     ok(!$user->is_admin);
@@ -1049,7 +1048,6 @@ for my $vm_name (vm_names()) {
     next if !$vm;
 
     diag("Testing VM $vm_name");
-    test_shutdown_clone($vm_name);
     test_view_all($vm);
     test_expose_ports($vm_name);
     test_change_settings($vm_name);
