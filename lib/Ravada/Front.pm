@@ -917,6 +917,8 @@ sub wait_request {
     }
     $req->status("timeout")
         if $req->status eq 'working';
+
+    $req->refresh();
     return $req;
 
 }

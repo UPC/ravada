@@ -1996,6 +1996,9 @@ sub _select_db($self) {
     return $row;
 }
 
+sub refresh($self) {
+    delete $self->{_data};
+}
 
 sub AUTOLOAD {
     my $self = shift;
