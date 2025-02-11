@@ -1996,6 +1996,12 @@ sub _select_db($self) {
     return $row;
 }
 
+=head2 refresh
+
+Refresh request status and data
+
+=cut
+
 sub refresh($self) {
     delete $self->{_data};
 }
