@@ -1736,18 +1736,18 @@ get '/machine/display/(:driver)/(:id).(#extension)' => sub {
     }
 };
 
-sub _display_file_spice($c, $domain, $extension, $display) {
-    $c->res->headers->content_type('application/x-virt-viewer');
+sub _display_file_rdp($c, $domain, $extension, $display) {
+    $c->res->headers->content_type('application/x-rdp');
         $c->res->headers->content_disposition(
         "inline;filename=".$domain->id.".$extension");
 
     my $format = $extension;
     $format =~ s/^(\w+)\.(\w+)/$2/;
-    return $c->render(data => $domain->_display_file_rdp($display, $tls), format => $format);
+    return $c->render(data => $domain->_display_file_rdp($display), format => $format);
 };
 
-sub _display_file_rdp($c, $domain, $extension, $display) {
-    $c->res->headers->content_type('application/x-rdp');
+sub _display_file_spice($c, $domain, $extension, $display) {
+    $c->res->headers->content_type('application/x-virt-viewer');
         $c->res->headers->content_disposition(
         "inline;filename=".$domain->id.".$extension");
 
