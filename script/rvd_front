@@ -1727,7 +1727,27 @@ get '/machine/display/(:driver)/(:id).(#extension)' => sub {
         || $USER->can_view_all
     ;
 
+    if ($extension eq 'vv') {
+        return _display_file_spice($c, $domain, $extension, $display);
+    } elsif ($extension eq 'rdp' ) {
+        return _display_file_rdp($c, $domain, $extension, $display);
+    } else {
+        return not_found($c);
+    }
+};
+
+sub _display_file_spice($c, $domain, $extension, $display) {
     $c->res->headers->content_type('application/x-virt-viewer');
+        $c->res->headers->content_disposition(
+        "inline;filename=".$domain->id.".$extension");
+
+    my $format = $extension;
+    $format =~ s/^(\w+)\.(\w+)/$2/;
+    return $c->render(data => $domain->_display_file_rdp($display, $tls), format => $format);
+};
+
+sub _display_file_rdp($c, $domain, $extension, $display) {
+    $c->res->headers->content_type('application/x-rdp');
         $c->res->headers->content_disposition(
         "inline;filename=".$domain->id.".$extension");
 
@@ -1737,6 +1757,7 @@ get '/machine/display/(:driver)/(:id).(#extension)' => sub {
     $tls = 1 if $1 && $1 eq 'tls';
     return $c->render(data => $domain->_display_file_spice($display, $tls), format => $format);
 };
+
 
 # Network ##########################################################3
 
