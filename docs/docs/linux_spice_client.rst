@@ -1,5 +1,5 @@
-SPICE client setup for MacOS
-============================
+SPICE client setup for GNU/Linux
+================================
 
 Virt-Viewer
 -----------
