@@ -3774,16 +3774,18 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
     my ($id_port, $public_port) = $sth->fetchrow();
 
     my $internal_ip;
+    my $internal_ip_info;
     for ( 1 .. 5 ) {
-        $internal_ip = $self->ip;
-        last if $internal_ip;
+        $internal_ip_info = $self->ip_info;
+        last if $internal_ip_info && $internal_ip_info->{address};
         sleep 1;
     }
+    $internal_ip = $internal_ip_info->{address};
+
     die "Error: I can't get the internal IP of ".$self->name." ".($internal_ip or '<UNDEF>').". Retry."
         if !$internal_ip || $internal_ip !~ /^(\d+\.\d+)/;
 
-    die "Error: No NAT ip in domain ".$self->name." found. Retry.\n"
-    if !$self->_vm->_is_ip_nat($internal_ip);
+    return unless $internal_ip_info->{type} =~ /^(bridge|network)$/;
 
     if ($public_port
         && ( $self->_used_ports_iptables($public_port, "$internal_ip:$internal_port")
@@ -3970,18 +3972,9 @@ sub open_exposed_ports($self, $remote_ip=undef) {
     return if !@ports;
     return if !$self->is_active;
 
-    if (!$self->has_nat_interfaces) {
-        $self->_set_ports_direct();
-        return;
-    }
-
     my $ip = $self->ip;
     if ( ! $ip ) {
         die "Error: No ip in domain ".$self->name.". Retry.\n";
-    }
-
-    if (!$self->_vm->_is_ip_nat($ip)) {
-        die "Error: No NAT ip in domain ".$self->name." found. Retry.\n";
     }
 
     $self->display_info(Ravada::Utils::user_daemon);
@@ -3989,15 +3982,6 @@ sub open_exposed_ports($self, $remote_ip=undef) {
         $self->_open_exposed_port($expose->{internal_port}, $expose->{name}
             ,$expose->{restricted}, $remote_ip);
     }
-}
-
-sub _set_ports_direct($self) {
-    my $sth_update = $$CONNECTOR->dbh->prepare(
-        "UPDATE domain_ports set public_port=NULL "
-        ." WHERE id_domain=?"
-    );
-    $sth_update->execute($self->id);
-
 }
 
 sub _close_exposed_port($self,$internal_port_req=undef) {

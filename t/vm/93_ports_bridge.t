@@ -76,7 +76,10 @@ sub test_bridge($vm) {
     $domain->expose(port => $internal_port, restricted => 0, name => 'ssh');
 
     my $remote_ip = '10.0.0.1';
-    $domain->start(user => user_admin, remote_ip => $remote_ip);
+    Ravada::Request->start_domain(uid => user_admin->id
+        ,id_domain => $domain->id
+        ,remote_ip => $remote_ip
+    );
     wait_request(debug => 1);
 
     my $internal_ip = _wait_ip($domain);
@@ -100,7 +103,7 @@ sub test_bridge($vm) {
     run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
     die $err if $err;
     my @out = split /\n/,$out;
-    is(grep(/^DNAT.*$local_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out),0);
+    is(grep(/^DNAT.*$local_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out),1);
 
     run3(['iptables','-L','FORWARD','-n'],\($in, $out, $err));
     die $err if $err;
