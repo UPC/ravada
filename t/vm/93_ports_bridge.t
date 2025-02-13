@@ -62,21 +62,27 @@ sub _set_bridge($vm, $domain) {
 
 sub test_bridge($vm) {
 
+    diag("Testing bridge on ".$vm->type);
+
     my $domain= $BASE->clone(name => new_domain_name, user => user_admin);
     is($domain->has_nat_interfaces,1,"Expecting ".$domain->name." has nat "
         .$vm->name);
     _set_bridge($vm, $domain);
     is($domain->has_nat_interfaces,0,"Expecting ".$domain->name." has no nat "
         .$vm->name) or exit;
-    return;
+
     my $internal_port = 22;
     my $name = "foo";
     $domain->expose(port => $internal_port, restricted => 0, name => 'ssh');
+
     my $remote_ip = '10.0.0.1';
     $domain->start(user => user_admin, remote_ip => $remote_ip);
+    wait_request(debug => 1);
 
     my $internal_ip = _wait_ip($domain);
-    wait_request(debug => 1);
+
+    my $ip_info = $domain->ip_info();
+    ok($ip_info->{type} eq 'bridge');
 
     my $internal_net = $internal_ip;
     $internal_net =~ s{(.*)\.\d+$}{$1.0/24};
@@ -84,8 +90,11 @@ sub test_bridge($vm) {
     my $local_ip = $vm->ip;
     my $exposed_port = $domain->exposed_port($internal_port);
     my $public_port = $exposed_port->{public_port};
-    is($public_port, $internal_port) or exit;
-    is($exposed_port->{public_port}, $internal_port) or exit;
+
+    warn Dumper([$exposed_port, $public_port]);
+    ok($public_port) or die $domain->name;
+
+    isnt($exposed_port->{public_port}, $internal_port) or exit;
 
     my ($in, $out, $err);
     run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
