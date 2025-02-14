@@ -3855,7 +3855,13 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
             ." WHERE id_domain=? AND internal_port=?"
     );
     $sth->execute($internal_ip, $self->id, $internal_port);
-    $self->_update_display_port_exposed($name, $local_ip, $public_port, $internal_port);
+
+    my $display_ip = ( $self->_vm->nat_ip
+            or $self->_vm->display_ip
+            or $local_ip );
+
+
+    $self->_update_display_port_exposed($name, $display_ip, $public_port, $internal_port);
 
     if ( !$> && $public_port ) {
         $self->_delete_iptables_nat($public_port, $internal_ip
