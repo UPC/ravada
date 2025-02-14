@@ -883,7 +883,8 @@ sub ip_info($self) {
     return if !exists $hardware->{network};
     for ( 1 .. 2 ) {
         for my $network(@{$hardware->{network}}) {
-            return $network if ref($network) && $network->{address};
+            $network->{addr} = delete $network->{address};
+            return $network if ref($network) && $network->{addr};
         }
 
         $self->_set_ip_address();

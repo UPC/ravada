@@ -73,14 +73,17 @@ sub test_bridge($vm) {
 
     my $internal_port = 22;
     my $name = "foo";
-    $domain->expose(port => $internal_port, restricted => 0, name => 'ssh');
+    $domain->expose(port => $internal_port, restricted => 1, name => 'ssh');
 
     my $remote_ip = '10.0.0.1';
+    $domain->start(user => user_admin, remote_ip => $remote_ip);
+    _wait_ip($domain);
+
     Ravada::Request->start_domain(uid => user_admin->id
         ,id_domain => $domain->id
         ,remote_ip => $remote_ip
     );
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
     my $internal_ip = _wait_ip($domain);
 
@@ -94,7 +97,6 @@ sub test_bridge($vm) {
     my $exposed_port = $domain->exposed_port($internal_port);
     my $public_port = $exposed_port->{public_port};
 
-    warn Dumper([$exposed_port, $public_port]);
     ok($public_port) or die $domain->name;
 
     isnt($exposed_port->{public_port}, $internal_port) or exit;
@@ -103,18 +105,24 @@ sub test_bridge($vm) {
     run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
     die $err if $err;
     my @out = split /\n/,$out;
-    is(grep(/^DNAT.*$local_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out),1);
+    is(grep(/^DNAT.*$local_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out),1)
+        or die Dumper(\@out);
+
+    run3(['iptables','-t','nat','-L','POSTROUTING','-n'],\($in, $out, $err));
+    die $err if $err;
+    @out = split /\n/,$out;
+    is(grep(/^SNAT.* 0.0.0.0\/0\s+$internal_ip\s+tcp dpt\:$internal_port to\:$local_ip$/,@out),1);
 
     run3(['iptables','-L','FORWARD','-n'],\($in, $out, $err));
     die $err if $err;
     @out = split /\n/,$out;
-    is(grep(m{^ACCEPT.*$internal_net\s+state NEW},@out),0) or die $out;
+    is(grep(m{^ACCEPT.*$internal_net\s+state NEW},@out),1) or die $out;
 
     run3(['iptables','-L','FORWARD','-n'],\($in, $out, $err));
     die $err if $err;
     @out = split /\n/,$out;
-    is(grep(m{^ACCEPT.*$remote_ip\s+$internal_ip.*dpt:$internal_port},@out),0) or die $out;
-    is(grep(m{^DROP.*0.0.0.0.+$internal_ip.*dpt:$internal_port},@out),0) or die $out;
+    is(grep(m{^ACCEPT.*$remote_ip\s+$internal_ip.*dpt:$internal_port},@out),1) or die $out;
+    is(grep(m{^DROP.*0.0.0.0.+$internal_ip.*dpt:$internal_port},@out),1) or die $out;
 
     $domain->remove(user_admin);
 }
@@ -124,7 +132,7 @@ sub test_bridge($vm) {
 init();
 clean();
 
-for my $vm_name ( reverse vm_names() ) {
+for my $vm_name ( vm_names() ) {
 
     SKIP: {
         my $vm = rvd_back->search_vm($vm_name);

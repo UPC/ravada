@@ -3780,7 +3780,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
         last if $internal_ip_info && $internal_ip_info->{address};
         sleep 1;
     }
-    $internal_ip = $internal_ip_info->{address};
+    $internal_ip = $internal_ip_info->{addr};
 
     die "Error: I can't get the internal IP of ".$self->name." ".($internal_ip or '<UNDEF>').". Retry."
         if !$internal_ip || $internal_ip !~ /^(\d+\.\d+)/;
@@ -3811,7 +3811,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
             , $internal_port, $debug_ports);
         $self->_delete_iptables_forward($internal_ip, $internal_port);
 
-        warn $self->name." open $public_port ->"
+        warn $self->name."[ $internal_ip_info->{type} ] open $public_port ->"
         ." $internal_ip:$internal_port\n"
         if $debug_ports;
 
@@ -3823,7 +3823,18 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
             ,dport => $public_port
             ,j => 'DNAT'
             ,'to-destination' => "$internal_ip:$internal_port"
-        ) if !$>;
+        );
+        if ($internal_ip_info->{type} eq 'bridge') {
+            $self->_vm->iptables_unique(
+                t => 'nat'
+                ,A => 'POSTROUTING'
+                ,p => 'tcp'
+                ,d => $internal_ip
+                ,dport => $internal_port
+                ,j => 'SNAT'
+                ,'to-source' => $local_ip
+            );
+        }
 
         $self->_open_iptables_state();
         $self->_open_exposed_port_client($internal_port, $restricted, $remote_ip);
