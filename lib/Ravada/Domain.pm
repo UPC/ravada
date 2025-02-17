@@ -3856,12 +3856,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
     );
     $sth->execute($internal_ip, $self->id, $internal_port);
 
-    my $display_ip = ( $self->_vm->nat_ip
-            or $self->_vm->display_ip
-            or $local_ip );
-
-
-    $self->_update_display_port_exposed($name, $display_ip, $public_port, $internal_port);
+    $self->_update_display_port_exposed($name, $local_ip, $public_port, $internal_port);
 
     if ( !$> && $public_port ) {
         $self->_delete_iptables_nat($public_port, $internal_ip
@@ -3921,10 +3916,14 @@ sub _update_display_port_exposed($self, $name, $local_ip, $public_port, $interna
         ." SET ip=?,listen_ip=?,port=?,is_active=?,id_vm=? "
         ." WHERE driver=? AND id_domain=?"
     );
+    my $display_ip = ( $self->_vm->nat_ip
+            or $self->_vm->display_ip
+            or $local_ip );
+
     my $is_builtin;
     for (1 .. 10) {
         eval {
-            $sth->execute($local_ip, $local_ip, $public_port,1, $self->_vm->id
+            $sth->execute($display_ip, $local_ip, $public_port,1, $self->_vm->id
                 ,$name, $self->id);
         };
         warn "Warning: $@".Dumper([$name, $public_port]) if $@;
