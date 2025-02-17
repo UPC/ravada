@@ -65,6 +65,35 @@ sub test_route($vm) {
         is($ip, $route{$network},$vm->type) or die $domain->name;
     }
 }
+sub test_nat_rdp($vm) {
+    my $domain = create_domain($vm);
+
+    Ravada::Request->add_hardware(
+        name => 'display'
+        ,uid => user_admin->id
+        ,data => { driver => 'rdp' }
+        ,id_domain => $domain->id
+    );
+    wait_request();
+    wait_ip($domain);
+
+    $vm->nat_ip($NAT_IP);
+
+    my $req = Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,remote_ip => $REMOTE_IP
+    );
+    wait_request(debug=>0);
+
+    my $sth = connector->dbh->prepare("SELECT * FROM domain_displays");
+    $sth->execute();
+    while (my $row = $sth->fetchrow_hashref) {
+        is($row->{listen_ip}, $vm->ip,"listen_ip ".$row->{driver});
+        is($row->{ip},$NAT_IP,"ip ".$row->{driver});
+    }
+}
+
 
 sub test_nat($vm_name) {
     my $domain = create_domain($vm_name);
@@ -224,6 +253,8 @@ for my $vm_name ( vm_names() ) {
 
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
+
+        test_nat_rdp($vm);
 
         test_route($vm);
         test_nat($vm_name);
