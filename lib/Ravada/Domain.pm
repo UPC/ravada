@@ -3693,7 +3693,7 @@ sub _add_expose($self, $internal_port, $name, $restricted) {
     }
 
     $self->_open_exposed_port($internal_port, $name, $restricted)
-        if $self->is_active && $self->ip;
+        if $self->is_active && $self->ip_info;
     return $public_port;
 }
 
