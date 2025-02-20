@@ -403,6 +403,7 @@ sub test_assign_network($vm, $net) {
         ,options => {
             network => $net->{name}
         }
+        ,disk => 2*1024*1024
     );
     wait_request(debug => 0);
 
@@ -421,6 +422,7 @@ sub test_assign_network_clone($vm, $net, $volatile) {
         ,vm => $vm->type
         ,name => $name
         ,id_owner => user_admin->id
+        ,disk => 2*1024*1024
     );
     wait_request(debug => 0);
 
@@ -526,6 +528,10 @@ sub test_change_network_internal_kvm($vm, $net) {
 
     my $doc = XML::LibXML->load_xml( string => $network->get_xml_description );
     my ($range) = $doc->findnodes("/network/ip/dhcp/range");
+    my ($forward) = $doc->findnodes("/network/forward");
+    my $forward_mode='none';
+    $forward_mode = $forward->getAttribute('mode') if $forward;
+
     my $start_new = $range->getAttribute('start');
     my ($n) = $start_new =~ /.*\.(\d+)/;
     $n++;
@@ -543,6 +549,7 @@ sub test_change_network_internal_kvm($vm, $net) {
     my ($net2) = grep { $_->{name} eq $net->{name} } $vm->list_virtual_networks();
     is($net2->{dhcp_start},$start_new) or exit;
 
+    is($net2->{forward_mode}, $forward_mode);
 }
 
 sub test_changed_uuid($vm) {
@@ -794,6 +801,25 @@ sub test_new_network($vm) {
 
 }
 
+sub test_change_forward($vm, $net) {
+    my $net2 = dclone($net);
+    my $user2 = create_user();
+
+    for my $mode ('none' , 'nat') {
+        $net2->{forward_mode} = $mode;
+        my $req_change2 = Ravada::Request->change_network(
+            uid => user_admin->id
+            ,data => $net2
+        );
+
+        wait_request(check_error => 0, debug => 0);
+        is($req_change2->error,'');
+
+        test_change_network_internal($vm, $net2);
+
+    }
+}
+
 ########################################################################
 
 init();
@@ -827,6 +853,7 @@ for my $vm_name ( vm_names() ) {
 
         my $net = test_add_network($vm);
 
+        test_change_forward($vm, $net);
         test_assign_network($vm, $net);
         test_assign_network_clone($vm, $net, 0);
         test_assign_network_clone($vm, $net, 1); # volatile clone

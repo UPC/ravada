@@ -2454,6 +2454,7 @@ sub _sql_create_tables($self) {
                 ,'dhcp_end' => 'char(15)'
                 ,'is_active' => 'integer not null default 1'
                 ,'is_public' => 'integer not null default 0'
+                ,'forward_mode' => 'char(20)'
                 ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
             }
         ]

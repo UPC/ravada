@@ -3028,6 +3028,9 @@ sub list_virtual_networks($self) {
             $ip = $ip_doc->getAttribute('address');
             $netmask = $ip_doc->getAttribute('netmask');
         }
+        my ($forward) = $doc->findnodes("/network/forward");
+        my $forward_mode = 'none';
+        $forward_mode = $forward->getAttribute('mode');
         my $data= {
             is_active => $net->is_active()
             ,autostart => $net->get_autostart()
@@ -3037,6 +3040,7 @@ sub list_virtual_networks($self) {
             ,ip_address => $ip
             ,ip_netmask => $netmask
             ,internal_id => ''.$net->get_uuid_string
+            ,forward_mode => $forward_mode
         };
         if ($ip_doc) {
             my ($dhcp_range) = $ip_doc->findnodes("dhcp/range");
@@ -3226,6 +3230,8 @@ sub change_network($self, $data) {
             $changed++;
         }
     }
+
+    my $forward_mode = delete $data->{forward_mode};
 
     for ('id_vm','internal_id','id' ,'_old_name', 'date_changed') {
         delete $data->{$_};
