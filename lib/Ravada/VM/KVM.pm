@@ -3030,7 +3030,7 @@ sub list_virtual_networks($self) {
         }
         my ($forward) = $doc->findnodes("/network/forward");
         my $forward_mode = 'none';
-        $forward_mode = $forward->getAttribute('mode');
+        $forward_mode = $forward->getAttribute('mode') if $forward;
         my $data= {
             is_active => $net->is_active()
             ,autostart => $net->get_autostart()
@@ -3232,6 +3232,27 @@ sub change_network($self, $data) {
     }
 
     my $forward_mode = delete $data->{forward_mode};
+
+    if (defined $forward_mode) {
+        my $curr_fw_mode='none';
+        my ($xml_forward) = $doc->findnodes("/network/forward");
+        $curr_fw_mode = $xml_forward->getAttribute('mode') if $xml_forward;
+        if ( $curr_fw_mode ne $forward_mode) {
+            $changed++;
+            my $is_active = $network->is_active;
+            $network->destroy() if $network->is_active;
+            if (!$xml_forward) {
+                my ($xml_network) = $doc->findnodes("network");
+                $xml_forward = $xml_network->addNewChild(undef,"forward");
+            }
+            $xml_forward->setAttribute('mode' => $forward_mode);
+            my ($xml_nat) = $xml_forward->findnodes("nat");
+            $xml_forward->removeChild($xml_nat) if $forward_mode ne 'nat';
+            $network= $self->vm->define_network($doc->toString);
+            $network->create() if $is_active;
+        }
+    }
+
 
     for ('id_vm','internal_id','id' ,'_old_name', 'date_changed') {
         delete $data->{$_};

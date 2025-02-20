@@ -531,6 +531,7 @@ sub test_change_network_internal_kvm($vm, $net) {
     my ($forward) = $doc->findnodes("/network/forward");
     my $forward_mode='none';
     $forward_mode = $forward->getAttribute('mode') if $forward;
+    is($forward_mode,$net->{forward_mode});
 
     my $start_new = $range->getAttribute('start');
     my ($n) = $start_new =~ /.*\.(\d+)/;
@@ -549,7 +550,7 @@ sub test_change_network_internal_kvm($vm, $net) {
     my ($net2) = grep { $_->{name} eq $net->{name} } $vm->list_virtual_networks();
     is($net2->{dhcp_start},$start_new) or exit;
 
-    is($net2->{forward_mode}, $forward_mode);
+    is($net2->{forward_mode}, $net->{forward_mode});
 }
 
 sub test_changed_uuid($vm) {
@@ -703,6 +704,7 @@ sub test_public_network($vm, $net) {
 
 
     my $net3 = _search_network(id => $net->{id});
+    is($net3->{id}, $net2->{id});
     is($net3->{id_owner}, $user2->id) or exit;
 
     is($user2->can_change_hardware_network($clone, {network => $net3->{name}}),1) or exit;
@@ -805,6 +807,9 @@ sub test_change_forward($vm, $net) {
     my $net2 = dclone($net);
     my $user2 = create_user();
 
+    is($net2->{forward_mode},'nat') or exit;
+
+    warn Dumper($net2);
     for my $mode ('none' , 'nat') {
         $net2->{forward_mode} = $mode;
         my $req_change2 = Ravada::Request->change_network(
@@ -818,6 +823,7 @@ sub test_change_forward($vm, $net) {
         test_change_network_internal($vm, $net2);
 
     }
+    exit;
 }
 
 ########################################################################

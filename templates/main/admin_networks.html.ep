@@ -18,7 +18,7 @@
         </div>
 
         <div class="row">
-            <div class="col-md-2"><b><%=l 'Name' %></b></div>
+            <div class="col-md-4"><b><%=l 'Name' %></b></div>
             <div class="col-md-1"
                  ng-show="<%= ( $_user->is_admin or $_user->can_manage_all_networks or 0 ) %>"
                 ><b><%=l 'Public' %></b></div>
@@ -26,10 +26,10 @@
             <div class="col-md-2"
                  ng-show="<%= ( $_user->is_admin or $_user->can_manage_all_networks or 0 ) %>"
                 ><b><%=l 'Owner' %></b></div>
-            <div class="col-md-2"><b><%=l 'Bridge' %></b></div>
+            <div class="col-md-1"><b><%=l 'Bridge' %></b></div>
             <div class="col-md-2"><b><%=l 'Address' %></b></div>
             <div class="col-md-1"><b><%=l 'Active' %></b></div>
-            <div class="col-md-2"><b><%=l 'Auto Start' %></b></div>
+            <div class="col-md-1"><b><%=l 'Auto Start' %></b></div>
         </div>
 
         <div class="row" ng-show="loaded_networks && networks.length==0">
@@ -43,7 +43,7 @@
         <div ng-repeat="network in networks | orderObjectBy:'name'"
              class="row" ng-cloak
         >
-            <div class="col-md-2">
+            <div class="col-md-4">
                 <a href="/network/settings/{{network.id}}.html"
                     ng-show="network._can_change">{{network.name}}</a>
                 <span ng-show="!network._can_change">{{network.name}}</span>
@@ -61,7 +61,7 @@
             <div class="col-md-2"
                  ng-show="<%= ( $_user->is_admin or $_user->can_manage_all_networks or 0 ) %>"
                 >{{network._owner.name}}</div>
-            <div class="col-md-2">{{network.bridge}}</div>
+            <div class="col-md-1">{{network.bridge}}</div>
             <div class="col-md-2">{{network.ip_address}}</div>
             <div class="col-md-1">
                 <span ng-show="network.is_active"
@@ -69,7 +69,7 @@
                 <span ng-show="!network.is_active"
                       >&#10005;</span>
             </div>
-            <div class="col-md-2">
+            <div class="col-md-1">
                 <span ng-show="network.autostart"
                       >&#10004;</span>
                 <span ng-show="!network.autostart"
