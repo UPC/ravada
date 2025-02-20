@@ -1748,11 +1748,15 @@ sub _ip_agent($self) {
     return $found;
 }
 
-sub _ip_info_agent($self) {
+sub _ip_info_get($self) {
     my @ip;
     eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_AGENT) };
-    return if $@ && $@ =~ /^libvirt error code: (74|86),/;
-    warn $@ if $@;
+    warn $@ if $@ && $@ !~ /^libvirt error code: (74|86),/;
+
+    if (!@ip) {
+        eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_LEASE) };
+        warn $@ if $@;
+    }
 
     my $found;
 
@@ -1809,7 +1813,7 @@ sub ip($self) {
 }
 
 sub ip_info($self) {
-    my $ip = $self->_ip_info_agent();
+    my $ip = $self->_ip_info_get();
     return $ip;
 }
 
