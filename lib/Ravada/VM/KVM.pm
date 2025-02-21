@@ -3247,7 +3247,7 @@ sub change_network($self, $data) {
             }
             $xml_forward->setAttribute('mode' => $forward_mode);
             my ($xml_nat) = $xml_forward->findnodes("nat");
-            $xml_forward->removeChild($xml_nat) if $forward_mode ne 'nat';
+            $xml_forward->removeChild($xml_nat) if $forward_mode ne 'nat' && $xml_nat;
             $network= $self->vm->define_network($doc->toString);
             $network->create() if $is_active;
         }

@@ -500,6 +500,9 @@ sub _check_domain_network($domain, $net_name) {
 }
 
 sub test_change_network_internal($vm, $net) {
+
+    my ($net2) = grep { $_->{name} eq $net->{name} } $vm->list_virtual_networks;
+    is($net2->{id}, $net->{id}) or exit;
     if ($vm->type eq 'KVM') {
         test_change_network_internal_kvm($vm, $net);
     } elsif ($vm->type eq 'Void') {
@@ -803,13 +806,59 @@ sub test_new_network($vm) {
 
 }
 
-sub test_change_forward($vm, $net) {
+sub _add_nat($vm, $net2) {
+    my $net = $vm->vm->get_network_by_name($net2->{name});
+
+    my $doc = XML::LibXML->load_xml(string => $net->get_xml_description);
+    my ($forward) = $doc->findnodes("/network/forward");
+    my ($nat) = $forward->findnodes("nat");
+
+    my $is_active = $net->is_active;
+    $net->destroy() if $is_active;
+    my ($xml_network) = $doc->findnodes("/network");
+    $nat = $xml_network->addNewChild(undef,"nat");
+
+    my $port = $nat->addNewChild(undef,"port");
+    $port->setAttribute("start" => 1024);
+    $port->setAttribute("end" => 65535);
+
+    $net= $vm->vm->define_network($doc->toString);
+    $net->create() if $is_active;
+}
+
+sub _del_nat($vm, $net2) {
+    my $net = $vm->vm->get_network_by_name($net2->{name});
+
+    my $doc = XML::LibXML->load_xml(string => $net->get_xml_description);
+
+    my ($port) = $doc->findnodes("/network/nat/port");
+    return if !$port;
+
+    diag("removing port ".$doc->toString);
+
+    my $is_active = $net->is_active;
+    $net->destroy() if $is_active;
+    my ($nat) = $doc->findnodes("/network/nat");
+    ($port) = $nat->findnodes("port");
+    $nat->removeChild($port);
+
+    $net= $vm->vm->define_network($doc->toString);
+    $net->create() if $is_active;
+
+}
+
+sub test_change_forward($vm, $add_nat=1) {
+
+    return if $vm->type ne 'KVM';
+
+    my $net = test_add_network($vm);
+
     my $net2 = dclone($net);
     my $user2 = create_user();
 
-    is($net2->{forward_mode},'nat') or exit;
+    _add_nat($vm, $net2) if $vm->type eq 'KVM' && $add_nat;
+    _del_nat($vm, $net2) if $vm->type eq 'KVM' && !$add_nat;
 
-    warn Dumper($net2);
     for my $mode ('none' , 'nat') {
         $net2->{forward_mode} = $mode;
         my $req_change2 = Ravada::Request->change_network(
@@ -823,7 +872,12 @@ sub test_change_forward($vm, $net) {
         test_change_network_internal($vm, $net2);
 
     }
-    exit;
+    my $req = Ravada::Request->remove_network(
+        uid => user_admin->id
+        ,id => $net->{id}
+    );
+    wait_request(check_error => 0);
+
 }
 
 ########################################################################
@@ -857,9 +911,11 @@ for my $vm_name ( vm_names() ) {
 
         test_list_networks($vm);
 
+        test_change_forward($vm, 0);
+        test_change_forward($vm, 1);
+
         my $net = test_add_network($vm);
 
-        test_change_forward($vm, $net);
         test_assign_network($vm, $net);
         test_assign_network_clone($vm, $net, 0);
         test_assign_network_clone($vm, $net, 1); # volatile clone

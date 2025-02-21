@@ -14,6 +14,9 @@
         <input type="text" ng-model="network.name" required
             name="name"
         ng-disabled="network.id"/>
+
+        <span class="badge badge-danger" ng-show="network.forward_mode=='none'"><%=l 'isolated' %></span>
+        <span class="badge badge-secondary" ng-show="network.forward_mode=='nat'"><%=l 'connected' %></span>
     </div>
 </div>
 
@@ -81,11 +84,13 @@
     </div>
 </div>
 
-<div class="form-group row" ng-show="network.forward_mode">
+<div class="form-group row">
     <div class="col-md-3" align="right"><%=l 'Forward' %></div>
     <div class="col-md-3">
-        <input type="text" ng-model="network.forward_mode"
-        />
+        <select name="forward_mode" ng-model="network.forward_mode"
+            ng-options="item for item in ['nat','none']"
+        >
+        </select>
     </div>
 </div>
 

@@ -1141,6 +1141,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'manage_pools'
                 || $command eq 'list_storage_pools'
                 || $command eq 'list_cpu_models'
+                || $command eq 'list_networks'
                 ;
         next if ( $command eq 'force_shutdown'
                 || $command eq 'force_reboot'
