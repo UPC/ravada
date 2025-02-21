@@ -65,6 +65,7 @@ sub test_route($vm) {
         is($ip, $route{$network},$vm->type) or die $domain->name;
     }
 }
+
 sub test_nat_rdp($vm) {
     my $domain = create_domain($vm);
 
@@ -92,6 +93,7 @@ sub test_nat_rdp($vm) {
         is($row->{listen_ip}, $vm->ip,"listen_ip ".$row->{driver});
         is($row->{ip},$NAT_IP,"ip ".$row->{driver});
     }
+    $vm->nat_ip('');
 }
 
 
