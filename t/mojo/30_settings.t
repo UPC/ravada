@@ -27,7 +27,7 @@ my %FILES;
 my %HREFS;
 
 my %MISSING_LANG = map {$_ => 1 }
-    qw(ca-valencia he ko);
+    qw(ca-valencia cs he ko);
 
 my $ID_DOMAIN;
 
