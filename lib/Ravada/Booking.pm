@@ -287,6 +287,7 @@ sub entries($self) {
 }
 
 sub bookings(%args) {
+    warn Dumper(\%args);
     my $date = ( delete $args{date} or _today() );
     $date = $date->ymd if ref($date) =~ /DateTime/;
     my $time = delete $args{time};
@@ -307,6 +308,7 @@ sub bookings(%args) {
     }
     my $sth = _dbh->prepare($sql);
     $sth->execute(@args);
+    warn Dumper([$sql, \@args]);
     my $id;
     my @found;
     $sth->bind_columns(\$id);
@@ -342,7 +344,9 @@ sub user_allowed($user,$id_base, $enable_host_devices=1) {
     # allowed by default if there are no current bookings right now
     my $allowed =  1;
 
+    warn "date=".$today." time=".$now;
     for my $entry (Ravada::Booking::bookings( date => $today, time => $now)) {
+        warn $entry->id;
         # first we disallow because there is a booking
         $allowed = 0;
         next unless !scalar($entry->bases_id) || grep { $_ == $id_base } $entry->bases_id;
@@ -355,6 +359,7 @@ sub user_allowed($user,$id_base, $enable_host_devices=1) {
         my $user0 = Ravada::Auth::SQL->new(name => $user_name);
         return 1 if $user0->is_admin;
     }
+    warn "$user_name $id_base allowed=$allowed";
     return $allowed;
 }
 

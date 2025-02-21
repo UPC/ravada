@@ -6784,18 +6784,21 @@ sub _cmd_enforce_limits($self, $request=undef) {
 }
 
 sub _shutdown_bookings($self) {
+    warn 1;
     my @bookings = Ravada::Booking::bookings();
     return if !scalar(@bookings);
+    warn 2;
 
     my @domains = $self->list_domains_data(status => 'active');
     for my $dom ( @domains ) {
+        warn $dom->{name};
         next if $dom->{autostart};
         next if $self->_user_is_admin($dom->{id_owner});
 
         if ( Ravada::Booking::user_allowed($dom->{id_owner}, $dom->{id_base}, $dom->{host_devices})
             && Ravada::Booking::user_allowed($dom->{id_owner}, $dom->{id}, $dom->{host_devices})
         ) {
-            #warn "\tuser $dom->{id_owner} allowed to start clones from $dom->{id_base}";
+            warn "\tuser $dom->{id_owner} allowed to start clones from $dom->{id_base}";
             next;
         }
 
