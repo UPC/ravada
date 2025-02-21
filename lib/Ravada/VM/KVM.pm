@@ -3118,7 +3118,11 @@ sub create_network($self, $data) {
     my ($xml_net) = $xml->findnodes("/network");
 
     my $forward = $xml_net->addNewChild(undef,'forward');
-    $forward->setAttribute('mode' => 'nat');
+    if ($data->{isolated}) {
+        $forward->setAttribute('mode' => 'none');
+    } else {
+        $forward->setAttribute('mode' => 'nat');
+    }
 
     my $ip = $xml_net->addNewChild(undef,'ip');
     $ip->setAttribute('address' => $data->{ip_address});

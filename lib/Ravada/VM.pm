@@ -1640,6 +1640,7 @@ sub _around_create_network($orig, $self,$data, $id_owner, $request=undef) {
     $request->error(''.$@) if $@ && $request;
     $data->{id_owner} = $id_owner;
     $data->{is_public} = 0 if !$data->{is_public};
+    delete $data->{isolated};
     $self->_insert_network($data);
 }
 

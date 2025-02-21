@@ -2429,7 +2429,8 @@ sub _sql_create_tables($self) {
             bundles => {
                 id => 'integer PRIMARY KEY AUTO_INCREMENT',
                 name => 'char(255) NOT NULL',
-                private_network => 'integer NOT NULL default 0'
+                private_network => 'integer NOT NULL default 0',
+                isolated => 'integer NOT NULL default 0'
             }
         ],
         [
@@ -4931,6 +4932,8 @@ sub _net_bundle($self, $domain, $user0) {
     $self->_cmd_new_network($req_new_net);
     my $data = decode_json($req_new_net->output);
     $req_new_net->status('done');
+
+    $data->{isolated} = $bundle->{'isolated'};
 
     my $req_network = Ravada::Request->create_network(
         uid => Ravada::Utils::user_daemon->id

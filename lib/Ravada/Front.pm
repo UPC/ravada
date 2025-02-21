@@ -2051,6 +2051,21 @@ sub bundle_private_network($self, $id_bundle, $value=1){
     $sth->execute($value, $id_bundle);
 }
 
+=head2 bundle_isolated
+
+Sets the bundle network isolated
+
+Arguments : id_bundle, value ( defaults 1 )
+
+=cut
+
+sub bundle_isolated($self, $id_bundle, $value=1){
+    my $sth = $self->_dbh->prepare(
+        "UPDATE bundles set isolated=? WHERE id=?");
+    $sth->execute($value, $id_bundle);
+}
+
+
 =head2 add_to_bundle
 
 Adds a domain to a bundle
