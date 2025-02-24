@@ -464,6 +464,7 @@ sub create_network($self, $data, $id_owner=undef, $request=undef) {
     delete $data->{is_public};
     delete $data->{id};
     delete $data->{id_vm};
+    delete $data->{isolated};
 
     $self->write_file($file_out,Dump($data));
 

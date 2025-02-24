@@ -3657,6 +3657,18 @@ sub list_vms($self) {
     return @{$self->vm};
 }
 
+sub list_vms_id($self) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms"
+    );
+    $sth->execute();
+    my @vms;
+    while (my ($id) = $sth->fetchrow) {
+        push @vms,($id);
+    }
+    return @vms;
+}
+
 =head2 list_domains
 
 List all created domains
@@ -6118,7 +6130,9 @@ sub _clean_requests($self, $command, $request=undef, $status='requested') {
 sub _refresh_active_vms ($self) {
 
     my %active_vm;
-    for my $vm ($self->list_vms) {
+    for my $id ($self->list_vms_id) {
+        my $vm;
+        eval{ $vm = Ravada::VM->open($id) };
         next if !$vm;
         if ( !$vm->vm || !$vm->enabled() || !$vm->is_active ) {
             $vm->shutdown_domains();

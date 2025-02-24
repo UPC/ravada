@@ -1166,6 +1166,11 @@ sub _do_select_vm_db {
     }
 
     confess Dumper(\%args) if !keys %args;
+    if (exists $args{name} && scalar(keys(%args))==1) {
+        my ($type) = ref($self) =~ /.*::(\w+)/;
+        confess "Error: I can't find type in ".ref($self) if !$type;
+        $args{vm_type} = $type;
+    }
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT * FROM vms WHERE ".join(" AND ",map { "$_=?" } sort keys %args )
     );

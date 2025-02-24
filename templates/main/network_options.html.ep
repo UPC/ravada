@@ -94,14 +94,16 @@
     </div>
 </div>
 
-
+invalid={{form_network.$invalid}}<br/>
+pristine={{form_network.$pristine}}
 <div class="form-group row">
     <div class="col-md-3" align="right"></div>
     <div class="col-md-4" align="left">
         <button ng-show="network.id" class="btn btn-outline-secondary"
             ng-click="load_network(network.id)"><%=l 'Cancel' %></button>
         <button class="btn btn-primary"
-            ng-click="update_network(); form_options.$pristine=true"
+            ng-disabled="form_network.$pristine"
+            ng-click="update_network()"
             ><%=l 'Save' %></button>
     </div>
 </div>
