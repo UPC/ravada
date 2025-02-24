@@ -317,6 +317,7 @@ sub bookings(%args) {
         push @found,($entry)
         if !defined $id_base || grep { $_ == $id_base } $entry->bases_id;
     }
+    warn "found=".scalar(@found);
     return @found;
 }
 
