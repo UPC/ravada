@@ -773,7 +773,7 @@ sub _set_default_info($self, $listen_ip=undef, $network=undef) {
         ,address => $info->{ip}
         ,type => 'nat'
         ,driver => 'virtio'
-        ,name => $net->{name}
+        ,network => $net->{name}
     };
     $self->_store(hardware => $hardware );
 

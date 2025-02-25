@@ -935,12 +935,14 @@ ravadaApp.directive("solShowMachine", swMach)
                 .then(function(response) {
                 $scope.network = response.data;
                 $scope.network._old_name = $scope.network.name;
+                $scope.form_network.$setPristine();
             });
 
         };
 
         $scope.update_network = function() {
 
+            $scope.form_network.$setPristine();
             var update = $scope.network['id'];
             $http.post('/v2/network/set/'
                 , JSON.stringify($scope.network))
