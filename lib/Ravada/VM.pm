@@ -1735,12 +1735,16 @@ sub _around_list_networks($orig, $self) {
     return @list;
 }
 
-sub list_virtual_networks_data($self) {
-    my $sth = $self->_dbh->prepare(
+sub list_virtual_networks_data($id_vm) {
+    if (ref($id_vm)) {
+        my $self = $id_vm;
+        $id_vm = $self->id;
+    }
+    my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT * FROM virtual_networks "
         ." WHERE id_vm=?"
     );
-    $sth->execute($self->id);
+    $sth->execute($id_vm);
     my @networks;
     while ( my $row = $sth->fetchrow_hashref) {
         push @networks,($row);
@@ -3113,6 +3117,25 @@ Arguments: dir , optional regexp pattern
 sub list_files($self, $dir, $pattern=undef) {
     return $self->_list_files_local($dir, $pattern) if $self->is_local;
     return $self->_list_files_remote($dir, $pattern);
+}
+
+sub _set_active_machines_isolated($self, $network) {
+    my $sth = $self->_dbh->prepare("SELECT id FROM domains "
+        ." WHERE id_vm=? "
+        ."   AND status='active'"
+    );
+    $sth->execute($self->id);
+    while ( my ($id_domain) = $sth->fetchrow) {
+        my $domain = Ravada::Front::Domain->open($id_domain);
+        my @interfaces = $domain->get_controller('network');
+        my $found = 0;
+        for my $if ( @interfaces ) {
+            next if !$if->{network} || $if->{network} ne $network;
+            $found++;
+            last;
+        }
+        $domain->_fetch_networking_mode() if $found;
+    }
 }
 
 1;

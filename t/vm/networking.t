@@ -916,6 +916,45 @@ sub _create_domain($vm, $net) {
     return $domain;
 }
 
+sub test_change_forward_active($vm) {
+
+    my $net = test_add_network($vm);
+
+    my $net2 = dclone($net);
+    my $user2 = create_user();
+
+    my $domain = _create_domain($vm, $net);
+    is($domain->_data('networking'),'nat');
+    $domain->start(user_admin);
+    for my $mode ('none' , 'nat') {
+        $net2->{forward_mode} = $mode;
+        my $req_change2 = Ravada::Request->change_network(
+            uid => user_admin->id
+            ,data => $net2
+        );
+
+        wait_request(check_error => 0, debug => 0);
+        is($req_change2->error,'');
+
+        _check_network_internal($vm, $net2);
+        Ravada::Request->refresh_machine(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+            ,_force => 1
+        );
+        wait_request(debug => 0);
+        delete $domain->{_data};
+
+        is($domain->_data('networking'),'isolated') or die $domain->name;
+    }
+    my $req = Ravada::Request->remove_network(
+        uid => user_admin->id
+        ,id => $net->{id}
+    );
+    wait_request(check_error => 0);
+}
+
+
 sub test_change_forward($vm, $add_nat=1) {
 
     my $net = test_add_network($vm);
@@ -990,6 +1029,8 @@ for my $vm_name ( vm_names() ) {
         test_create_fail($vm);
 
         test_list_networks($vm);
+
+        test_change_forward_active($vm);
 
         test_change_forward($vm, 0);
         test_change_forward($vm, 1);

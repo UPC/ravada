@@ -301,9 +301,13 @@ sub _vm_disconnect {
 }
 
 sub _fetch_networking_mode($self) {
+
+    my $is_active = $self->is_active;
+    my $networking_old = $self->_data('networking');
+
     my $networking = '';
     my @interfaces = $self->get_controller('network');
-    my @virtual_networks = $self->_vm->list_virtual_networks_data();
+    my @virtual_networks = Ravada::VM::list_virtual_networks_data($self->_data('id_vm'));
     for my $item (@interfaces) {
         next if lc($item->{type}) ne 'nat';
         next if !$item->{network};
@@ -319,7 +323,9 @@ sub _fetch_networking_mode($self) {
         }
         last if $networking eq 'nat';
     }
-    $self->_data('networking' => $networking);
+    if (!$is_active || $networking eq 'isolated') {
+        $self->_data('networking' => $networking);
+    }
 }
 
 sub _around_start($orig, $self, @arg) {
@@ -7392,7 +7398,7 @@ sub refresh_ports($self, $request=undef) {
         $msg .= " $port->{internal_port}:$is_port_active_txt";
     }
     if ($is_active && $self->_data('networking') eq 'isolated') {
-        $msg = "Virtual machine ".$self->name." isolated. No exposed ports.";
+        $msg = "Virtual machine ".$self->name." isolated. No ports exposed.";
     } else {
         die "Virtual machine ".$self->name." is not up. retry.\n"if !$ip;
         die "Virtual machine ".$self->name." $ip has ports down: $msg. retry.\n"

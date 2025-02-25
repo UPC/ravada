@@ -7241,7 +7241,16 @@ sub _cmd_change_network($self, $request) {
     $data->{internal_id} = $network->{internal_id} if !$data->{internal_id};
     my $vm = Ravada::VM->open($network->{id_vm});
 
+    my $forward_mode;
+
+    $forward_mode = $data->{forward_mode} if $data->{forward_mode};
+    my $network_name = $data->{name};
+
     $vm->change_network($data, $request->args('uid'));
+
+    if ($forward_mode) {
+        $vm->_set_active_machines_isolated($network_name);
+    }
 }
 
 sub _cmd_active_storage_pool($self, $request) {

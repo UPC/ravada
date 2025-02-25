@@ -924,12 +924,16 @@ sub _remove_old_domains_vm($vm_name) {
     for my $domain ( sort { $b->name cmp $a->name }  @domains) {
         next if $domain->name !~ /^$base_name/i;
 
-        eval { $domain->shutdown_now($USER_ADMIN); };
-        warn "Error shutdown ".$domain->name." $@" if $@ && $@ !~ /No DB info/i;
+        eval { $domain->shutdown_now($USER_ADMIN) if $domain->is_active };
+        warn "Error shutdown ".$domain->name." $@" if $@ && $@ !~ /No DB info/i
+            && $@ !~ /libvirt error code: 55,/
+        ;
 
         $domain = $vm->search_domain($domain->name);
         eval {$domain->remove( $USER_ADMIN ) }  if $domain;
-        warn $@ if $@;
+        warn "Error shutdown ".$domain->name." $@" if $@ && $@ !~ /No DB info/i
+            && $@ !~ /libvirt error code: 55,/
+        ;
         if ( $@ && $@ =~ /No DB info/i ) {
             eval { $domain->domain->undefine($Sys::Virt::Domain::UNDEFINE_NVRAM) if $domain->domain };
         }
