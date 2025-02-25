@@ -94,8 +94,6 @@
     </div>
 </div>
 
-invalid={{form_network.$invalid}}<br/>
-pristine={{form_network.$pristine}}
 <div class="form-group row">
     <div class="col-md-3" align="right"></div>
     <div class="col-md-4" align="left">
@@ -107,6 +105,8 @@ pristine={{form_network.$pristine}}
             ><%=l 'Save' %></button>
     </div>
 </div>
+
+<div ng-show="!form_network.$pristine"><span class="info"><%=l 'You must restart already connected virtual machines to apply network changes.' %></span></div>
 
 </form>
 </div>

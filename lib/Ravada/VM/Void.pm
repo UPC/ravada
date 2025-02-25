@@ -190,7 +190,7 @@ sub create_domain {
 
         $self->_add_cdrom($domain, %args);
         $domain->_set_default_drivers();
-        $domain->_set_default_info($listen_ip);
+        $domain->_set_default_info($listen_ip, $network);
         $domain->_store( is_active => $active );
 
     }
@@ -373,6 +373,7 @@ sub list_virtual_networks($self) {
 
         $net->{id_vm} = $self->id if !$net->{id_vm};
         $net->{is_active}=0 if !defined $net->{is_active};
+        $net->{forward_mode}='nat' if !$net->{forward_mode};
         push @list,($net);
     }
     if (!@list) {
@@ -382,6 +383,7 @@ sub list_virtual_networks($self) {
             , bridge => 'voidbr0'
             ,ip_address => '192.51.100.1'
             ,is_active => 1
+            ,forward_mode => 'nat'
         };
 
         my $file_out = $self->dir_img."/networks/".$net->{name}.".yml";
@@ -454,6 +456,8 @@ sub create_network($self, $data, $id_owner=undef, $request=undef) {
 
     $data->{bridge} = $self->_new_net_bridge()
     if !exists $data->{bridge} || ! defined $data->{bridge};
+
+    $data->{forward_mode} = 'nat' if !exists $data->{forward_mode};
 
     delete $data->{is_public};
 

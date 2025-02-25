@@ -571,6 +571,7 @@ sub _around_create_domain {
     $domain->_data('is_compacted' => 1);
     $domain->_data('alias' => $alias) if $alias;
     $domain->_data('date_status_change', Ravada::Utils::now());
+    $domain->_fetch_networking_mode();
     $self->_change_hardware_install($domain,$hardware) if $hardware;
 
     if ($id_base) {
@@ -1557,6 +1558,8 @@ sub _insert_network($self, $net) {
     $net->{id_owner} = Ravada::Utils::user_daemon->id
     if !exists $net->{id_owner};
 
+    confess if exists $net->{isolated};
+
     $net->{id_vm} = $self->id;
     $net->{is_public}=1 if !exists $net->{is_public};
 
@@ -1730,6 +1733,19 @@ sub _around_list_networks($orig, $self) {
     $self->_check_networks() if $first_time;
 
     return @list;
+}
+
+sub list_virtual_networks_data($self) {
+    my $sth = $self->_dbh->prepare(
+        "SELECT * FROM virtual_networks "
+        ." WHERE id_vm=?"
+    );
+    $sth->execute($self->id);
+    my @networks;
+    while ( my $row = $sth->fetchrow_hashref) {
+        push @networks,($row);
+    }
+    return @networks;
 }
 
 =head2 is_active

@@ -488,7 +488,7 @@ sub _check_domain_network_kvm($domain, $net_name) {
 
 sub _check_domain_network_void($domain, $net_name) {
     my $config = $domain->get_config();
-    ok($config->{hardware}->{network}->[0]->{name}, $net_name);
+    ok($config->{hardware}->{network}->[0]->{network}, $net_name);
 }
 
 sub _check_domain_network($domain, $net_name) {
@@ -509,6 +509,53 @@ sub test_change_network_internal($vm, $net) {
         test_change_network_internal_void($vm, $net);
     }
 }
+
+sub _check_network_internal($vm, $net) {
+
+    my ($net2) = grep { $_->{name} eq $net->{name} } $vm->list_virtual_networks;
+    is($net2->{id}, $net->{id}) or exit;
+    if ($vm->type eq 'KVM') {
+        _check_network_internal_kvm($vm, $net);
+    } elsif ($vm->type eq 'Void') {
+        _check_network_internal_void($vm, $net);
+    }
+}
+
+sub _check_network_internal_void($vm, $net) {
+
+    my $file_out = $vm->dir_img."/networks/".$net->{name}.".yml";
+    my $internal = LoadFile($file_out);
+
+    for my $field ('name', 'autostart','bridge','dhcp_start','forward_mode') {
+        is($internal->{$field}, $net->{$field},$field);
+    }
+}
+
+sub _check_network_internal_kvm($vm, $net) {
+    my $network = $vm->vm->get_network_by_name($net->{name});
+    die "Error: I can't find network $net->{name}" if !$network;
+
+    my $doc = XML::LibXML->load_xml( string => $network->get_xml_description );
+    my ($range) = $doc->findnodes("/network/ip/dhcp/range");
+    is($range->getAttribute('start'), $net->{dhcp_start});
+
+    my ($forward) = $doc->findnodes("/network/forward");
+    my $forward_mode='none';
+    $forward_mode = $forward->getAttribute('mode') if $forward;
+    is($forward_mode,$net->{forward_mode});
+
+    my ($bridge) = $doc->findnodes("/network/bridge");
+    is($bridge->getAttribute('name'), $net->{bridge});
+
+    my $internal_autostart= $network->get_autostart();
+    if ($internal_autostart) {
+        $internal_autostart = 1;
+    } else {
+        $internal_autostart = 0;
+    }
+    is($internal_autostart,$net->{autostart},"autostart");
+}
+
 
 sub test_change_network_internal_void($vm, $net) {
     my $file_out = $vm->dir_img."/networks/".$net->{name}.".yml";
@@ -554,6 +601,9 @@ sub test_change_network_internal_kvm($vm, $net) {
     is($net2->{dhcp_start},$start_new) or exit;
 
     is($net2->{forward_mode}, $net->{forward_mode});
+
+    my ($bridge) = $doc->findnodes("/network/bridge");
+    is($bridge->getAttribute('name'), $net->{bridge});
 }
 
 sub test_changed_uuid($vm) {
@@ -834,8 +884,6 @@ sub _del_nat($vm, $net2) {
     my ($port) = $doc->findnodes("/network/nat/port");
     return if !$port;
 
-    diag("removing port ".$doc->toString);
-
     my $is_active = $net->is_active;
     $net->destroy() if $is_active;
     my ($nat) = $doc->findnodes("/network/nat");
@@ -847,9 +895,28 @@ sub _del_nat($vm, $net2) {
 
 }
 
-sub test_change_forward($vm, $add_nat=1) {
+sub _create_domain($vm, $net) {
 
-    return if $vm->type ne 'KVM';
+    my $id_iso = search_id_iso('Alpine%');
+    my $name = new_domain_name();
+
+    my $req = Ravada::Request->create_domain(
+        id_iso => $id_iso
+        ,vm => $vm->type
+        ,name => $name
+        ,id_owner => user_admin->id
+        ,disk => 2*1024*1024
+        ,options => {
+            network => $net->{name}
+        }
+    );
+    wait_request(debug => 0);
+
+    my $domain = rvd_back->search_domain($name);
+    return $domain;
+}
+
+sub test_change_forward($vm, $add_nat=1) {
 
     my $net = test_add_network($vm);
 
@@ -859,6 +926,8 @@ sub test_change_forward($vm, $add_nat=1) {
     _add_nat($vm, $net2) if $vm->type eq 'KVM' && $add_nat;
     _del_nat($vm, $net2) if $vm->type eq 'KVM' && !$add_nat;
 
+    my $domain = _create_domain($vm, $net);
+    is($domain->_data('networking'),'nat');
     for my $mode ('none' , 'nat') {
         $net2->{forward_mode} = $mode;
         my $req_change2 = Ravada::Request->change_network(
@@ -869,15 +938,26 @@ sub test_change_forward($vm, $add_nat=1) {
         wait_request(check_error => 0, debug => 0);
         is($req_change2->error,'');
 
-        test_change_network_internal($vm, $net2);
+        _check_network_internal($vm, $net2);
+        Ravada::Request->refresh_machine(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+            ,_force => 1
+        );
+        wait_request(debug => 0);
+        delete $domain->{_data};
 
+        if ($mode eq 'none') {
+            is($domain->_data('networking'),'isolated') or die $domain->name;
+        } else {
+            is($domain->_data('networking'), $mode) or exit;
+        }
     }
     my $req = Ravada::Request->remove_network(
         uid => user_admin->id
         ,id => $net->{id}
     );
     wait_request(check_error => 0);
-
 }
 
 ########################################################################
@@ -886,7 +966,7 @@ init();
 clean();
 
 for my $vm_name ( vm_names() ) {
-    diag("testing $vm_name");
+    diag("testing networks in $vm_name");
 
     SKIP: {
 

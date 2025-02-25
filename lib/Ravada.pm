@@ -2962,6 +2962,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','date_status_change' , 'datetime');
     $self->_upgrade_table('domains','show_clones' , 'int not null default 1');
     $self->_upgrade_table('domains','config_no_hd' , 'text');
+    $self->_upgrade_table('domains','networking' , 'varchar(32)');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
@@ -5770,6 +5771,7 @@ sub _cmd_refresh_machine($self, $request) {
             $domain->remove(Ravada::Utils::user_daemon);
             return;
         }
+        $domain->_fetch_networking_mode();
     }
     $domain->info($user);
     $domain->client_status(1) if $is_active;

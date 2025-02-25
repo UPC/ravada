@@ -300,11 +300,34 @@ sub _vm_disconnect {
     $self->_vm->disconnect();
 }
 
+sub _fetch_networking_mode($self) {
+    my $networking = '';
+    my @interfaces = $self->get_controller('network');
+    my @virtual_networks = $self->_vm->list_virtual_networks_data();
+    for my $item (@interfaces) {
+        next if lc($item->{type}) ne 'nat';
+        next if !$item->{network};
+        for my $network (@virtual_networks) {
+            next unless $network->{name} eq $item->{network};
+            next unless $network->{forward_mode};
+            if( $network->{forward_mode} eq 'nat') {
+                $networking = 'nat';
+            } elsif ($network->{forward_mode} eq 'none') {
+                $networking = 'isolated' unless $networking eq 'nat';
+            }
+            last;
+        }
+        last if $networking eq 'nat';
+    }
+    $self->_data('networking' => $networking);
+}
+
 sub _around_start($orig, $self, @arg) {
 
     $self->_post_hibernate() if $self->is_hibernated && !$self->_data('post_hibernated');
     if ( !$self->is_active ) {
         $self->_unlock_host_devices(0);
+        $self->_fetch_networking_mode();
     }
 
     $self->_start_preconditions(@arg);
@@ -2237,6 +2260,7 @@ sub info($self, $user) {
         ,auto_compact => ($self->auto_compact or 0)
         ,date_changed => $self->_data('date_changed')
         ,is_volatile => $self->_data('is_volatile')
+        ,networking => $self->_data('networking')
     };
 
     $info->{alias} = ( $self->_data('alias') or $info->{name} );
@@ -3969,6 +3993,7 @@ sub open_exposed_ports($self, $remote_ip=undef) {
     my @ports = $self->list_ports();
     return if !@ports;
     return if !$self->is_active;
+    return if $self->_data('networking') eq 'isolated';
 
     if (!$self->has_nat_interfaces) {
         $self->_set_ports_direct();
@@ -7366,9 +7391,13 @@ sub refresh_ports($self, $request=undef) {
         $is_port_active_txt = "down" if !$is_port_active;
         $msg .= " $port->{internal_port}:$is_port_active_txt";
     }
-    die "Virtual machine ".$self->name." is not up. retry.\n"if !$ip;
-    die "Virtual machine ".$self->name." $ip has ports down: $msg. retry.\n"
-    if $port_down;
+    if ($is_active && $self->_data('networking') eq 'isolated') {
+        $msg = "Virtual machine ".$self->name." isolated. No exposed ports.";
+    } else {
+        die "Virtual machine ".$self->name." is not up. retry.\n"if !$ip;
+        die "Virtual machine ".$self->name." $ip has ports down: $msg. retry.\n"
+        if $port_down;
+    }
 
     if (($msg) && ($request))
     {
