@@ -3920,7 +3920,6 @@ sub _update_display_port_exposed($self, $name, $local_ip, $public_port, $interna
             or $self->_vm->display_ip
             or $local_ip );
 
-    my $is_builtin;
     for (1 .. 10) {
         eval {
             $sth->execute($display_ip, $local_ip, $public_port,1, $self->_vm->id

@@ -76,10 +76,6 @@ sub test_nat_rdp($vm) {
         ,id_domain => $domain->id
     );
     wait_request();
-    wait_ip($domain);
-
-    $vm->nat_ip($NAT_IP);
-
     my $req = Ravada::Request->start_domain(
         uid => user_admin->id
         ,id_domain => $domain->id
@@ -87,11 +83,20 @@ sub test_nat_rdp($vm) {
     );
     wait_request(debug=>0);
 
+    wait_ip($domain);
+
+    die "Error: no ip found for ".$domain->name if !$domain->ip;
+
+    $vm->nat_ip($NAT_IP);
+
+    $req->status('requested');
+    wait_request(debug=>0);
+
     my $sth = connector->dbh->prepare("SELECT * FROM domain_displays");
     $sth->execute();
     while (my $row = $sth->fetchrow_hashref) {
         is($row->{listen_ip}, $vm->ip,"listen_ip ".$row->{driver});
-        is($row->{ip},$NAT_IP,"ip ".$row->{driver});
+        is($row->{ip},$NAT_IP,"ip ".$row->{driver}) or exit;
     }
     $vm->nat_ip('');
 }
