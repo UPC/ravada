@@ -1735,6 +1735,17 @@ sub _around_list_networks($orig, $self) {
     return @list;
 }
 
+=head2 list_virtual_networks_data
+
+Returns a list of information of the virtual networks in this virtual
+machines manager (VM) from the database
+
+Arguments:
+
+Pass either the VM object or an id_vm
+
+=cut
+
 sub list_virtual_networks_data($id_vm) {
     if (ref($id_vm)) {
         my $self = $id_vm;

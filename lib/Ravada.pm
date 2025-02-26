@@ -3658,7 +3658,7 @@ sub list_vms($self) {
     return @{$self->vm};
 }
 
-sub list_vms_id($self) {
+sub _list_vms_id($self) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id FROM vms"
     );
@@ -6132,7 +6132,7 @@ sub _clean_requests($self, $command, $request=undef, $status='requested') {
 sub _refresh_active_vms ($self) {
 
     my %active_vm;
-    for my $id ($self->list_vms_id) {
+    for my $id ($self->_list_vms_id) {
         my $vm;
         eval{ $vm = Ravada::VM->open($id) };
         next if !$vm;
