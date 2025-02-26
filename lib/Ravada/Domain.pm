@@ -5605,7 +5605,7 @@ sub list_vms($self, $check_host_devices=0, $only_available=0) {
         next if $only_available && ( !$is_active || !$enabled);
         my $t1 = time;
         if ($only_available && $cached_down) {
-            next if time-$cached_down < $self->timeout_down_cache();
+            next if time-$cached_down < $self->_vm->timeout_down_cache();
         }
         if ($id_request && $only_available) {
             $sth_req->execute($id_request);

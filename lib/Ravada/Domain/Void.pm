@@ -945,7 +945,7 @@ sub _new_network($self) {
         ,address => ''
         ,type => 'nat'
         ,driver => 'virtio'
-        ,name => "net".(scalar(@$list)+1)
+        ,network => "net".(scalar(@$list)+1)
     };
 }
 
