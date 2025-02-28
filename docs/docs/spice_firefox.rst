@@ -63,7 +63,7 @@ macOS
 
 Follow these steps for Spice client setup link .
 
-https://ravada.readthedocs.io/en/latest/docs/mac_clients.html
+https://ravada.readthedocs.io/en/latest/docs/macos_spice_client.html
 
 Frequently Asked Questions
 ==========================
