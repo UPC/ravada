@@ -1358,8 +1358,14 @@ sub _store_display($self, $display, $display_old=undef) {
     $self->_set_display_ip(\%display_new) if !exists $display->{ip} || !$display->{ip};
     if (!exists $display_new{ip} || !$display_new{ip}) {
         unlock_hash(%display_new);
-        $display_new{ip} = $self->_vm->ip;
-        $display_new{listen_ip} = $display_new{ip};
+        $display_new{listen_ip} = $self->_vm->ip;
+        my $display_ip = ( $self->_vm->nat_ip
+            or $self->_vm->display_ip
+            or $self->_vm->public_ip
+            or $self->_vm->ip
+        );
+
+        $display_new{ip} = $display_ip;
     }
 
     if ( !$display_old ) {
@@ -1369,7 +1375,6 @@ sub _store_display($self, $display, $display_old=undef) {
         $display_old = $self->_get_display($display->{driver})
     }
 
-    my $ip = ( $display_new{ip} or $display_old->{ip} );
     my $driver = ( $display_new{driver} or $display_old->{driver} );
     if (exists $display_new{port} && $display_new{port}
         && (!exists $display_new{id_vm} || !$display_new{id_vm}) ) {
@@ -3920,6 +3925,7 @@ sub _update_display_port_exposed($self, $name, $local_ip, $public_port, $interna
             or $self->_vm->display_ip
             or $local_ip );
 
+    my $is_builtin;
     for (1 .. 10) {
         eval {
             $sth->execute($display_ip, $local_ip, $public_port,1, $self->_vm->id
