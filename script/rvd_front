@@ -3569,6 +3569,8 @@ sub render_machines_user {
         template => 'main/list_bases_ng'
         ,user => $USER
         ,_anonymous => $anonymous
+        ,time_zone => $RAVADA->setting("/backend/time_zone")
+        ,localtime => ''.localtime(time)
     );
 }
 

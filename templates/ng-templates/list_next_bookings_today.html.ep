@@ -8,6 +8,10 @@
     the booking list will be shutdown.' %>
     </p>
 
+    <p><%=l 'Time zone'%>: <%= $time_zone %>
+        , <%=l 'Local time'%>: <%= $localtime %>
+    </p>
+
     <table border="1" bordercolor="darkgray" cellpadding="5">
     <tr ng-repeat="booking in bookings_today">
         <td align="right">
