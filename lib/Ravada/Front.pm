@@ -1958,6 +1958,10 @@ sub upload_users_json($self, $data_json, $type='openid') {
         if (!ref($g)) {
             $g = { name => $g0 };
         }
+        if (!exists $g->{name} or !defined $g->{name} || !length($g->{name})) {
+                push @error, ("Missing group name in ".Dumper($g));
+                next;
+        }
         $found++;
         my $group = Ravada::Auth::Group->new(name => $g->{name});
         my $members = delete $g->{members};
