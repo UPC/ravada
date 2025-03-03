@@ -6792,15 +6792,16 @@ sub _shutdown_bookings($self) {
         next if $dom->{autostart};
         next if $self->_user_is_admin($dom->{id_owner});
 
-        if ( Ravada::Booking::user_allowed($dom->{id_owner}, $dom->{id_base}, $dom->{host_devices})
+        my $user = Ravada::Auth::SQL->search_by_id($dom->{id_owner});
+        if ($user
+            && Ravada::Booking::user_allowed($dom->{id_owner}, $dom->{id_base}, $dom->{host_devices})
             && Ravada::Booking::user_allowed($dom->{id_owner}, $dom->{id}, $dom->{host_devices})
         ) {
             #warn "\tuser $dom->{id_owner} allowed to start clones from $dom->{id_base}";
             next;
         }
 
-        my $user = Ravada::Auth::SQL->search_by_id($dom->{id_owner});
-        $user->send_message("The server is booked. Shutting down ".$dom->{name});
+        $user->send_message("The server is booked. Shutting down ".$dom->{name}) if $user;
         Ravada::Request->shutdown_domain(
             uid => Ravada::Utils::user_daemon->id
             ,id_domain => $dom->{id}

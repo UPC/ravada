@@ -334,7 +334,7 @@ sub user_allowed($user,$id_base, $enable_host_devices=1) {
     confess "Error: undefined user " if !defined $user;
     $user_name = _search_user_name($user) if !ref($user) && $user =~ /^\d+$/;
 
-    confess"Undefined user name " if !defined $user_name;
+    confess"Undefined user name for user = ".Dumper($user) if !defined $user_name;
 
     my $today = _today();
     my $now = _now();
