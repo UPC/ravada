@@ -1,5 +1,5 @@
-SPICE client setup for MacOS
-============================
+SPICE client setup for GNU/Linux
+================================
 
 Virt-Viewer
 -----------
@@ -19,4 +19,4 @@ Firefox
 
 Check this document with more information about SPICE viewer
 and
-`<http://ravada.readthedocs.io/en/latest/docs/spice_firefox.html> Firefox`_.
+`Firefox <http://ravada.readthedocs.io/en/latest/docs/spice_firefox.html>`_.
