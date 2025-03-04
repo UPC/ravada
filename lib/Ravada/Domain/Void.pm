@@ -156,7 +156,7 @@ sub _set_display($self, $listen_ip=$self->_vm->listen_ip) {
     #    my $ip = ($self->_vm->nat_ip or $self->_vm->ip());
     my $port = 'auto';
     $port = $self->_new_free_port() if $self->is_active();
-    my $display_data = { driver => 'void', ip => $listen_ip, port =>$port
+    my $display_data = { driver => 'void', listen_ip => $listen_ip, port =>$port
         , is_builtin => 1
         , xistorra => 1
     };
