@@ -109,7 +109,6 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/install_tpm
    docs/mount_virtual_volume
    docs/replace_server
-   docs/report_rrdgraph
    docs/users_upload
    docs/volume_differences
    docs/ROADMAP
