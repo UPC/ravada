@@ -62,8 +62,6 @@ sub _set_bridge($vm, $domain) {
 
 sub test_bridge($vm) {
 
-    diag("Testing bridge on ".$vm->type);
-
     my $domain= $BASE->clone(name => new_domain_name, user => user_admin);
     is($domain->has_nat_interfaces,1,"Expecting ".$domain->name." has nat "
         .$vm->name);
@@ -132,7 +130,7 @@ sub test_bridge($vm) {
 init();
 clean();
 
-for my $vm_name ( vm_names() ) {
+for my $vm_name ( reverse vm_names() ) {
 
     SKIP: {
         my $vm = rvd_back->search_vm($vm_name);

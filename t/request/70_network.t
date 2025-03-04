@@ -81,7 +81,6 @@ sub test_list_bridges($vm) {
        ,timeout => 1
       );
     ok($bridges);
-    warn Dumper($bridges);
 
     SKIP: {
         skip("No system bridges found",1) if !scalar @exp_bridges;
