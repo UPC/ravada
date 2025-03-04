@@ -2143,7 +2143,10 @@ get '/list_ldap_attributes/(#cn)' => sub {
             ($user) = Ravada::Auth::LDAP::search_user($cn);
         }
     };
+    my $field = $Ravada::CONFIG->{ldap}->{field};
+    $field = 'cn' if !defined $field;
     my $return;
+
     if ( $@ ) {
         my $error = $@;
         $error =~ s/(.*) at lib\/Ravada.*/$1/;
@@ -2166,8 +2169,6 @@ get '/list_ldap_attributes/(#cn)' => sub {
                 $values->{$attribute} = \@values;
             }
         }
-        my $field = $Ravada::CONFIG->{ldap}->{field};
-        $field = 'cn' if !defined $field;
         my $user_name = $user->get_value($field);
         $return = {
             dn_found => $user->dn
@@ -2176,6 +2177,7 @@ get '/list_ldap_attributes/(#cn)' => sub {
             , values => $values
         };
     }
+    $return->{field} = $field;
 
     $c->session(ldap_attributes_cn => $cn) if $user;
     $LDAP_ATTRIBUTES{$cn} = $return;

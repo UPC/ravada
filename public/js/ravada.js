@@ -950,10 +950,12 @@
               $scope.ldap_entries = 0;
               $scope.ldap_verified = 0;
               $scope.searching_ldap_attributes = true;
+              $scope.cn_changed=false;
               if ($scope.cn) {
                   $http.get('/list_ldap_attributes/'+$scope.cn).then(function(response) {
                       $scope.ldap_error = response.data.error;
                       $scope.ldap_attributes = response.data.attributes;
+                      $scope.ldap_field = response.data.field;
                       $scope.dn_found = response.data.dn_found;
                       $scope.values = response.data.values;
                       $scope.searching_ldap_attributes = false;
@@ -1367,6 +1369,7 @@
 
             $scope.new_base = undefined;
             $scope.cn ='';
+            $scope.cn_changed=false;
             $scope.list_ldap_attributes();
             $scope.list_caches = ['default','none','writethrough'
                 ,'writeback','directsync','unsafe'];
