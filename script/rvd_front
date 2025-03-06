@@ -4040,9 +4040,9 @@ sub _init_user_group {
     my $group = $CONFIG_FRONT->{group};
 
     if (defined $group) {
-        $group = getgrnam($group) or die "CRITICAL: I can't find user $group\n"
-            if $group !~ /^\d+$/;
-
+        my $gname=$group;
+        $group = getgrnam($gname) or die "CRITICAL: I can't find user $gname\n"
+            if $gname!~ /^\d+$/;
     }
     if (defined $user) {
         $user = getpwnam($user) or die "CRITICAL: I can't find user $user\n"

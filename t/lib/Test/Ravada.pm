@@ -1633,7 +1633,7 @@ sub remove_networks_req() {
             ,id_vm => $id_vm
         );
     }
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 }
 
 sub remove_qemu_networks($vm=undef) {

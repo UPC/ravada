@@ -416,7 +416,7 @@ sub _set_ip_address($self) {
     for my $net (@{$hardware->{network}}) {
         next if !ref($net);
         next if exists $net->{address} && $net->{address};
-        next if $net->{type} ne 'nat';
+        next if $net->{type} ne 'nat' && $net->{type} ne 'bridge';
         $net->{address} = '198.51.100.'.int(rand(253)+2);
         $changed++;
     }
@@ -876,6 +876,22 @@ sub ip {
     }
 
     return;
+}
+
+sub ip_info($self) {
+    my $hardware = $self->_value('hardware');
+    return if !exists $hardware->{network};
+    for ( 1 .. 2 ) {
+        for my $network(@{$hardware->{network}}) {
+            $network->{addr} = delete $network->{address};
+            return $network if ref($network) && $network->{addr};
+        }
+
+        $self->_set_ip_address();
+    }
+
+    return;
+
 }
 
 sub clean_disk($self, $file) {
