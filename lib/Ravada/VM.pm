@@ -1561,6 +1561,7 @@ sub _clean_virtual_network_data($net) {
           'ip_address',
           'ip_netmask',
           'is_active',
+          'is_public',
           'name'
     );
 
