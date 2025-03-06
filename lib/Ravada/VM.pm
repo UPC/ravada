@@ -1562,6 +1562,7 @@ sub _clean_virtual_network_data($net) {
           'ip_netmask',
           'is_active',
           'is_public',
+          'is_active',
           'name'
     );
 
@@ -1683,13 +1684,18 @@ sub _around_remove_network($orig, $self, $user, $id_net) {
         my ($net) = grep { $_->{id} eq $id_net } $self->list_virtual_networks();
         die "Error: network id $id_net not found" if !$net;
         $name = $net->{name};
+    } else {
+        my ($net) = grep { $_->{name} eq $id_net } $self->list_virtual_networks();
+        warn "Error: network $id_net not found" if !$net;
+        $id_net= $net->{id};
     }
-
 
     $self->$orig($name);
 
-    my $sth = $self->_dbh->prepare("DELETE FROM virtual_networks WHERE id=?");
-    $sth->execute($id_net);
+    if ( defined $id_net) {
+        my $sth = $self->_dbh->prepare("DELETE FROM virtual_networks WHERE id=?");
+        $sth->execute($id_net);
+    }
 }
 
 sub _around_change_network($orig, $self, $data, $uid) {

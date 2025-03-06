@@ -27,7 +27,7 @@ my %FILES;
 my %HREFS;
 
 my %MISSING_LANG = map {$_ => 1 }
-    qw(ca-valencia he ko);
+    qw(ca-valencia he ko cs);
 
 my $ID_DOMAIN;
 
@@ -273,7 +273,7 @@ sub test_networks_access_grant($vm_name) {
 
         my $networks3 = decode_json($t->tx->res->body);
         my ($net3) = grep { $_->{name} eq $new->{name}} @$networks3;
-        is($net3->{is_active}, $new->{is_active}) or exit;
+        is($net3->{is_active}, $new->{is_active}) or die $net3->{name};
     }
 
     for ( 1 .. 2 ) {
@@ -326,7 +326,7 @@ sub test_networks_admin($vm_name) {
     $new->{is_active} = 0;
 
     $t->post_ok("/v2/network/set/" => json => $new);
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     $t->get_ok("/v2/vm/list_networks/".$id_vm);
 
     my $networks3 = decode_json($t->tx->res->body);
@@ -340,7 +340,7 @@ sub test_networks_admin($vm_name) {
 
     $new->{is_public}=1;
     $t->post_ok("/v2/network/set/" => json => $new);
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     $t->get_ok("/v2/vm/list_networks/".$id_vm);
 
     my $networks5 = decode_json($t->tx->res->body);
@@ -625,6 +625,7 @@ mojo_login($t, $USERNAME, $PASSWORD);
 
 remove_old_domains_req(0); # 0=do not wait for them
 clean_clones();
+remove_networks_req();
 
 $ID_DOMAIN = _search_public_base();
 
@@ -645,5 +646,6 @@ for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
 
 clean_clones();
 remove_old_users();
+remove_networks_req();
 
 done_testing();
