@@ -1472,6 +1472,9 @@ sub _insert_display( $self, $display ) {
 
     confess Dumper($display) if $display->{driver} =~ /-tls/ && !$display->{is_secondary};
 
+    $display->{listen_ip} = $self->_vm->ip
+    if !exists $display->{listen_ip} || !$display->{listen_ip};
+
     lock_hash(%$display);
     $self->_clean_display_order($display->{n_order}) if $display->{n_order};
 
