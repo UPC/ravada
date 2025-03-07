@@ -1358,8 +1358,14 @@ sub _store_display($self, $display, $display_old=undef) {
     $self->_set_display_ip(\%display_new) if !exists $display->{ip} || !$display->{ip};
     if (!exists $display_new{ip} || !$display_new{ip}) {
         unlock_hash(%display_new);
-        $display_new{ip} = $self->_vm->ip;
-        $display_new{listen_ip} = $display_new{ip};
+        $display_new{listen_ip} = $self->_vm->ip;
+        my $display_ip = ( $self->_vm->nat_ip
+            or $self->_vm->display_ip
+            or $self->_vm->public_ip
+            or $self->_vm->ip
+        );
+
+        $display_new{ip} = $display_ip;
     }
 
     if ( !$display_old ) {
@@ -1369,7 +1375,6 @@ sub _store_display($self, $display, $display_old=undef) {
         $display_old = $self->_get_display($display->{driver})
     }
 
-    my $ip = ( $display_new{ip} or $display_old->{ip} );
     my $driver = ( $display_new{driver} or $display_old->{driver} );
     if (exists $display_new{port} && $display_new{port}
         && (!exists $display_new{id_vm} || !$display_new{id_vm}) ) {
@@ -2136,6 +2141,59 @@ sub display($self, $user) {
 
     my $display = $display_info->{driver}."://$display_info->{ip}:$display_info->{port}";
     return $display;
+}
+
+sub _display_file_rdp($self,$display) {
+
+    my $ret = "screen mode id:i:2
+use multimon:i:0
+desktopwidth:i:1280
+desktopheight:i:1024
+session bpp:i:32
+winposstr:s:0,1,14,5,1280,1000
+compression:i:1
+keyboardhook:i:2
+audiocapturemode:i:0
+videoplaybackmode:i:1
+connection type:i:7
+networkautodetect:i:1
+bandwidthautodetect:i:1
+displayconnectionbar:i:1
+enableworkspacereconnect:i:0
+disable wallpaper:i:0
+allow font smoothing:i:0
+allow desktop composition:i:0
+disable full window drag:i:1
+disable menu anims:i:1
+disable themes:i:0
+disable cursor setting:i:0
+bitmapcachepersistenable:i:1
+full address:s:".$display->{ip}.":".$display->{port}."\n"
+."audiomode:i:0
+redirectprinters:i:0
+redirectcomports:i:0
+redirectsmartcards:i:0
+redirectclipboard:i:1
+redirectposdevices:i:0
+autoreconnection enabled:i:1
+authentication level:i:0
+prompt for credentials:i:0
+negotiate security layer:i:1
+remoteapplicationmode:i:0
+alternate shell:s:
+shell working directory:s:
+gatewayhostname:s:
+gatewayusagemethod:i:4
+gatewaycredentialssource:i:4
+gatewayprofileusagemethod:i:0
+promptcredentialonce:i:0
+gatewaybrokeringtype:i:0
+use redirection server name:i:0
+rdgiskdcproxy:i:0
+kdcproxyname:s:
+drivestoredirect:s:*
+username:s:
+";
 }
 
 # taken from isard-vdi thanks to @tuxinthejungle Alberto Larraz
@@ -3807,6 +3865,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
             ." WHERE id_domain=? AND internal_port=?"
     );
     $sth->execute($internal_ip, $self->id, $internal_port);
+
     $self->_update_display_port_exposed($name, $local_ip, $public_port, $internal_port);
 
     if ( !$> && $public_port ) {
@@ -3878,10 +3937,14 @@ sub _update_display_port_exposed($self, $name, $local_ip, $public_port, $interna
         ." SET ip=?,listen_ip=?,port=?,is_active=?,id_vm=? "
         ." WHERE driver=? AND id_domain=?"
     );
+    my $display_ip = ( $self->_vm->nat_ip
+            or $self->_vm->display_ip
+            or $local_ip );
+
     my $is_builtin;
     for (1 .. 10) {
         eval {
-            $sth->execute($local_ip, $local_ip, $public_port,1, $self->_vm->id
+            $sth->execute($display_ip, $local_ip, $public_port,1, $self->_vm->id
                 ,$name, $self->id);
         };
         warn "Warning: $@".Dumper([$name, $public_port]) if $@;

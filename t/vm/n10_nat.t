@@ -18,10 +18,10 @@ my $FILE_CONFIG = "t/etc/ravada.conf";
 init( );
 
 my $NAT_IP = '2.2.2.2';
-
 my $REMOTE_IP = '9.9.9.9';
-
 my $CHAIN = 'RAVADA';
+
+my $BASE;
 ##################################################################################
 
 sub _search_other_ip($ip) {
@@ -65,6 +65,43 @@ sub test_route($vm) {
         is($ip, $route{$network},$vm->type) or die $domain->name;
     }
 }
+
+sub test_nat_rdp($vm) {
+    my $domain = $BASE->clone(user => user_admin
+        ,name => new_domain_name);
+
+    Ravada::Request->add_hardware(
+        name => 'display'
+        ,uid => user_admin->id
+        ,data => { driver => 'rdp' }
+        ,id_domain => $domain->id
+    );
+    $vm->nat_ip($NAT_IP);
+    wait_request();
+    my $req = Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,remote_ip => $REMOTE_IP
+    );
+    wait_request(debug=>0);
+
+    wait_ip($domain);
+
+    die "Error: no ip found for ".$domain->name if !$domain->ip;
+
+    $req->status('requested');
+    wait_request(debug=>0);
+
+    my $sth = connector->dbh->prepare("SELECT * FROM domain_displays "
+    ." WHERE id_domain=?");
+    $sth->execute($domain->id);
+    while (my $row = $sth->fetchrow_hashref) {
+        is($row->{listen_ip}, $vm->ip,"listen_ip ".$row->{driver});
+        is($row->{ip},$NAT_IP,"ip ".$row->{driver}) or exit;
+    }
+    $vm->nat_ip('');
+}
+
 
 sub test_nat($vm_name) {
     my $domain = create_domain($vm_name);
@@ -204,6 +241,15 @@ sub test_chain($vm_name, %args) {
 
     }
 }
+
+sub _import_base($vm) {
+    if ($vm->type eq 'KVM') {
+        $BASE = import_domain($vm);
+    } else {
+        $BASE = create_domain($vm);
+    }
+}
+
 ##################################################################################
 
 clean();
@@ -224,6 +270,9 @@ for my $vm_name ( vm_names() ) {
 
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
+
+        _import_base($vm);
+        test_nat_rdp($vm);
 
         test_route($vm);
         test_nat($vm_name);
