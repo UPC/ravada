@@ -694,7 +694,8 @@ sub post_resume_aux($self, %args) {
     # 55: domain is not running
     # 74: not configured
     # 86: no agent
-    die "$@\n" if $@ && $@ !~ /libvirt error code: (55|74|86),/;
+    # 84: qemu doesn't support rtc-reset-reinjection command
+    die "$@\n" if $@ && $@ !~ /libvirt error code: (55|74|84|86),/;
 }
 
 sub set_time($self) {

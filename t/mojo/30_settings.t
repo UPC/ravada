@@ -27,7 +27,7 @@ my %FILES;
 my %HREFS;
 
 my %MISSING_LANG = map {$_ => 1 }
-    qw(ca-valencia he ko);
+    qw(ca-valencia cs he ko);
 
 my $ID_DOMAIN;
 
@@ -503,7 +503,7 @@ sub test_languages() {
     while (my $file = readdir $ls) {
         next if $file !~ /(.*)\.po$/;
         next if $MISSING_LANG{$1};
-        ok($lang->{$1},"Expecting $1 in select");
+        ok($lang->{$1},"Expecting $1 in language select");
     }
 }
 

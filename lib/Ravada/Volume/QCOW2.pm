@@ -17,7 +17,7 @@ has 'capacity' => (
     ,builder => '_get_capacity'
 );
 
-our $QEMU_IMG = "/usr/bin/qemu-img";
+our $QEMU_IMG = "qemu-img";
 
 sub prepare_base($self) {
 
