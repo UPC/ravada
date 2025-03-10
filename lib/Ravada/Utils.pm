@@ -207,4 +207,39 @@ sub TZ_SYSTEM() {
     return $TZ_SYSTEM;
 }
 
+sub _different_list($list1, $list2) {
+    return 1 if scalar(@$list1) != scalar (@$list2);
+    for my $i (0 .. scalar(@$list1)-1) {
+        my $h1 = $list1->[$i];
+        my $h2 = $list2->[$i];
+        return 1 if _different($h1, $h2);
+   }
+    return 0;
+}
+
+sub _different_hash($h1,$h2) {
+    for my $key (keys %$h1) {
+        next if exists $h1->{$key} && exists $h2->{$key}
+        && !defined $h1->{$key} && !defined $h2->{$key};
+        if (!exists $h2->{$key}
+            || !defined $h1->{$key} && defined $h2->{$key}
+            || defined $h1->{$key} && !defined $h2->{$key}
+            || _different($h1->{$key}, $h2->{$key})) {
+            return 1;
+        }
+    }
+    return 0;
+}
+sub _different($var1, $var2) {
+    return 1 if !defined $var1 &&  defined $var2;
+    return 1 if  defined $var1 && !defined $var2;
+    return 1 if ref($var1) ne ref($var2);
+    return _different_list($var1, $var2) if ref($var1) eq 'ARRAY';
+    return _different_hash($var1, $var2) if ref($var1) eq 'HASH';
+    return 1 if !defined $var1 && defined $var2
+                || defined $var1 && !defined $var2;
+    return 0 if !defined $var1 && !defined $var2;
+    return $var1 ne $var2;
+}
+
 1;

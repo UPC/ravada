@@ -24,6 +24,9 @@ sub test_create_network($vm) {
         ,name => base_domain_name()
     );
     wait_request();
+    is($req_new->status, 'done');
+    is($req_new->error, '');
+    ok($req_new->output,"Expecting output") or die;
     my $data = decode_json($req_new->output);
 
     my $req = Ravada::Request->create_network(
@@ -159,6 +162,8 @@ sub test_deny_access($vm) {
     $req_list->status('requested');
     wait_request();
 
+    is($req_list->status,'done');
+    is($req_list->error,'');
     my $new_list = decode_json($req_list->output);
     my ($found) = grep { $_->{name} eq $new_data->{name} } @$new_list;
 
