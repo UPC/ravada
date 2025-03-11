@@ -1446,7 +1446,7 @@ sub wait_request {
                 $done{$req->{id}}++;
                 if ($check_error && $req->command ne 'set_time') {
                     if ($req->command =~ /remove/) {
-                        like($req->error,qr(^$|Unknown domain|Domain not found));
+                        like($req->error,qr(^$|Unknown domain|Domain not found)) or confess $req->command;
                     } elsif($req->command eq 'set_time') {
                         like($req->error,qr(^$|libvirt error code));
                     } else {
@@ -1628,7 +1628,7 @@ sub remove_networks_req() {
     $sth->execute(base_domain_name."%");
     while (my ($id, $id_vm, $name, $node) = $sth->fetchrow) {
         my $req = Ravada::Request->remove_network(
-            uid => user_admin()->id
+            uid => Ravada::Utils::user_daemon()->id
             ,id => $id
             ,id_vm => $id_vm
         );
