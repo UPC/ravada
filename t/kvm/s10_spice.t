@@ -54,21 +54,48 @@ sub test_spice {
 }
 
 sub _remove_display($domain) {
+
+    my $info = $domain->info(user_admin);
+    my $index;
+    my $index_tls;
+    my $n = 0;
+    for my $item ( @{$info->{hardware}->{display}} ) {
+        if ( $item->{driver} eq 'spice' ) {
+            $index=$item->{_index};
+        }
+        if ( $item->{driver} eq 'spice-tls' ) {
+            $index_tls=$n;
+        }
+        last if $index && $index_tls;
+        $n++;
+    }
+
+    ok(defined $index) or die "No spice found in hardwre"
+    .Dumper($info->{hardware}->{display});
+
+    ok(defined $index_tls) or die "No spice-tls found in hardwre"
+    .Dumper($info->{hardware}->{display});
+
     my $req = Ravada::Request->remove_hardware(
         uid => user_admin->id
         ,id_domain => $domain->id
         ,name => 'display'
-        ,index => 0
+        ,index => $index
     );
     wait_request();
 
     is($req->error,'');
+    Ravada::Request->force_shutdown(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request();
 
     my $doc =XML::LibXML->load_xml(string => $domain->domain->get_xml_description());
     my ($spice) = $doc->findnodes("/domain/devices/graphics");
     ok(!$spice);
 
-    my $info = $domain->info(user_admin);
+    $info = $domain->info(user_admin);
     my ($hw_spice) = grep { $_->{driver} =~ /spice/ } @{$info->{hardware}->{display}};
     ok(!$hw_spice);
 }
@@ -89,15 +116,25 @@ sub _add_display($domain,$driver='spice') {
     my @redir = $doc->findnodes("/domain/devices/redirdev[\@type=\'spicevmc\']");
     ok(scalar(@redir)>2);
 
-    my @audio = $doc->findnodes("/domain/devices/audio[\@type='spice']");
-    is(scalar(@audio),1);
+    my @audio = $doc->findnodes("/domain/devices/audio");
+    ok(scalar(@audio));
+
+    my ($none) = grep { $_->getAttribute('type') eq 'none' } @audio;
+    ok(!$none,"Expecting no 'none' audio");
+
+    my @audio_spice = $doc->findnodes("/domain/devices/audio[\@type='spice']");
+    is(scalar(@audio_spice),1);
 
     my @channel = $doc->findnodes("/domain/devices/channel[\@type='spicevmc']");
     is(scalar(@channel),1);
 }
 
 sub test_remove_spice($domain) {
-    $domain->shutdown_now(user_admin) if $domain->is_active;
+    Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request();
 
     my $doc =XML::LibXML->load_xml(string => $domain->domain->get_xml_description());
     my ($spice) = $doc->findnodes("/domain/devices/graphics");
