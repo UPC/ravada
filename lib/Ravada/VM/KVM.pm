@@ -3230,7 +3230,7 @@ sub change_network($self, $data) {
     for ('id_vm','internal_id','id' ,'_old_name', 'date_changed') {
         delete $data->{$_};
     }
-    die "Error: unexpected args ".Dumper($data) if keys %$data;
+    warn "Warning: unexpected args ".Dumper($data) if keys %$data;
 
     return $changed;
 }
