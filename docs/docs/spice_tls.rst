@@ -57,14 +57,16 @@ Add ``/etc/pki/libvirt-spice/** r,`` in ``/etc/apparmor.d/abstractions/libvirt-q
 Create self signed certificate
 ------------------------------
 
-Download and modify your servername in `v3.ext <https://raw.githubusercontent.com/UPC/ravada/gh-pages/docs/docs/v3.ext>`__ file, then run the
+Download and run the
 `create_cert.sh <https://raw.githubusercontent.com/UPC/ravada/gh-pages/docs/docs/create_cert.sh>`__ script.
 
 .. prompt:: bash
 
    chmod +x create_cert.sh
-   sudo ./create_cert.sh server.ip.address
+   sudo ./create_cert.sh
    sudo systemctl restart libvirtd
+
+The script tries to guess your IP and server name, then it creates a valid v3.ext file.
 
 .. warning::
     Whatever method you use to generate the certificate and key files, the Common Name value used for the server and client certificates/keys must each differ from the Common Name value used for the CA certificate. Otherwise, the certificate and key files will not work for servers compiled using OpenSSL.
