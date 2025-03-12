@@ -1814,6 +1814,7 @@ sub ip($self) {
 
 sub ip_info($self) {
     my $ip = $self->_ip_info_get();
+    lock_hash(%$ip);
     return $ip;
 }
 

@@ -3838,7 +3838,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
     my $internal_ip_info;
     for ( 1 .. 5 ) {
         $internal_ip_info = $self->ip_info;
-        last if $internal_ip_info && $internal_ip_info->{address};
+        last if $internal_ip_info && $internal_ip_info->{addr};
         sleep 1;
     }
     $internal_ip = $internal_ip_info->{addr};
