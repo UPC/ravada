@@ -3838,7 +3838,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
     my $internal_ip_info;
     for ( 1 .. 5 ) {
         $internal_ip_info = $self->ip_info;
-        last if $internal_ip_info && $internal_ip_info->{addr};
+        last if $internal_ip_info && exists $internal_ip_info->{addr} && $internal_ip_info->{addr};
         sleep 1;
     }
     $internal_ip = $internal_ip_info->{addr};
@@ -3846,7 +3846,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
     die "Error: I can't get the internal IP of ".$self->name." ".($internal_ip or '<UNDEF>').". Retry."
         if !$internal_ip || $internal_ip !~ /^(\d+\.\d+)/;
 
-    return unless $internal_ip_info->{type} =~ /^(bridge|network)$/;
+    return unless exists $internal_ip_info->{type} && $internal_ip_info->{type} =~ /^(bridge|network)$/;
 
     if ($public_port
         && ( $self->_used_ports_iptables($public_port, "$internal_ip:$internal_port")
