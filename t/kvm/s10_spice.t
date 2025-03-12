@@ -71,10 +71,11 @@ sub _remove_display($domain) {
     }
 
     ok(defined $index) or die "No spice found in hardwre"
-    .Dumper($info->{hardware}->{display});
+    .Dumper([ map { $_->{driver} } @{$info->{hardware}->{display}}] );
+
 
     ok(defined $index_tls) or die "No spice-tls found in hardwre"
-    .Dumper($info->{hardware}->{display});
+    .Dumper([ map { $_->{driver} } @{$info->{hardware}->{display}}] );
 
     my $req = Ravada::Request->remove_hardware(
         uid => user_admin->id
