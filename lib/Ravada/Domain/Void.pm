@@ -881,12 +881,12 @@ sub ip {
 sub ip_info($self) {
     my $hardware = $self->_value('hardware');
     return if !exists $hardware->{network};
-    for ( 1 .. 2 ) {
         for my $network(@{$hardware->{network}}) {
             $network->{addr} = delete $network->{address};
-            lock_hash(%$network);
-            return $network if ref($network) && exists $network->{addr} && $network->{addr};
-        }
+            if ( ref($network) && exists $network->{addr} && $network->{addr} ) {
+                lock_hash(%$network);
+                return $network;
+            }
 
         $self->_set_ip_address();
     }

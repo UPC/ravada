@@ -3841,7 +3841,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
         last if $internal_ip_info && exists $internal_ip_info->{addr} && $internal_ip_info->{addr};
         sleep 1;
     }
-    $internal_ip = $internal_ip_info->{addr};
+    $internal_ip = $internal_ip_info->{addr} if exists $internal_ip_info->{addr};
 
     die "Error: I can't get the internal IP of ".$self->name." ".($internal_ip or '<UNDEF>').". Retry."
         if !$internal_ip || $internal_ip !~ /^(\d+\.\d+)/;
