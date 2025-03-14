@@ -1547,21 +1547,51 @@ sub _around_ping($orig, $self, $option=undef, $cache=1) {
     return $ping;
 }
 
+sub _clean_virtual_network_data($net) {
+
+    my $net2 = {};
+
+    my @valid_fields = (
+          'autostart',
+          'bridge',
+          'dhcp_end',
+          'dhcp_start',
+          'id_owner',
+          'internal_id',
+          'ip_address',
+          'ip_netmask',
+          'is_active',
+          'is_public',
+          'is_active',
+          'name'
+    );
+
+    for my $field (@valid_fields) {
+        $net2->{$field}=$net->{$field}
+        if exists $net->{$field};
+    }
+
+    return $net2;
+}
+
 sub _insert_network($self, $net) {
     delete $net->{id};
     $net->{id_owner} = Ravada::Utils::user_daemon->id
     if !exists $net->{id_owner};
 
-    $net->{id_vm} = $self->id;
-    $net->{is_public}=1 if !exists $net->{is_public};
 
-    my @fields = grep !/^_/, sort keys %$net;
+    my $net2 = _clean_virtual_network_data($net);
+
+    $net2->{id_vm} = $self->id;
+    $net2->{is_public}=1 if !exists $net->{is_public};
+
+    my @fields = grep !/^_/, sort keys %$net2;
 
     my $sql = "INSERT INTO virtual_networks ("
     .join(",",@fields).")"
     ." VALUES(".join(",",map { '?' } @fields).")";
     my $sth = $self->_dbh->prepare($sql);
-    $sth->execute(map { $net->{$_} } @fields);
+    $sth->execute(map { $net2->{$_} } @fields);
 
     $net->{id} = Ravada::Utils::last_insert_id($$CONNECTOR->dbh);
 }
@@ -1583,7 +1613,7 @@ sub _update_network($self, $net) {
 }
 
 sub _update_network_db($self, $old, $new0) {
-    my $new = dclone($new0);
+    my $new = _clean_virtual_network_data($new0);
     my $id = $old->{id} or confess "Missing id";
     my $sql = "";
     for my $field (sort keys %$new) {
@@ -1654,13 +1684,18 @@ sub _around_remove_network($orig, $self, $user, $id_net) {
         my ($net) = grep { $_->{id} eq $id_net } $self->list_virtual_networks();
         die "Error: network id $id_net not found" if !$net;
         $name = $net->{name};
+    } else {
+        my ($net) = grep { $_->{name} eq $id_net } $self->list_virtual_networks();
+        warn "Error: network $id_net not found" if !$net;
+        $id_net= $net->{id};
     }
-
 
     $self->$orig($name);
 
-    my $sth = $self->_dbh->prepare("DELETE FROM virtual_networks WHERE id=?");
-    $sth->execute($id_net);
+    if ( defined $id_net) {
+        my $sth = $self->_dbh->prepare("DELETE FROM virtual_networks WHERE id=?");
+        $sth->execute($id_net);
+    }
 }
 
 sub _around_change_network($orig, $self, $data, $uid) {

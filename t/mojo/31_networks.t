@@ -45,118 +45,20 @@ sub _remove_nodes($vm_name) {
 
 }
 
-sub test_nodes($vm_name) {
-    mojo_check_login($t);
-    my $name = new_domain_name();
-
-    _remove_nodes($vm_name);
-
-    $t->post_ok('/v1/node/new' => form => {
-        vm_type => $vm_name
-        , name => $name
-        , hostname => '1.2.3.99'
-        , _submit => 1
-    });
-    is($t->tx->res->code(),200);
-
-    exit if !$t->success;
-
-    my @list_nodes = rvd_front->list_vms($vm_name);
-    my ($found) = grep { $_->{name} eq $name } @list_nodes;
-    ok($found,"Expecting $name in list vms ".Dumper(\@list_nodes)) or return;
-    my $id_node = $found->{id};
-
-    my $name2 = new_domain_name();
-    $t->post_ok("/v1/node/set", json => {
-            id => $found->{id}
-            , name => $name2
-        }
+sub _remove_networks($id_vm) {
+    my $sth = connector->dbh->prepare("SELECT vn.id FROM virtual_networks vn, vms v"
+        ." WHERE vn.id_vm=v.id "
+        ."   AND v.id=? AND vn.name like ?"
     );
-    is($t->tx->res->code(),200) or die $t->tx->res->body;
+    $sth->execute($id_vm, base_domain_name."%");
 
-    @list_nodes = rvd_front->list_vms($vm_name);
-    ($found) = grep { $_->{id} == $id_node } @list_nodes;
-    is($found->{name}, $name2) or die Dumper($found);
-
-    my $new_hostname = new_domain_name();
-    $t->post_ok("/v1/node/set", json => {
-            id => $id_node
-            , hostname => $new_hostname
+    while ( my ($id) = $sth->fetchrow) {
+        my $id_req = mojo_request($t, "remove_network", { id => $id});
+        if ($id_req) {
+            my $req = Ravada::Request->open($id_req);
+            die "Error in ".$req->command." id=$id" if $req->error;
         }
-    );
-
-    @list_nodes = rvd_front->list_vms($vm_name);
-
-    ($found) = grep { $_->{id} == $id_node } @list_nodes;
-    is($found->{hostname}, $new_hostname) or die Dumper(\@list_nodes);
-
-    test_exists_node( $id_node, $name2 );
-    test_settings_item( $id_node, 'node' );
-
-    $t->get_ok("/v1/node/remove/".$found->{id});
-    is($t->tx->res->code(),200) or die $t->tx->res->body;
-
-    ok(! grep { $_->{id} == $found->{id} } rvd_front->list_vms($vm_name));
-
-}
-
-sub test_settings_item($id, $item) {
-    $item = 'route' if $item eq 'network';
-    my $url = '/'.$item.'/settings/'.$id.'.html';
-    $t->get_ok($url);
-    is($t->tx->res->code(),200, "Expecting $url") or die $t->tx->res->body;
-}
-
-sub test_exists_node($id_node, $name) {
-    $t->post_ok("/v1/exists/vms", json => {
-            id => $id_node
-            , name => $name
-        }
-    );
-    is($t->tx->res->code(),200) or die $t->tx->res->body;
-
-    my $result_exists = decode_json($t->tx->res->body);
-    is($result_exists->{id},undef);
-
-    $t->post_ok("/v1/exists/vms", json => {
-            name => $name
-        }
-    );
-    is($t->tx->res->code(),200) or die $t->tx->res->body;
-
-    $result_exists = decode_json($t->tx->res->body);
-    is($result_exists->{id}, $id_node);
-}
-
-sub test_exists_network($id_network, $field, $name) {
-    $t->post_ok("/v1/exists/networks", json => {
-            id => $id_network
-            , $field => $name
-        }
-    );
-    is($t->tx->res->code(),200) or die $t->tx->res->body;
-
-    my $result_exists = decode_json($t->tx->res->body);
-    is($result_exists->{id},undef);
-
-    $t->post_ok("/v1/exists/networks", json => {
-            $field => $name
-        }
-    );
-    is($t->tx->res->code(),200) or die $t->tx->res->body;
-
-    $result_exists = decode_json($t->tx->res->body);
-    is($result_exists->{id}, $id_network);
-}
-
-sub _remove_route($address) {
-    my @list_networks = Ravada::Route::list_networks();
-
-    my ($found) = grep { $_->{address} eq $address} @list_networks;
-    return if !$found;
-
-    $t->get_ok("/v2/route/remove/".$found->{id});
-    is($t->tx->res->code(),200) or die $t->tx->res->body;
+    }
 
 }
 
@@ -274,162 +176,62 @@ sub test_networks_access_grant($vm_name) {
 
 }
 
-sub test_routes($vm_name) {
+sub test_networks_admin($vm_name) {
     mojo_check_login($t);
-    my $name = new_domain_name();
-    my $address = '1.2.3.0/24';
 
-    _remove_route($address);
-
-    $t->post_ok('/v2/route/set' => json => {
-        name => $name
-        , address =>  $address    });
-    is($t->tx->res->code(),200) or die $t->tx->res->to_string();
-
-    exit if !$t->success;
-
-    my @list_networks = Ravada::Route::list_networks();
-    my ($found) = grep { $_->{name} eq $name } @list_networks;
-    ok($found,"Expecting $name in list vms ".Dumper(\@list_networks)) or return;
-    my $id_network = $found->{id};
-
-    my $name2 = new_domain_name();
-    $t->post_ok("/v2/route/set", json => {
-            id => $found->{id}
-            , name => $name2
-        }
-    );
-    is($t->tx->res->code(),200) or die $t->tx->res->body;
-
-    @list_networks = Ravada::Route::list_networks();
-    ($found) = grep { $_->{id} == $id_network } @list_networks;
-    is($found->{name}, $name2) or die Dumper($found);
-
-    my $new_name = new_domain_name();
-    $t->post_ok("/v2/route/set", json => {
-            id => $id_network
-            , name => $new_name
-        }
-    );
-
-    @list_networks = Ravada::Route::list_networks();
-
-    ($found) = grep { $_->{id} == $id_network } @list_networks;
-    is($found->{name}, $new_name) or die Dumper(\@list_networks);
-
-    test_exists_network($id_network, 'name', $new_name);
-    test_exists_network($id_network, 'address', $address);
-
-    test_settings_item( $id_network, 'network' );
-
-    $t->get_ok("/v2/route/remove/".$found->{id});
-    is($t->tx->res->code(),200) or die $t->tx->res->body;
-
-    ok(! grep { $_->{id} == $found->{id} } Ravada::Route::list_networks());
-
-}
-
-sub _find_files($dir) {
-    return @{$FILES{$dir}} if exists $FILES{$dir};
-    open my $find ,"-|", "find $dir -type f" or die $!;
-    my @found;
-    while (my $file =<$find>) {
-        chomp $file;
-        push @found,($file);
+    for my $url (qw( /admin/networks/ /network/new) ) {
+        $t->get_ok($url);
+        is($t->tx->res->code(),200, "Expecting access to $url");
     }
-    close $find;
-    $FILES{$dir} = \@found;
-    return @found;
-}
 
-sub _hrefs($file) {
-    return @{$HREFS{$file}} if exists $HREFS{$file};
-    open my $in,"<",$file or confess "$! $file";
-    my @href;
-    for my $line ( <$in> ) {
-        chomp $line;
-        my ($found) = $line =~ /href=["'](.*?)["']/;
-        next if $found && $found =~ /^\?/;
-        push @href,($found) if $found;
-    }
-    close $in;
-    $HREFS{$file} = \@href;
-    return @href;
-}
+    my $id_vm = _id_vm($vm_name);
+    die "Error: I can't find if for vm type = $vm_name" if !$id_vm;
 
-sub _search_path_templates($path) {
-    for my $file (_find_files("templates")) {
-        for my $href ( _hrefs($file) ) {
-            return 1 if $href eq $path;
-        }
-    }
-    return 0;
-}
+    _remove_networks($id_vm);
 
-sub _search_path($path) {
-   return _search_path_templates($path);
-}
+    $t->get_ok("/v2/vm/list_networks/".$id_vm);
+    my $networks = decode_json($t->tx->res->body);
+    ok(scalar(@$networks));
 
-# Check for unused routes
-sub test_unused_routes() {
-    my $routes = $t->app->routes->children;
-    for my $route (@$routes){
-        my $render = $route->render();
-        my $unparsed = $route->pattern->unparsed();
-        next if $render =~ m{^/robots.txt} || $render eq '/'
-        || $render =~ m{^/(anonymous|login|test)$}
-        || $render =~ m{^/(index).html}
-        || $render eq '/anonymous_logout.html'
-        || $unparsed eq '/anonymous/(#base_id).html'
-        ;
+    $t->post_ok("/v2/network/new/".$id_vm => json => { name => base_domain_name() });
+    my $data = decode_json($t->tx->res->body);
 
-        ok(_search_path($render), Dumper($unparsed,$render)) or exit;
-    }
-}
+    $t->post_ok("/v2/network/set/" => json => $data );
 
-sub _fill_href($href) {
-    $href=~ s/(.*)\{\{machine.id}}(.*)/${1}$ID_DOMAIN$2/;
+    my $new_ok = decode_json($t->tx->res->body);
+    ok($new_ok->{id_network}) or die Dumper([$t->tx->res->body, $new_ok]);
 
-    $href =~ s/(.*)\{\{.*vm_type}}(.*)/${1}kvm$2/;
-    $href =~ s/(.*)\{\{showmachine.type}}(.*)/${1}kvm$2/;
+    $t->get_ok("/v2/vm/list_networks/".$id_vm);
+    my $networks2 = decode_json($t->tx->res->body);
+    my ($new) = grep { $_->{name} eq $data->{name} } @$networks2;
 
-    return $href;
-}
+    ok($new);
+    is($new->{_can_change},1) or exit;
+    is($new->{_owner}->{id},user_admin->id) or exit;
+    $new->{is_active} = 0;
 
-sub test_missing_routes() {
-    my %done;
-    for my $file ( _find_files('templates') ) {
-        for my $href (_hrefs($file) ) {
-            next if $done{$href}++;
-            next if $href =~ m{^#};
-            next if $href =~ m{^(http|https)://};
-            next if $href =~ m{^<%=.*?%>$};
-            next if $href =~ m/^\{\{.*?}}$/;
-            next if $href =~ m/^javascript/;
-            next if $href =~ /anonymous/;
+    $t->post_ok("/v2/network/set/" => json => $new);
+    wait_request(debug => 0);
+    $t->get_ok("/v2/vm/list_networks/".$id_vm);
 
-            my $href2 = _fill_href($href);
-            mojo_check_login($t);
-            $t->get_ok($href2, "file: $file href='$href'");
-            like($t->tx->res->code(),qr/200|302|40\d+|500/) or die $t->tx->res->to_string();
-        }
-    }
-    mojo_login($t, $USERNAME, $PASSWORD);
-}
+    my $networks3 = decode_json($t->tx->res->body);
+    my ($changed) = grep { $_->{name} eq $data->{name} } @$networks3;
+    is($changed->{is_active},0) or die $changed->{name};
 
-sub test_languages() {
-    mojo_check_login($t);
-    $t->get_ok("/translations");
-    is($t->tx->res->code(),200) or die $t->tx->res->body;
+    $t->get_ok("/v2/network/info/".$changed->{id});
 
-    my $lang = decode_json($t->tx->res->body);
+    my $changed4 = decode_json($t->tx->res->body);
+    is($changed4->{is_active},0) or exit;
 
-    opendir my $ls,"lib/Ravada/I18N" or die $!;
-    while (my $file = readdir $ls) {
-        next if $file !~ /(.*)\.po$/;
-        next if $MISSING_LANG{$1};
-        ok($lang->{$1},"Expecting $1 in select");
-    }
+    $new->{is_public}=1;
+    $t->post_ok("/v2/network/set/" => json => $new);
+    wait_request(debug => 0);
+    $t->get_ok("/v2/vm/list_networks/".$id_vm);
+
+    my $networks5 = decode_json($t->tx->res->body);
+    my ($changed5) = grep { $_->{name} eq $data->{name} } @$networks5;
+    is($changed5->{is_public},1) or warn Dumper($changed5);
+
 }
 
 sub clean_clones() {
@@ -554,16 +356,13 @@ remove_networks_req();
 
 $ID_DOMAIN = _search_public_base();
 
-test_languages();
-test_missing_routes();
-
 for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
 
     diag("Testing settings in $vm_name");
 
-    test_storage_pools($vm_name);
-    test_nodes( $vm_name );
-    test_routes( $vm_name );
+    test_networks_access( $vm_name );
+    test_networks_access_grant($vm_name);
+    test_networks_admin( $vm_name );
 }
 
 clean_clones();

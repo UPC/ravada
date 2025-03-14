@@ -7194,6 +7194,7 @@ sub _cmd_remove_network($self, $request) {
 sub _check_user_authorized_network($request, $id_network) {
 
     my $user=Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: user ".$request->args('uid')." not found" if !$user;
 
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT * FROM virtual_networks WHERE id=?"

@@ -2952,7 +2952,7 @@ sub list_machine_types($self) {
 
 sub _is_ip_nat($self, $ip0) {
     my $ip = NetAddr::IP->new($ip0);
-    for my $net ( $self->vm->list_networks ) {
+    for my $net ( $self->vm->list_all_networks ) {
         my $xml = XML::LibXML->load_xml(string
             => $net->get_xml_description());
         my ($xml_ip) = $xml->findnodes("/network/ip");
@@ -3230,7 +3230,7 @@ sub change_network($self, $data) {
     for ('id_vm','internal_id','id' ,'_old_name', 'date_changed') {
         delete $data->{$_};
     }
-    die "Error: unexpected args ".Dumper($data) if keys %$data;
+    warn "Warning: unexpected args ".Dumper($data) if keys %$data;
 
     return $changed;
 }

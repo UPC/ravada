@@ -1748,6 +1748,47 @@ sub _ip_agent($self) {
     return $found;
 }
 
+sub _ip_info_get($self) {
+    my @ip;
+    eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_AGENT) };
+    warn $@ if $@ && $@ !~ /^libvirt error code: (74|86),/;
+
+    if (!@ip) {
+        eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_LEASE) };
+        warn $@ if $@;
+    }
+
+    my $found;
+
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+    my @interfaces =  $doc->findnodes('/domain/devices/interface');
+
+    for my $if (@ip) {
+        next if $if->{name} =~ /^lo/;
+        for my $addr ( @{$if->{addrs}} ) {
+
+            next unless $addr->{type} == 0 && $addr->{addr} !~ /^127\./;
+            $found = {
+                'hwaddr' => $if->{hwaddr}
+                ,'addr' => $addr->{addr}
+            };
+
+            for my $dev (@interfaces) {
+                my ($mac) = $dev->findnodes("mac");
+                next unless $mac
+                    && lc($mac->getAttribute('address')) eq lc($if->{hwaddr});
+
+                my ($type) = $dev->getAttribute('type');
+                $found->{'type'} = $type;
+                last;
+            }
+            return $found if $found->{hwaddr} && $found->{type};
+        }
+    }
+    return $found;
+}
+
+
 #sub _ip_arp($self) {
 #    my @sys_virt_version = split('\.', $Sys::Virt::VERSION);
 #    return undef if ($sys_virt_version[0] < 5);
@@ -1769,6 +1810,12 @@ sub ip($self) {
 #    return $ip[0]->{addrs}->[0]->{addr} if $ip[0];
 
     return;
+}
+
+sub ip_info($self) {
+    my $ip = $self->_ip_info_get();
+    lock_hash(%$ip);
+    return $ip;
 }
 
 =head2 set_max_mem
