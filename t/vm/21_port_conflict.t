@@ -44,7 +44,8 @@ sub test_display_conflict_next($vm) {
     $domain1->start(user => user_admin, remote_ip => '2.3.4.5');
     delete_request('set_time','enforce_limits');
     for ( 1 .. 30 ) {
-        last if $domain1->ip;
+        my $ip_info = $domain1->ip_info;
+        last if exists $ip_info->{addr} && $ip_info->{addr};
         sleep 1;
     }
     wait_request(debug => 0);
@@ -61,6 +62,12 @@ sub test_display_conflict_next($vm) {
         my ($display_x2go) = grep { $_->{driver} eq 'x2go' } @$displays1;
         $port_conflict = $display_x2go->{port};
         last if $port_conflict;
+        Ravada::Request->open_exposed_ports(
+            uid => user_admin->id
+            ,id_domain => $domain1->id
+            ,_force => 1
+        );
+
         wait_request();
     }
     confess if !defined $port_conflict;
