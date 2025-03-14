@@ -3753,8 +3753,13 @@ sub _add_expose($self, $internal_port, $name, $restricted) {
         confess $@;
     }
 
-    $self->_open_exposed_port($internal_port, $name, $restricted)
-        if $self->is_active && $self->ip_info;
+    if ($self->is_active) {
+        my $ip_info = $self->ip_info;
+        if ( $ip_info && exists $ip_info->{addr} && $ip_info->{addr}) {
+            $self->_open_exposed_port($internal_port, $name, $restricted);
+        }
+    }
+
     return $public_port;
 }
 
