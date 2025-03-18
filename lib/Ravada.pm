@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '2.3.1-beta3';
+our $VERSION = '2.3.3-rc1';
 
 use utf8;
 
@@ -352,7 +352,7 @@ sub _update_isos {
     my $field = 'name';
     my @now = localtime(time);
     my $year = $now[5]+1900;
-    $year-- if $now[4]<2;
+    $year-- if $now[4]<4;
     my %data = (
 	    androidx86 => {
                     name => 'Android 8.1 x86'

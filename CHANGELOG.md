@@ -2,13 +2,9 @@
 
 **Implemented enhancements:**
 
-- Users can share virtual machines [\#2021]
-- Virtual networks management [\#1984]
-- GPU Mediated devices [\#1955]
-- Allow remove users via GUI [\#2023]
+Expose ports in bridged Virtual Machines [\#2143]
+RDP file to launch application [\#2142]
 
 **Bugfixes**
-
-- Node Option Not Available [\#2032]
 
 **Refactors**

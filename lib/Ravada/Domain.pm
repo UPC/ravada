@@ -3848,7 +3848,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
     }
     $internal_ip = $internal_ip_info->{addr} if exists $internal_ip_info->{addr};
 
-    die "Error: I can't get the internal IP of ".$self->name." ".($internal_ip or '<UNDEF>').". Retry."
+    die "Error: I can't get the internal IP of ".$self->name." ".($internal_ip or '<UNDEF>').". Retry.\n"
         if !$internal_ip || $internal_ip !~ /^(\d+\.\d+)/;
 
     return unless exists $internal_ip_info->{type} && $internal_ip_info->{type} =~ /^(bridge|network)$/;
