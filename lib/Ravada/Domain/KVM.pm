@@ -2696,6 +2696,8 @@ sub _remove_device($self, $index, $device, $attribute_name0=undef, $attribute_va
 
             if ($device eq 'graphics' && $controller->getAttribute('type') eq 'spice') {
                 $self->_remove_spice_related($devices);
+            } elsif ($device eq 'video') {
+                $self->_set_minimal_video($devices);
             }
 
             $self->_vm->connect if !$self->_vm->vm;
@@ -2711,6 +2713,17 @@ sub _remove_device($self, $index, $device, $attribute_name0=undef, $attribute_va
 
     confess "ERROR: $device $msg ".($index or '<UNDEF>')
         ." not removed, only ".($ind)." found in ".$self->name."\n";
+}
+
+sub _set_minimal_video($self, $devices) {
+    my $string = 'video';
+    my @current = $devices->findnodes($string);
+    if (!@current) {
+        my $video = $devices->addNewChild(undef,'video');
+        my $model = $video->addNewChild(undef,'model');
+        $model->setAttribute('type' => 'none');
+    }
+
 }
 
 sub _remove_spice_related($self, $devices) {
