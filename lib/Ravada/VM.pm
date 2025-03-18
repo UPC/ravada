@@ -830,7 +830,7 @@ Returns the external IP this for this VM
 sub ip {
     my $self = shift;
 
-    my $name = ($self->public_ip or $self->host())
+    my $name = ($self->display_ip, $self->public_ip or $self->host())
         or confess "this vm has no host name";
     my $ip = inet_ntoa(inet_aton($name)) ;
 
@@ -2592,7 +2592,7 @@ sub _store_mac_address($self, $force=0 ) {
     die "Error: I can't find arp" if !$ARP;
 
     my %done;
-    for my $ip ($self->host,$self->ip, $self->public_ip) {
+    for my $ip ($self->host,$self->ip, $self->display_ip, $self->public_ip) {
         next if !$ip || $done{$ip}++;
         CORE::open (my $arp,'-|',"$ARP -n ".$ip) or die "$! $ARP";
         while (my $line = <$arp>) {
