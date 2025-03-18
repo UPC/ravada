@@ -61,7 +61,12 @@ TroubleShooting
 
 *The port appears down when I start the virtual Machine*
 
-Solution: This port has a service in the virtual machine that is not up. Be sure the
+Solution1: This port has a service in the virtual machine that is not up. Be sure the
 service has started, and that it is listening in the correct port. Check also if this
 virtual machine has an internal firewall that may block connections.
 
+Solution2: The host must allow connections to the virtual machine. Verify the iptables in the server. You should have *ACCEPT* in the *OUTPUT* table. If you have strict restrictions, make sure you allow this:
+
+::
+
+  -A OUTPUT -s 192.168.122.1/32 -d 192.168.122.0/24 -j ACCEPT
