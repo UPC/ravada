@@ -62,13 +62,22 @@ sub login( $user=$USERNAME, $pass=$PASSWORD ) {
 
 sub test_view_tls($base) {
 
+    return if $base->type ne 'KVM';
+
     mojo_check_login($t);
 
-    my ($clone) = $base->clones;
-    if (!$clone) {
-        $t->get_ok("/machine/clone/".$base->id.".html")->status_is(200);
-        wait_request(debug => 0, check_error => 1, background => 1, timeout => 120);
-        ($clone) = $base->clones;
+    my $name = new_domain_name();
+    Ravada::Request->clone(
+        uid => user_admin->id
+        ,name => $name
+        ,id_domain => $base->id
+    );
+    wait_request();
+    my $clone;
+    for ( 1 .. 10 ) {
+        ($clone) = grep { $_->{name} eq $name } $base->clones;
+        last if $clone;
+        wait_request();
     }
 
     my $clone_f = Ravada::Front::Domain->open($clone->{id});
@@ -85,25 +94,46 @@ sub test_view_tls($base) {
             );
         }
     }
+    Ravada::Request->start_domain(uid => user_admin->id
+        ,id_domain => $clone->{id}
+    );
     wait_request();
+
+    for ( 1 .. 10 ) {
+        $info = $clone_f->info(user_admin);
+        $display = $info->{hardware}->{display};
+        my ($found_spice) = grep { $_->{driver} eq 'spice' } @$display;
+        my ($found_rdp) = grep { $_->{driver} eq 'rdp' } @$display;
+        last if $found_spice && $found_rdp;
+
+        wait_request();
+    }
+
     $t->get_ok("/machine/display/spice/".$clone->{id}.".vv")
     ->status_is(200);
 
+    die $t->tx->res->body unless $t->tx->res->code == 200;
+
     my @text = split(/\n/,$t->tx->res->body);
-    like $text[0] =~ /\[virt-viewer/;
+    like($text[0], qr/\[virt-viewer/);
 
     $t->get_ok("/machine/display/rdp/".$clone->{id}.".rdp")
     ->status_is(200);
 
-    warn $t->tx->res->body;
+    @text = split(/\n/,$t->tx->res->body);
+    like($text[0] ,qr/screen mode/);
 
-    $t->get_ok("/machine/display/spice-tls/".$clone->{id}.".tls.vv")
-    ->status_is(200);
+        $t->get_ok("/machine/display/spice-tls/".$clone->{id}.".tls.vv")
+        ->status_is(200);
 
     @text = split(/\n/,$t->tx->res->body);
-    like $text[0] =~ /\[virt-viewer/;
-    warn $t->tx->res->body;
-    exit;
+    like($text[0] ,qr/\[virt-viewer/);
+
+    Ravada::Request->remove_domain(
+        name => $name
+        ,uid => user_admin->id
+    );
+    wait_request();
 }
 
 sub test_many_clones($base) {
@@ -1155,7 +1185,7 @@ test_frontend_admin($t);
 test_username_case($t);
 test_network_case($t);
 
-for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
+for my $vm_name (@{rvd_front->list_vm_types} ) {
 
     diag("Testing new machine in $vm_name");
 
@@ -1169,6 +1199,8 @@ for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
     test_new_machine($t);
     my $base0 = test_create_base($t, $vm_name, $name);
     push @bases,($base0->name);
+
+    test_view_tls($base0);
 
     test_clone_same_name($t, $base0);
 
@@ -1213,7 +1245,6 @@ for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
         is($clone->is_volatile,0) or exit;
     }
     push @bases, ( $clone );
-    test_view_tls($base1);
     mojo_check_login($t, $USERNAME, $PASSWORD);
     test_copy_without_prepare($clone);
     mojo_check_login($t, $USERNAME, $PASSWORD);
