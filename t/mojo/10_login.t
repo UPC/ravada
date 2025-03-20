@@ -106,7 +106,9 @@ sub test_view_tls($base) {
         my ($found_rdp) = grep { $_->{driver} eq 'rdp' } @$display;
         last if $found_spice && $found_rdp;
 
+        wait_request();
     }
+
     $t->get_ok("/machine/display/spice/".$clone->{id}.".vv")
     ->status_is(200);
 
