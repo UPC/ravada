@@ -84,13 +84,12 @@ The default visualization protocol, SPICE, can be hardened
 Apache
 ------
 
-You can reach the Ravada frontend heading to
-http://your.server.ip:8081/. It is advised to run an Apache server or
-similar before the frontend.
+You can reach the Ravada frontend heading at
+http://your.server.ip:8081/.
 
-In order to make ravada use apache, you must follow the steps explained
-on `here <apache.html>`__.
-
+Follow one of these guides to configure `Apache <apache.html>`__
+or `nginx <nginx_as_reverse_proxy.html>`__
+as a frontend to Ravada with SSL support.
 
 Firewall
 --------

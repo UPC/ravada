@@ -70,6 +70,7 @@ Do you feel like giving us a hand? Here you have all the information you need as
    docs/INSTALL_devel
    docs/add_kvm_storage_pool
    docs/apache
+   docs/nginx_as_reverse_proxy
    docs/convert_from_virtualbox
    docs/How_Create_Virtual_Machine
    docs/dump_hard_drive
