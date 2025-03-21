@@ -494,6 +494,9 @@ ravadaApp.directive("solShowMachine", swMach)
       else $scope.orderParam = [type1,'-'+type2];
     }
     $scope.hide_clones = true;
+    $scope.toggle_show_all_clones = function() {
+        $scope.showClones($scope.hide_clones);
+    };
     $scope.showClones = function(value){
         $scope.auto_hide_clones = false;
         $scope.show_active = false;
@@ -658,6 +661,14 @@ ravadaApp.directive("solShowMachine", swMach)
         if (id_base) {
             $scope.set_show_clones(mach.id_base, true);
             show_parents(machine_base(id_base));
+        }
+    };
+    $scope.toggle_show_active = function() {
+        if (!$scope.show_active) {
+            $scope.do_show_active();
+        } else {
+            $scope.reload_list();
+            $scope.showClones(false);
         }
     };
     $scope.do_show_active = function() {

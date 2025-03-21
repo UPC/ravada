@@ -25,22 +25,23 @@
     </button>
     <button type="button" class="btn btn-outline-primary btn-sm"
         ng-disabled="!n_active || (!n_active_hidden && !show_active)"
+            ng-click="toggle_show_active();"
     >
         <span ng-show="!show_active"
             ng-enabled="n_active"
-            ng-click="do_show_active();"
         ><%=l 'Show active' %></span>
 
         <span ng-show="show_active"
-            ng-click="reload_list()"
-        ><%=l 'Hide active' %></span>
-        <span class="badge badge-warning">{{n_active}}</span>
+        ><%=l 'Show all' %></span>
+        <i class="fas fa-sync-alt fa-spin" ng-show="list_machines_time<2 && !n_active"></i>
+        <span ng-show="list_machines_time>=2" class="badge badge-warning">{{n_active}}</span>
     </button>
-
-    <button type="button" class="btn btn-outline-primary btn-sm">
-        <a ng-show="hide_clones" ng-click="showClones(true)"
+    <button type="button" class="btn btn-outline-primary btn-sm"
+        ng-click="toggle_show_all_clones()"
+    >
+        <a ng-show="hide_clones"
             align="right"><%=l 'Show clones' %></a>
-        <a ng-show="!hide_clones" ng-click="showClones(false)"
+        <a ng-show="!hide_clones"
             align="right"><%=l 'Hide clones' %></a>
     </button>
 
