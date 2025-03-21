@@ -426,7 +426,7 @@ ravadaApp.directive("solShowMachine", swMach)
                   var keys = Object.keys($scope.list_machines);
                   for ( var n_key=0 ; n_key<keys.length ; n_key++) {
                       mach = $scope.list_machines[n_key];
-                      if (typeof(mache) != 'undefined' && mach.status == 'active') {
+                      if (typeof(mach) != 'undefined' && mach.status == 'active') {
                           n_active_current++;
                           if (!mach.show) {
                               $scope.n_active_hidden++;
