@@ -1713,13 +1713,10 @@ get '/machine/display/(:driver)/(:id).(#extension)' => sub {
 
     my $id = $c->stash('id');
     my $extension = $c->stash('extension');
+    my $driver = $c->stash('driver');
 
     my $domain = $RAVADA->search_domain_by_id($id);
     return $c->render(text => "unknown machine id=$id") if !$domain;
-
-    my $display = $domain->_get_display($c->stash('driver'));
-    return $c->render(text => "unknown display ".$c->stash('driver')." for machine id=$id")
-    if !$display;
 
     return access_denied($c)
         unless $USER->id eq $domain->id_owner
@@ -1727,9 +1724,13 @@ get '/machine/display/(:driver)/(:id).(#extension)' => sub {
         || $USER->can_view_all
     ;
 
-    if ($extension eq 'vv') {
+    my $display = $domain->_get_display($c->stash('driver'));
+    return $c->render(text => "unknown display ".$c->stash('driver')." for machine id=$id")
+    if !$display;
+
+    if ($driver =~ /spice/ ) {
         return _display_file_spice($c, $domain, $extension, $display);
-    } elsif ($extension eq 'rdp' ) {
+    } elsif ($driver eq 'rdp' ) {
         return _display_file_rdp($c, $domain, $extension, $display);
     } else {
         return not_found($c);
