@@ -789,8 +789,8 @@ sub _update_isos {
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => "https://cdimage.kali.org/kali-$year".'.\d+/'
-            ,file_re => "kali-linux-$year.".'\d+-installer-amd64.iso'
+            ,url => "https://cdimage.kali.org/kali-$year".'.\d+.*/'
+            ,file_re => "kali-linux-$year.".'\d+.*-installer-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,min_disk_size => '10'
         }
@@ -800,8 +800,8 @@ sub _update_isos {
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => "https://cdimage.kali.org/kali-$year".'.\d+/'
-            ,file_re => "kali-linux-$year.".'\d+-installer-netinst-amd64.iso'
+            ,url => "https://cdimage.kali.org/kali-$year".'.\d+.*/'
+            ,file_re => "kali-linux-$year.".'\d+.*-installer-netinst-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,min_disk_size => '10'
         }
