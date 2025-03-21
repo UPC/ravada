@@ -1798,18 +1798,8 @@ sub _ip_info_get($self) {
 #}
 
 sub ip($self) {
-    my ($ip) = $self->_ip_agent();
-    return $ip if $ip;
-
-    my @ip;
-    eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_LEASE) };
-    warn $@ if $@;
-    return $ip[0]->{addrs}->[0]->{addr} if $ip[0];
-
-#    @ip = $self->_ip_arp();
-#    return $ip[0]->{addrs}->[0]->{addr} if $ip[0];
-
-    return;
+    my $ip_info = $self->ip_info();
+    return $ip_info->{addr} if exists $ip_info->{addr};
 }
 
 sub ip_info($self) {
