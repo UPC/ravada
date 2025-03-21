@@ -929,6 +929,25 @@ sub _ip_a($self, $dev) {
     warn "Warning $dev not found in active interfaces";
 }
 
+sub list_ips($self) {
+    my %bridge = map { $_ => 1 } $self->_list_qemu_bridges();
+
+    my ($out, $err) = $self->run_command_cache("/sbin/ip","-o","a");
+    die $err if $err;
+    my @ips;
+    my $found_ip;
+    for my $line ( split /\n/,$out) {
+        my ($dev,$ip) = $line =~ m{^\d+:\s+([a-z0-9]+)\s+inet\d* (\d+\.\d+\.\d+\.\d+)/};
+        next if !$ip || $ip eq '127.0.0.1';
+        next if $bridge{$dev};
+        push @ips,($ip) if $ip;
+    }
+    my @ips_sorted = sort (@ips);
+
+    $self->_data('ip_all' => encode_json([@ips_sorted]));
+
+}
+
 sub _interface_ip($self, $remote_ip=undef) {
     return '127.0.0.1' if $remote_ip && $remote_ip =~ /^127\./;
     my ($out, $err) = $self->run_command_cache("/sbin/ip","route");

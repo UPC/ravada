@@ -347,6 +347,7 @@ sub test_remove_booking_entry_non_admin($t, $id) {
 }
 
 sub test_node_info($vm_name) {
+    Ravada::Request->refresh_vms(uid => user_admin->id);
     my $sth = connector->dbh->prepare("SELECT * FROM vms WHERE vm_type=?");
     $sth->execute($vm_name);
 
@@ -365,6 +366,14 @@ sub test_node_info($vm_name) {
         } else {
             is($node_info->{is_local},0);
         }
+
+        my $ca = '';
+        if (exists $node_info->{tls} && exists $node_info->{tls}->{ca}
+            && $node_info->{tls}->{ca}) {
+            $ca = substr($node_info->{tls}->{ca},0,10)."...";
+        }
+        is($ca,'', "Expecting empty tls->{ca}");
+        ok(scalar(@{$node_info->{ip_all}}), "Expecting list of available ips");
 
         $ws_args->{login} = $user->name;
 

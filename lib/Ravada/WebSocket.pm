@@ -414,6 +414,15 @@ sub _get_node_info($rvd, $args) {
 
     $data->{bases}=_list_bases_node($rvd, $data->{id});
 
+    if (exists $data->{tls} && $data->{tls} && $data->{tls} =~ /\{/) {
+        $data->{tls} = decode_json($data->{tls});
+        delete $data->{tls}->{ca};
+    }
+
+    if (exists $data->{ip_all} && $data->{ip_all} && $data->{ip_all} =~ /\[/) {
+        $data->{ip_all} = decode_json($data->{ip_all});
+    }
+
     return $data;
 }
 

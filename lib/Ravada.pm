@@ -2970,6 +2970,7 @@ sub _upgrade_tables {
 
     $self->_upgrade_table('vms','mac','char(18)');
     $self->_upgrade_table('vms','tls','text');
+    $self->_upgrade_table('vms','ip_all','text');
 
     $self->_upgrade_table('domain_displays', 'id_vm','int DEFAULT NULL');
 
@@ -6125,6 +6126,7 @@ sub _refresh_active_vms ($self) {
         $active_vm{$vm->id} = 1;
         eval {
             $vm->list_virtual_networks();
+            $vm->list_ips();
         };
         warn $@ if $@;
     }
