@@ -940,6 +940,10 @@
                 }
 
             }
+            if(typeof($scope.showmachine.hardware[hardware][index]["_index"])
+                !== 'undefined') {
+                index=$scope.showmachine.hardware[hardware][index]._index;
+            }
             $scope.request('remove_hardware',{
                     'id_domain': $scope.showmachine.id
                      ,'name': hardware

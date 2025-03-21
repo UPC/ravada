@@ -6448,6 +6448,10 @@ sub _add_hardware_disk($orig, $self, $index, $data) {
 sub _around_add_hardware($orig, $self, $hardware, $index, $data=undef) {
     confess "Error: minimal add hardware index>=0 , got '$index'" if defined $index && $index <0;
 
+
+    die "Error: Virtual Machines with host devices can not be modified while running"
+    if $self->is_active && $self->list_host_devices_locked;
+
     my $data_orig = undef;
     $data_orig = dclone($data ) if ref($data);
 
@@ -6480,6 +6484,9 @@ sub _delete_db_display_by_driver($self, $driver) {
 
 sub _around_remove_hardware($orig, $self, $hardware, $index=undef, $options=undef) {
     confess "Error: supply either index or options when removing hardware " if !defined $index && !defined $options;
+
+    die "Error: Virtual Machines with host devices can not be modified while running"
+    if $self->is_active && $self->list_host_devices_locked;
 
     my $id_filesystem;
     if ( $hardware eq 'filesystem') {

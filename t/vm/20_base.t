@@ -523,7 +523,7 @@ sub test_display_info($vm) {
     my $exp_driver = 'spice';
     $exp_driver .= "-tls" if $TLS;
     is($display_h->[0]->{driver}, $exp_driver) if $domain->type eq 'KVM';
-    like($display_h->[0]->{password},qr{..+}, $domain_f->name) or exit if $domain->type eq 'KVM';
+    like($display_h->[0]->{password},qr{..+}, $domain_f->name) or confess Dumper($display_h->[0]) if $domain->type eq 'KVM';
     is($display_h->[0]->{id_exposed_port},undef); # spice doesn't need exposed port
 
     is($display_h->[1+$TLS]->{driver}, 'rdp');
@@ -1481,7 +1481,7 @@ sub test_display_drivers($vm, $remove) {
         Ravada::Request->start_domain(uid => user_admin->id
             ,id_domain => $domain->id
         );
-        for ( 1 .. 10 ) {
+        for my $n ( 1 .. 20 ) {
             wait_request(debug => 0);
             last if !$req->error || $req->error !~ /Retry/i;
             sleep 1;
@@ -1608,10 +1608,11 @@ sub test_display_conflict($vm) {
     for ( 1 .. 10 ) {
         $port3 = $domain->exposed_port(22);
         last if $port3->{public_port} && $port3->{public_port} != $display_builtin->{port};
-        Ravada::Request->refresh_machine(uid => user_admin->id ,id_domain => $domain->id);
+        Ravada::Request->refresh_machine(uid => user_admin->id ,id_domain => $domain->id
+            , _force => 1);
         wait_request(debug => 0);
     }
-    isnt($port3->{public_port},$display_builtin->{port}) or die;
+    isnt($port3->{public_port},$display_builtin->{port}) or die $domain->id." ".$domain->name;
 
     $domain->remove(user_admin);
 
