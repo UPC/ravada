@@ -1342,16 +1342,24 @@ sub upload_group_members($file) {
 sub change_network_forward($rvd_back) {
 
     my $sth = $rvd_back->_dbh->prepare(
-        "SELECT id,id_vm FROM virtual_networks WHERE name=?"
+        "SELECT vn.id, vn.id_vm, vms.name FROM virtual_networks vn, vms "
+        ." WHERE vn.name=?"
+        ."   AND vn.id_vm=vms.id "
     );
 
     die "Error: No network names supplied.\n" if !@ARGV;
 
+    my $n_changed=0;
     for my $name (@ARGV) {
         $sth->execute($name);
-        my ($id_network , $id_vm) = $sth->fetchrow;
+        my ($id_network , $id_vm, $vm_name) = $sth->fetchrow;
+        my ($id_network2 , $id_vm2, $vm_name2) = $sth->fetchrow;
         if (!$id_network) {
             warn "Error: network $name not found.\n";
+            next;
+        }
+        if ($id_network2) {
+            warn "Error: network $name found on node $vm_name and $vm_name2.\n";
             next;
         }
         my $vm = Ravada::VM->open($id_vm);
@@ -1362,7 +1370,9 @@ sub change_network_forward($rvd_back) {
             uid => Ravada::Utils::user_daemon->id
             ,data => $network
         );
+        $n_changed++;
     }
+    print "$n_changed networks change requested.\n";
 }
 
 sub DESTROY {

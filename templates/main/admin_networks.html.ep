@@ -18,7 +18,7 @@
         </div>
 
         <div class="row">
-            <div class="col-md-4"><b><%=l 'Name' %></b></div>
+            <div class="col-md-5"><b><%=l 'Name' %></b></div>
             <div class="col-md-1"
                  ng-show="<%= ( $_user->is_admin or $_user->can_manage_all_networks or 0 ) %>"
                 ><b><%=l 'Public' %></b></div>
@@ -26,9 +26,8 @@
             <div class="col-md-2"
                  ng-show="<%= ( $_user->is_admin or $_user->can_manage_all_networks or 0 ) %>"
                 ><b><%=l 'Owner' %></b></div>
-            <div class="col-md-1"><b><%=l 'Bridge' %></b></div>
             <div class="col-md-2"><b><%=l 'Address' %></b></div>
-            <div class="col-md-1"><b><%=l 'Active' %></b></div>
+            <div class="col-md-1"><b><%=l 'Status' %></b></div>
             <div class="col-md-1"><b><%=l 'Auto Start' %></b></div>
         </div>
 
@@ -41,9 +40,10 @@
         </div>
 
         <div ng-repeat="network in networks | orderObjectBy:'name'"
-             class="row" ng-cloak
+             class="row border" ng-cloak
         >
-            <div class="col-md-4">
+            <div class="col-md-5" align="left">
+
                 <a href="/network/settings/{{network.id}}.html"
                     ng-show="network._can_change">{{network.name}}</a>
                 <span ng-show="!network._can_change">{{network.name}}</span>
@@ -60,14 +60,12 @@
 
             <div class="col-md-2"
                  ng-show="<%= ( $_user->is_admin or $_user->can_manage_all_networks or 0 ) %>"
-                >{{network._owner.name}}</div>
-            <div class="col-md-1">{{network.bridge}}</div>
+                 ><a href="/admin/user/{{network._owner.id}}.html">{{network._owner.name}}</a></div>
             <div class="col-md-2">{{network.ip_address}}</div>
             <div class="col-md-1">
-                <span ng-show="network.is_active"
-                      >&#10004;</span>
-                <span ng-show="!network.is_active"
-                      >&#10005;</span>
+                <span ng-show="network.is_active" class="badge badge-success"><%=l 'active' %></span>
+                <span ng-show="!network.is_active" class="badge badge-danger"><%=l 'down' %></span>
+                <span ng-show="network.forward_mode=='none'" class="badge badge-warning"><%=l 'isolated' %></span>
             </div>
             <div class="col-md-1">
                 <span ng-show="network.autostart"
