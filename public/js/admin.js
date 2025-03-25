@@ -927,6 +927,7 @@ ravadaApp.directive("solShowMachine", swMach)
                 .then(function(response) {
                     $scope.network=response.data;
                     $scope.form_network.$setDirty();
+                    $scope.name_search = $scope.network._owner.name;
             });
         };
 
@@ -937,6 +938,21 @@ ravadaApp.directive("solShowMachine", swMach)
                 $scope.network._old_name = $scope.network.name;
                 $scope.form_network.$setPristine();
             });
+
+        };
+        $scope.search_users = function() {
+            console.log($scope.name_search);
+            $scope.searching_user = true;
+            $scope.user_found = '';
+            $http.get("/search_user/"+$scope.name_search)
+                .then(function(response) {
+                    $scope.user_found = response.data.found;
+                    $scope.user_count = response.data.count;
+                    $scope.searching_user=false;
+                    if ($scope.user_count == 1) {
+                        $scope.name_search = response.data.found;
+                    }
+                });
 
         };
 

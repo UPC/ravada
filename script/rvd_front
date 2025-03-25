@@ -741,6 +741,10 @@ any '/v2/network/new/#id_vm' => sub($c) {
             $data = decode_json($req->output);
         };
         warn $@ if $@;
+        $data->{_owner} = {
+            id => $USER->id
+            ,name => $USER->name
+        };
     }
     $c->render(json => $data);
 };
