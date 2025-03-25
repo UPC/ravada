@@ -3105,6 +3105,7 @@ sub new_network($self, $name='net') {
         }
         $new->{$field} = $value;
     }
+    $new->{forward_mode} = "nat";
     return $new;
 }
 

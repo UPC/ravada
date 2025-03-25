@@ -926,7 +926,7 @@ ravadaApp.directive("solShowMachine", swMach)
             $http.get('/v2/network/new/'+id_vm)
                 .then(function(response) {
                     $scope.network=response.data;
-                    console.log(response.data);
+                    $scope.form_network.$setDirty();
             });
         };
 
