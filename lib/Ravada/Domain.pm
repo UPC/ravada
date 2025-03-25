@@ -3314,9 +3314,6 @@ sub _pre_shutdown {
     $self->list_disks;
     $self->_remove_start_requests();
 
-    my $ip = $self->ip;
-    $self->_delete_ip_rule ([undef,$ip,'nat' ]) if $ip;
-
 }
 
 sub _remove_start_requests($self) {
@@ -3892,6 +3889,19 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
             ,'to-destination' => "$internal_ip:$internal_port"
         );
         if ($internal_ip_info->{type} eq 'bridge') {
+
+            my @iptables_arg = ("0.0.0.0/0"
+                        ,$local_ip, 'nat', 'POSTROUTING', 'SNAT',
+                        ,{'protocol' => 'tcp',
+                            'd' => $internal_ip
+                            ,'d_port' => $internal_port
+                            ,'to_source' => $local_ip
+                        });
+
+            $self->_log_iptable(iptables => \@iptables_arg
+                , user => Ravada::Utils::user_daemon
+                , remote_ip => "0.0.0.0/0");
+
             $self->_vm->iptables_unique(
                 t => 'nat'
                 ,A => 'POSTROUTING'
@@ -4254,6 +4264,7 @@ sub _remove_iptables {
     my %rule;
     for my $row (@iptables) {
         my ($id, $id_vm, $iptables) = @$row;
+
         next if !$id_vm;
         push @{$rule{$id_vm}},[ $id, $iptables ];
     }
@@ -4535,51 +4546,53 @@ sub _delete_ip_rule ($self, $iptables, $vm = $self->_vm) {
     confess if !ref($vm);
     return if !$vm->is_active;
 
-    my ($s, $d, $filter, $chain, $jump, $extra) = @$iptables;
-    lock_hash %$extra;
+    my ($s, $d, $filter, $chain, $jump, $extra0) = @$iptables;
+    lock_hash %$extra0;
 
+    confess if $extra0 && exists $extra0->{s_port} && $extra0->{s_port}==0;
     $filter = 'filter' if !$filter;
 
     if ($s) {
         $s = undef if $s =~ m{^0\.0\.0\.0};
         $s .= "/32" if defined $s && $s !~ m{/};
+    } else {
+        $s = "0.0.0.0/0";
     }
     $d .= "/32" if defined $d && $d !~ m{/};
 
-    my $iptables_list = $vm->iptables_list();
+    $extra0 = {} if !defined $extra0;
 
-    my $removed = 0;
-    for my $line (@{$iptables_list->{$filter}}) {
-        my %args = @$line;
-        next if defined $chain && $args{A} ne $chain;
-        next if $args{A} =~ /LIBVIRT_/;
-        if((!defined $jump || ( exists $args{j} && $args{j} eq $jump ))
-           && ( !defined $s || (exists $args{s} && $args{s} eq $s))
-           && ( !defined $d || ( exists $args{d} && $args{d} eq $d))
-           && (exists $extra->{d_port} && $args{dport} eq $extra->{d_port}))
-        {
-
-           my $curr_chain = delete $args{A};
-           if ($vm->is_active) {
-                my @cmd = ("iptables", "-t", $filter, "-D", $curr_chain);
-                my $m = delete $args{m};
-                my $p = delete $args{p};
-                push @cmd,("-m" => $m) if $m;
-                push @cmd,("-p" => $m) if $p;
-                for my $key ( sort keys  %args) {
-                    my $dash = '-';
-                    $dash = '--' if length($key)>1;
-                    push @cmd, ("$dash$key" => $args{$key});
-                }
-                my ($out, $err) = $vm->run_command(@cmd);
-                warn $err if $err;
-           }
-           $removed++;
-        }
-
+    my $extra = dclone($extra0);
+    my @cmd = ("iptables", "-t", $filter, "-D", $chain,"-j",$jump);
+    unlock_hash(%$extra);
+    my $protocol = delete $extra->{protocol};
+    if ($protocol) {
+        push @cmd,("-m",$protocol,"-p",$protocol);
     }
-    return $removed;
+    for my $key ( sort keys %$extra) {
+        my $dash = '-';
+        $dash = '--' if length($key)>1;
+        my $option = $key;
+        $option = 'to-source' if $option eq 'to_source';
+        $option =~ s/^(.*)_(.*)/$1$2/;
+        my $value = $extra->{$key};
+
+        if (
+            ($option eq 'd' || $option eq 's')
+                && $value !~ m{/}) {
+            $value .= "/32";
+        }
+        push @cmd, ("$dash$option" => $value);
+    }
+    my ($out, $err) = $vm->run_command(@cmd);
+    #    warn $out if $out;
+    #    warn Dumper([$extra0,"@cmd\n$err"]) if $err && $chain ne 'RAVADA';
+
+    warn $err if $err && $err !~ /does a matching rule exist in that chain/;
+    return 1 if !$err;
+    return 0;
 }
+
 sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT') {
     confess "local port undefined " if !$local_port;
 
@@ -4587,7 +4600,7 @@ sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT
 
     my @iptables_arg = ($remote_ip
                         ,$local_ip, 'filter', $IPTABLES_CHAIN, $jump,
-                        ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
+                        ,{'protocol' => 'tcp', 'd_port' => $local_port});
 
     $self->_vm->iptables_unique(
                 A => $IPTABLES_CHAIN
@@ -4682,7 +4695,8 @@ sub _log_iptable {
 
     $uid = $user->id if !$uid;
 
-
+    confess if $iptables && exists $iptables->[5]
+    && exists $iptables->[5]->{s_port} && $iptables->[5]->{s_port} == 0;
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO iptables "
         ."(id_domain, id_user, remote_ip, time_req, iptables, id_vm)"
