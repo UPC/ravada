@@ -4565,6 +4565,9 @@ sub _delete_ip_rule ($self, $iptables, $vm = $self->_vm) {
     my $extra = dclone($extra0);
     my @cmd = ("iptables", "-t", $filter, "-D", $chain,"-j",$jump);
     unlock_hash(%$extra);
+    push @cmd, ("-s",$s) if $s;
+    push @cmd, ("-d",$d) if $d;
+
     my $protocol = delete $extra->{protocol};
     if ($protocol) {
         push @cmd,("-m",$protocol,"-p",$protocol);
@@ -4585,8 +4588,8 @@ sub _delete_ip_rule ($self, $iptables, $vm = $self->_vm) {
         push @cmd, ("$dash$option" => $value);
     }
     my ($out, $err) = $vm->run_command(@cmd);
-    #    warn $out if $out;
-    #    warn Dumper([$extra0,"@cmd\n$err"]) if $err && $chain ne 'RAVADA';
+    # warn $out if $out;
+    # warn Dumper([$extra0,"@cmd\n$err"]);# if $err && $chain ne 'RAVADA';
 
     warn $err if $err && $err !~ /does a matching rule exist in that chain/;
     return 1 if !$err;
