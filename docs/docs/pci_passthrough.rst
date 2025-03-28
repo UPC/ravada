@@ -382,6 +382,11 @@ Then add it to the end of the file /etc/modprobe.d/blacklist-gpu.conf:
   blacklist xhci_pci
 
 
+PCI Templates
+-------------
+
+You may want to change the default Virtual Machine templates, follow this guide `PCI Passthrough Templates <pci_passthrough_templates.html>`__ .
+
 References
 ----------
 
