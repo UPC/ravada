@@ -109,10 +109,17 @@
                 <span ng-show="!searching_user && user_count>=0 && !user_found ">
                 {{user_count}} <%=l 'found' %>
                 </span>
-                <span ng-show="user_found"><%=l 'Exact match' %></span>
+
                 <i class="fas fa-sync-alt fa-spin"
                     ng-show="searching_user"></i>
 
+                <select class="form-control" ng-model="network._owner"
+                        name="owner"
+                        ng-options="user.name for user in list_users"
+                        ng-disabled="!list_users || searching_user"
+                        ng-hide="list_users.length==0"
+                    >
+                </select>
     </div>
 </div>
 
