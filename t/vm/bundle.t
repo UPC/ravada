@@ -111,7 +111,9 @@ sub test_bundle_isolated($vm) {
 
     rvd_front->bundle_isolated($id_bundle,1);
 
-    my $user = create_user();
+    my $user_name = new_domain_name;
+    $user_name =~ s/(.*?)_(.*)/$1.$2/;
+    my $user = create_user($user_name);
 
     _req_clone($user, $base1);
 
@@ -306,5 +308,4 @@ for my $vm_name ( vm_names() ) {
 }
 
 end();
-clean();
 done_testing();

@@ -3077,6 +3077,18 @@ sub new_network($self, $name='net') {
             }
 
         }
+        if ( $field eq 'name' && $name ne 'net' ) {
+            my $value = $base{$field};
+            $value =~ s/(.*-.).*(\..*)/$1$2/;
+            if (exists $old{$value}) {
+                $value = $base{$field};
+            }
+            if (!exists $old{$value}) {
+                $new->{$field}=$value;
+                next;
+            }
+        }
+
         my ($last) = reverse sort keys %old;
         my ($z,$n) = $last =~ /.*?(0*)(\d+)/;
         $z=$last if !defined $z;
