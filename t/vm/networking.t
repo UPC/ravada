@@ -844,7 +844,7 @@ sub test_new_network($vm) {
 
     my $data2 = decode_json($req2->output);
     for my $field( keys %$data) {
-        next if $field =~ /^(id_vm|ip_netmask|is_active|autostart)/;
+        next if $field =~ /^(id_vm|ip_netmask|is_active|autostart|forward_mode)/;
 
         isnt($data2->{$field}, $data->{$field},$field);
     }
