@@ -3891,9 +3891,8 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
         if ($internal_ip_info->{type} eq 'bridge') {
 
             my @iptables_arg = ("0.0.0.0/0"
-                        ,$local_ip, 'nat', 'POSTROUTING', 'SNAT',
-                        ,{'protocol' => 'tcp',
-                            'd' => $internal_ip
+                        ,$internal_ip, 'nat', 'POSTROUTING', 'SNAT',
+                        ,{'protocol' => 'tcp'
                             ,'d_port' => $internal_port
                             ,'to_source' => $local_ip
                         });
@@ -4693,6 +4692,9 @@ sub _log_iptable {
     confess "ERROR: Choose wether uid or user "
         if $user && $uid;
     confess "ERROR: Supply user or uid" if !defined $user && !defined $uid;
+
+    confess "ERROR: duplicated d ".Dumper([$remote_ip,$iptables])
+    if $iptables->[5]->{d} && $iptables->[1];
 
     lock_hash(%args);
 
