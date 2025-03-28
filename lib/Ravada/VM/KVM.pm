@@ -3091,7 +3091,10 @@ sub new_network($self, $name='net') {
 
         my ($last) = reverse sort keys %old;
         my ($z,$n) = $last =~ /.*?(0*)(\d+)/;
-        $z=$last if !defined $z;
+        if (!defined $z) {
+            ($z) = $last =~ /.*?(\d+$)/;
+            $z='' if !defined $z;
+        }
         $n=0 if !defined $n;
         $n++;
         $n = "$z$n";
