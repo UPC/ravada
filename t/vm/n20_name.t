@@ -65,7 +65,11 @@ sub test_nat($vm_name) {
     isnt($ip , '127.0.0.1', "[$vm_name] Expecting IP no '127.0.0.1', got '$ip'")
         or exit;
 
-    $domain->shutdown_now(user_admin)   if $domain->is_active;
+    Ravada::Request->force_shutdown(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request();
 
     test_chain($vm_name, local_ip =>  $ip, local_port => $port, remote_ip => $REMOTE_IP
         , enabled => 0);
