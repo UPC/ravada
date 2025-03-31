@@ -137,8 +137,10 @@ sub test_duplicate_bridge_add($vm, $net) {
 
 # only admins or users that can manage all networks can do this
 sub test_change_owner($vm) {
+    my $user0 = create_user();
     my $user = create_user();
     my $new = $vm->new_network(new_domain_name);
+    $new->{id_owner} = $user0->id;
     my $req = Ravada::Request->create_network(
         uid => user_admin->id
         ,id_vm => $vm->id
@@ -148,6 +150,7 @@ sub test_change_owner($vm) {
 
     my($new2) = grep { $_->{name} eq $new->{name} } $vm->list_virtual_networks();
     ok($new2) or return;
+    is($new2->{id_owner}, $user0->id) or die $new->{name};
     $new2->{id_owner} = $user->id;
     my $req_change = Ravada::Request->change_network(
         uid => $user->id
@@ -157,7 +160,7 @@ sub test_change_owner($vm) {
     wait_request(check_error => 0, debug => 0);
 
     my($new2b) = grep { $_->{name} eq $new->{name} } $vm->list_virtual_networks();
-    is($new2b->{id_owner}, user_admin->id);
+    is($new2b->{id_owner}, $user0->id) or exit;
 
     like($req_change->error,qr/not authorized/) or exit;
 
@@ -167,7 +170,7 @@ sub test_change_owner($vm) {
     wait_request(check_error => 0);
     like($req_change->error,qr/not authorized/);
     my($new2c) = grep { $_->{name} eq $new->{name} } $vm->list_virtual_networks();
-    is($new2c->{id_owner}, user_admin->id);
+    is($new2c->{id_owner}, $user0->id);
 
     user_admin->grant($user, 'manage_all_networks');
     $req_change->status('requested');

@@ -5,8 +5,10 @@
 <div id="wrapper">
     %= include 'bootstrap/navigation'
     <div id="page-wrapper" ng-controller='manage_networks'
-        ng-init="init('<%= $id_vm %>')">
-    <div id="admin-content">
+        ng-init="init('<%= $id_vm %>')"
+        class="card"
+        >
+    <div class="card-header border">
         <div class="row">
             <div class="col-md-8"><h2><%=l 'Networks' %></h2></div>
             <div class="col-md-4" align="right">
@@ -16,7 +18,8 @@
                   </h2>
             </div>
         </div>
-
+    </div>
+    <div class="card-body">
         <div class="row">
             <div class="col-md-5"><b><%=l 'Name' %></b></div>
             <div class="col-md-1"
@@ -27,8 +30,8 @@
                  ng-show="<%= ( $_user->is_admin or $_user->can_manage_all_networks or 0 ) %>"
                 ><b><%=l 'Owner' %></b></div>
             <div class="col-md-2"><b><%=l 'Address' %></b></div>
-            <div class="col-md-1"><b><%=l 'Status' %></b></div>
-            <div class="col-md-1"><b><%=l 'Auto Start' %></b></div>
+            <div class="col-md-1 align-bottom"><b><%=l 'Status' %></b></div>
+            <div class="col-md-1"><b><%=l 'Start' %></b></div>
         </div>
 
         <div class="row" ng-show="loaded_networks && networks.length==0">

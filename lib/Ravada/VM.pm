@@ -1646,7 +1646,7 @@ sub _around_create_network($orig, $self,$data, $id_owner, $request=undef) {
     delete $data->{internal_id} if exists $data->{internal_id};
     eval { $self->$orig($data) };
     $request->error(''.$@) if $@ && $request;
-    $data->{id_owner} = $id_owner;
+    $data->{id_owner} = ($data->{id_owner} or  $id_owner);
     $data->{is_public} = 0 if !$data->{is_public};
     delete $data->{isolated};
     $self->_insert_network($data);

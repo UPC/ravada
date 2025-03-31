@@ -9,6 +9,7 @@ use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use Moose;
 use Socket qw( inet_aton inet_ntoa );
+use Storable qw(dclone);
 use Sys::Hostname;
 use URI;
 use YAML qw(Dump Load);
@@ -447,9 +448,12 @@ sub new_network($self, $name='net') {
     return $new;
 }
 
-sub create_network($self, $data, $id_owner=undef, $request=undef) {
+sub create_network($self, $data0, $id_owner=undef, $request=undef) {
 
-    $data->{internal_id} = $self->_new_net_id();
+    $data0->{internal_id} = $self->_new_net_id();
+
+    my $data = dclone($data0);
+
     my $file_out = $self->dir_img."/networks/".$data->{name}.".yml";
     die "Error: network $data->{name} already created"
     if $self->file_exists($file_out);
@@ -469,6 +473,7 @@ sub create_network($self, $data, $id_owner=undef, $request=undef) {
     delete $data->{id};
     delete $data->{id_vm};
     delete $data->{isolated};
+    delete $data->{id_owner};
 
     $self->write_file($file_out,Dump($data));
 
