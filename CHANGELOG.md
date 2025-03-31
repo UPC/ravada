@@ -2,13 +2,10 @@
 
 **Implemented enhancements:**
 
-- Users can share virtual machines [\#2021]
-- Virtual networks management [\#1984]
-- GPU Mediated devices [\#1955]
-- Allow remove users via GUI [\#2023]
-
 **Bugfixes**
 
-- Node Option Not Available [\#2032]
+- Remove SPICE display fails on Ubuntu 24 [\#2157]
+- Incorrect VM IP address [\#2164]
+- Postrouting iptables rule not removed after VM shutdown [\#2166]
 
 **Refactors**
