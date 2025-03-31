@@ -122,7 +122,35 @@ sub test_bridge($vm) {
     is(grep(m{^ACCEPT.*$remote_ip\s+$internal_ip.*dpt:$internal_port},@out),1) or die $out;
     is(grep(m{^DROP.*0.0.0.0.+$internal_ip.*dpt:$internal_port},@out),1) or die $out;
 
-    $domain->remove(user_admin);
+    Ravada::Request->shutdown_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,timeout => 2
+    );
+    wait_request();
+    for ( 1.. 10 ) {
+        run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
+        die $err if $err;
+        @out = split /\n/,$out;
+
+        last if(!grep(/^DNAT.*$local_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out));
+
+        wait_request();
+    }
+
+    run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
+    die $err if $err;
+    @out = split /\n/,$out;
+
+    is(grep(/^DNAT.*$local_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out),0)
+        or die Dumper(\@out);
+
+    run3(['iptables','-t','nat','-L','POSTROUTING','-n'],\($in, $out, $err));
+    die $err if $err;
+    @out = split /\n/,$out;
+    is(grep(/^SNAT.* 0.0.0.0\/0\s+$internal_ip\s+tcp dpt\:$internal_port to\:$local_ip$/,@out),0)
+        or die Dumper([ grep /^SNAT/, @out]);
+
 }
 
 ######################################################################
