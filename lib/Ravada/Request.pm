@@ -1966,7 +1966,8 @@ sub _data($self, $field, $value=undef) {
 
         return $value;
     }
-    return $self->{_data}->{$field} if exists $self->{_data}->{$field};
+    return $self->{_data}->{$field}
+    if exists $self->{_data}->{$field} && defined $self->{_data}->{$field};
 
     $self->{_data} = $self->_select_db( );
 
