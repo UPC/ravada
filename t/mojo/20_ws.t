@@ -425,7 +425,7 @@ sub test_node_info($vm_name) {
         };
 
         my $node_info = Ravada::WebSocket::_get_node_info
-                            (rvd_front(), $ws_args);
+                            (undef,rvd_front(), $ws_args);
         if ($node->{hostname} =~ /localhost|127.0.0.1/) {
             is($node_info->{is_local},1);
         } else {
@@ -435,7 +435,7 @@ sub test_node_info($vm_name) {
         $ws_args->{login} = $user->name;
 
         $node_info = Ravada::WebSocket::_get_node_info
-                            (rvd_front(), $ws_args);
+                            (undef, rvd_front(), $ws_args);
 
         is_deeply($node_info,{});
     }

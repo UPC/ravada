@@ -514,7 +514,7 @@ sub _now {
      return DateTime->from_epoch( epoch => time() , time_zone => $TZ )
 }
 
-sub _list_next_bookings_today($rvd, $args) {
+sub _list_next_bookings_today($self, $rvd, $args) {
 
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my @ret = Ravada::Booking::bookings_range(
