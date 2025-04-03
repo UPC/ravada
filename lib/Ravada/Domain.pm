@@ -8166,7 +8166,7 @@ sub check_grace($self,$type) {
     die $err if $err;
 
     if ( $start>$start_req && $start - $start_req > int($grace_time*60/2) ) {
-        warn "No enough data";
+        #        warn "No enough data";
         return;
     }
 

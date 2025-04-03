@@ -1971,7 +1971,7 @@ sub _data($self, $field, $value=undef) {
 
     $self->{_data} = $self->_select_db( );
 
-    confess "No DB info ".$self->{id}   if !$self->{_data};
+    return if !$self->{_data};
     confess "No field $field "          if !exists$self->{_data}->{$field};
 
     return $self->{_data}->{$field};
