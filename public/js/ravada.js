@@ -482,7 +482,7 @@
                             update_info_settings();
                         }
                     });
-                    _select_new_base();
+                    //_select_new_base();
                 }
             };
 
@@ -584,8 +584,12 @@
                 ws.onmessage = function(event) {
                     var data = JSON.parse(event.data);
                     $scope.$apply(function () {
-                        $scope.bases = data;
-                        _select_new_base();
+                        if (typeof($scope.bases) == 'undefined'
+                        || $scope.bases.length != data.length) {
+                            $scope.bases = data;
+                            $scope.new_base=undefined;
+                            _select_new_base();
+                        }
                     });
                 }
             };

@@ -10,18 +10,22 @@ use Test::Ravada;
 use_ok('Ravada');
 use_ok('Ravada::Front');
 
-init();
+my $USER;
+my $RVD_BACK;
+my $RVD_FRONT;
 
-my $USER = create_user('foo','bar', 1);
-my $RVD_BACK  = rvd_back( );
-my $RVD_FRONT = rvd_front();
 
-# twice so it won't warn it is only used once
-ok($Ravada::CONNECTOR,"\$Ravada::Connector wasn't set");
-ok($Ravada::CONNECTOR,"\$Ravada::Connector wasn't set");
+sub _init() {
+    $USER = create_user('foo','bar', 1);
+    $RVD_BACK  = rvd_back( );
+    $RVD_FRONT = rvd_front();
 
-ok($RVD_BACK->connector());
+    # twice so it won't warn it is only used once
+    ok($Ravada::CONNECTOR,"\$Ravada::Connector wasn't set");
+    ok($Ravada::CONNECTOR,"\$Ravada::Connector wasn't set");
 
+    ok($RVD_BACK->connector());
+}
 
 sub test_empty {
 
@@ -63,7 +67,7 @@ sub test_add_domain_db {
     ok($bases,"No bases list returned");
     ok(scalar @$bases == 0, "There should be no bases");
     
-    connector->dbh->do("UPDATE DOMAINS set is_base=1,is_public=1 WHERE name='$domain_name'");
+    connector->dbh->do("UPDATE Domains set is_base=1,is_public=1 WHERE name='$domain_name'");
     
     $bases = $RVD_FRONT->list_bases();
     ok($bases,"No bases list returned");
@@ -84,19 +88,18 @@ sub test_vm_types {
 
 }
 
-my $ping = $RVD_FRONT->ping_backend();
 
+init();
 clean();
+
 SKIP: {
-    diag("SKIPPING: No backend found at ping")    if !$ping;
-    skip("No backend found at ping",10) if !$ping;
+    _init();
     for my $vm_name ( 'Void') {
         test_empty();
         test_add_domain_db($vm_name);
         test_vm_types();
     }
 }
-clean();
- 
+
 end();
 done_testing();
