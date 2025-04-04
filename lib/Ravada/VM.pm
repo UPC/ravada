@@ -1982,7 +1982,6 @@ sub write_file( $self, $file, $contents ) {
 sub _waitpid($pid) {
     for my $n ( 1 .. 10 ) {
         my $kid = waitpid($pid,WNOHANG);
-        warn "$n $kid";
         last if $kid;
         sleep 1;
     }
