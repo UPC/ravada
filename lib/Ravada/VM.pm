@@ -51,6 +51,9 @@ our $TIMEOUT_DOWN_CACHE = 300;
 our %VM; # cache Virtual Manager Connection
 our %SSH;
 
+our $CACHE_VM=0;
+our $CACHE_SSH=0;
+
 our $ARP = `which arp`;
 chomp $ARP;
 
@@ -248,7 +251,7 @@ sub open {
     eval {
         $internal_vm = $vm->vm;
     };
-    $VM{$args{id}} = $vm unless $args{readonly} || !$internal_vm;
+    $VM{$args{id}} = $vm unless $args{readonly} || !$internal_vm || !$CACHE_VM;
     return if $vm->is_local && !$internal_vm;
     return $vm;
 
@@ -455,7 +458,7 @@ sub _connect_ssh($self) {
             return;
         }
     }
-    $SSH{$self->host} = $ssh;
+    $SSH{$self->host} = $ssh if $CACHE_SSH;
     return $ssh;
 }
 
@@ -1971,6 +1974,17 @@ sub write_file( $self, $file, $contents ) {
 
     print $rin $contents;
     close $rin;
+
+    waitpid($pid);
+}
+
+sub _waitpid($pid) {
+    for my $n ( 1 .. 10 ) {
+        my $kid = waitpid($pid,WNOHANG);
+        warn "$n $kid";
+        last if $kid;
+        sleep 1;
+    }
 }
 
 sub _write_file_local( $self, $file, $contents ) {
@@ -1994,7 +2008,10 @@ sub read_file( $self, $file ) {
     my ($rout, $pid) = $self->_ssh->pipe_out("cat $file")
         or die "pipe_out method failed ".$self->_ssh->error;
 
-    return join ("",<$rout>);
+    my $text = join ("",<$rout>);
+    waitpid($pid);
+
+    return $text;
 }
 
 sub _read_file_local( $self, $file ) {
