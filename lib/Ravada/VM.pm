@@ -1976,7 +1976,7 @@ sub write_file( $self, $file, $contents ) {
     print $rin $contents;
     close $rin;
 
-    waitpid($pid);
+    _waitpid($pid);
 }
 
 sub _waitpid($pid) {
@@ -2010,7 +2010,7 @@ sub read_file( $self, $file ) {
         or die "pipe_out method failed ".$self->_ssh->error;
 
     my $text = join ("",<$rout>);
-    waitpid($pid);
+    _waitpid($pid);
 
     return $text;
 }
