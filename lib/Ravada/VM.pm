@@ -17,6 +17,7 @@ use File::Path qw(make_path);
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use JSON::XS;
+use POSIX qw(WNOHANG);
 use Socket qw( inet_aton inet_ntoa );
 use Moose::Role;
 use Net::DNS;
