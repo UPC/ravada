@@ -1726,28 +1726,6 @@ sub get_info {
     return $info;
 }
 
-sub _ip_agent($self) {
-    my @ip;
-    eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_AGENT) };
-    return if $@ && $@ =~ /^libvirt error code: (74|86),/;
-    warn $@ if $@;
-
-    my $found;
-    for my $if (@ip) {
-        next if $if->{name} =~ /^lo/;
-        for my $addr ( @{$if->{addrs}} ) {
-
-            next unless $addr->{type} == 0 && $addr->{addr} !~ /^127\./;
-
-            $found = $addr->{addr} if !$found;
-
-            return $addr->{addr}
-            if $self->_vm->_is_ip_nat($addr->{addr});
-        }
-    }
-    return $found;
-}
-
 sub _ip_info_get($self) {
     my @ip;
     eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_AGENT) };
@@ -1758,7 +1736,7 @@ sub _ip_info_get($self) {
         warn $@ if $@;
     }
 
-    my $found;
+    my $found={};
 
     my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
     my @interfaces =  $doc->findnodes('/domain/devices/interface');
@@ -1768,6 +1746,7 @@ sub _ip_info_get($self) {
         for my $addr ( @{$if->{addrs}} ) {
 
             next unless $addr->{type} == 0 && $addr->{addr} !~ /^127\./;
+            next if $addr->{addr} =~ /^169\.254/; # ignore rfc5735
             $found = {
                 'hwaddr' => $if->{hwaddr}
                 ,'addr' => $addr->{addr}

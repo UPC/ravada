@@ -144,7 +144,8 @@ sub test_nat($vm_name) {
     like($display_ip, qr{\d+\.\d+\.\d+\.\d+});
 
     my $file_config = "/tmp/config_display.yml";
-    DumpFile($file_config,{ display_ip => $display_ip, vm => ['Void', 'KVM'] });
+    DumpFile($file_config,{ display_ip => $display_ip, vm => ['Void', 'KVM']
+            ,dir_rrd => '/var/tmp/ravada/'.new_domain_name() });
 
     my $rvd_back = Ravada->new(
         connector => connector()
@@ -179,7 +180,8 @@ sub test_nat($vm_name) {
     #--------------------------------------------------------------------------------
     # Now with Nat
     #
-    DumpFile($file_config,{ display_ip => $display_ip, nat_ip => $NAT_IP, vm => ['Void', 'KVM'] });
+    DumpFile($file_config,{ display_ip => $display_ip, nat_ip => $NAT_IP, vm => ['Void', 'KVM']
+            ,dir_rrd => '/var/tmp/ravada/'.new_domain_name() });
 
     $rvd_back = Ravada->new(
         connector => connector()
