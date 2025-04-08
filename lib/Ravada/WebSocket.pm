@@ -65,13 +65,7 @@ our %TABLE_CHANNEL = (
 
 lock_hash(%TABLE_CHANNEL);
 
-my $A_WHILE;
-my %A_WHILE;
-my $LIST_MACHINES_TIME = 0;
-my $LIST_MACHINES_LAST = 0;
-my $LIST_MACHINES_TIME_COUNT = 0;
 my $TZ;
-my %TIME0;
 ######################################################################
 
 
@@ -166,16 +160,18 @@ sub _list_machines($self, $rvd, $args) {
             || $user->is_admin()
         );
 
-    $LIST_MACHINES_TIME++;
-    if ($LIST_MACHINES_TIME == 1 ) {
+    $args->{_list_machines_time} = 0 if !$args->{_list_machines_time};
+    $args->{_list_machines_time}++;
+
+    if ($args->{_list_machines_time} == 1 ) {
         return (0, $rvd->list_machines($user, id_base => undef));
-    } elsif( $LIST_MACHINES_TIME <= 2 || $LIST_MACHINES_TIME_COUNT++ > 60
+    } elsif( $args->{_list_machines_time} <= 2 || $args->{_list_machines_time_count}++ > 60
         || $self->_count_different('domains')) {
-        $LIST_MACHINES_TIME_COUNT=0;
+        $args->{_list_machines_time_count}=0;
         return (0,$rvd->list_machines($user));
     }
 
-    my $seconds = time - $LIST_MACHINES_LAST + 60;
+    my $seconds = time - $args->{_list_machines_last} + 60;
     my $list_changed = $rvd->list_machines($user
         , date_changed => Ravada::Utils::now($seconds));
     #    for my $item (@$list_changed) {
@@ -207,7 +203,7 @@ sub _list_machines_tree($self, $rvd, $args) {
 
     return if $refresh && !scalar(@$list_orig);
 
-    $LIST_MACHINES_LAST = time;
+    $args->{_list_machines_last} = time;
 
     return {action => 'refresh', data => $list_orig} if $refresh;
 
@@ -261,7 +257,7 @@ sub _list_host_devices($self, $rvd, $args) {
         _list_domains_with_device($rvd, $row);
         _list_devices_node($rvd, $row);
         push @found, $row;
-        next unless _its_been_a_while_channel($args->{channel});
+        next unless $self->_its_been_a_while_channel($args);
         my $req = Ravada::Request->list_host_devices(
             uid => $user->id
             ,id_host_device => $row->{id}
@@ -484,7 +480,7 @@ sub _ping_backend($self, $rvd, $args) {
 
     # If there are requests in state different that requested it's ok
     if ( scalar(@reqs) > $requested ) {
-        _its_been_a_while(1);
+        $self->_its_been_a_while(1);
         return 2;
     }
 
@@ -494,7 +490,7 @@ sub _ping_backend($self, $rvd, $args) {
     } @reqs ;
 
     if (!$ping_backend) {
-        return 0 if $requested && _its_been_a_while();
+        return 0 if $requested && $self->_its_been_a_while();
         my @now = localtime(time);
         my $seconds = $now[0];
         Ravada::Request->ping_backend() if $seconds < 5;
@@ -502,11 +498,11 @@ sub _ping_backend($self, $rvd, $args) {
     }
 
     if ($ping_backend->{status} eq 'requested') {
-        return 0 if _its_been_a_while();
+        return 0 if $self->_its_been_a_while();
         return 1;
     }
 
-    _its_been_a_while(1);
+    $self->_its_been_a_while(1);
     return 1;
 }
 
@@ -543,23 +539,23 @@ sub _list_networks($rvd, $args) {
     return \@networks;
 }
 
-sub _its_been_a_while_channel($channel) {
-    if (!$A_WHILE{$channel} || time -$A_WHILE{$channel} > 5) {
-        $A_WHILE{$channel} = time;
+sub _its_been_a_while_channel($self, $args) {
+    if (!$args->{a_while} || time -$args->{a_while} > 5) {
+        $args->{a_while} = time;
         return 1;
     }
     return 0;
 }
 
-sub _its_been_a_while($reset=0) {
+sub _its_been_a_while($self, $reset=0) {
     if ($reset) {
-        $A_WHILE = 0;
+        $self->{a_while}->{_global} = 0;
     }
-    if (!$A_WHILE) {
-        $A_WHILE = time;
+    if (!$self->{a_while}->{_global}) {
+        $self->{a_while}->{_global} = time;
         return 0;
     }
-    return time - $A_WHILE > 5;
+    return time - $self->{a_while}->{_global} > 5;
 }
 
 sub _different($var1, $var2) {
@@ -666,7 +662,8 @@ sub _send_answer($self, $ws_client, $channel, $key = $ws_client) {
 
     my $old_ret;
     if (exists $TABLE_CHANNEL{$channel} && $TABLE_CHANNEL{$channel}
-            && defined $TIME0{$channel} && time < $TIME0{$channel}+60) {
+            && defined $self->clients->{$key}->{TIME0}->{$channel}
+            && time < $self->clients->{$key}->{TIME0}->{$channel}+60) {
         my ($old_count, $old_changed) = $self->_old_info($key);
         my ($new_count, $new_changed) = $self->_new_info($key);
 
@@ -679,7 +676,7 @@ sub _send_answer($self, $ws_client, $channel, $key = $ws_client) {
 
     }
 
-    $TIME0{$channel} = time;
+    $self->clients->{$key}->{TIME0}->{$channel} = time;
 
     my $ret;
     eval { $ret = $exec->($self, $self->ravada, $self->clients->{$key}) };
@@ -707,14 +704,11 @@ sub subscribe($self, %args) {
         , %args
         , ret => undef
     };
-    if ($args{channel} =~ /list_machines/) {
-        $LIST_MACHINES_TIME = 0 ;
-    }
     $self->_clean_info($ws);
     $self->_send_answer($ws,$args{channel});
     my $channel = $args{channel};
     $channel =~ s{/.*}{};
-    $TIME0{$channel} = 0 if $channel =~ /list_machines/i;
+    $self->clients->{$ws}->{TIME0}->{$channel} = 0 if $channel =~ /list_machines/i;
 }
 
 sub unsubscribe($self, $ws) {
