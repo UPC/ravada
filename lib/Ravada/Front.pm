@@ -1795,6 +1795,7 @@ sub list_networks($self, $id_vm ,$id_user) {
         $self->_search_user($row->{id_owner},\%owner);
         $row->{_owner} = $owner{$row->{id_owner}};
         $row->{_can_change}=0;
+        $row->{is_active}=0 if !defined $row->{is_active};
 
         $row->{_can_change}=1
         if $user->is_admin || $user->can_manage_all_networks

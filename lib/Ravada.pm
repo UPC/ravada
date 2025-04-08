@@ -789,8 +789,8 @@ sub _update_isos {
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => "https://cdimage.kali.org/kali-$year".'.\d+/'
-            ,file_re => "kali-linux-$year.".'\d+-installer-amd64.iso'
+            ,url => "https://cdimage.kali.org/kali-$year".'.\d+.*/'
+            ,file_re => "kali-linux-$year.".'\d+.*-installer-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,min_disk_size => '10'
         }
@@ -800,8 +800,8 @@ sub _update_isos {
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => "https://cdimage.kali.org/kali-$year".'.\d+/'
-            ,file_re => "kali-linux-$year.".'\d+-installer-netinst-amd64.iso'
+            ,url => "https://cdimage.kali.org/kali-$year".'.\d+.*/'
+            ,file_re => "kali-linux-$year.".'\d+.*-installer-netinst-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,min_disk_size => '10'
         }
@@ -4946,7 +4946,11 @@ sub _net_bundle($self, $domain, $user0) {
     my $data = decode_json($req_new_net->output);
     $req_new_net->status('done');
 
-    $data->{isolated} = $bundle->{'isolated'};
+    if ($bundle->{'isolated'}) {
+        $data->{forward_mode} = 'none'
+    } else {
+        $data->{forward_mode} = 'nat'
+    }
 
     my $req_network = Ravada::Request->create_network(
         uid => Ravada::Utils::user_daemon->id
@@ -7214,6 +7218,7 @@ sub _cmd_remove_network($self, $request) {
 sub _check_user_authorized_network($request, $id_network) {
 
     my $user=Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: user ".$request->args('uid')." not found" if !$user;
 
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT * FROM virtual_networks WHERE id=?"

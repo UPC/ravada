@@ -1721,13 +1721,10 @@ get '/machine/display/(:driver)/(:id).(#extension)' => sub {
 
     my $id = $c->stash('id');
     my $extension = $c->stash('extension');
+    my $driver = $c->stash('driver');
 
     my $domain = $RAVADA->search_domain_by_id($id);
     return $c->render(text => "unknown machine id=$id") if !$domain;
-
-    my $display = $domain->_get_display($c->stash('driver'));
-    return $c->render(text => "unknown display ".$c->stash('driver')." for machine id=$id")
-    if !$display;
 
     return access_denied($c)
         unless $USER->id eq $domain->id_owner
@@ -1735,6 +1732,30 @@ get '/machine/display/(:driver)/(:id).(#extension)' => sub {
         || $USER->can_view_all
     ;
 
+    my $display = $domain->_get_display($c->stash('driver'));
+    return $c->render(text => "unknown display ".$c->stash('driver')." for machine id=$id")
+    if !$display;
+
+    if ($driver =~ /spice/ ) {
+        return _display_file_spice($c, $domain, $extension, $display);
+    } elsif ($driver eq 'rdp' ) {
+        return _display_file_rdp($c, $domain, $extension, $display);
+    } else {
+        return not_found($c);
+    }
+};
+
+sub _display_file_rdp($c, $domain, $extension, $display) {
+    $c->res->headers->content_type('application/x-rdp');
+        $c->res->headers->content_disposition(
+        "inline;filename=".$domain->id.".$extension");
+
+    my $format = $extension;
+    $format =~ s/^(\w+)\.(\w+)/$2/;
+    return $c->render(data => $domain->_display_file_rdp($display), format => $format);
+};
+
+sub _display_file_spice($c, $domain, $extension, $display) {
     $c->res->headers->content_type('application/x-virt-viewer');
         $c->res->headers->content_disposition(
         "inline;filename=".$domain->id.".$extension");
@@ -1745,6 +1766,7 @@ get '/machine/display/(:driver)/(:id).(#extension)' => sub {
     $tls = 1 if $1 && $1 eq 'tls';
     return $c->render(data => $domain->_display_file_spice($display, $tls), format => $format);
 };
+
 
 # Network ##########################################################3
 
@@ -4037,9 +4059,9 @@ sub _init_user_group {
     my $group = $CONFIG_FRONT->{group};
 
     if (defined $group) {
-        $group = getgrnam($group) or die "CRITICAL: I can't find user $group\n"
-            if $group !~ /^\d+$/;
-
+        my $gname=$group;
+        $group = getgrnam($gname) or die "CRITICAL: I can't find user $gname\n"
+            if $gname!~ /^\d+$/;
     }
     if (defined $user) {
         $user = getpwnam($user) or die "CRITICAL: I can't find user $user\n"

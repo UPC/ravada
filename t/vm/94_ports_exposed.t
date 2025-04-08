@@ -73,7 +73,8 @@ sub test_expose_port($vm) {
         ,id_domain => $domain->id
         ,remote_ip => $remote_ip2
     );
-    wait_request();
+    wait_request(debug=>0);
+    is($req->error,'');
 
     my @out_nat = split /\n/, `iptables-save -t nat`;
     my @prerouting= (grep /--to-destination $internal_ip:22/, @out_nat);
