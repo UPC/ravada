@@ -1569,6 +1569,7 @@ sub _clean_virtual_network_data($net) {
           'is_active',
           'is_public',
           'is_active',
+          'forward_mode',
           'name'
     );
 
@@ -1675,7 +1676,6 @@ sub _around_create_network($orig, $self,$data, $id_owner, $request=undef) {
     $request->error(''.$@) if $@ && $request;
     $data->{id_owner} = ($data->{id_owner} or  $id_owner);
     $data->{is_public} = 0 if !$data->{is_public};
-    delete $data->{isolated};
     $self->_insert_network($data);
 }
 
