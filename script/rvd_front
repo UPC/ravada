@@ -3152,7 +3152,7 @@ websocket '/ws/subscribe' => sub {
     my $c = shift;
     my $expiration = $SESSION_TIMEOUT;
     $USER = _logged_in($c) if !$USER;
-    return if !$USER;
+    return access_denied_user($c) if !$USER;
     $expiration = $SESSION_TIMEOUT_ADMIN    if $USER->is_operator;
     $c->inactivity_timeout( $expiration );
     $c->on(message => sub {

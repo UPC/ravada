@@ -708,7 +708,7 @@ sub test_frontend_list($vm) {
             channel => '/'.$vm->id
             ,login => user_admin->name
     };
-    my $front_devices = Ravada::WebSocket::_list_host_devices(undef,rvd_front(), $ws_args);
+    my $front_devices = Ravada::WebSocket::_list_host_devices(rvd_front(), $ws_args);
     is(scalar(@$front_devices),2) or exit;
 
     my ($dev_attached) = ($domain->list_host_devices_attached);
@@ -861,7 +861,7 @@ sub _get_frontend_devices($vm, $id_hd) {
         channel => '/'.$vm->id
         ,login => user_admin->name
     };
-    my $front_devs = Ravada::WebSocket::_list_host_devices(undef, rvd_front(), $ws_args);
+    my $front_devs = Ravada::WebSocket::_list_host_devices(rvd_front(), $ws_args);
     my @devices;
     my $n_hds = scalar(@$front_devs);
     for my $curr_hd ( @$front_devs ) {

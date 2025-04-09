@@ -345,6 +345,10 @@ ravadaApp.directive("solShowMachine", swMach)
           }, 5 * 1000 );
 
           var ws = new WebSocket(url);
+
+          ws.onerror = function(error) {
+              console.log(error);
+          };
           ws.onopen    = function (event) {
               ws_connected = true ;
               $scope.ws_fail = false;

@@ -69,7 +69,7 @@ my $TZ;
 ######################################################################
 
 
-sub _list_alerts($self, $rvd, $args) {
+sub _list_alerts($rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my $user = Ravada::Auth::SQL->new(name => $login) or die "Error: uknown user $login";
 
@@ -86,7 +86,7 @@ sub _list_alerts($self, $rvd, $args) {
     return [@ret2,@ret];
 }
 
-sub _list_bases($self, $rvd, $args) {
+sub _list_bases($rvd, $args) {
     my $domains = $rvd->list_bases();
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my $user = Ravada::Auth::SQL->new(name => $login) or die "Error: uknown user $login";
@@ -100,14 +100,14 @@ sub _list_bases($self, $rvd, $args) {
     return \@domains_show;
 }
 
-sub _list_isos($self, $rvd, $args) {
+sub _list_isos($rvd, $args) {
     my ($type) = $args->{channel} =~ m{/(.*)};
     $type = 'KVM' if !defined $type;
 
     return $rvd->iso_file($type);
 }
 
-sub _list_iso_images($self, $rvd, $args) {
+sub _list_iso_images($rvd, $args) {
     my ($type) = $args->{channel} =~ m{/(.*)};
     $type = 'KVM' if !defined $type;
 
@@ -115,7 +115,7 @@ sub _list_iso_images($self, $rvd, $args) {
     return $images;
 }
 
-sub _list_nodes($self, $rvd, $args) {
+sub _list_nodes($rvd, $args) {
     my ($type) = $args->{channel} =~ m{/(.*)};
     my @nodes = $rvd->list_vms($type);
     return \@nodes;
@@ -131,7 +131,7 @@ sub _request_exists($rvd, $id_request) {
     return $id_found;
 }
 
-sub _request($self, $rvd, $args) {
+sub _request($rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my $user = Ravada::Auth::SQL->new(name => $login);
 
@@ -147,7 +147,7 @@ sub _request($self, $rvd, $args) {
     return $info;
 }
 
-sub _list_machines($self, $rvd, $args) {
+sub _list_machines($rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my $user = Ravada::Auth::SQL->new(name => $login)
         or die "Error: uknown user $login";
@@ -165,19 +165,15 @@ sub _list_machines($self, $rvd, $args) {
 
     if ($args->{_list_machines_time} == 1 ) {
         return (0, $rvd->list_machines($user, id_base => undef));
-    } elsif( $args->{_list_machines_time} <= 2 || $args->{_list_machines_time_count}++ > 60
-        || $self->_count_different('domains')) {
-        $args->{_list_machines_time_count}=0;
+    } elsif( $args->{_list_machines_time} <= 2 || $args->{_list_machines_time} > 60
+        || _count_different($rvd, $args, 'domains')) {
+        $args->{_list_machines_time}=2;
         return (0,$rvd->list_machines($user));
     }
 
     my $seconds = time - $args->{_list_machines_last} + 60;
     my $list_changed = $rvd->list_machines($user
         , date_changed => Ravada::Utils::now($seconds));
-    #    for my $item (@$list_changed) {
-    #    return (0,$rvd->list_machines($user))
-    #    if $item->{is_base};
-    #}
     return (1,$list_changed);
 
 }
@@ -198,8 +194,8 @@ sub _list_children($list_orig, $list, $level=0) {
     return @list2;
 }
 
-sub _list_machines_tree($self, $rvd, $args) {
-    my ($refresh,$list_orig) = $self->_list_machines($rvd, $args);
+sub _list_machines_tree($rvd, $args) {
+    my ($refresh,$list_orig) = _list_machines($rvd, $args);
 
     return if $refresh && !scalar(@$list_orig);
 
@@ -214,7 +210,7 @@ sub _list_machines_tree($self, $rvd, $args) {
     return { 'action' => 'new', data => \@ordered };
 }
 
-sub _list_machines_user($self, $rvd, $args) {
+sub _list_machines_user($rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my $user = Ravada::Auth::SQL->new(name => $login)
         or die "Error: uknown user $login";
@@ -224,7 +220,7 @@ sub _list_machines_user($self, $rvd, $args) {
     return $ret;
 }
 
-sub _list_machines_user_including_privates($self, $rvd, $args) {
+sub _list_machines_user_including_privates($rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my $user = Ravada::Auth::SQL->new(name => $login)
         or die "Error: uknown user $login";
@@ -235,12 +231,12 @@ sub _list_machines_user_including_privates($self, $rvd, $args) {
     return $ret;
 }
 
-sub _list_bases_anonymous($self, $rvd, $args) {
+sub _list_bases_anonymous($rvd, $args) {
     my $remote_ip = $args->{remote_ip} or die "Error: no remote_ip arg ".Dumper($args);
     return $rvd->list_bases_anonymous($remote_ip);
 }
 
-sub _list_host_devices($self, $rvd, $args) {
+sub _list_host_devices($rvd, $args) {
     my ($id_vm) = $args->{channel} =~ m{/(\d+)};
 
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
@@ -257,7 +253,7 @@ sub _list_host_devices($self, $rvd, $args) {
         _list_domains_with_device($rvd, $row);
         _list_devices_node($rvd, $row);
         push @found, $row;
-        next unless $self->_its_been_a_while_channel($args);
+        next unless _its_been_a_while_channel($args);
         my $req = Ravada::Request->list_host_devices(
             uid => $user->id
             ,id_host_device => $row->{id}
@@ -385,14 +381,14 @@ sub _get_domain_with_device($rvd, $dev) {
     }
 }
 
-sub _list_requests($self, $rvd, $args) {
+sub _list_requests($rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my $user = Ravada::Auth::SQL->new(name => $login) or die "Error: uknown user $login";
     return [] unless $user->is_operator || $user->is_admin;
     return $rvd->list_requests;
 }
 
-sub _get_machine_info($self, $rvd, $args) {
+sub _get_machine_info($rvd, $args) {
     my ($id_domain) = $args->{channel} =~ m{/(\d+)};
     my $domain = $rvd->search_domain_by_id($id_domain) or do {
         warn "Error: domain $id_domain not found.";
@@ -413,7 +409,7 @@ sub _get_machine_info($self, $rvd, $args) {
     return $info;
 }
 
-sub _get_node_info($self, $rvd, $args) {
+sub _get_node_info($rvd, $args) {
     my ($id_node) = $args->{channel} =~ m{/(\d+)};
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my $user = Ravada::Auth::SQL->new(name => $login) or die "Error: uknown user $login";
@@ -473,14 +469,14 @@ sub _list_recent_requests($rvd, $seconds) {
     return @reqs;
 }
 
-sub _ping_backend($self, $rvd, $args) {
+sub _ping_backend($rvd, $args) {
     my @reqs = _list_recent_requests($rvd, 120);
 
     my $requested = scalar( grep { $_->{status} eq 'requested' } @reqs );
 
     # If there are requests in state different that requested it's ok
     if ( scalar(@reqs) > $requested ) {
-        $self->_its_been_a_while(1);
+        _its_been_a_while($args, 1);
         return 2;
     }
 
@@ -490,7 +486,7 @@ sub _ping_backend($self, $rvd, $args) {
     } @reqs ;
 
     if (!$ping_backend) {
-        return 0 if $requested && $self->_its_been_a_while();
+        return 0 if $requested && _its_been_a_while($args);
         my @now = localtime(time);
         my $seconds = $now[0];
         Ravada::Request->ping_backend() if $seconds < 5;
@@ -498,11 +494,11 @@ sub _ping_backend($self, $rvd, $args) {
     }
 
     if ($ping_backend->{status} eq 'requested') {
-        return 0 if $self->_its_been_a_while();
+        return 0 if _its_been_a_while($args);
         return 1;
     }
 
-    $self->_its_been_a_while(1);
+    _its_been_a_while($args, 1);
     return 1;
 }
 
@@ -510,7 +506,7 @@ sub _now {
      return DateTime->from_epoch( epoch => time() , time_zone => $TZ )
 }
 
-sub _list_next_bookings_today($self, $rvd, $args) {
+sub _list_next_bookings_today($rvd, $args) {
 
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my @ret = Ravada::Booking::bookings_range(
@@ -539,7 +535,7 @@ sub _list_networks($rvd, $args) {
     return \@networks;
 }
 
-sub _its_been_a_while_channel($self, $args) {
+sub _its_been_a_while_channel($args) {
     if (!$args->{a_while} || time -$args->{a_while} > 5) {
         $args->{a_while} = time;
         return 1;
@@ -547,15 +543,15 @@ sub _its_been_a_while_channel($self, $args) {
     return 0;
 }
 
-sub _its_been_a_while($self, $reset=0) {
+sub _its_been_a_while($args, $reset=0) {
     if ($reset) {
-        $self->{a_while}->{_global} = 0;
+        $args->{a_while}->{_global} = 0;
     }
-    if (!$self->{a_while}->{_global}) {
-        $self->{a_while}->{_global} = time;
+    if (!$args->{a_while}->{_global}) {
+        $args->{a_while}->{_global} = time;
         return 0;
     }
-    return time - $self->{a_while}->{_global} > 5;
+    return time - $args->{a_while}->{_global} > 5;
 }
 
 sub _different($var1, $var2) {
@@ -573,19 +569,19 @@ sub BUILD {
             for my $key ( keys %{$self->clients} ) {
                 my $ws_client = $self->clients->{$key}->{ws};
                 my $channel = $self->clients->{$key}->{channel};
-                _send_answer($self, $ws_client, $channel, $key);
+                $self->_send_answer($ws_client, $channel, $key);
             }
         });
 
 }
 
-sub _count_different($self, $table) {
-    my $count = $self->_count_table($table);
+sub _count_different($rvd, $args, $table) {
+    my $count = _count_table($rvd, $table);
     my $key = "_count".$table;
-    if (!defined $self->{$key}
-        || $self->{$key} != $count ) {
+    if (!defined $args->{$key}
+        || $args->{$key} != $count ) {
 
-        $self->{$key} = $count;
+        $args->{$key} = $count;
         return 1;
     }
     return 0;
@@ -622,8 +618,7 @@ sub _date_changed_table($self, $table, $id) {
     return ($date or '');
 }
 
-sub _count_table($self, $table) {
-    my $rvd = $self->ravada;
+sub _count_table($rvd, $table) {
     my $sth = $rvd->_dbh->prepare("SELECT count(*) FROM $table");
     $sth->execute;
     my ($count) = $sth->fetchrow;
@@ -647,7 +642,7 @@ sub _new_info($self, $key) {
 
     for my $table (@$table0) {
         $count .= ":" if $count;
-        $count .= $self->_count_table($table);
+        $count .= _count_table($self->ravada, $table);
 
         $date .= ":" if $date;
         $date .= $self->_date_changed_table($table, $id);
@@ -679,12 +674,14 @@ sub _send_answer($self, $ws_client, $channel, $key = $ws_client) {
     $self->clients->{$key}->{TIME0}->{$channel} = time;
 
     my $ret;
-    eval { $ret = $exec->($self, $self->ravada, $self->clients->{$key}) };
+    eval { $ret = $exec->($self->ravada, $self->clients->{$key}) };
     warn $@ if $@;
 
     if ( defined $ret && (!defined $old_ret || _different($ret, $old_ret ))) {
 
-        warn localtime(time)." WS: send $channel " if $DEBUG;
+        my $short_key = $key;
+        $short_key =~ s/.*HASH\((.*)\)/$1/;
+        warn time." $short_key WS: send $channel " if $DEBUG;
         $ws_client->send( {json => $ret} );
         $self->clients->{$key}->{ret} = $ret;
     }
