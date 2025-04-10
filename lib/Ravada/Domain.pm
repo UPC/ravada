@@ -323,7 +323,7 @@ sub _fetch_networking_mode($self) {
         }
         last if $networking eq 'nat';
     }
-    if (!$is_active || $networking eq 'isolated') {
+    if (!$is_active || $networking eq 'isolated' || !$self->_data('networking')) {
         $self->_data('networking' => $networking);
     }
 }

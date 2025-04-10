@@ -675,8 +675,14 @@ sub test_disapeared_network($vm) {
     ok(!$net2, "Expecting $net->{name} removed");
 
     my $sth = connector->dbh->prepare("SELECT * FROM virtual_networks WHERE name=?");
-    $sth->execute($net->{name});
-    my $row = $sth->fetchrow_hashref;
+    my $row;
+    for ( 1 .. 5 ) {
+        $sth->execute($net->{name});
+        $row = $sth->fetchrow_hashref;
+        last if !$row;
+        wait_request();
+        $vm->list_virtual_networks();
+    }
     ok(!$row,"Expected $net->{name} removed from db".Dumper($row)) or exit;
 
     my ($default) = grep { $_->{name} eq $default0->{name} } $vm->list_virtual_networks();
@@ -1066,6 +1072,7 @@ for my $vm_name ( vm_names() ) {
         test_add_down_network($vm);
 
         test_remove_network($vm,$net);
+        remove_networks_req();
     }
 }
 
