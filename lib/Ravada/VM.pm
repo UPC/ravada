@@ -1646,6 +1646,7 @@ sub _around_new_network($orig, $self, $name) {
     $data->{id_vm} = $self->id;
     $data->{is_active}=1;
     $data->{autostart}=1;
+    $data->{forward_mode} = 'nat';
     return $data;
 }
 
