@@ -3670,6 +3670,9 @@ sub admin {
         }
     }
     if ($page eq 'machines') {
+
+        return access_denied($c) if !$USER->can_view_admin_machines;
+
         _count_nodes($c);
         Ravada::Request->refresh_vms();
         $c->stash(n_clones_hide => ($CONFIG_FRONT->{admin}->{hide_clones} or 10) );
