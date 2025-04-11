@@ -84,6 +84,8 @@ my $TIME_CONNECTION = 10;
 my $TYPE;
 my $CREATE;
 
+my $CHANGE_NETWORK_FORWARD;
+
 my $USAGE = "$0 "
         ." [--debug] [--config=$FILE_CONFIG_DEFAULT] [--add-user=name] [--add-user-ldap=name]"
         ." [--add-user-file=filename]"
@@ -94,6 +96,7 @@ my $USAGE = "$0 "
         ." [--remove-user=name]"
         ." [--clean-db-leftovers]"
         ." [--log=pathname]"
+        ." [--set-network-forward=(nat|none)]"
         ."\n"
         ." --add-user : adds a new db user\n"
         ." --add-user-ldap : adds a new LDAP user\n"
@@ -124,6 +127,8 @@ my $USAGE = "$0 "
         ." --restore file1 file2 ... fileN\n"
         ." --migrate node machine1 machine2 ... machineN\n"
         ."\n"
+        ."Operations on networks:\n"
+        ." --change-network-forward=[nat|none]"
         ."Operations modifiers:\n"
         ." --all : execute on all virtual machines\n"
         ."          For hibernate, it is executed on all the actives\n"
@@ -196,6 +201,8 @@ GetOptions (       help => \$help
         ,"time-connection=s" => \$TIME_CONNECTION
         ,"type=s" => \$TYPE
         ,"create" => \$CREATE
+
+        ,"change-network-forward=s" => \$CHANGE_NETWORK_FORWARD
 ) or exit;
 
 $START = 1 if $DEBUG || $FILE_CONFIG || $NOFORK;
@@ -227,6 +234,9 @@ die "ERROR: Missing the machine name or id\n$USAGE"
 die "ERROR: Supply either --all or --disconnected or --active\n"
 if ( $ALL && ( $DISCONNECTED || $ACTIVE ))
     || ( $DISCONNECTED && ( $ALL || $ACTIVE ));
+
+die "ERROR: Network forward mode must be nat or none.\n"
+if $CHANGE_NETWORK_FORWARD && $CHANGE_NETWORK_FORWARD !~ /^(nat|none)$/;
 
 my %CONFIG;
 %CONFIG = ( config => $FILE_CONFIG )    if $FILE_CONFIG;
@@ -1329,6 +1339,42 @@ sub upload_group_members($file) {
     }
 }
 
+sub change_network_forward($rvd_back) {
+
+    my $sth = $rvd_back->_dbh->prepare(
+        "SELECT vn.id, vn.id_vm, vms.name FROM virtual_networks vn, vms "
+        ." WHERE vn.name=?"
+        ."   AND vn.id_vm=vms.id "
+    );
+
+    die "Error: No network names supplied.\n" if !@ARGV;
+
+    my $n_changed=0;
+    for my $name (@ARGV) {
+        $sth->execute($name);
+        my ($id_network , $id_vm, $vm_name) = $sth->fetchrow;
+        my ($id_network2 , $id_vm2, $vm_name2) = $sth->fetchrow;
+        if (!$id_network) {
+            warn "Error: network $name not found.\n";
+            next;
+        }
+        if ($id_network2) {
+            warn "Error: network $name found on node $vm_name and $vm_name2.\n";
+            next;
+        }
+        my $vm = Ravada::VM->open($id_vm);
+
+        my ($network) = grep { $_->{id} == $id_network } $vm->list_virtual_networks();
+        $network->{forward_mode} = $CHANGE_NETWORK_FORWARD;
+        Ravada::Request->change_network(
+            uid => Ravada::Utils::user_daemon->id
+            ,data => $network
+        );
+        $n_changed++;
+    }
+    print "$n_changed networks change requested.\n";
+}
+
 sub DESTROY {
 }
 
@@ -1383,6 +1429,8 @@ purge_nodes($rvd_back)              if $PURGE_NODES;
 
 list_unused_vols($rvd_back)         if $LIST_UNUSED_VOLS;
 show_volume($rvd_back)              if $SHOW_VOLUME;
+
+change_network_forward($rvd_back)   if $CHANGE_NETWORK_FORWARD
 }
 
 

@@ -1552,72 +1552,6 @@ sub test_display_port_already_used($vm) {
     $domain->remove(user_admin);
 }
 
-sub test_display_conflict($vm) {
-    diag("Test display conflict");
-    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
-    $domain->start( remote_ip => '1.1.1.1' , user => user_admin);
-    my ($display_builtin) = @{$domain->info(user_admin)->{hardware}->{display}};
-    $domain->shutdown_now(user_admin);
-
-    my $req = Ravada::Request->add_hardware(
-          uid => user_admin->id
-        ,name => 'display'
-        ,data => { driver => 'x2go' }
-        ,id_domain =>$domain->id
-    );
-    wait_request(check_error => 0);
-    is($req->status,'done');
-
-    my $port = $domain->exposed_port(22);
-    my $sth = connector->dbh->prepare("UPDATE domain_ports SET public_port=NULL "
-        ." WHERE public_port=?");
-    $sth->execute($display_builtin->{port});
-
-    $sth = connector->dbh->prepare("UPDATE domain_ports SET public_port=? "
-        ." WHERE id=?");
-    $sth->execute($display_builtin->{port},$port->{id});
-
-    $sth = connector->dbh->prepare("UPDATE domain_displays SET port=? "
-        ." WHERE id_domain=? AND driver=?");
-    $sth->execute($display_builtin->{port},$domain->id, 'x2go');
-
-    my $port2 = $domain->exposed_port(22);
-    is($port2->{public_port},$display_builtin->{port});
-
-    $domain->shutdown(user => user_admin, timeout => 30);
-    wait_request(debug => 0);
-
-    $domain->start( remote_ip => '1.1.1.1' , user => user_admin);
-    wait_request(debug => 0);
-
-    for ( 1 .. 3 ) {
-        my $display = $domain->info(user_admin)->{hardware}->{display};
-        last if $display->[0]->{port} ne $display->[1]->{port};
-        Ravada::Request->refresh_machine(uid => user_admin->id
-            ,id_domain=> $domain->id
-        );
-        wait_request();
-    }
-
-    my $display = $domain->info(user_admin)->{hardware}->{display};
-    isnt($display->[0]->{port}, $display->[1]->{port}) or die Dumper($display);
-    is($display->[0]->{is_active},1);
-    is($display->[1]->{is_active},1);
-
-    my $port3;
-    for ( 1 .. 10 ) {
-        $port3 = $domain->exposed_port(22);
-        last if $port3->{public_port} && $port3->{public_port} != $display_builtin->{port};
-        Ravada::Request->refresh_machine(uid => user_admin->id ,id_domain => $domain->id
-            , _force => 1);
-        wait_request(debug => 0);
-    }
-    isnt($port3->{public_port},$display_builtin->{port}) or die $domain->id." ".$domain->name;
-
-    $domain->remove(user_admin);
-
-}
-
 sub test_display_conflict_non_builtin($vm) {
     my $base= $BASE->clone(name => new_domain_name, user => user_admin);
     my $req = Ravada::Request->add_hardware(
@@ -1939,7 +1873,6 @@ for my $vm_name ( vm_names() ) {
 
         test_display_iptables($vm);
 
-        test_display_conflict($vm);
         test_displays_cloned($vm);
 
         test_removed_leftover($vm);

@@ -1141,6 +1141,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'manage_pools'
                 || $command eq 'list_storage_pools'
                 || $command eq 'list_cpu_models'
+                || $command eq 'list_networks'
                 ;
         next if ( $command eq 'force_shutdown'
                 || $command eq 'force_reboot'
@@ -2050,6 +2051,21 @@ sub bundle_private_network($self, $id_bundle, $value=1){
         "UPDATE bundles set private_network=? WHERE id=?");
     $sth->execute($value, $id_bundle);
 }
+
+=head2 bundle_isolated
+
+Sets the bundle network isolated
+
+Arguments : id_bundle, value ( defaults 1 )
+
+=cut
+
+sub bundle_isolated($self, $id_bundle, $value=1){
+    my $sth = $self->_dbh->prepare(
+        "UPDATE bundles set isolated=? WHERE id=?");
+    $sth->execute($value, $id_bundle);
+}
+
 
 =head2 add_to_bundle
 

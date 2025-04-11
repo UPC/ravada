@@ -94,7 +94,12 @@ sub _get_controller_generic($self, $item) {
 }
 
 sub _get_controller_network($self) {
-    return $self->_get_controller_generic('network');
+    my @networks = $self->_get_controller_generic('network');
+    for my $net ( @networks ) {
+        $net->{_name} = $net->{network} if
+        !exists $net->{name} && !exists $net->{_name};
+    }
+    return @networks;
 }
 
 1;

@@ -155,13 +155,7 @@ sub _list_machines($rvd, $args) {
     my $user = Ravada::Auth::SQL->new(name => $login)
         or die "Error: uknown user $login";
     return []
-        unless (
-            $user->can_list_machines
-            || $user->can_list_own_machines()
-            || $user->can_list_clones()
-            || $user->can_list_clones_from_own_base()
-            || $user->is_admin()
-        );
+        unless $user->can_view_admin_machines;
 
     if ($LIST_MACHINES_FIRST_TIME) {
         $LIST_MACHINES_FIRST_TIME = 0;

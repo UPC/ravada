@@ -79,12 +79,10 @@ sub test_bundle_2($vm, $n, $do_clone=0, $volatile=0) {
     }
 }
 
-sub test_bundle($vm, $do_clone=0, $volatile=0) {
-
+sub _bundle_2_bases($vm) {
     my $base1 = create_domain_v2(vm => $vm);
     $base1->prepare_base(user_admin);
     $base1->is_public(1);
-    $base1->volatile_clones(1) if $volatile;
 
     my $base2a = create_domain($vm);
     Ravada::Request->add_hardware(
@@ -96,7 +94,6 @@ sub test_bundle($vm, $do_clone=0, $volatile=0) {
     my $base2 = Ravada::Domain->open($base2a->id);
     $base2->prepare_base(user_admin);
     $base2->is_public(1);
-    $base2->volatile_clones(1) if $volatile;
 
     my $name = new_domain_name();
     my $id_bundle = rvd_front->create_bundle($name);
@@ -104,6 +101,49 @@ sub test_bundle($vm, $do_clone=0, $volatile=0) {
 
     rvd_front->add_to_bundle($id_bundle, $base1->id);
     rvd_front->add_to_bundle($id_bundle, $base2->id);
+
+    return ($base1, $base2, $id_bundle);
+}
+
+sub test_bundle_isolated($vm) {
+
+    my ($base1, $base2, $id_bundle) = _bundle_2_bases($vm);
+
+    rvd_front->bundle_isolated($id_bundle,1);
+
+    my $user_name = new_domain_name;
+    $user_name =~ s/(.*?)_(.*)/$1.$2/;
+    my $user = create_user($user_name);
+
+    _req_clone($user, $base1);
+
+    my ($net) = grep { $_->{id_owner} == $user->id } $vm->list_virtual_networks();
+    ok($net);
+
+    test_network_isolated($vm, $net->{name}) if $vm->type eq 'KVM';
+
+}
+
+sub test_network_isolated($vm, $name) {
+    my $net = $vm->vm->get_network_by_name($name);
+    die "Error: net $name not found" if !$net;
+
+    my $doc = XML::LibXML->load_xml(string => $net->get_xml_description());
+
+    my $forward_mode = 'none';
+    my ($forward) = $doc->findnodes("/network/forward");
+
+    $forward_mode = $forward->getAttribute('mode')  if $forward;
+
+    is($forward_mode, "none");
+}
+
+sub test_bundle($vm, $do_clone=0, $volatile=0) {
+
+    my ($base1, $base2) = _bundle_2_bases($vm);
+
+    $base1->volatile_clones(1) if $volatile;
+    $base2->volatile_clones(1) if $volatile;
 
     my $user = create_user();
 
@@ -250,6 +290,8 @@ for my $vm_name ( vm_names() ) {
     skip $msg,10    if !$vm;
 
     diag("Testing $vm_name bundle");
+
+    test_bundle_isolated($vm); # with clone
 
     test_bundle_2($vm,3,0);
     test_bundle_2($vm,3,1);

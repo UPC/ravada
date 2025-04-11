@@ -741,6 +741,10 @@ any '/v2/network/new/#id_vm' => sub($c) {
             $data = decode_json($req->output);
         };
         warn $@ if $@;
+        $data->{_owner} = {
+            id => $USER->id
+            ,name => $USER->name
+        };
     }
     $c->render(json => $data);
 };
@@ -749,6 +753,10 @@ get '/v2/network/info/#id' => sub($c) {
     my $sth = $RAVADA->_dbh->prepare("SELECT * from virtual_networks WHERE id=?");
     $sth->execute($c->stash('id'));
     my $row = $sth->fetchrow_hashref;
+    $row->{_owner}
+        = { id => $row->{id_owner}
+            ,name => Ravada::Utils::search_user_name($RAVADA->_dbh,$row->{id_owner})
+        };
     return $c->render(json => $row);
 };
 
@@ -2680,15 +2688,25 @@ get '/search_user/#name'=> sub($c) {
     return _search_user($c, $name);
 };
 
+get '/search_other_user/#name'=> sub($c) {
+    my $name = $c->stash('name');
+    return _search_user($c, $name,1);
+};
+
 get '/search_user/'=> sub($c) {
 
     return _search_user($c);
 };
 
 
-sub _search_user($c,$name='') {
+sub _search_user($c, $name='', $other=0) {
 
-    my $list_found = $RAVADA->list_users_share($name,$USER);
+    my $list_found;
+    if ($other) {
+        $list_found = $RAVADA->list_users_share($name,$USER);
+    } else {
+        $list_found = $RAVADA->list_users_share($name);
+    }
     my $found;
     if (scalar(@$list_found) == 1 ) {
         ($found) = @$list_found ;
@@ -2696,7 +2714,7 @@ sub _search_user($c,$name='') {
         ($found) = grep { $_->{name} eq $name } @$list_found;
     }
     $found = $found->{name} if $found;
-    return $c->render(json => {found => $found , count => scalar(@$list_found) } );
+    return $c->render(json => {found => $found , count => scalar(@$list_found), list => $list_found } );
 };
 
 get '/group/#type/list_members/#name' => sub($c) {
@@ -3652,6 +3670,9 @@ sub admin {
         }
     }
     if ($page eq 'machines') {
+
+        return access_denied($c) if !$USER->can_view_admin_machines;
+
         _count_nodes($c);
         Ravada::Request->refresh_vms();
         $c->stash(n_clones_hide => ($CONFIG_FRONT->{admin}->{hide_clones} or 10) );

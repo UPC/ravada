@@ -75,25 +75,35 @@ sub test_display_conflict_next($vm) {
     my @domains = _conflict_port($domain1, $port_conflict);
 
     my $display_x2go_b;
-    my $displays1b
-    = $domain1->info(user_admin)->{hardware}->{display};
+    my $displays1b;
     for ( 1 .. 10 ) {
+        $displays1b = $domain1->info(user_admin)->{hardware}->{display};
+
         ($display_x2go_b) = grep { $_->{driver} eq 'x2go' } @$displays1b;
         last if $display_x2go_b->{port};
         Ravada::Request->refresh_machine(id_domain => $domain1->id, uid => user_admin->id);
         sleep 1;
         wait_request();
     }
-    isnt($display_x2go_b->{port}, $port_conflict,
-        $domain1->id." ".$domain1->name)
-        or die Dumper(
-            $domain1->id
-            ,$domain1->name
-            ,[map { [$_->{id}, $_->{driver},$_->{port}]} @$displays1b ]
-        );
-    like($display_x2go_b->{port},qr/^\d+$/);
 
-    _check_iptables_fixed_conflict($vm, $port_conflict) if !$<;
+    my %ports;
+
+    for my $domain ( $domain0,$domain1, @domains) {
+        my $display_curr = $domain->info(user_admin)->{hardware}->{display};
+
+        my %ports_curr = map { $_->{port} => 1 } @$display_curr;
+        for my $i (keys %ports_curr ) {
+            ok(!exists $ports{$i});
+            $ports{$i}++;
+        }
+        for my $display (@$display_curr) {
+            if ($display->{is_builtin}) {
+                _check_iptables_port($vm, $display->{port}) if !$<;
+            } else {
+                _check_iptables_prerouting($vm, $display->{port}) if !$<;
+            }
+        }
+    }
 
     for (@domains) {
         $_->remove(user_admin);
@@ -137,7 +147,7 @@ sub _listening_ports {
     return \%port;
 }
 
-sub _check_iptables_fixed_conflict($vm, $port) {
+sub _check_iptables_port($vm, $port) {
     #the $port should be in chain RAVADA accept because it is builtin
     # and not on the pre-routing
     my ($out,$err) = $vm->run_command("iptables-save");
@@ -152,6 +162,23 @@ sub _check_iptables_fixed_conflict($vm, $port) {
     my @iptables_prerouting = grep(/^-A PREROUTING .*--dport $port/, split(/\n/,$out));
     is(scalar(@iptables_prerouting),0) or die Dumper(\@iptables_prerouting);
 }
+
+sub _check_iptables_prerouting($vm, $port) {
+    #the $port should be in chain RAVADA accept because it is builtin
+    # and not on the pre-routing
+    my ($out,$err) = $vm->run_command("iptables-save");
+    die $err if $err;
+    my @iptables_ravada = grep { /^-A RAVADA/ } split /\n/,$out;
+    my @accept = grep /^-A RAVADA -s.*--dport $port .*-j ACCEPT/, @iptables_ravada;
+    is(scalar(@accept),0,"Expecting --dport $port ") or die Dumper(\@iptables_ravada,\@accept);
+
+    my @drop = grep /^-A RAVADA -d.*--dport $port .*-j DROP/, @iptables_ravada;
+    is(scalar(@drop),0) or die Dumper(\@iptables_ravada,\@drop);
+
+    my @iptables_prerouting = grep(/^-A PREROUTING .*--dport $port/, split(/\n/,$out));
+    is(scalar(@iptables_prerouting),1) or die Dumper(\@iptables_prerouting);
+}
+
 
 sub _add_hardware($domain, $name, $data) {
     my $req = Ravada::Request->add_hardware(
@@ -203,6 +230,7 @@ sub _conflict_port($domain1, $port_conflict) {
     for ( 1 .. 100 ) {
         $req = Ravada::Request->refresh_machine_ports(uid => user_admin->id
             ,id_domain => $domain1->id
+            ,_force => 1
         );
         last if $req;
         sleep 1;
@@ -265,7 +293,6 @@ for my $db ( 'mysql', 'sqlite' ) {
               $BASE = create_domain($vm);
           }
           flush_rules() if !$<;
-
 
           test_display_conflict_next($vm);
       }

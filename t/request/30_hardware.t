@@ -806,7 +806,11 @@ sub test_remove_hardware_by_index($vm, $hardware) {
         is($items2->[0], $items1->[0]);
         is($items2->[1], $items1->[2]);
     } elsif ($hardware !~ /^(usb controller|video)$/) {
-        die "Error: no $name_field in ".Dumper($items2) if !exists $items2->[0]->{$name_field};
+        for my $n ( 0 .. scalar(@$items2)-1) {
+            my $curr = $items2->[$n];
+            die "Error: no $name_field for ".$domain->name
+            ." in $hardware\[$n\] ".Dumper($items2) if !exists $curr->{$name_field};
+        }
 
         is($items2->[0]->{$name_field},$items1->[0]->{$name_field});
         is($items2->[1]->{$name_field},$items1->[2]->{$name_field});

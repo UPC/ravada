@@ -773,7 +773,7 @@ sub _set_default_info($self, $listen_ip=undef, $network=undef) {
         ,address => $info->{ip}
         ,type => 'network'
         ,driver => 'virtio'
-        ,name => $net->{name}
+        ,network => $net->{name}
     };
     $self->_store(hardware => $hardware );
 
@@ -962,7 +962,7 @@ sub _new_network($self) {
         ,address => ''
         ,type => 'network'
         ,driver => 'virtio'
-        ,name => "net".(scalar(@$list)+1)
+        ,network => "net".(scalar(@$list)+1)
     };
 }
 

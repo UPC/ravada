@@ -571,6 +571,7 @@ sub _around_create_domain {
     $domain->_data('is_compacted' => 1);
     $domain->_data('alias' => $alias) if $alias;
     $domain->_data('date_status_change', Ravada::Utils::now());
+    $domain->_fetch_networking_mode();
     $self->_change_hardware_install($domain,$hardware) if $hardware;
 
     if ($id_base) {
@@ -1166,6 +1167,11 @@ sub _do_select_vm_db {
     }
 
     confess Dumper(\%args) if !keys %args;
+    if (exists $args{name} && scalar(keys(%args))==1) {
+        my ($type) = ref($self) =~ /.*::(\w+)/;
+        confess "Error: I can't find type in ".ref($self) if !$type;
+        $args{vm_type} = $type;
+    }
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT * FROM vms WHERE ".join(" AND ",map { "$_=?" } sort keys %args )
     );
@@ -1563,6 +1569,7 @@ sub _clean_virtual_network_data($net) {
           'is_active',
           'is_public',
           'is_active',
+          'forward_mode',
           'name'
     );
 
@@ -1578,7 +1585,6 @@ sub _insert_network($self, $net) {
     delete $net->{id};
     $net->{id_owner} = Ravada::Utils::user_daemon->id
     if !exists $net->{id_owner};
-
 
     my $net2 = _clean_virtual_network_data($net);
 
@@ -1640,6 +1646,7 @@ sub _around_new_network($orig, $self, $name) {
     $data->{id_vm} = $self->id;
     $data->{is_active}=1;
     $data->{autostart}=1;
+    $data->{forward_mode} = 'nat';
     return $data;
 }
 
@@ -1668,7 +1675,7 @@ sub _around_create_network($orig, $self,$data, $id_owner, $request=undef) {
     delete $data->{internal_id} if exists $data->{internal_id};
     eval { $self->$orig($data) };
     $request->error(''.$@) if $@ && $request;
-    $data->{id_owner} = $id_owner;
+    $data->{id_owner} = ($data->{id_owner} or  $id_owner);
     $data->{is_public} = 0 if !$data->{is_public};
     $self->_insert_network($data);
 }
@@ -1759,6 +1766,34 @@ sub _around_list_networks($orig, $self) {
     $self->_check_networks() if $first_time;
 
     return @list;
+}
+
+=head2 list_virtual_networks_data
+
+Returns a list of information of the virtual networks in this virtual
+machines manager (VM) from the database
+
+Arguments:
+
+Pass either the VM object or an id_vm
+
+=cut
+
+sub list_virtual_networks_data($id_vm) {
+    if (ref($id_vm)) {
+        my $self = $id_vm;
+        $id_vm = $self->id;
+    }
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT * FROM virtual_networks "
+        ." WHERE id_vm=?"
+    );
+    $sth->execute($id_vm);
+    my @networks;
+    while ( my $row = $sth->fetchrow_hashref) {
+        push @networks,($row);
+    }
+    return @networks;
 }
 
 =head2 is_active
@@ -3126,6 +3161,25 @@ Arguments: dir , optional regexp pattern
 sub list_files($self, $dir, $pattern=undef) {
     return $self->_list_files_local($dir, $pattern) if $self->is_local;
     return $self->_list_files_remote($dir, $pattern);
+}
+
+sub _set_active_machines_isolated($self, $network) {
+    my $sth = $self->_dbh->prepare("SELECT id FROM domains "
+        ." WHERE id_vm=? "
+        ."   AND status='active'"
+    );
+    $sth->execute($self->id);
+    while ( my ($id_domain) = $sth->fetchrow) {
+        my $domain = Ravada::Front::Domain->open($id_domain);
+        my @interfaces = $domain->get_controller('network');
+        my $found = 0;
+        for my $if ( @interfaces ) {
+            next if !$if->{network} || $if->{network} ne $network;
+            $found++;
+            last;
+        }
+        $domain->_fetch_networking_mode() if $found;
+    }
 }
 
 1;

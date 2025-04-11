@@ -1428,6 +1428,25 @@ sub can_change_hardware_network($user, $domain, $data) {
     return 0;
 }
 
+=head2 can_view_admin_machines
+
+Returns true if the user can acess admin machines menu
+
+=cut
+
+
+
+sub can_view_admin_machines($user) {
+    return 1
+        if $user->can_list_machines
+            || $user->can_list_own_machines()
+            || $user->can_list_clones()
+            || $user->can_list_clones_from_own_base()
+            || $user->is_admin()
+            ;
+
+    return 0;
+}
 
 sub AUTOLOAD($self, $domain=undef) {
 
