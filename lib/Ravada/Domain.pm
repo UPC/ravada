@@ -4577,9 +4577,12 @@ sub _delete_ip_rule ($self, $iptables, $vm = $self->_vm) {
     return if !$vm->is_active;
 
     my ($s, $d, $filter, $chain, $jump, $extra0) = @$iptables;
+
+    if ( $extra0 && exists $extra0->{s_port} && $extra0->{s_port}==0 ) {
+        delete $extra0->{s_port};
+    }
     lock_hash %$extra0;
 
-    confess if $extra0 && exists $extra0->{s_port} && $extra0->{s_port}==0;
     $filter = 'filter' if !$filter;
 
     if ($s) {
