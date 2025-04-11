@@ -749,7 +749,7 @@ sub _discover() {
             if ($hostname ne 'localhost') {
                 my $domain = rvd_front->search_domain($name);
                 if (!$domain) {
-                    confess if $name !~ /\d+$/;
+                    confess if $name !~ /\d+$/ && $name !~ /tst_mojo_\d+/;
                     Ravada::Request->create_domain(
                         id_owner => user_admin->id
                         ,vm => $vm_type
