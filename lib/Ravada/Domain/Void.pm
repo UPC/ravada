@@ -416,7 +416,7 @@ sub _set_ip_address($self) {
     for my $net (@{$hardware->{network}}) {
         next if !ref($net);
         next if exists $net->{address} && $net->{address};
-        next if $net->{type} ne 'nat' && $net->{type} ne 'bridge';
+        next if $net->{type} ne 'network' && $net->{type} ne 'bridge';
         $net->{address} = '198.51.100.'.int(rand(253)+2);
         $changed++;
     }
@@ -771,7 +771,7 @@ sub _set_default_info($self, $listen_ip=undef, $network=undef) {
     $hardware->{network}->[0] = {
         hwaddr => $info->{mac}
         ,address => $info->{ip}
-        ,type => 'nat'
+        ,type => 'network'
         ,driver => 'virtio'
         ,network => $net->{name}
     };
@@ -960,7 +960,7 @@ sub _new_network($self) {
     my $data = {
         hwaddr => _new_mac()
         ,address => ''
-        ,type => 'nat'
+        ,type => 'network'
         ,driver => 'virtio'
         ,network => "net".(scalar(@$list)+1)
     };

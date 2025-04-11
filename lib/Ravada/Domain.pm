@@ -309,7 +309,7 @@ sub _fetch_networking_mode($self) {
     my @interfaces = $self->get_controller('network');
     my @virtual_networks = Ravada::VM::list_virtual_networks_data($self->_data('id_vm'));
     for my $item (@interfaces) {
-        next if lc($item->{type}) ne 'nat';
+        next if lc($item->{type}) ne 'network';
         next if !$item->{network};
         for my $network (@virtual_networks) {
             next unless $network->{name} eq $item->{network};
