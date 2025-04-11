@@ -7059,16 +7059,18 @@ sub _cmd_close_exposed_ports($self, $request) {
     $domain->_close_exposed_port($port);
 
     if ($request->defined_arg('clean')) {
-        my $query = "UPDATE domain_ports SET public_port=NULL"
+        my $query = "UPDATE domain_ports SET public_port=?"
                     ." WHERE id_domain=? ";
         $query .=" AND internal_port=?" if $port;
 
         my $sth_update = $CONNECTOR->dbh->prepare($query);
 
         if ($port) {
-            $sth_update->execute($domain->id, $port);
+            $sth_update->execute($domain->_vm->_new_free_port()
+                ,$domain->id, $port);
         } else {
-            $sth_update->execute($domain->id);
+            $sth_update->execute($domain->_vm->_new_free_port()
+                ,$domain->id);
         }
     }
 }

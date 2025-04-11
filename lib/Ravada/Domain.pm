@@ -4483,32 +4483,25 @@ sub _post_start {
 
 sub _check_port_conflicts($self) {
     my @displays = $self->_get_controller_display();
-    my $sth = $self->_dbh->prepare("SELECT id,id_domain,internal_port FROM domain_ports"
-        ." WHERE public_port=? AND is_active=1 AND id_domain <> ?"
-    );
-    for my $display ( @displays ) {
-        for my $port ($display->{port}) {
-            $sth->execute($port, $self->id);
-            while ( my ($id, $id_domain, $internal_port) = $sth->fetchrow ) {
-                # Updating the graphics port is not possible rightnow libvirt 5.0
-                # my $new_port = $self->_vm->new_free_port();
-                # $self->_update_device_graphics($display->{driver},{port => $new_port});
-
-                my $req_close= Ravada::Request->close_exposed_ports(
+    my %dupe_port;
+    for my $display (@displays) {
+        $dupe_port{$display->{port}}++ if $display->{port};
+    }
+    for my $port (keys %dupe_port) {
+        next if $dupe_port{$port}<2;
+        my $req_close= Ravada::Request->close_exposed_ports(
                            uid => Ravada::Utils::user_daemon->id
-                         ,port => $internal_port
-                    ,id_domain => $id_domain
+                    ,id_domain => $self->id
                         ,clean => 1
-                );
-                my $req = Ravada::Request->open_exposed_ports(
-                           uid => Ravada::Utils::user_daemon->id
-                    ,id_domain => $id_domain
-                ,after_request => $req_close->id
-                ,retry => 20
+        );
+        my $req = Ravada::Request->open_exposed_ports(
+                       uid => Ravada::Utils::user_daemon->id
+                ,id_domain => $self->id
+            ,after_request => $req_close->id
+                    ,retry => 20
                 ,_force => 1
-                );
-            }
-        }
+        );
+
     }
 }
 
@@ -7491,6 +7484,15 @@ sub refresh_ports($self, $request=undef) {
         my $is_port_active_txt = "up";
         $is_port_active_txt = "down" if !$is_port_active;
         $msg .= " $port->{internal_port}:$is_port_active_txt";
+
+        Ravada::Request->open_exposed_ports(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_domain => $self->id
+            ,retry => 20
+            ,_force => 1
+        ) if $is_active && !defined $port->{public_port}
+            && $self->_data('networking') ne 'isolated';
+
     }
     if ($is_active && $self->_data('networking') eq 'isolated') {
         $msg = "Virtual machine ".$self->name." isolated. No ports exposed.";
