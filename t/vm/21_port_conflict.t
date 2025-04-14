@@ -69,7 +69,6 @@ sub test_display_conflict_next($vm) {
         );
 
         wait_request(debug=>1);
-        warn Dumper([$req->id,$req->status, $req->output, $req->error]);
     }
     confess if !defined $port_conflict;
 
