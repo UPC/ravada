@@ -52,7 +52,7 @@ sub test_display_conflict_next($vm) {
     my $displays1;
     my $port_conflict;
 
-    for ( 1 .. 10 ) {
+    for my $n ( 1 .. 10 ) {
         $displays1 = $domain1->info(user_admin)->{hardware}->{display};
         if ($vm->type eq 'KVM') {
             isnt($displays1->[1+$TLS]->{port}, $next_port_builtin) or die Dumper($displays1);
@@ -62,13 +62,14 @@ sub test_display_conflict_next($vm) {
         my ($display_x2go) = grep { $_->{driver} eq 'x2go' } @$displays1;
         $port_conflict = $display_x2go->{port};
         last if $port_conflict;
-        Ravada::Request->open_exposed_ports(
+        my $req = Ravada::Request->open_exposed_ports(
             uid => user_admin->id
             ,id_domain => $domain1->id
             ,_force => 1
         );
 
-        wait_request();
+        wait_request(debug=>1);
+        warn Dumper([$req->id,$req->status, $req->output, $req->error]);
     }
     confess if !defined $port_conflict;
 
@@ -263,7 +264,7 @@ for my $db ( 'mysql', 'sqlite' ) {
 
     $USER = create_user(new_domain_name(),"bar");
 
-    for my $vm_name ( vm_names() ) {
+    for my $vm_name (reverse vm_names() ) {
 
         diag("Testing $vm_name VM $db");
         my $CLASS= "Ravada::VM::$vm_name";

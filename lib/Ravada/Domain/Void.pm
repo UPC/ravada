@@ -416,7 +416,7 @@ sub _set_ip_address($self) {
     for my $net (@{$hardware->{network}}) {
         next if !ref($net);
         next if exists $net->{address} && $net->{address};
-        next if $net->{type} ne 'network' && $net->{type} ne 'bridge';
+        next if $net->{type} ne 'nat' && $net->{type} ne 'bridge';
         $net->{address} = '198.51.100.'.int(rand(253)+2);
         $changed++;
     }
@@ -771,7 +771,7 @@ sub _set_default_info($self, $listen_ip=undef, $network=undef) {
     $hardware->{network}->[0] = {
         hwaddr => $info->{mac}
         ,address => $info->{ip}
-        ,type => 'network'
+        ,type => 'nat'
         ,driver => 'virtio'
         ,network => $net->{name}
     };
@@ -960,7 +960,7 @@ sub _new_network($self) {
     my $data = {
         hwaddr => _new_mac()
         ,address => ''
-        ,type => 'network'
+        ,type => 'nat'
         ,driver => 'virtio'
         ,network => "net".(scalar(@$list)+1)
     };
@@ -1315,7 +1315,7 @@ sub reload_config($self, $data) {
 sub has_nat_interfaces($self) {
     my $config = $self->_load();
     for my $if (@{$config->{hardware}->{network}}) {
-        return 1 if exists $if->{type} && $if->{type} eq 'network';
+        return 1 if exists $if->{type} && $if->{type} eq 'nat';
     }
     return 0;
 }

@@ -309,7 +309,7 @@ sub _fetch_networking_mode($self) {
     my @interfaces = $self->get_controller('network');
     my @virtual_networks = Ravada::VM::list_virtual_networks_data($self->_data('id_vm'));
     for my $item (@interfaces) {
-        next if lc($item->{type}) ne 'network';
+        next if lc($item->{type}) ne 'nat';
         next if !$item->{network};
         for my $network (@virtual_networks) {
             next unless $network->{name} eq $item->{network};
@@ -3878,7 +3878,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
     die "Error: I can't get the internal IP of ".$self->name." ".($internal_ip or '<UNDEF>').". Retry."
         if !$internal_ip || $internal_ip !~ /^(\d+\.\d+)/;
 
-    return unless exists $internal_ip_info->{type} && $internal_ip_info->{type} =~ /^(bridge|network)$/;
+    return unless exists $internal_ip_info->{type} && $internal_ip_info->{type} =~ /^(bridge|nat)$/i;
 
     if ($public_port
         && ( $self->_used_ports_iptables($public_port, "$internal_ip:$internal_port")

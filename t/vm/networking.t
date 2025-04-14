@@ -933,8 +933,11 @@ sub test_change_forward_active($vm) {
     my $user2 = create_user();
 
     my $domain = _create_domain($vm, $net);
-    is($domain->_data('networking'),'nat');
+
+    my $info = $domain->info(user_admin);
+    is($domain->_data('networking'),'nat') or exit;
     $domain->start(user_admin);
+
     for my $mode ('none' , 'nat') {
         $net2->{forward_mode} = $mode;
         my $req_change2 = Ravada::Request->change_network(
