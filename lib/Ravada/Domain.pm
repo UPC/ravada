@@ -6048,7 +6048,7 @@ sub client_status($self, $force=0) {
     $self->_data('client_status', $status);
 #    $self->_data('client_status_time_checked', time );
 
-    if ( $status && $self->_data('shutdown_grace_time')) {
+    if ( $status ) {
         my $value = 1;
         if ($status eq 'disconnected') {
             $value = 0;
