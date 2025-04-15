@@ -151,14 +151,8 @@ sub _list_machines($rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my $user = Ravada::Auth::SQL->new(name => $login)
         or die "Error: uknown user $login";
-    return (0,[])
-        unless (
-            $user->can_list_machines
-            || $user->can_list_own_machines()
-            || $user->can_list_clones()
-            || $user->can_list_clones_from_own_base()
-            || $user->is_admin()
-        );
+    return []
+        unless $user->can_view_admin_machines;
 
     $args->{_list_machines_time} = 0 if !$args->{_list_machines_time};
     $args->{_list_machines_time}++;

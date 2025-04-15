@@ -225,7 +225,7 @@ sub test_change_hardware($vm, @nodes) {
     }
     my @hardware = grep (!/^disk$/, sort keys %{$info->{hardware}});
     push @hardware,("disk");
-    for my $hardware ( @hardware) {
+    for my $hardware (reverse @hardware) {
         next if $hardware =~ /cpu|features|memory/;
         my $tls = 0;
         $tls = grep {$_->{driver} =~ /-tls/} @{$info->{hardware}->{$hardware}}
@@ -260,9 +260,14 @@ sub test_change_hardware($vm, @nodes) {
 
             my $info2 = $clone2->info(user_admin);
             my $devices2 = $info2->{hardware}->{$hardware};
-            is( scalar(@$devices2),$n_expected
+            if ($hardware eq 'video' && $vm->type eq 'KVM') {
+                is( scalar(@$devices2),1);
+                is($devices2->[0]->{type},'none');
+            } else {
+                is( scalar(@$devices2),$n_expected
                 , $clone2->name.": Expecting 1 $hardware device less in instance in node ".$node->name)
                 or die Dumper($devices2);
+            }
         }
 
         my $clone_fresh = Ravada::Domain->open($clone->id);

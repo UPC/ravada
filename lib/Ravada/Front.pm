@@ -1143,6 +1143,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'manage_pools'
                 || $command eq 'list_storage_pools'
                 || $command eq 'list_cpu_models'
+                || $command eq 'list_networks'
                 ;
         next if ( $command eq 'force_shutdown'
                 || $command eq 'force_reboot'
@@ -1796,6 +1797,7 @@ sub list_networks($self, $id_vm ,$id_user) {
         $self->_search_user($row->{id_owner},\%owner);
         $row->{_owner} = $owner{$row->{id_owner}};
         $row->{_can_change}=0;
+        $row->{is_active}=0 if !defined $row->{is_active};
 
         $row->{_can_change}=1
         if $user->is_admin || $user->can_manage_all_networks
@@ -2051,6 +2053,21 @@ sub bundle_private_network($self, $id_bundle, $value=1){
         "UPDATE bundles set private_network=? WHERE id=?");
     $sth->execute($value, $id_bundle);
 }
+
+=head2 bundle_isolated
+
+Sets the bundle network isolated
+
+Arguments : id_bundle, value ( defaults 1 )
+
+=cut
+
+sub bundle_isolated($self, $id_bundle, $value=1){
+    my $sth = $self->_dbh->prepare(
+        "UPDATE bundles set isolated=? WHERE id=?");
+    $sth->execute($value, $id_bundle);
+}
+
 
 =head2 add_to_bundle
 

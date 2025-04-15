@@ -1726,27 +1726,49 @@ sub get_info {
     return $info;
 }
 
-sub _ip_agent($self) {
+sub _ip_info_get($self) {
     my @ip;
     eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_AGENT) };
-    return if $@ && $@ =~ /^libvirt error code: (74|86),/;
-    warn $@ if $@;
+    warn $@ if $@ && $@ !~ /^libvirt error code: (74|86),/;
 
-    my $found;
+    if (!@ip) {
+        eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_LEASE) };
+        warn $@ if $@;
+    }
+
+    my $found={};
+
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+    my @interfaces =  $doc->findnodes('/domain/devices/interface');
+
     for my $if (@ip) {
         next if $if->{name} =~ /^lo/;
         for my $addr ( @{$if->{addrs}} ) {
 
             next unless $addr->{type} == 0 && $addr->{addr} !~ /^127\./;
+            next if $addr->{addr} =~ /^169\.254/; # ignore rfc5735
+            $found = {
+                'hwaddr' => $if->{hwaddr}
+                ,'addr' => $addr->{addr}
+            };
 
-            $found = $addr->{addr} if !$found;
+            for my $dev (@interfaces) {
+                my ($mac) = $dev->findnodes("mac");
+                next unless $mac
+                    && lc($mac->getAttribute('address')) eq lc($if->{hwaddr});
 
-            return $addr->{addr}
-            if $self->_vm->_is_ip_nat($addr->{addr});
+                my $type = 'NAT';
+                $type = 'bridge' if $dev->getAttribute('type') eq 'bridge';
+
+                $found->{'type'} = $type;
+                last;
+            }
+            return $found if $found->{hwaddr} && $found->{type};
         }
     }
     return $found;
 }
+
 
 #sub _ip_arp($self) {
 #    my @sys_virt_version = split('\.', $Sys::Virt::VERSION);
@@ -1757,18 +1779,14 @@ sub _ip_agent($self) {
 #}
 
 sub ip($self) {
-    my ($ip) = $self->_ip_agent();
-    return $ip if $ip;
+    my $ip_info = $self->ip_info();
+    return $ip_info->{addr} if exists $ip_info->{addr};
+}
 
-    my @ip;
-    eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_LEASE) };
-    warn $@ if $@;
-    return $ip[0]->{addrs}->[0]->{addr} if $ip[0];
-
-#    @ip = $self->_ip_arp();
-#    return $ip[0]->{addrs}->[0]->{addr} if $ip[0];
-
-    return;
+sub ip_info($self) {
+    my $ip = $self->_ip_info_get();
+    lock_hash(%$ip);
+    return $ip;
 }
 
 =head2 set_max_mem
@@ -2537,8 +2555,8 @@ sub _set_controller_display_spice($self, $number, $data) {
             $graphic = $g0;
         }
     }
+    my ($devices) = $doc->findnodes("/domain/devices");
     if (!$graphic) {
-        my ($devices) = $doc->findnodes("/domain/devices");
         $graphic = $devices->addNewChild(undef,'graphics');
     }
 
@@ -2569,6 +2587,8 @@ sub _set_controller_display_spice($self, $number, $data) {
         my $item = $graphic->addNewChild(undef, $name);
         $item->setAttribute($attrib => $value);
     }
+    _add_spice_related($devices);
+
     $self->reload_config($doc);
 }
 
@@ -2691,6 +2711,13 @@ sub _remove_device($self, $index, $device, $attribute_name0=undef, $attribute_va
             $file = $source->getAttribute('file') if $source;
 
             $devices->removeChild($controller);
+
+            if ($device eq 'graphics' && $controller->getAttribute('type') eq 'spice') {
+                $self->_remove_spice_related($devices);
+            } elsif ($device eq 'video') {
+                $self->_set_minimal_video($devices);
+            }
+
             $self->_vm->connect if !$self->_vm->vm;
             $self->reload_config($doc);
 
@@ -2704,6 +2731,65 @@ sub _remove_device($self, $index, $device, $attribute_name0=undef, $attribute_va
 
     confess "ERROR: $device $msg ".($index or '<UNDEF>')
         ." not removed, only ".($ind)." found in ".$self->name."\n";
+}
+
+sub _set_minimal_video($self, $devices) {
+    my $string = 'video';
+    my @current = $devices->findnodes($string);
+    if (!@current) {
+        my $video = $devices->addNewChild(undef,'video');
+        my $model = $video->addNewChild(undef,'model');
+        $model->setAttribute('type' => 'none');
+    }
+
+}
+
+sub _remove_spice_related($self, $devices) {
+    for my $redir ($devices->findnodes("redirdev[\@type=\'spicevmc\']")) {
+        $devices->removeChild($redir);
+    }
+    my ($audio) = $devices->findnodes("audio[\@type='spice']");
+    $devices->removeChild($audio) if $audio;
+
+    my ($channel) = $devices->findnodes("channel[\@type='spicevmc']");
+    $devices->removeChild($channel) if $channel;
+}
+
+sub _add_spice_related($devices) {
+
+    if (!$devices->findnodes("redirdev[\@type=\'spicevmc\']")) {
+        for ( 1 .. 3 ) {
+            my $redir = $devices->addNewChild(undef,'redirdev');
+            $redir->setAttribute('type' => 'spicevmc');
+            $redir->setAttribute('bus' => 'usb');
+        }
+    }
+    my @audio = $devices->findnodes("audio");
+    my ($none) = grep { $_->getAttribute('type') eq 'none' } @audio;
+
+    if (!@audio || $none) {
+        $devices->removeChild($none) if $none;
+
+        my $audio= $devices->addNewChild(undef,'audio');
+        $audio->setAttribute(type =>'spice');
+        $audio->setAttribute(id => 1);
+    }
+
+    if (!$devices->findnodes("channel[\@type=\'spicevmc\']")) {
+        my $channel = $devices->addNewChild(undef,'channel');
+        $channel->setAttribute('type' => 'spicevmc');
+
+        my $target = $channel->addNewChild(undef,'target');
+        $target->setAttribute('type' => 'virtio');
+        $target->setAttribute('name' => 'com.redhat.spice.0');
+
+        my $address = $channel->addNewChild(undef,'address');
+        $address->setAttribute('type' => 'virtio-serial');
+        $address->setAttribute('controller' => 0);
+        $address->setAttribute('bus' => 0);
+        $address->setAttribute('port' => 1);
+
+    }
 }
 
 sub _remove_controller_display($self, $index, $attribute_name=undef, $attribute_value=undef) {
