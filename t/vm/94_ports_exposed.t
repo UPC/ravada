@@ -81,7 +81,7 @@ sub test_expose_port($vm) {
     is(scalar(@prerouting),1);
     my @out= split /\n/, `iptables-save`;
     my @forward = (grep /-s $remote_ip2\/32 -d $internal_ip.* --dport 22.*-j ACCEPT/, @out);
-    is(scalar(@forward),1,"-s $remote_ip2\/32 -d $internal_ip.* --dport 22.*-j ACCEPT") or die Dumper([grep /FORWARD/,@out]);
+    is(scalar(@forward),1,"-s $remote_ip2\/32 -d $internal_ip.* --dport 22.*-j ACCEPT") or die $domain->name." ". Dumper([grep /FORWARD/,@out]);
     remove_domain($domain0);
 }
 

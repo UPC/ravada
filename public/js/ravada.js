@@ -1325,7 +1325,7 @@
             $scope.search_shared_user = function() {
                 $scope.searching_shared_user = true;
                 $scope.shared_user_found = '';
-                $http.get("/search_user/"+$scope.user_share)
+                $http.get("/search_other_user/"+$scope.user_share)
                 .then(function(response) {
                     $scope.shared_user_found = response.data.found;
                     $scope.shared_user_count = response.data.count;

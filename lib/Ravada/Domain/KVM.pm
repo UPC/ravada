@@ -1757,7 +1757,9 @@ sub _ip_info_get($self) {
                 next unless $mac
                     && lc($mac->getAttribute('address')) eq lc($if->{hwaddr});
 
-                my ($type) = $dev->getAttribute('type');
+                my $type = 'NAT';
+                $type = 'bridge' if $dev->getAttribute('type') eq 'bridge';
+
                 $found->{'type'} = $type;
                 last;
             }

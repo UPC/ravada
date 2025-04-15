@@ -300,11 +300,40 @@ sub _vm_disconnect {
     $self->_vm->disconnect();
 }
 
+sub _fetch_networking_mode($self) {
+
+    my $is_active = $self->is_active;
+    my $networking_old = $self->_data('networking');
+
+    my $networking = '';
+    my @interfaces = $self->get_controller('network');
+    my @virtual_networks = Ravada::VM::list_virtual_networks_data($self->_data('id_vm'));
+    for my $item (@interfaces) {
+        next if lc($item->{type}) ne 'nat';
+        next if !$item->{network};
+        for my $network (@virtual_networks) {
+            next unless $network->{name} eq $item->{network};
+            next unless $network->{forward_mode};
+            if( $network->{forward_mode} eq 'nat') {
+                $networking = 'nat';
+            } elsif ($network->{forward_mode} eq 'none') {
+                $networking = 'isolated' unless $networking eq 'nat';
+            }
+            last;
+        }
+        last if $networking eq 'nat';
+    }
+    if (!$is_active || $networking eq 'isolated' || !$self->_data('networking')) {
+        $self->_data('networking' => $networking);
+    }
+}
+
 sub _around_start($orig, $self, @arg) {
 
     $self->_post_hibernate() if $self->is_hibernated && !$self->_data('post_hibernated');
     if ( !$self->is_active ) {
         $self->_unlock_host_devices(0);
+        $self->_fetch_networking_mode();
     }
 
     $self->_start_preconditions(@arg);
@@ -2298,6 +2327,7 @@ sub info($self, $user) {
         ,auto_compact => ($self->auto_compact or 0)
         ,date_changed => $self->_data('date_changed')
         ,is_volatile => $self->_data('is_volatile')
+        ,networking => $self->_data('networking')
     };
 
     $info->{alias} = ( $self->_data('alias') or $info->{name} );
@@ -3848,7 +3878,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
     die "Error: I can't get the internal IP of ".$self->name." ".($internal_ip or '<UNDEF>').". Retry."
         if !$internal_ip || $internal_ip !~ /^(\d+\.\d+)/;
 
-    return unless exists $internal_ip_info->{type} && $internal_ip_info->{type} =~ /^(bridge|network)$/;
+    return unless exists $internal_ip_info->{type} && $internal_ip_info->{type} =~ /^(bridge|nat)$/i;
 
     if ($public_port
         && ( $self->_used_ports_iptables($public_port, "$internal_ip:$internal_port")
@@ -4062,6 +4092,7 @@ sub open_exposed_ports($self, $remote_ip=undef) {
     my @ports = $self->list_ports();
     return if !@ports;
     return if !$self->is_active;
+    return if $self->_data('networking') eq 'isolated';
 
     my $ip = $self->ip;
     if ( ! $ip ) {
@@ -4452,32 +4483,25 @@ sub _post_start {
 
 sub _check_port_conflicts($self) {
     my @displays = $self->_get_controller_display();
-    my $sth = $self->_dbh->prepare("SELECT id,id_domain,internal_port FROM domain_ports"
-        ." WHERE public_port=? AND is_active=1 AND id_domain <> ?"
-    );
-    for my $display ( @displays ) {
-        for my $port ($display->{port}) {
-            $sth->execute($port, $self->id);
-            while ( my ($id, $id_domain, $internal_port) = $sth->fetchrow ) {
-                # Updating the graphics port is not possible rightnow libvirt 5.0
-                # my $new_port = $self->_vm->new_free_port();
-                # $self->_update_device_graphics($display->{driver},{port => $new_port});
-
-                my $req_close= Ravada::Request->close_exposed_ports(
+    my %dupe_port;
+    for my $display (@displays) {
+        $dupe_port{$display->{port}}++ if $display->{port};
+    }
+    for my $port (keys %dupe_port) {
+        next if $dupe_port{$port}<2;
+        my $req_close= Ravada::Request->close_exposed_ports(
                            uid => Ravada::Utils::user_daemon->id
-                         ,port => $internal_port
-                    ,id_domain => $id_domain
+                    ,id_domain => $self->id
                         ,clean => 1
-                );
-                my $req = Ravada::Request->open_exposed_ports(
-                           uid => Ravada::Utils::user_daemon->id
-                    ,id_domain => $id_domain
-                ,after_request => $req_close->id
-                ,retry => 20
+        );
+        my $req = Ravada::Request->open_exposed_ports(
+                       uid => Ravada::Utils::user_daemon->id
+                ,id_domain => $self->id
+            ,after_request => $req_close->id
+                    ,retry => 20
                 ,_force => 1
-                );
-            }
-        }
+        );
+
     }
 }
 
@@ -4546,9 +4570,12 @@ sub _delete_ip_rule ($self, $iptables, $vm = $self->_vm) {
     return if !$vm->is_active;
 
     my ($s, $d, $filter, $chain, $jump, $extra0) = @$iptables;
+
+    if ( $extra0 && exists $extra0->{s_port} && $extra0->{s_port}==0 ) {
+        delete $extra0->{s_port};
+    }
     lock_hash %$extra0;
 
-    confess if $extra0 && exists $extra0->{s_port} && $extra0->{s_port}==0;
     $filter = 'filter' if !$filter;
 
     if ($s) {
@@ -5659,7 +5686,7 @@ sub list_vms($self, $check_host_devices=0, $only_available=0) {
         next if $only_available && ( !$is_active || !$enabled);
         my $t1 = time;
         if ($only_available && $cached_down) {
-            next if time-$cached_down < $self->timeout_down_cache();
+            next if time-$cached_down < $self->_vm->timeout_down_cache();
         }
         if ($id_request && $only_available) {
             $sth_req->execute($id_request);
@@ -7457,10 +7484,23 @@ sub refresh_ports($self, $request=undef) {
         my $is_port_active_txt = "up";
         $is_port_active_txt = "down" if !$is_port_active;
         $msg .= " $port->{internal_port}:$is_port_active_txt";
+
+        Ravada::Request->open_exposed_ports(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_domain => $self->id
+            ,retry => 20
+            ,_force => 1
+        ) if $is_active && !defined $port->{public_port}
+            && $self->_data('networking') ne 'isolated';
+
     }
-    die "Virtual machine ".$self->name." is not up. retry.\n"if !$ip;
-    die "Virtual machine ".$self->name." $ip has ports down: $msg. retry.\n"
-    if $port_down;
+    if ($is_active && $self->_data('networking') eq 'isolated') {
+        $msg = "Virtual machine ".$self->name." isolated. No ports exposed.";
+    } else {
+        die "Virtual machine ".$self->name." is not up. retry.\n"if !$ip;
+        die "Virtual machine ".$self->name." $ip has ports down: $msg. retry.\n"
+        if $port_down;
+    }
 
     if (($msg) && ($request))
     {
