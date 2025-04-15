@@ -359,6 +359,11 @@ any '/test' => sub {
     );
 };
 
+any '/logout.json' => sub($c) {
+    logout($c);
+    return $c->render(json => {logout => '1'});
+};
+
 any '/logout' => sub {
     my $c = shift;
     my $redirect_to = logout($c);
@@ -604,7 +609,7 @@ get '/list_nodes_by_id.json' => sub {
 };
 
 get '/list_host_devices/(:id_vm)' => sub($c) {
-    $c->render(json => Ravada::WebSocket::_list_host_devices(undef,$RAVADA
+    $c->render(json => Ravada::WebSocket::_list_host_devices($RAVADA
             , {
                 channel => '/'.$c->stash('id_vm')
                 ,login => $USER->name

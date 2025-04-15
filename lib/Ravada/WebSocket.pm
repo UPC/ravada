@@ -155,6 +155,8 @@ sub _list_machines($rvd, $args) {
         unless $user->can_view_admin_machines;
 
     $args->{_list_machines_time} = 0 if !$args->{_list_machines_time};
+    $args->{_list_machines_last} = 0 if !$args->{_list_machines_last};
+
     $args->{_list_machines_time}++;
 
     if ($args->{_list_machines_time} == 1 ) {

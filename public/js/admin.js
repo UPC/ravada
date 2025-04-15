@@ -375,6 +375,9 @@ ravadaApp.directive("solShowMachine", swMach)
                   $scope.n_active_hidden = 0;
                   var action = data0.action;
                   var data = data0.data;
+                  if (typeof(data) == 'undefined') {
+                      return;
+                  }
                   if(action == 'new' || Object.keys($scope.list_machines).length==0) {
                       $scope.list_machines.length = data.length;
                       for (var i=0, iLength = data.length; i<iLength; i++){
@@ -424,6 +427,8 @@ ravadaApp.directive("solShowMachine", swMach)
                                 if (mach2.id_base>0) { $scope.n_clones++ }
                         }
                     }
+
+                    $http.get("/logout.json");
                   }
                   var n_active_current = 0;
 

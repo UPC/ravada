@@ -5781,7 +5781,7 @@ sub _cmd_refresh_machine($self, $request) {
             $domain->remove(Ravada::Utils::user_daemon);
             return;
         }
-        $domain->_fetch_networking_mode();
+        $domain->_fetch_networking_mode() if $domain->is_known();
     }
     $domain->info($user);
     $domain->client_status(1) if $is_active;
