@@ -1,11 +1,7 @@
 Testing environment
 ===================
 
-Previously
-`install <https://github.com/frankiejol/Test-SQL-Data/blob/master/INSTALL.md>`__
-TEST::SQL::DATA module.
-
-In project root run:
+At the project root directory run:
 
 .. prompt:: bash $
 
@@ -19,9 +15,11 @@ If something goes wrong you see: Result: FAIL
 Run a single test
 -----------------
 
+Tests are in the *t* directory.
+
 .. prompt:: bash $
 
-    make; sudo prove -l t/lxc/\*t
+    make; sudo prove -l t/vm/05_open.t
 
 
 Advanced Features tests
@@ -38,7 +36,6 @@ Nodes
 
 Install two virtual machines called ztest-1 and ztest-2 with these features:
 
- - OS: Lubuntu 18.04
  - Disk Size: 20 GB
  - RAM : At least 4 GB
 
