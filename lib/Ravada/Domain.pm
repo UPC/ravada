@@ -1780,6 +1780,21 @@ sub _log_active_domains($self) {
 
 }
 
+sub _json_equal($a, $b) {
+
+    return 0 if !defined $a && defined $b;
+    return 0 if defined $a && !defined $b;
+
+    return 0 if length($a) != length($b);
+    my $ha;
+    eval { $ha = decode_json($a) };
+
+    my $hb;
+    eval { $hb = decode_json($a) };
+
+    return Ravada::Utils::_different($a, $b);
+}
+
 sub _data($self, $field, $value=undef, $table='domains') {
 
     _init_connector();
@@ -1810,6 +1825,8 @@ sub _data($self, $field, $value=undef, $table='domains') {
         return if $field eq 'status'
         && $self->{$data}->{$field} eq 'active'
         && $value eq 'starting';
+
+        return if $field eq 'info' && _json_equal($value, $self->{$data}->{$field});
 
         $self->_assert_update($table, $field => $value);
         my $sth = $$CONNECTOR->dbh->prepare(
@@ -2382,7 +2399,8 @@ sub info($self, $user) {
 }
 
 sub _date_status_change($self) {
-    my $date = $self->_data('date_status_change');
+    my $date = $self;
+    $date = $self->_data('date_status_change') if (ref($self));
     if (!$date) {
         return {
             date => ''
@@ -2597,6 +2615,8 @@ sub _after_remove_domain($self, $user, $cascade=undef) {
     $self->_remove_iptables( );
     $self->remove_expose();
     $self->_remove_domain_cascade($user)   if !$cascade;
+    my $id_base;
+    $id_base = $self->_data('id_base') if $self->is_known();
 
     if ($self->is_known && $self->is_base) {
         #        $self->_do_remove_base($user);
@@ -2616,6 +2636,11 @@ sub _after_remove_domain($self, $user, $cascade=undef) {
     _remove_domain_data_db($id, $type);
 
     $self->{_is_removed}=time;
+
+    if ($id_base) {
+        my $base = Ravada::Front::Domain->open($id_base);
+        $base->clones();
+    }
 }
 
 sub _remove_all_volumes($self) {
@@ -2802,15 +2827,19 @@ sub is_locked {
         ."   AND command <> 'refresh_machine_ports'"
         ."   AND command <> 'screenshot'"
         ."   AND command <> 'add_hardware'"
+        ."   AND command <> 'refresh_machine'"
     );
     $sth->execute($self->id);
+    my $found=0;
     while (my ($id, $at_time,$command) = $sth->fetchrow) {
         next if $at_time && $at_time - time > 1;
-        return $id;
+        $found = $id;
+        last;
     };
     $sth->finish;
 
-    return 0;
+    $self->_data('is_locked' => $found);
+    return $found;
 }
 
 =head2 id_owner
@@ -2869,6 +2898,7 @@ sub clones($self, %filter) {
         lock_hash(%$row);
         push @clones , $row;
     }
+    $self->_data('has_clones' => scalar(@clones));
     return @clones;
 }
 
@@ -2877,12 +2907,20 @@ Returns the number of clones from this virtual machine
     my $has_clones = $domain->has_clones
 =cut
 
-sub has_clones {
-    my $self = shift;
+sub has_clones($self, $check=0) {
+
+    my $has_clones;
+    if (!$check) {
+        $has_clones = $self->_data('has_clones');
+        return $has_clones if defined $has_clones;
+    }
 
     _init_connector();
 
-    return scalar $self->clones;
+    $has_clones = scalar $self->clones;
+
+    $self->_data('has_clones' => $has_clones);
+    return $has_clones;
 }
 
 
@@ -5118,6 +5156,11 @@ sub _listen_ip($self, $remote_ip=undef) {
 
 sub remote_ip($self) {
 
+    _init_connector();
+
+    my $id = $self;
+    $id = $self->id() if ref($self);
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT remote_ip, iptables FROM iptables "
         ." WHERE "
@@ -5125,7 +5168,7 @@ sub remote_ip($self) {
         ."    AND time_deleted IS NULL"
         ." ORDER BY time_req DESC "
     );
-    $sth->execute($self->id);
+    $sth->execute($id);
     my %ip;
     my $first_ip;
     while ( my ($remote_ip, $iptables_json ) = $sth->fetchrow() ) {
@@ -5987,10 +6030,14 @@ sub client_status($self, $force=0) {
 
     return $self->_data('client_status')    if $self->readonly;
 
+=pod
+
     my $time_checked = time - $self->_data('client_status_time_checked');
     if ( $time_checked < $TIME_CACHE_NETSTAT && !$force ) {
         return $self->_data('client_status');
     }
+
+=cut
     my $status = '';
     if ( !$self->is_active) {
         $status = '';
@@ -5999,9 +6046,9 @@ sub client_status($self, $force=0) {
         $status = 'disconnected' if !defined $status || !length($status);
     }
     $self->_data('client_status', $status);
-    $self->_data('client_status_time_checked', time );
+#    $self->_data('client_status_time_checked', time );
 
-    if ( $status && $self->_data('shutdown_grace_time')) {
+    if ( $status ) {
         my $value = 1;
         if ($status eq 'disconnected') {
             $value = 0;
@@ -6082,13 +6129,13 @@ sub _client_connection_status_display($self, $force) {
         for my $line (@out) {
             my @netstat_info = split(/\s+/,$line);
             if ( $netstat_info[2] =~ /:$port$/ ) {
-                my $ip;
-                ($ip) = $netstat_info[3] =~ m{(\d+\.\d+\.\d+\.\d+)};
-                if ($ip) {
-                    return "$ip.".$display->{driver};
+                my ($ip_src) = $netstat_info[3] =~ /(\d+\.\d+\.\d+\.\d+)/;
+                if($ip_src) {
+                    $ip_src.=":";
                 } else {
-                    return 'connected ('.$display->{driver}.")";
+                    $ip_src = '';
                 }
+                return "connected ($ip_src".$display->{driver}.")";
             }
         }
     }
@@ -6102,10 +6149,10 @@ sub _client_connection_status_port($self, $force) {
     for my $port ( $self->list_ports ) {
         my $public_port = $port->{public_port} or next;
         for my $line (split /\n/,$iptstate_out) {
-            my ($ip_port,$status) = $line =~/^[0-9.:]+\s+\d+\.\d+\.\d+\.\d+:(\d+)\s+\w+\s+(\w+)/;
+            my ($ip_src,$ip_port,$status) = $line =~/^(\d+\.\d+\.\d+\.\d+)\:\d+\s+\d+\.\d+\.\d+\.\d+:(\d+)\s+\w+\s+(\w+)/;
             next if !defined $ip_port || $public_port != $ip_port;
             last if $status ne 'ESTABLISHED';
-            return 'connected ('.($port->{name} or $port->{internal_port}).")";
+            return "connected ($ip_src:".($port->{name} or $port->{internal_port}).")";
         }
     }
     return 'disconnected';
@@ -8251,7 +8298,7 @@ sub check_grace($self,$type) {
     die $err if $err;
 
     if ( $start>$start_req && $start - $start_req > int($grace_time*60/2) ) {
-        warn "No enough data";
+        #        warn "No enough data";
         return;
     }
 

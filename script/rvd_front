@@ -359,6 +359,11 @@ any '/test' => sub {
     );
 };
 
+any '/logout.json' => sub($c) {
+    logout($c);
+    return $c->render(json => {logout => '1'});
+};
+
 any '/logout' => sub {
     my $c = shift;
     my $redirect_to = logout($c);
@@ -3192,7 +3197,7 @@ websocket '/ws/subscribe' => sub {
     my $c = shift;
     my $expiration = $SESSION_TIMEOUT;
     $USER = _logged_in($c) if !$USER;
-    return if !$USER;
+    return access_denied_user($c) if !$USER;
     $expiration = $SESSION_TIMEOUT_ADMIN    if $USER->is_operator;
     $c->inactivity_timeout( $expiration );
     $c->on(message => sub {
@@ -3874,6 +3879,7 @@ sub _show_request {
     if (!$domain) {
         return $c->render(data => "Request ".$request->status." , but I can't find domain $name");
     }
+    $c->stash('id_base' => $domain->_data('id_base'));
     return view_machine($c,$domain);
 }
 
