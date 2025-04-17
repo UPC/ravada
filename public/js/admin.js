@@ -346,9 +346,6 @@ ravadaApp.directive("solShowMachine", swMach)
 
           var ws = new WebSocket(url);
 
-          ws.onerror = function(error) {
-              console.log(error);
-          };
           ws.onopen    = function (event) {
               ws_connected = true ;
               $scope.ws_fail = false;
@@ -428,7 +425,6 @@ ravadaApp.directive("solShowMachine", swMach)
                         }
                     }
 
-                    $http.get("/logout.json");
                   }
                   var n_active_current = 0;
 
@@ -543,11 +539,16 @@ ravadaApp.directive("solShowMachine", swMach)
         else {
             $http.get('/'+target+'/'+action+'/'+machineId+'.json')
                .then(function(response) {
-                   if(response.status == 300 ) {
+                   if(response.status == 300 || response.status == 403) {
                    console.error('Reponse error', response.status);
                    window.location.reload();
-               }
-            });
+                    }
+                }).catch(function(data) {
+                    if (data.status == 403) {
+                        window.location.reload();
+                    }
+                })
+            ;
         }
     };
     $scope.set_autostart= function(machineId, value) {
