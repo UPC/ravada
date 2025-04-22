@@ -335,22 +335,10 @@ sub list_domains($self, %args) {
         ." FROM domains d LEFT JOIN vms "
         ."  ON d.id_vm = vms.id ";
 
-    my $where = '';
-    for my $field ( sort keys %args ) {
-        $where .= " AND " if $where;
-        if (!defined $args{$field}) {
-            $where .= " $field IS NULL ";
-            delete $args{$field};
-            next;
-        }
-        my $operation = "=";
-        $operation = ">=" if $field eq 'date_changed';
-        $where .= " d.$field $operation ?";
-    }
-    $where = "WHERE $where" if $where;
+    my ($where, $values) = $self->_create_where(\%args);
 
     my $sth = $CONNECTOR->dbh->prepare("$query $where ORDER BY d.id");
-    $sth->execute(map { $args{$_} } sort keys %args);
+    $sth->execute(@$values);
 
     my @domains = ();
     while ( my $row = $sth->fetchrow_hashref) {
@@ -398,6 +386,52 @@ sub list_domains($self, %args) {
 
     return \@domains;
 }
+
+sub _create_where($self, $args) {
+    my $where = '';
+    my @values;
+
+    warn Dumper($args);
+
+    my $date_changed = delete $args->{date_changed};
+    for my $field ( sort keys %$args ) {
+        $where .= " OR " if $where;
+        if (!defined $args->{$field}) {
+            $where .= " $field IS NULL ";
+            next;
+        }
+        my $operation = "=";
+        $operation = ">=" if $field eq 'date_changed';
+        if (!ref($args->{$field})) {
+            $where .= " d.$field $operation ?";
+            push @values,($args->{$field});
+        } else {
+            my $option = '';
+            for my $value ( @{$args->{$field}} ) {
+                $option .= " OR " if $option;
+                if (!defined $value) {
+                    $option .= " d.$field IS NULL ";
+                    next;
+                }
+                $option .= " d.$field=? ";
+                push @values,($value);
+            }
+            $where .= " ($option) ";
+        }
+    }
+    if ($date_changed) {
+        $where = " ( $where ) AND " if $where ;
+        $where .= " d.date_changed >= ? ";
+        push @values, ($date_changed);
+    }
+
+    $where = "WHERE $where" if $where;
+
+    warn Dumper([$where, \@values]);
+
+    return ($where,\@values);
+}
+
 
 sub _node_name($self, $id_vm) {
     return $self->{_node_name}->{$id_vm}

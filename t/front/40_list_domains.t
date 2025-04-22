@@ -50,6 +50,100 @@ sub test_create_domain {
     return $domain;
 }
 
+sub _create_bases_and_clones($vm_name) {
+
+    my @bases;
+    my ($n_bases, $n_domains) = ( 0,0 );
+    for my $n ( 1 .. 3 ) {
+        my $base = create_domain($vm_name);
+        push @bases,($base);
+        $n_domains++;
+        Ravada::Request->prepare_base(uid => user_admin->id
+            ,id_domain => $base->id
+        );
+        wait_request();
+        $base->is_public(1);
+        next if $n == 1;
+
+        Ravada::Request->clone(uid => user_admin->id
+            ,id_domain => $base->id
+            ,number => 3
+        );
+        wait_request();
+        $n_domains += 3;
+    }
+    return (\@bases, scalar(@bases), $n_domains);
+
+}
+
+sub test_list_domains_clones($vm_name) {
+
+    my ($bases, $n_bases, $n_domains) = _create_bases_and_clones($vm_name);
+
+    my $list_domains = rvd_front->list_domains();
+    is(scalar@$list_domains, $n_domains ,Dumper([map { [$_->{id}." ".$_->{name}, $_->{id_base}] } @$list_domains]));
+
+    $list_domains = rvd_front->list_domains(id_base => undef);
+    is(scalar@$list_domains, $n_bases ,Dumper($list_domains));
+
+    for my $base ( @$bases ) {
+
+        $list_domains = rvd_front->list_domains(id_base => $base->id);
+        is(scalar@$list_domains, $base->has_clones(1),Dumper([map { [$_->{id}." ".$_->{name}, $_->{id_base}] } @$list_domains])) or exit;
+
+        my $curr_n_domains = $n_bases + $base->has_clones;
+        $list_domains = rvd_front->list_domains(id_base => [undef, $base->id]);
+
+        is(scalar@$list_domains, $curr_n_domains ,Dumper([map { [$_->{id}." ".$_->{name}, $_->{id_base}] } @$list_domains])) or exit;
+    }
+
+    my @id_base = ( undef );
+
+    my $curr_n_domains = $n_bases;
+    for my $base ( @$bases ) {
+
+        $curr_n_domains += $base->has_clones();
+        push @id_base,($base->id);
+
+        $list_domains = rvd_front->list_domains(id_base => \@id_base);
+        is(scalar@$list_domains, $curr_n_domains,Dumper([map { [$_->{id}." ".$_->{name}, $_->{id_base}] } @$list_domains])) or exit;
+
+    }
+
+    $curr_n_domains = $n_bases;
+    @id_base = ( undef );
+    for my $base ( @$bases ) {
+
+        $curr_n_domains += $base->has_clones();
+        push @id_base,($base->id);
+
+        $list_domains = rvd_front->list_domains(id_base => \@id_base, date_changed => '2024-01-01');
+        is(scalar@$list_domains, $curr_n_domains,Dumper([map { [$_->{id}." ".$_->{name}, $_->{id_base}] } @$list_domains])) or exit;
+
+    }
+
+    $curr_n_domains = $n_bases;
+    @id_base = ( undef );
+    my ($clone) = $bases->[-1]->clones();
+    for my $base ( @$bases ) {
+
+        $curr_n_domains += $base->has_clones();
+        push @id_base,($base->id);
+
+        $list_domains = rvd_front->list_domains(id_base => \@id_base, date_changed => '2024-01-01'
+        , name => $clone->{name});
+
+        my $exp = $curr_n_domains;
+        my ($found) = grep { $_->{name} eq $clone->{name} } $base->clones;
+        $exp++ if !$found;
+
+        is(scalar@$list_domains, $exp, Dumper([map { [$_->{id}." ".$_->{name}, $_->{id_base}] } @$list_domains])) or exit;
+
+    }
+
+    remove_domain(@$bases);
+}
+
 sub test_list_domains {
     my $vm_name = shift;
     my $domain = shift;
@@ -287,6 +381,8 @@ for my $vm_name (reverse sort @VMS) {
         skip $msg,10    if !$vm;
 
         use_ok($CLASS);
+
+        test_list_domains_clones($vm_name);
 
         test_list_bases_show_clones($vm);
 

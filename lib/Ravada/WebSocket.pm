@@ -159,8 +159,11 @@ sub _list_machines($rvd, $args) {
 
     $args->{_list_machines_time}++;
 
+    my @id_base = (undef);
+    @id_base=keys(%{$args->{show_clones}}) if exists $args->{show_clones};
+
     if ($args->{_list_machines_time} == 1 ) {
-        return (0, $rvd->list_machines($user, id_base => undef));
+        return (0, $rvd->list_machines($user, id_base => \@id_base));
     } elsif( $args->{_list_machines_time} <= 2 || $args->{_list_machines_time} > 60
         || _count_different($rvd, $args, 'domains')) {
         $args->{_list_machines_time}=2;
@@ -169,7 +172,10 @@ sub _list_machines($rvd, $args) {
 
     my $seconds = time - $args->{_list_machines_last} + 60;
     my $list_changed = $rvd->list_machines($user
-        , date_changed => Ravada::Utils::now($seconds));
+        , date_changed => Ravada::Utils::now($seconds)
+        , id_base => \@id_base
+    );
+
     return (1,$list_changed);
 
 }
@@ -692,11 +698,18 @@ sub subscribe($self, %args) {
     my %args2 = %args;
     delete $args2{ws};
     warn "Subscribe ".Dumper(\%args2) if $DEBUG;
-    $self->clients->{$ws} = {
-        ws => $ws
-        , %args
-        , ret => undef
-    };
+    if (!exists $self->clients->{$ws}) {
+        $self->clients->{$ws} = {
+            ws => $ws
+            , %args
+            , ret => undef
+        };
+    } else {
+        for my $key (keys %{$self->clients->{$ws}}) {
+            $self->clients->{$ws}->{$key} = 1
+            if $key =~ /_(time|last)$/i;
+        }
+    }
     $self->_clean_info($ws);
     $self->_send_answer($ws,$args{channel});
     my $channel = $args{channel};

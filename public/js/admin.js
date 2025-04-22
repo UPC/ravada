@@ -412,6 +412,9 @@ ravadaApp.directive("solShowMachine", swMach)
                         if (typeof(mach2) != 'undefined' && typeof(mach) != 'undefined') {
                             mach2._level = mach._level;
                               var show=false;
+                              if (mach2.name != mach.name || mach2.id_base != mach.id_base) {
+                                  ws.send("list_machines_tree");
+                              }
                               if (mach2._level == 0 && !$scope.filter && !$scope.show_active) {
                                   mach2.show=true;
                               }
