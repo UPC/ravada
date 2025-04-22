@@ -310,6 +310,7 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.list_machines_time = 0;
         $scope.n_active=0;
         $scope.show_active=false;
+        var ws_list_machines;
         if( $scope.check_netdata && $scope.check_netdata != "0" ) {
             var url = $scope.check_netdata;
             $scope.check_netdata = 0;
@@ -345,6 +346,7 @@ ravadaApp.directive("solShowMachine", swMach)
           }, 5 * 1000 );
 
           var ws = new WebSocket(url);
+          ws_list_machines=ws;
 
           ws.onopen    = function (event) {
               ws_connected = true ;
@@ -629,6 +631,7 @@ ravadaApp.directive("solShowMachine", swMach)
             $scope.show_active = false;
             $scope.hide_clones = true;
         }
+        ws_list_machines.send("list_machines_tree/show_clones/"+id+"="+$scope.show_clones[id]);
        $scope.n_active_hidden = 0;
        $scope.n_active = 0;
        for (var [key, mach ] of Object.entries($scope.list_machines)) {

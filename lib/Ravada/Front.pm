@@ -391,8 +391,6 @@ sub _create_where($self, $args) {
     my $where = '';
     my @values;
 
-    warn Dumper($args);
-
     my $date_changed = delete $args->{date_changed};
     for my $field ( sort keys %$args ) {
         $where .= " OR " if $where;
@@ -426,8 +424,6 @@ sub _create_where($self, $args) {
     }
 
     $where = "WHERE $where" if $where;
-
-    warn Dumper([$where, \@values]);
 
     return ($where,\@values);
 }

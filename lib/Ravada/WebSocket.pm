@@ -160,14 +160,16 @@ sub _list_machines($rvd, $args) {
     $args->{_list_machines_time}++;
 
     my @id_base = (undef);
-    @id_base=keys(%{$args->{show_clones}}) if exists $args->{show_clones};
+
+    push @id_base,(keys(%{$args->{show_clones}}))
+    if exists $args->{show_clones};
 
     if ($args->{_list_machines_time} == 1 ) {
         return (0, $rvd->list_machines($user, id_base => \@id_base));
     } elsif( $args->{_list_machines_time} <= 2 || $args->{_list_machines_time} > 60
         || _count_different($rvd, $args, 'domains')) {
         $args->{_list_machines_time}=2;
-        return (0,$rvd->list_machines($user));
+        return (0,$rvd->list_machines($user, id_base => \@id_base));
     }
 
     my $seconds = time - $args->{_list_machines_last} + 60;
@@ -693,6 +695,23 @@ sub _send_answer($self, $ws_client, $channel, $key = $ws_client) {
     # }
 }
 
+sub manage_action($self, $ws, $channel, $action, $args) {
+    if ($channel eq 'list_machines_tree') {
+
+        $self->clients->{$ws}->{_list_machines_time}=0;
+        if ($action eq 'show_clones') {
+            my ($id, $value) = $args =~/(\d+)=(.+)/;
+            if ($value eq 'true') {
+                $self->clients->{$ws}->{$action}->{$id}=1;
+            } else {
+                delete $self->clients->{$ws}->{$action}->{$id};
+            }
+            return;
+        }
+    }
+    warn "Warning: unknown action for $channel / $action";
+}
+
 sub subscribe($self, %args) {
     my $ws = $args{ws};
     my %args2 = %args;
@@ -705,6 +724,12 @@ sub subscribe($self, %args) {
             , ret => undef
         };
     } else {
+        my $channel0 = $args{channel};
+        my ($channel,$action,$args)= $channel0 =~ m{(.*?)/(.*?)/(.*)};
+        if ($channel) {
+            $args{channel} = $channel;
+            $self->manage_action($ws, $channel, $action, $args);
+        }
         for my $key (keys %{$self->clients->{$ws}}) {
             $self->clients->{$ws}->{$key} = 1
             if $key =~ /_(time|last)$/i;
