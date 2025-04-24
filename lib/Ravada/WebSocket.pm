@@ -151,8 +151,11 @@ sub _list_machines($rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my $user = Ravada::Auth::SQL->new(name => $login)
         or die "Error: uknown user $login";
-    return []
-        unless $user->can_view_admin_machines;
+    return (0,[])
+        if !$user->can_view_admin_machines
+        || ( exists $args->{_list_machines_last}
+            && time -  $args->{_list_machines_last} < 2
+        );
 
     $args->{_list_machines_time} = 0 if !$args->{_list_machines_time};
     $args->{_list_machines_last} = 0 if !$args->{_list_machines_last};
@@ -209,8 +212,11 @@ sub _add_show_clones_parent($rvd, $args, $id) {
     $sth->execute($id);
     my ($id_base) = $sth->fetchrow;
     if ($id_base && ! exists $args->{show_clones}->{$id_base}) {
-            $args->{show_clones}->{$id_base}=1;
-            _add_show_clones_parent($rvd, $args, $id_base);
+            if (!$args->{show_clones}->{$id_base}) {
+                $args->{show_clones}->{$id_base}=1;
+                _add_show_clones_parent($rvd, $args, $id_base);
+                delete $args->{_list_machines_time};
+            }
     }
 
 }
@@ -220,8 +226,11 @@ sub _show_clones_parents($rvd, $args, $list) {
     for my $item (@$list) {
         my $id_base = $item->{id_base};
         if ($id_base && ! exists $args->{show_clones}->{$id_base}) {
-            $args->{show_clones}->{$id_base}=1;
-            _add_show_clones_parent($rvd, $args, $id_base);
+            if (!$args->{show_clones}->{$id_base}) {
+                $args->{show_clones}->{$id_base}=1;
+                _add_show_clones_parent($rvd, $args, $id_base);
+                delete $args->{_list_machines_time};
+            }
         }
     }
 }
@@ -617,7 +626,7 @@ sub BUILD {
 
 sub _count_different($rvd, $args, $table) {
     my $count = _count_table($rvd, $table);
-    my $key = "_count".$table;
+    my $key = "_count_".$table;
     if (!defined $args->{$key}
         || $args->{$key} != $count ) {
 

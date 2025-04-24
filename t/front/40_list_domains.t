@@ -3,7 +3,9 @@ use strict;
 
 use Carp qw(confess);
 use Data::Dumper;
+use Storable qw(dclone);
 use Test::More;
+use Ravada::WebSocket;
 
 use lib 't/lib';
 use Test::Ravada;
@@ -50,12 +52,20 @@ sub test_create_domain {
     return $domain;
 }
 
-sub _create_bases_and_clones($vm_name) {
+sub _create_bases_and_clones($vm_name, $base0=undef) {
 
     my @bases;
     my ($n_bases, $n_domains) = ( 0,0 );
     for my $n ( 1 .. 3 ) {
-        my $base = create_domain($vm_name);
+        my $base;
+        if (!$base0) {
+            $base = create_domain($vm_name);
+        } else {
+            $base = $base0->clone(
+                name => new_domain_name()
+                ,user => user_admin
+            );
+        }
         push @bases,($base);
         $n_domains++;
         Ravada::Request->prepare_base(uid => user_admin->id
@@ -75,6 +85,7 @@ sub _create_bases_and_clones($vm_name) {
     return (\@bases, scalar(@bases), $n_domains);
 
 }
+
 
 sub test_list_domains_clones($vm_name) {
 
@@ -142,6 +153,67 @@ sub test_list_domains_clones($vm_name) {
     }
 
     remove_domain(@$bases);
+}
+
+sub test_list_domains_active($vm_name) {
+
+    my ($bases, $n_bases, $n_domains) = _create_bases_and_clones($vm_name);
+
+    my ($bases2) = _create_bases_and_clones($vm_name, $bases->[0]);
+    my ($bases3) = _create_bases_and_clones($vm_name, $bases2->[0]);
+    my ($bases4) = _create_bases_and_clones($vm_name, $bases3->[-1]);
+
+    for my $bases ( $bases3, $bases4 ) {
+        my ($clone) = $bases->[1]->clones;
+        Ravada::Request->start_domain(uid => user_admin->id
+        ,id_domain => $clone->{id}
+        );
+        wait_request();
+        diag($clone->{name});
+    }
+
+    my @id_base = ( $bases->[2]->id );
+    my %show_clones = map { $_ => 1 } @id_base;
+
+    my %ws_args = ( show_clones => \%show_clones, 'show_active'=>1 , login => user_admin->name );
+    my $found = 0;
+    my $ws_list_data;
+    for ( 1 .. 4 ) {
+        my $ws_list = Ravada::WebSocket::_list_machines_tree(rvd_front, \%ws_args);
+        #        __dump_list_domains($ws_list->{data});
+        if (scalar(@{$ws_list->{data}})) {
+            my $active = grep { $_->{status} eq 'active' } @{$ws_list->{data}};
+            $ws_list_data = $ws_list->{data};
+            if ($active == 2 ) {
+                $found++;
+                last;
+            } else {
+                __dump_list_domains($ws_list_data);
+            }
+        }
+
+        sleep 1;
+    }
+    ok($found) ||
+    __dump_list_domains($ws_list_data);
+
+    my $list_domains = rvd_front->list_domains(id_base => [undef,@id_base], status => 'active');
+
+    my $active = grep { $_->{status} eq 'active' } @{$list_domains};
+    is($active,2);
+
+    remove_domain(@$bases3, @$bases2, @$bases);
+    exit;
+
+}
+
+sub __dump_list_domains($list_domains=rvd_front->list_domains()) {
+
+    warn Dumper([map { $_->{id}." ".($_->{id_base} or ' ')." "
+                .($_->{is_base} or ' ')." "
+                .$_->{status}." "
+                .$_->{name}
+            } @$list_domains]);
 }
 
 sub test_list_domains {
@@ -381,6 +453,8 @@ for my $vm_name (reverse sort @VMS) {
         skip $msg,10    if !$vm;
 
         use_ok($CLASS);
+
+        test_list_domains_active($vm_name);
 
         test_list_domains_clones($vm_name);
 

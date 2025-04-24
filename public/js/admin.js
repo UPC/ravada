@@ -355,7 +355,10 @@ ravadaApp.directive("solShowMachine", swMach)
               for (var i=0; i<show.length; i++) {
                   ws.send("list_machines_tree/show_clones/"+show[i]+"="+$scope.show_clones[show[i]]);
               }
-              if (show.length == 0 ) {
+              if ($scope.show_active) {
+                  ws.send("list_machines_tree/show_active/true");
+              }
+              if (show.length == 0 || !$scope.show_active ) {
                   ws.send('list_machines_tree');
               }
           };
