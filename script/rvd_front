@@ -3477,6 +3477,8 @@ sub _render_login($c, $error, $status=undef) {
     my $css_snippets = ["\t.intro {\n\t\tbackground:"
                     ." url($CONFIG_FRONT->{login_bg_file})"
                     ." no-repeat bottom center scroll;\n\t}"];
+
+    $c->session(url => $c->req->url->to_abs->path);
     $c->render(
                     template => ($CONFIG_FRONT->{login_custom} or 'main/start')
                         ,css => ['/css/main.css']
@@ -3501,7 +3503,7 @@ sub _login_ok($c, $auth_ok) {
 
     my $login = $auth_ok->name;
 
-    my $url = ($c->param('url') or $c->req->url->to_abs->path);
+    my $url = ($c->param('url') or $c->session('url') or $c->req->url->to_abs->path);
     $url = '/' if $url =~ m{^/login};
 
     $c->session('login' => $login);

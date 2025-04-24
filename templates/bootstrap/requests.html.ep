@@ -24,7 +24,7 @@
         <span class="badge badge-warning" ng-show="show_requests"><%=l 'hide' %></span>
     </button>
     <button type="button" class="btn btn-outline-primary btn-sm"
-        ng-disabled="!n_active || (!n_active_hidden && !show_active)"
+        ng-disabled="!n_active"
             ng-click="toggle_show_active();"
     >
         <span ng-show="!show_active"
@@ -35,14 +35,6 @@
         ><%=l 'Show all' %></span>
         <i class="fas fa-sync-alt fa-spin" ng-show="list_machines_time<2 && !n_active"></i>
         <span ng-show="list_machines_time>=2" class="badge badge-warning">{{n_active}}</span>
-    </button>
-    <button type="button" class="btn btn-outline-primary btn-sm"
-        ng-click="toggle_show_all_clones()"
-    >
-        <a ng-show="hide_clones"
-            align="right"><%=l 'Show clones' %></a>
-        <a ng-show="!hide_clones"
-            align="right"><%=l 'Hide clones' %></a>
     </button>
 
     <input type="text" ng-model="filter" placeholder="<%=l 'filter' %>"

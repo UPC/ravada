@@ -164,23 +164,27 @@ sub _list_machines($rvd, $args) {
     push @id_base,(keys(%{$args->{show_clones}}))
     if exists $args->{show_clones};
 
+    my @filter = ( id_base => \@id_base );
+    push @filter,("status" => "active") if $args->{show_active};
+
     if ($args->{_list_machines_time} == 1 ) {
-        return (0, $rvd->list_machines($user, id_base => \@id_base));
+        return (0, $rvd->list_machines($user, @filter));
     } elsif( $args->{_list_machines_time} <= 2 || $args->{_list_machines_time} > 60
         || _count_different($rvd, $args, 'domains')) {
         $args->{_list_machines_time}=2;
-        return (0,$rvd->list_machines($user, id_base => \@id_base));
+        return (0,$rvd->list_machines($user, @filter));
     }
 
     my $seconds = time - $args->{_list_machines_last} + 60;
     my $list_changed = $rvd->list_machines($user
         , date_changed => Ravada::Utils::now($seconds)
-        , id_base => \@id_base
+        , @filter
     );
 
     return (1,$list_changed);
 
 }
+
 sub _list_children($list_orig, $list, $level=0) {
     my @list2;
     for my $item (sort {$a->{name} cmp $b->{name} } @$list) {
@@ -198,20 +202,52 @@ sub _list_children($list_orig, $list, $level=0) {
     return @list2;
 }
 
+sub _add_show_clones_parent($rvd, $args, $id) {
+    my $sth = $rvd->_dbh->prepare(
+        "SELECT id_base FROM domains where id=?"
+    );
+    $sth->execute($id);
+    my ($id_base) = $sth->fetchrow;
+    if ($id_base && ! exists $args->{show_clones}->{$id_base}) {
+            $args->{show_clones}->{$id_base}=1;
+            _add_show_clones_parent($rvd, $args, $id_base);
+    }
+
+}
+
+sub _show_clones_parents($rvd, $args, $list) {
+
+    for my $item (@$list) {
+        my $id_base = $item->{id_base};
+        if ($id_base && ! exists $args->{show_clones}->{$id_base}) {
+            $args->{show_clones}->{$id_base}=1;
+            _add_show_clones_parent($rvd, $args, $id_base);
+        }
+    }
+}
+
 sub _list_machines_tree($rvd, $args) {
     my ($refresh,$list_orig) = _list_machines($rvd, $args);
 
     return if $refresh && !scalar(@$list_orig);
 
+    _show_clones_parents($rvd, $args, $list_orig);
+
     $args->{_list_machines_last} = time;
 
-    return {action => 'refresh', data => $list_orig} if $refresh;
+    return {action => 'refresh'
+        , data => $list_orig
+        , n_active => _count_domains_active($rvd)
+    } if $refresh;
 
     my @list = sort { lc($a->{name}) cmp lc($b->{name}) }
                 grep {!exists($_->{id_base}) || !$_->{id_base} }
                 @$list_orig;
     my @ordered = _list_children($list_orig, \@list);
-    return { 'action' => 'new', data => \@ordered };
+    return { 'action' => 'new'
+        , data => \@ordered
+        , n_active => _count_domains_active($rvd)
+    };
 }
 
 sub _list_machines_user($rvd, $args) {
@@ -629,6 +665,13 @@ sub _count_table($rvd, $table) {
     return $count;
 }
 
+sub _count_domains_active($rvd) {
+    my $sth = $rvd->_dbh->prepare("SELECT count(*) FROM domains "
+        ." WHERE status='active'");
+    $sth->execute;
+    my ($count) = $sth->fetchrow;
+    return $count;
+}
 
 sub _new_info($self, $key) {
     my $channel = $self->clients->{$key}->{channel};
@@ -690,9 +733,6 @@ sub _send_answer($self, $ws_client, $channel, $key = $ws_client) {
         $self->clients->{$key}->{ret} = $ret;
     }
     $self->unsubscribe($key) if $channel eq 'ping_backend' && $ret eq 2;
-    # if (!$ret && $channel !~ /list_machines/) {
-    #    $self->unsubscribe($key);
-    # }
 }
 
 sub manage_action($self, $ws, $channel, $action, $args) {
@@ -705,6 +745,14 @@ sub manage_action($self, $ws, $channel, $action, $args) {
                 $self->clients->{$ws}->{$action}->{$id}=1;
             } else {
                 delete $self->clients->{$ws}->{$action}->{$id};
+            }
+            return;
+        } elsif ($action eq 'show_active') {
+            if ($args eq 'true') {
+                delete $self->clients->{$ws}->{show_clones};
+                $self->clients->{$ws}->{$action}=1;
+            } else {
+                delete $self->clients->{$ws}->{$action};
             }
             return;
         }
