@@ -178,7 +178,7 @@ sub test_list_domains_active($vm_name) {
     my %ws_args = ( show_clones => \%show_clones, 'show_active'=>1 , login => user_admin->name );
     my $found = 0;
     my $ws_list_data;
-    for ( 1 .. 4 ) {
+    for ( 1 .. 5 ) {
         my $ws_list = Ravada::WebSocket::_list_machines_tree(rvd_front, \%ws_args);
         #        __dump_list_domains($ws_list->{data});
         if (scalar(@{$ws_list->{data}})) {
@@ -198,6 +198,7 @@ sub test_list_domains_active($vm_name) {
     __dump_list_domains($ws_list_data);
 
     my $list_domains = rvd_front->list_domains(id_base => [undef,@id_base], status => 'active');
+    __dump_list_domains($list_domains);;
 
     my $active = grep { $_->{status} eq 'active' } @{$list_domains};
     is($active,2);

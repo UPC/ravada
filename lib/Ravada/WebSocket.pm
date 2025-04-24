@@ -233,6 +233,9 @@ sub _show_clones_parents($rvd, $args, $list) {
             }
         }
     }
+
+    return 1 if !exists $args->{_list_machines_time};
+    return 0;
 }
 
 sub _list_machines_tree($rvd, $args) {
@@ -240,7 +243,9 @@ sub _list_machines_tree($rvd, $args) {
 
     return if $refresh && !scalar(@$list_orig);
 
-    _show_clones_parents($rvd, $args, $list_orig);
+    if ( _show_clones_parents($rvd, $args, $list_orig)) {
+        ($refresh,$list_orig) = _list_machines($rvd, $args);
+    }
 
     $args->{_list_machines_last} = time;
 
