@@ -247,6 +247,7 @@ sub _access_allowed($self, $id_base, $id_clone, $access_data) {
 }
 
 sub list_machines($self, $user, @filter) {
+warn $user->name;
     return $self->list_domains(@filter) if $user->can_list_machines();
 
     my @list = ();
@@ -430,6 +431,7 @@ sub _create_where($self, $args) {
 
     $where = "WHERE $where" if $where;
 
+    warn Dumper([$where,\@values]);
     return ($where,\@values);
 }
 

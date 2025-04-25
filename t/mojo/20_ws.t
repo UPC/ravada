@@ -56,22 +56,23 @@ sub list_machines_user($t, $headers={}){
 }
 
 sub _clean_machines_info($machines) {
-    for (@$machines) {
-        for my $key (keys %$_ ) {
-            delete $_->{$key} unless $key =~ /id|name|base|clone/;
+    for my $m (@$machines) {
+        for my $key (keys %$m ) {
+            delete $m->{$key} unless $key =~ /id|name|base|clone/;
         }
     }
 }
 
 sub list_machines($t) {
-    mojo_check_login($t);
-    $t->websocket_ok("/ws/subscribe")->send_ok("list_machines")->message_ok->finish_ok;
-
+    diag("subscribe");
+    $t->websocket_ok("/ws/subscribe")->send_ok("list_machines");
+    $t->tx->finish;
     return if !$t->message || !$t->message->[1];
 
     my $name = base_domain_name();
     my @machines = grep { $_->{name} =~ /^$name/ } @{decode_json($t->message->[1])};
     _clean_machines_info(\@machines);
+    warn Dumper([map {$_->{name} } @machines]);
     return @machines;
 }
 
@@ -113,16 +114,19 @@ sub test_bases($t, $bases) {
         $n_machines += $n_clones;
 
         my @machines = list_machines($t);
-        is( scalar(@machines), scalar(@$bases), Dumper(\@machines)) or exit;
+        is( scalar(@machines), scalar(@$bases)
+            , Dumper([[ map { $_->{name} } @machines]
+                    , [ map { $_->name } @$bases  ]
+                    ])) or exit;
     }
 }
 
 sub _login_non_admin($t) {
-    my $user_name = base_domain_name().".doe";
-    if (! $USER ) {
-        remove_old_user($user_name);
-        $USER = create_user($user_name, $$);
-    }
+    mojo_logout($t);
+    my $user_name = new_domain_name().".doe";
+    remove_old_user($user_name);
+    $USER = create_user($user_name, $$);
+    warn "$user_name / $$";
     mojo_login($t, $user_name,$$);
 }
 
@@ -155,6 +159,9 @@ sub _prepare_base($base) {
 }
 
 sub test_list_machines_non_admin($t, $bases) {
+diag("********** test list machines non admin");
+mojo_logout($t);
+    sleep 1;
     _login_non_admin($t);
     _prepare_base($bases->[0]);
 

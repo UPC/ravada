@@ -149,13 +149,16 @@ sub _request($rvd, $args) {
 
 sub _list_machines($rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
+    warn $login;
     my $user = Ravada::Auth::SQL->new(name => $login)
         or die "Error: uknown user $login";
-    return
-        if !$user->can_view_admin_machines
-        || ( exists $args->{_list_machines_last}
-            && time -  $args->{_list_machines_last} < 2
-        );
+    warn $user->can_view_admin_machines;
+
+    return (0,[])
+        if !$user->can_view_admin_machines;
+
+    return if exists $args->{_list_machines_last}
+            && time -  $args->{_list_machines_last} < 2;
 
     $args->{_list_machines_time} = 0 if !$args->{_list_machines_time};
     $args->{_list_machines_last} = 0 if !$args->{_list_machines_last};
@@ -745,6 +748,7 @@ sub _send_answer($self, $ws_client, $channel, $key = $ws_client) {
         my $short_key = $key;
         $short_key =~ s/.*HASH\((.*)\)/$1/;
         warn time." $short_key WS: send $channel " if $DEBUG;
+        warn "ret=".Dumper($ret) if $channel eq  'list_machines';
         $ws_client->send( {json => $ret} );
         $self->clients->{$key}->{ret} = $ret;
     }
@@ -788,6 +792,7 @@ sub subscribe($self, %args) {
     my %args2 = %args;
     delete $args2{ws};
     warn "Subscribe ".Dumper(\%args2) if $DEBUG;
+    warn "subscribe ".$args{channel}." ".$args{login};
     if (!exists $self->clients->{$ws}) {
         $self->clients->{$ws} = {
             ws => $ws
@@ -795,6 +800,9 @@ sub subscribe($self, %args) {
             , ret => undef
         };
     } else {
+        return $self->unsubscribe_all()
+           if $args{login} ne $self->clients->{$ws}->{login};
+
         my $channel0 = $args{channel};
         my ($channel,$action,$args)= $channel0 =~ m{(.*?)/(.*?)/(.*)};
         if ($channel) {
@@ -806,6 +814,7 @@ sub subscribe($self, %args) {
             if $key =~ /_(time|last)$/i;
         }
     }
+    warn $args{login}." ".$args{channel};
     $self->_clean_info($ws);
     $self->_send_answer($ws,$args{channel});
     my $channel = $args{channel};
@@ -815,6 +824,13 @@ sub subscribe($self, %args) {
 
 sub unsubscribe($self, $ws) {
     delete $self->clients->{$ws};
+}
+
+sub unsubscribe_all($self) {
+    for my $ws ( keys %{$self->clients()} ) {
+        warn $ws;
+        delete $self->clients->{$ws};
+    }
 }
 
 1;

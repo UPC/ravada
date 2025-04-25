@@ -81,6 +81,7 @@ create_domain
     mojo_create_domain
     mojo_login
     mojo_check_login
+    mojo_logout
     mojo_request
     mojo_request_url
     mojo_request_url_post
@@ -1068,15 +1069,21 @@ sub mojo_clean($wait=1) {
 
 sub mojo_check_login( $t, $user=$MOJO_USER , $pass=$MOJO_PASSWORD ) {
     $t->ua->get("/user.json");
-    return if $t->tx && $t->tx->res->code =~ /^(101|200|302)$/;
+    return $user if $t->tx && $t->tx->res->code =~ /^(101|200|302)$/;
     mojo_login($t, $user,$pass);
+    return $user;
+}
+
+sub mojo_logout($t) {
+    $t->ua->get($URL_LOGOUT);
+    $t->reset_session();
 }
 
 sub mojo_login( $t, $user, $pass ) {
-    $t->ua->get($URL_LOGOUT);
+    mojo_logout($t);
 
     $t->post_ok('/login' => form => {login => $user, password => $pass});
-    like($t->tx->res->code(),qr/^(200|302)$/) or die $t->tx->res->body;
+    like($t->tx->res->code(),qr/^(200|302)$/) or die Dumper([$user, $pass]);# $t->tx->res->body;
     #    ->status_is(302);
     $MOJO_USER = $user;
     $MOJO_PASSWORD = $pass;

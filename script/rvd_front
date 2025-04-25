@@ -225,6 +225,8 @@ hook before_routes => sub {
     app->log->info(_remote_ip($c)." $user ["._time()."] ".$c->req->method." ".$url)
     if $CONFIG_FRONT->{log}->{log};
 
+    return access_denied_json($c) if !$USER && $url eq '/user.json';
+
     return if $url =~ m{^/(css|font|img|js)}
         || $url =~ m{^/fallback/.*\.(css|js|map)$}
         || $url =~ m{^/fallback/font}
@@ -289,6 +291,10 @@ my %header;
 any '/index.html' => sub {
     my $c = shift;
     return quick_start($c);
+};
+
+get '/user.json' => sub($c) {
+    return $c->render( json => {id => $USER->id , name => $USER->name});
 };
 
 any '/login' => sub {
@@ -3193,6 +3199,11 @@ get '/balance_options.json' => sub($c) {
     ]);
 };
 
+websocket '/ws/unsubscribe_all' => sub {
+    my $c = shift;
+    $WS->unsubscribe_all();
+} => 'ws_unsubscribe';
+
 websocket '/ws/subscribe' => sub {
     my $c = shift;
     my $expiration = $SESSION_TIMEOUT;
@@ -3209,6 +3220,8 @@ websocket '/ws/subscribe' => sub {
             }
             return access_denied($c)
               if !_allowed_anonymous_ws($channel) && $USER->is_temporary;
+
+              warn $USER->name." ".$channel;
 
             $WS->subscribe( ws => $ws
                 , channel => $channel
@@ -3438,6 +3451,7 @@ sub login($c, $status=200) {
     my $auth_ok;
     if (!@error) {
         if (defined $login && defined $password) {
+            warn $login;
             eval { $auth_ok = Ravada::Auth::login($login, $password)};
         } elsif (($c->param('ticket')) || ($c->param('submit') && $c->param('submit') eq 'sso')) {
             eval { $auth_ok = Ravada::Auth::login_external($ticket, $c->session('ticket')) };
@@ -3533,6 +3547,8 @@ sub _login_ok($c, $auth_ok) {
 
 sub logout {
     my $c = shift;
+
+    $WS->unsubscribe_all();
 
     $USER = undef;
     $c->session(expires => 1);
