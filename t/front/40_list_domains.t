@@ -198,14 +198,11 @@ sub test_list_domains_active($vm_name) {
     __dump_list_domains($ws_list_data);
 
     my $list_domains = rvd_front->list_domains(id_base => [undef,@id_base], status => 'active');
-    __dump_list_domains($list_domains);;
 
     my $active = grep { $_->{status} eq 'active' } @{$list_domains};
     is($active,2);
 
     remove_domain(@$bases3, @$bases2, @$bases);
-    exit;
-
 }
 
 sub __dump_list_domains($list_domains=rvd_front->list_domains()) {

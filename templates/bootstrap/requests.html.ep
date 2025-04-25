@@ -38,7 +38,7 @@
     </button>
 
     <input type="text" ng-model="filter" placeholder="<%=l 'filter' %>"
-        ng-change="show_filter()"
+        ng-change="list_machines_name()"
     />
 
     <button class="btn btn-outline-warning btn-sm"

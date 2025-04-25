@@ -151,7 +151,7 @@ sub _list_machines($rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my $user = Ravada::Auth::SQL->new(name => $login)
         or die "Error: uknown user $login";
-    return (0,[])
+    return
         if !$user->can_view_admin_machines
         || ( exists $args->{_list_machines_last}
             && time -  $args->{_list_machines_last} < 2
@@ -169,6 +169,8 @@ sub _list_machines($rvd, $args) {
 
     my @filter = ( id_base => \@id_base );
     push @filter,("status" => "active") if $args->{show_active};
+
+    push @filter,("name" => $args->{show_name}) if $args->{show_name};
 
     if ($args->{_list_machines_time} == 1 ) {
         return (0, $rvd->list_machines($user, @filter));
@@ -765,6 +767,13 @@ sub manage_action($self, $ws, $channel, $action, $args) {
             if ($args eq 'true') {
                 delete $self->clients->{$ws}->{show_clones};
                 $self->clients->{$ws}->{$action}=1;
+            } else {
+                delete $self->clients->{$ws}->{$action};
+            }
+            return;
+        } elsif ( $action eq 'show_name') {
+            if ($args) {
+                $self->clients->{$ws}->{$action}=$args;
             } else {
                 delete $self->clients->{$ws}->{$action};
             }

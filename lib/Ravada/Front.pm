@@ -400,9 +400,14 @@ sub _create_where($self, $args) {
         }
         my $operation = "=";
         $operation = ">=" if $field eq 'date_changed';
+        $operation = "like" if $field eq 'name';
         if (!ref($args->{$field})) {
             $where .= " d.$field $operation ?";
-            push @values,($args->{$field});
+            if ($field eq 'name') {
+                push @values,('%'.$args->{$field}.'%');
+            } else {
+                push @values,($args->{$field});
+            }
         } else {
             my $option = '';
             for my $value ( @{$args->{$field}} ) {

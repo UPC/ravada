@@ -323,7 +323,7 @@
         </table>
 
         <div ng-cloak="1"
-            ng-show="list_machines && list_machines_time > 2 && show_active && !n_show">
+            ng-show="list_machines && list_machines_time > 2 && ( show_active || filter) && !n_show">
             <%=l 'There are no active virtual machines'%>
             <button ng-click="reload_list()"><%=l 'reload list' %></button>
         </div>
