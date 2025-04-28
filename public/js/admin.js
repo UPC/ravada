@@ -334,6 +334,18 @@ ravadaApp.directive("solShowMachine", swMach)
           subscribe_list_requests(url);
           subscribe_ping_backend(url);
       };
+
+      var refresh_show_clones = function() {
+          $scope.n_clones=0;
+          var show=Object.keys($scope.show_clones);
+          for (var i=0; i<show.length; i++) {
+                  ws_list_machines.send("list_machines_tree/show_clones/"+show[i]+"=false");
+                  ws_list_machines.send("list_machines_tree/show_clones/"+show[i]+"="
+                      +$scope.show_clones[show[i]]);
+          }
+          return show.length;
+      };
+
       subscribe_list_machines= function(url) {
           ws_connected = false;
           $scope.list_machines = {};
@@ -358,17 +370,13 @@ ravadaApp.directive("solShowMachine", swMach)
               $scope.ws_connection_lost = false;
               ws_connected = true ;
               $scope.ws_fail = false;
-              var show=Object.keys($scope.show_clones);
-              for (var i=0; i<show.length; i++) {
-                  ws.send("list_machines_tree/show_clones/"+show[i]+"="+$scope.show_clones[show[i]]);
-              }
               if ($scope.show_active) {
                   ws.send("list_machines_tree/show_active/true");
               }
               if ($scope.filter) {
                   ws_list_machines.send("list_machines_tree/show_name/"+$scope.filter);
               }
-              if (show.length == 0 || !$scope.show_active || !$scope.filter ) {
+              if (! refresh_show_clones() || !$scope.show_active || !$scope.filter ) {
                   ws.send('list_machines_tree');
               }
           };
@@ -730,6 +738,9 @@ ravadaApp.directive("solShowMachine", swMach)
     $scope.list_machines_name = function() {
         ws_list_machines.send("list_machines_tree/show_name/"+$scope.filter);
         $scope.show_filter();
+        if (!$scope.filter) {
+            refresh_show_clones();
+        }
     };
 
     $scope.show_filter = function() {
