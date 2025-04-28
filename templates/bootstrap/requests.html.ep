@@ -34,7 +34,7 @@
         <span ng-show="show_active"
         ><%=l 'Show all' %></span>
         <i class="fas fa-sync-alt fa-spin" ng-show="list_machines_time<2 && !n_active"></i>
-        <span ng-show="list_machines_time>=2" class="badge badge-warning">{{n_active}}</span>
+        <span ng-show="list_machines_time>=2 && !show_active" class="badge badge-warning">{{n_active}}</span>
     </button>
 
     <input type="text" ng-model="filter" placeholder="<%=l 'filter' %>"

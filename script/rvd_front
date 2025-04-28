@@ -3221,8 +3221,6 @@ websocket '/ws/subscribe' => sub {
             return access_denied($c)
               if !_allowed_anonymous_ws($channel) && $USER->is_temporary;
 
-              warn $USER->name." ".$channel;
-
             $WS->subscribe( ws => $ws
                 , channel => $channel
                 , login => $USER->name
@@ -3451,7 +3449,6 @@ sub login($c, $status=200) {
     my $auth_ok;
     if (!@error) {
         if (defined $login && defined $password) {
-            warn $login;
             eval { $auth_ok = Ravada::Auth::login($login, $password)};
         } elsif (($c->param('ticket')) || ($c->param('submit') && $c->param('submit') eq 'sso')) {
             eval { $auth_ok = Ravada::Auth::login_external($ticket, $c->session('ticket')) };

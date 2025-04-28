@@ -34,7 +34,6 @@ my %SUB = (
                   ,list_iso_images  => \&_list_iso_images
                   ,list_nodes => \&_list_nodes
            ,list_host_devices => \&_list_host_devices
-               ,list_machines => \&_list_machines
           ,list_machines_tree => \&_list_machines_tree
           ,list_machines_user => \&_list_machines_user
           ,list_machines_user_including_privates => \&_list_machines_user_including_privates
@@ -149,10 +148,8 @@ sub _request($rvd, $args) {
 
 sub _list_machines($rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
-    warn $login;
     my $user = Ravada::Auth::SQL->new(name => $login)
         or die "Error: uknown user $login";
-    warn $user->can_view_admin_machines;
 
     return (0,[])
         if !$user->can_view_admin_machines;
@@ -748,7 +745,6 @@ sub _send_answer($self, $ws_client, $channel, $key = $ws_client) {
         my $short_key = $key;
         $short_key =~ s/.*HASH\((.*)\)/$1/;
         warn time." $short_key WS: send $channel " if $DEBUG;
-        warn "ret=".Dumper($ret) if $channel eq  'list_machines';
         $ws_client->send( {json => $ret} );
         $self->clients->{$key}->{ret} = $ret;
     }
@@ -792,7 +788,6 @@ sub subscribe($self, %args) {
     my %args2 = %args;
     delete $args2{ws};
     warn "Subscribe ".Dumper(\%args2) if $DEBUG;
-    warn "subscribe ".$args{channel}." ".$args{login};
     if (!exists $self->clients->{$ws}) {
         $self->clients->{$ws} = {
             ws => $ws
@@ -814,7 +809,6 @@ sub subscribe($self, %args) {
             if $key =~ /_(time|last)$/i;
         }
     }
-    warn $args{login}." ".$args{channel};
     $self->_clean_info($ws);
     $self->_send_answer($ws,$args{channel});
     my $channel = $args{channel};

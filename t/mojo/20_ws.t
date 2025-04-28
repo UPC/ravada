@@ -64,15 +64,13 @@ sub _clean_machines_info($machines) {
 }
 
 sub list_machines($t) {
-    diag("subscribe");
-    $t->websocket_ok("/ws/subscribe")->send_ok("list_machines");
-    $t->tx->finish;
+    $t->websocket_ok("/ws/subscribe")->send_ok("list_machines_tree")->message_ok->finish_ok;
     return if !$t->message || !$t->message->[1];
 
     my $name = base_domain_name();
-    my @machines = grep { $_->{name} =~ /^$name/ } @{decode_json($t->message->[1])};
+    my $message = decode_json($t->message->[1]);
+    my @machines = grep { $_->{name} =~ /^$name/ } @{$message->{data}};
     _clean_machines_info(\@machines);
-    warn Dumper([map {$_->{name} } @machines]);
     return @machines;
 }
 
@@ -126,7 +124,6 @@ sub _login_non_admin($t) {
     my $user_name = new_domain_name().".doe";
     remove_old_user($user_name);
     $USER = create_user($user_name, $$);
-    warn "$user_name / $$";
     mojo_login($t, $user_name,$$);
 }
 
@@ -159,9 +156,7 @@ sub _prepare_base($base) {
 }
 
 sub test_list_machines_non_admin($t, $bases) {
-diag("********** test list machines non admin");
-mojo_logout($t);
-    sleep 1;
+    mojo_logout($t);
     _login_non_admin($t);
     _prepare_base($bases->[0]);
 
