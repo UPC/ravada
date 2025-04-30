@@ -76,17 +76,40 @@ ravadaApp.directive("solShowMachine", swMach)
 
   function newMachineCtrl($scope, $http) {
 
+      var ws_list_isos;
+      var isos_cache = {};
+
       $scope.init = function(url) {
+          $scope.disconnected = false;
           $scope.url = url;
           $scope.images = [];
-          subscribe_list_isos(url);
           subscribe_list_machines(url);
-          $http.get('/list_vm_types.json').then(function(response) {
-              $scope.backends = response.data;
-              $scope.backend = response.data[0];
+          $http.get('/list_nodes.json').then(function(response) {
+              $scope.nodes = {};
+              for (var i=0; i<response.data.length; i++) {
+                  var node = response.data[i];
+                  if (typeof($scope.nodes[node.type]) == 'undefined') {
+                      $scope.nodes[node.type] = [];
+                  }
+                  $scope.nodes[node.type].push(node);
+                  if(typeof($scope.backend) == 'undefined') {
+                      $scope.backend = node.type;
+                  }
+                  if (typeof($scope.node) == 'undefined' && node.is_local) {
+                      $scope.node = node;
+                  }
+              }
+              $scope.backends=Object.keys($scope.nodes);
+              $scope.subscribe_list_isos($scope.node.id);
               $scope.loadTemplates();
           });
       }
+
+      $scope.connect = function() {
+          $scope.disconnected=false;
+          subscribe_list_machines($scope.url);
+          $scope.subscribe_list_isos($scope.node.id);
+      };
 
       $scope.list_machine_types = function(backend) {
           $http.get('/list_machine_types.json?vm_type='+backend).then(function(response) {
@@ -117,9 +140,12 @@ ravadaApp.directive("solShowMachine", swMach)
       };
 
       $scope.loadTemplates = function() {
+          $scope.iso_file = '';
+          $http.get('/list_images.json').then(function(response) {
+              $scope.images = response.data;
+          });
           $scope.list_machine_types($scope.backend);
           $scope.list_storage_pools($scope.backend);
-          subscribe_list_images($scope.backend);
       }
 
       /*
@@ -128,13 +154,36 @@ ravadaApp.directive("solShowMachine", swMach)
       });
       */
 
-      subscribe_list_isos = function() {
-          var ws = new WebSocket($scope.url);
-          ws.onopen = function(event) { ws.send('list_isos') };
-          ws.onmessage = function(event) {
+      $scope.change_list_isos = function(id_vm) {
+        $scope.iso_file = '';
+        if (typeof(isos_cache[id_vm]) != 'undefined') {
+            $scope.isos = isos_cache[id_vm];
+            $scope.iso_file = $scope.change_iso($scope.id_iso);
+        } else {
+            $scope.isos = undefined;
+        }
+        ws_list_isos.send('list_isos/'+id_vm) ;
+      };
+
+      $scope.subscribe_list_isos = function(id_vm) {
+          $scope.iso_file = '';
+          $scope.isos=[];
+          if (typeof(ws_list_isos) != 'undefined') {
+              ws_list_isos.close();
+          }
+          ws_list_isos = new WebSocket($scope.url);
+          ws_list_isos.onopen = function(event) { ws_list_isos.send('list_isos/'+id_vm) };
+          ws_list_isos.onclose = function(event) {
+              $scope.disconnected=true;
+          };
+          ws_list_isos.onmessage = function(event) {
               var data = JSON.parse(event.data);
               $scope.$apply(function () {
                   $scope.isos = data;
+                  isos_cache[$scope.node.id] = data;
+                  if (!$scope.iso_file && $scope.id_iso) {
+                      $scope.iso_file = $scope.change_iso($scope.id_iso);
+                  }
               });
           }
       };
@@ -149,20 +198,6 @@ ravadaApp.directive("solShowMachine", swMach)
               });
           }
       };
-
-      subscribe_list_images = function(backend) {
-          $scope.images = [];
-          var ws = new WebSocket($scope.url);
-          ws.onopen = function(event) { ws.send('list_iso_images/'+backend) };
-          ws.onmessage = function(event) {
-              var data = JSON.parse(event.data);
-              $scope.$apply(function () {
-                  $scope.images = data;
-              });
-          }
-      };
-
-
       /*
       $http.get('/list_lxc_templates.json').then(function(response) {
               $scope.templates_lxc = response.data;

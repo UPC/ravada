@@ -148,7 +148,7 @@ our %VALID_ARG = (
     ,list_network_interfaces => { uid => 1, vm_type => 1, type => 2 }
 
     #isos
-    ,list_isos => { vm_type => 1 }
+    ,list_isos => { id_vm => 1 }
 
     ,manage_pools => { uid => 2, id_domain => 2 }
     ,ping_backend => {}
