@@ -235,7 +235,24 @@ ravadaApp.directive("solShowMachine", swMach)
           if ( $scope.swap.value < iso.min_swap_size ) {
               $scope.swap.value = iso.min_swap_size + 0.1;
           }
-          return (iso.device != null) ? iso.device : "";
+          if (iso.file_re ) {
+              file_re = new RegExp(iso.file_re);
+          } else {
+              return '';
+          }
+          if (typeof($scope.isos) != 'undefined' ) {
+              var name_re = /.*\/(.+\.iso$)/;
+              for (var i=0 ; i<$scope.isos.length ; i++) {
+                  var found = name_re.exec($scope.isos[i]);
+                  if (found.length && file_re.test(found[1])) {
+                      if ($scope.isos[i].downloading) {
+                          $scope.isos[i].downloading=false;
+                      }
+                      return $scope.isos[i];
+                  }
+              }
+          }
+          return "";
       };
 
       $scope.onIdIsoSelected = function() {
@@ -314,18 +331,17 @@ ravadaApp.directive("solShowMachine", swMach)
 
       $scope.refresh_storage = function() {
           $scope.refresh_working = true;
+          $scope.iso_file = undefined;
+          $scope.isos = undefined;
+          isos_cache[$scope.node.id] = undefined;
           $http.post('/request/refresh_storage/',
               JSON.stringify({})
           ).then(function(response) {
+              $scope.refresh_working = false;
+              $scope.change_list_isos($scope.node.id);
               if(response.status == 300 ) {
                   console.error('Response error', response.status);
               }
-              setTimeout(function(){
-                  $http.get('/iso_file.json').then(function(response) {
-                      $scope.isos = response.data;
-                      $scope.refresh_working = false;
-                  });
-              }, 3000);
           }
         );
       };
