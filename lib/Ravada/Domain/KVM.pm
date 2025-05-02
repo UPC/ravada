@@ -3373,7 +3373,10 @@ sub _fix_vcpu_from_topology($self, $data) {
 
     delete $data->{cpu}->{topology}->{dies} if $self->_vm->_data('version') < 8000000;
 
-    $data->{vcpu}->{'#text'} = $dies * $sockets * $cores * $threads ;
+    my $total = $dies * $sockets * $cores * $threads ;
+
+    $data->{vcpu}->{'#text'} = $total;
+    $data->{vcpu}->{'current'} = $total;
 }
 
 sub _change_hardware_cpu($self, $index, $data) {
@@ -3389,6 +3392,7 @@ sub _change_hardware_cpu($self, $index, $data) {
     my $doc = XML::LibXML->load_xml( string => $self->domain->get_xml_description( @flags ));
     my $count = 0;
     my $changed = 0;
+    my $changed_current= 0;
 
     my ($n_vcpu) = $doc->findnodes('/domain/vcpu/text()');
     my ($cpu0) = $doc->findnodes('/domain/cpu');
@@ -3400,7 +3404,7 @@ sub _change_hardware_cpu($self, $index, $data) {
     my ($data_n_cpus, $data_current_cpus);
     $data_n_cpus = delete $data->{vcpu}->{'#text'} if exists $data->{vcpu}->{'#text'};
 
-    $data_current_cpus = delete $data->{vcpu}->{'current'} if exists $data->{vcpu}->{'current'};
+    $data_current_cpus = $data->{vcpu}->{'current'} if exists $data->{vcpu}->{'current'};
     $data_n_cpus = $data_current_cpus if !defined $data_n_cpus && defined $data_current_cpus;
 
     my ($vcpu) = $doc->findnodes('/domain/vcpu');
@@ -3416,7 +3420,11 @@ sub _change_hardware_cpu($self, $index, $data) {
         && $vcpu->getAttribute($key) eq $data->{vcpu}->{$key};
 
         $vcpu->setAttribute($key => $data->{vcpu}->{$key});
-        $changed++ if $key ne 'current';
+        if ( $key ne 'current') {
+            $changed++;
+        } else {
+            $changed_current++;
+        }
     }
     for my $attrib ($vcpu->attributes) {
         next if exists $data->{vcpu}->{$attrib->name};
@@ -3443,8 +3451,10 @@ sub _change_hardware_cpu($self, $index, $data) {
     my $cpu_string2 = join("",grep(/./,split(/\n/,$cpu->toString)));
     $cpu_string2 =~ s/\s\s+/ /g;
 
-    if ( $cpu_string ne $cpu_string2 || $changed ) {
-        $self->needs_restart(1) if $self->is_active;
+    if ( $cpu_string ne $cpu_string2 || $changed || $changed_current ) {
+        if ($self->is_active && ($changed || $cpu_string ne $cpu_string2)) {
+            $self->needs_restart(1);
+        }
         $self->reload_config($doc);
     }
     if ($self->is_active && $data_current_cpus) {
@@ -3784,7 +3794,7 @@ sub reload_config($self, $doc) {
 
     $self->domain($new_domain);
 
-    $self->_data_extra('xml', $doc->toString) if $self->is_known && $self->is_local;
+    $self->_data_extra('xml', $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE)) if $self->is_known && $self->is_local;
 
 }
 

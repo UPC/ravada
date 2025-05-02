@@ -1792,7 +1792,7 @@ sub _json_equal($a, $b) {
     my $hb;
     eval { $hb = decode_json($a) };
 
-    return Ravada::Utils::_different($a, $b);
+    return Ravada::Utils::_different($ha, $hb);
 }
 
 sub _data($self, $field, $value=undef, $table='domains') {
