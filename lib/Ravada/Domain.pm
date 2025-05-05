@@ -6122,7 +6122,7 @@ sub _just_started($self) {
     my $start_time = time - 10;
     $sth->execute($self->id,$start_time);
     while ( my ($id, $command) = $sth->fetchrow ) {
-        return 1 if $command !~ /create|clone|start|open/i;
+        return 1 if $command =~ /create|clone|start|open/i;
     }
     return 0;
 }

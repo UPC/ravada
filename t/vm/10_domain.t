@@ -340,13 +340,13 @@ sub test_auto_shutdown_disconnected($vm, $grace=0) {
     $clone->start(user => user_admin, remote_ip => '1.2.3.4');
     _mock_connected($clone);
     ok(-e $clone->_rrd_file('status')) or die;
-    for (1 .. 2) {
+    for (1 .. 10) {
         last if $clone->client_status(1) eq 'disconnected';
         sleep 1;
         diag("waiting for ".$clone->name." to disconnect "
             .$clone->client_status);
     }
-    is($clone->client_status, 'disconnected');
+    is($clone->client_status, 'disconnected') or exit;
     my $req = Ravada::Request->enforce_limits( _force => 1);
     wait_request(debug => 0);
     is($req->status,'done');
