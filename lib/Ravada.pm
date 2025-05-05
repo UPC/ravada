@@ -4491,8 +4491,9 @@ sub _cmd_manage_pools($self, $request) {
                 );
                 $count_active++;
             } else {
-                $count_active++ if !$clone->client_status
-                                || $clone->client_status =~ /disconnected/i;
+                my $status = $clone->client_status();
+                $count_active++ if !$status
+                                || $status =~ /disconnected/i;
             }
         }
     }

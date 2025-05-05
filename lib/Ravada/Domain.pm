@@ -6109,8 +6109,31 @@ sub _run_iptstate($self, $force=undef) {
     return $out;
 }
 
+sub _just_started($self) {
+    my $sth = $self->_dbh->prepare(
+       "SELECT id,command "
+        ." FROM requests "
+        ." WHERE id_domain=?"
+        ." AND ( start_time>? "
+        ."      OR status <> 'done' "
+        ."      OR start_time IS NULL "
+        ." ) "
+    );
+    my $start_time = time - 10;
+    $sth->execute($self->id,$start_time);
+    while ( my ($id, $command) = $sth->fetchrow ) {
+        return 1 if $command !~ /create|clone|start|open/i;
+    }
+    return 0;
+}
 
 sub _client_connection_status($self, $force=undef) {
+
+    if ( $self->_just_started() ) {
+        my $data = $self->_data('client_status');
+        return $data if $data && $data =~ /\d+\./;
+        return 'connected';
+    }
 
     my $status = $self->_client_connection_status_display($force);
     return $status if $status =~ /^connected/ || $status =~ /\d+\.\d+\.\d+\.\d+/;
