@@ -518,7 +518,8 @@ sub _update_isos {
            ,arch => 'x86_64'
             ,xml => 'alpine-amd64.xml'
      ,xml_volume => 'alpine381_64-volume.xml'
-            ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.16/releases/x86_64/'
+            #,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.16/releases/x86_64/'
+            ,url => 'http://localhost/isos/'
         ,file_re => 'alpine-standard-3.16.*-x86_64.iso'
         ,sha256_url => '$url/alpine-standard-3.16.*.iso.sha256'
             ,min_disk_size => '2'
@@ -531,7 +532,8 @@ sub _update_isos {
            ,arch => 'i686'
             ,xml => 'alpine-i386.xml'
      ,xml_volume => 'alpine381_32-volume.xml'
-            ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.16/releases/x86/'
+            #,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.16/releases/x86/'
+            ,url => 'http://localhost/isos/'
             ,options => { machine => 'pc-i440fx' }
         ,file_re => 'alpine-standard-3.16.*-x86.iso'
         ,sha256_url => '$url/alpine-standard-3.16.*.iso.sha256'
@@ -3347,20 +3349,22 @@ sub create_domain {
         }
     }
     my $vm_name = delete $args{vm};
+    my $id_vm = delete $args{id_vm};
 
     my $start = delete $args{start};
     my $id_base = $args{id_base};
     my $data = delete $args{data};
     my $id_owner = $args{id_owner} or confess "Error: missing id_owner ".Dumper(\%args);
-    _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm add_to_pool options storage));
+    _check_args(\%args,qw(iso_file id_base id_iso id_owner name active swap memory disk id_template start remote_ip request vm add_to_pool options storage id_vm));
 
-    confess "ERROR: Argument vm required"   if !$id_base && !$vm_name;
+    confess "ERROR: Argument vm or id_vm required"   if !$id_base && !$vm_name && !$id_vm;
 
     my $vm;
     if ($vm_name) {
         $vm = $self->search_vm($vm_name);
         confess "ERROR: vm $vm_name not found"  if !$vm;
     }
+    $vm = Ravada::VM->open($id_vm) if $id_vm;
     my $base;
     if ($id_base) {
         $base = Ravada::Domain->open($id_base)
@@ -3388,6 +3392,7 @@ sub create_domain {
     eval { $domain = $vm->create_domain(%args, storage => $storage)};
 
     my $error = $@;
+    die $error if $error =~ /retry/;
     if ( $request ) {
         $request->error(''.$error) if $error;
         if ($error =~ /has \d+ requests/) {
@@ -5991,7 +5996,9 @@ sub _cmd_list_isos($self, $request){
     my $id_vm = $request->args('id_vm');
 
     my $vm = Ravada::VM->open( $id_vm);
-    my @isos = sort { "\L$a" cmp "\L$b" } $vm->search_volume_path_re(qr(.*\.iso$));
+    my @isos = ();
+    @isos = sort { "\L$a" cmp "\L$b" } $vm->search_volume_path_re(qr(.*\.iso$))
+    if $vm && $vm->vm;
 
     $request->output(encode_json(\@isos));
 }

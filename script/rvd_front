@@ -3160,14 +3160,15 @@ get '/img/screenshots/:file' => sub {
     );
 };
 
-get '/iso/download/(#id).json' => sub {
+get '/iso/download/(#id_node)/(#id_iso).json' => sub {
     my $c = shift;
 
     return access_denied($c)    if !$USER->is_admin;
     my $id = $c->stash('id');
 
     my $req = Ravada::Request->download(
-        id_iso => $id
+        id_iso => $c->stash('id_iso')
+        ,id_vm => $c->stash('id_node')
         ,uid => $USER->id
     );
 
@@ -3833,6 +3834,7 @@ sub req_new_domain {
     $args{id_template} = $c->param('id_template')   if $vm =~ /^LX/;
     $args{id_iso} = $c->param('id_iso')             if $vm eq 'KVM';
     $args{storage} = $c->param('storage');
+    $args{id_vm} = $c->param('id_vm');
 
     return $RAVADA->create_domain(%args);
 }

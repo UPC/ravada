@@ -58,6 +58,7 @@ our %VALID_ARG = (
            ,data => 2
            ,options => 2
            ,storage => 2
+           ,id_vm => 2
     }
     ,open_iptables => $args_manage_iptables
       ,remove_base => $args_remove_base
@@ -393,8 +394,8 @@ sub create_domain {
 
     my $args = _check_args('create_domain', @_ );
 
-    confess "ERROR: Argument vm required without id_base"
-        if !exists $args->{vm} && !exists $args->{id_base};
+    confess "ERROR: Argument vm or id_vm required without id_base"
+        if !exists $args->{vm} && !exists $args->{id_base} && !exists $args->{id_vm};
 
     my $self = {};
     if ($args->{network}) {
