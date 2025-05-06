@@ -87,6 +87,7 @@ sub test_start {
 
     wait_request( background => $fork, check_error => 0 );
 
+    is($req->_data('id_domain'),undef);
     ok($req->status eq 'done', "[$vm_name] Req ".$req->{id}." expecting status done, got ".$req->status);
     like($req->error , qr/unknown/i
             ,"[$vm_name] Req ".$req->{id}." expecting unknown domain error , got "

@@ -840,7 +840,62 @@ sub _new_request {
     $request->_validate();
     $request->status('requested') if $request->status ne'done';
 
+    $self->lock_domain() if ! $args{at};
+
     return $request;
+}
+
+sub id_domain($self, $value=undef) {
+
+    return $self->_data('id_domain' => $value) if defined $value;
+
+    my $id_domain = $self->{_data}->{id_domain};
+    return $id_domain if defined $id_domain;
+    $id_domain = $self->defined_arg('id_domain');
+    $self->{_data}->{id_domain} = $id_domain;
+    return $id_domain;
+}
+
+=head2 lock_domain
+
+  Checks if that request belongs to a virtual machine and sets it as locked
+
+=cut
+
+sub lock_domain($self) {
+    my $id_domain = $self->id_domain;
+    if (!defined $id_domain) {
+        $id_domain = $self->defined_arg('id_domain');
+    }
+    return if !defined $id_domain;
+
+    my $sth = $self->_dbh->prepare(
+        "UPDATE domains set is_locked=? "
+        ." WHERE id=?"
+    );
+    $sth->execute($self->id, $id_domain);
+}
+
+=head2 unlock_domain
+
+  Checks if that request belongs to a virtual machine and unlocks it
+
+=cut
+
+sub unlock_domain($self) {
+    my $id_domain = $self->id_domain;
+    if (!defined $id_domain) {
+        $id_domain = $self->defined_arg('id_domain');
+    }
+    return if !defined $id_domain;
+
+    my $sth = $self->_dbh->prepare(
+        "UPDATE domains set is_locked=0 "
+        ." WHERE id=?"
+        ."   AND is_locked<>0"
+    );
+    $sth->execute($id_domain);
+
 }
 
 sub _validate($self) {
@@ -1891,6 +1946,68 @@ sub remove($status, %args) {
     }
 }
 
+sub _data($self, $field, $value=undef) {
+    if (defined $value
+        && (
+          !exists $self->{_data}->{$field}
+          || !defined $self->{_data}->{$field}
+          || $value ne $self->{_data}->{$field}
+        )
+    ) {
+        confess "ERROR: field $field is read only"
+            if $FIELD_RO{$field};
+
+        $self->{_data}->{$field} = $value;
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "UPDATE requests set $field=?"
+            ." WHERE id=?"
+        );
+        $sth->execute($value, $self->id);
+        $sth->finish;
+
+        return $value;
+    }
+    return $self->{_data}->{$field}
+    if exists $self->{_data}->{$field} && defined $self->{_data}->{$field};
+
+    $self->{_data} = $self->_select_db( );
+
+    return if !$self->{_data};
+    confess "No field $field "          if !exists$self->{_data}->{$field};
+
+    return $self->{_data}->{$field};
+
+}
+
+sub id($self) {
+    return $self->{id};
+}
+
+sub _select_db($self) {
+
+    _init_connector();
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM requests "
+            ." WHERE id=?");
+    $sth->execute($self->{id});
+    my $row = $sth->fetchrow_hashref;
+    $sth->finish;
+
+    return if !$row;
+
+    return $row;
+}
+
+=head2 refresh
+
+Refresh request status and data
+
+=cut
+
+sub refresh($self) {
+    delete $self->{_data};
+}
+
 sub AUTOLOAD {
     my $self = shift;
 
@@ -1904,37 +2021,17 @@ sub AUTOLOAD {
         );
     }
 
+    confess "ERROR: Unknown field $name "
+        if !exists $self->{$name} && !exists $FIELD{$name} && !exists $FIELD_RO{$name};
+
     confess "Can't locate object method $name via package $self"
         if !ref($self);
 
     my $value = shift;
     $name =~ tr/[a-z][A-Z]_/_/c;
 
-    confess "ERROR: Unknown field $name "
-        if !exists $self->{$name} && !exists $FIELD{$name} && !exists $FIELD_RO{$name};
-    if (!defined $value) {
-        my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM requests "
-            ." WHERE id=?");
-        $sth->execute($self->{id});
-        my $row = $sth->fetchrow_hashref;
-        $sth->finish;
-
-        return $row->{$name};
-    }
-
-    confess "ERROR: field $name is read only"
-        if $FIELD_RO{$name};
-
-    confess "Error: $name can't be a ref ".Dumper($value) if ref($value);
-    my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set $name=? "
-            ." WHERE id=?");
-    confess if $name eq 'error' && !defined $value;
-    eval {
-        $sth->execute($value, $self->{id});
-        $sth->finish;
-    };
-    warn "$name=$value\n$@" if $@;
-    return $value;
+    delete $self->{_data}->{$name} if $name eq 'error';
+    return $self->_data($name, $value);
 
 }
 

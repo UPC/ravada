@@ -225,6 +225,8 @@ hook before_routes => sub {
     app->log->info(_remote_ip($c)." $user ["._time()."] ".$c->req->method." ".$url)
     if $CONFIG_FRONT->{log}->{log};
 
+    return access_denied_json($c) if !$USER && $url eq '/user.json';
+
     return if $url =~ m{^/(css|font|img|js)}
         || $url =~ m{^/fallback/.*\.(css|js|map)$}
         || $url =~ m{^/fallback/font}
@@ -289,6 +291,10 @@ my %header;
 any '/index.html' => sub {
     my $c = shift;
     return quick_start($c);
+};
+
+get '/user.json' => sub($c) {
+    return $c->render( json => {id => $USER->id , name => $USER->name});
 };
 
 any '/login' => sub {
@@ -357,6 +363,11 @@ any '/test' => sub {
         #        ."<script>alert(window.screen.availWidth"
         #        ."+\" \"+window.screen.availHeight)</script>"
     );
+};
+
+any '/logout.json' => sub($c) {
+    logout($c);
+    return $c->render(json => {logout => '1'});
 };
 
 any '/logout' => sub {
@@ -3189,11 +3200,16 @@ get '/balance_options.json' => sub($c) {
     ]);
 };
 
+websocket '/ws/unsubscribe_all' => sub {
+    my $c = shift;
+    $WS->unsubscribe_all();
+} => 'ws_unsubscribe';
+
 websocket '/ws/subscribe' => sub {
     my $c = shift;
     my $expiration = $SESSION_TIMEOUT;
     $USER = _logged_in($c) if !$USER;
-    return if !$USER;
+    return access_denied_user($c) if !$USER;
     $expiration = $SESSION_TIMEOUT_ADMIN    if $USER->is_operator;
     $c->inactivity_timeout( $expiration );
     $c->on(message => sub {
@@ -3473,6 +3489,8 @@ sub _render_login($c, $error, $status=undef) {
     my $css_snippets = ["\t.intro {\n\t\tbackground:"
                     ." url($CONFIG_FRONT->{login_bg_file})"
                     ." no-repeat bottom center scroll;\n\t}"];
+
+    $c->session(url => $c->req->url->to_abs->path);
     $c->render(
                     template => ($CONFIG_FRONT->{login_custom} or 'main/start')
                         ,css => ['/css/main.css']
@@ -3497,7 +3515,7 @@ sub _login_ok($c, $auth_ok) {
 
     my $login = $auth_ok->name;
 
-    my $url = ($c->param('url') or $c->req->url->to_abs->path);
+    my $url = ($c->param('url') or $c->session('url') or $c->req->url->to_abs->path);
     $url = '/' if $url =~ m{^/login};
 
     $c->session('login' => $login);
@@ -3527,6 +3545,8 @@ sub _login_ok($c, $auth_ok) {
 
 sub logout {
     my $c = shift;
+
+    $WS->unsubscribe_all();
 
     $USER = undef;
     $c->session(expires => 1);
@@ -3876,6 +3896,7 @@ sub _show_request {
     if (!$domain) {
         return $c->render(data => "Request ".$request->status." , but I can't find domain $name");
     }
+    $c->stash('id_base' => $domain->_data('id_base'));
     return view_machine($c,$domain);
 }
 

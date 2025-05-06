@@ -1667,6 +1667,10 @@ sub _add_indexes_generic($self) {
             "index(id_domain)"
             ,"unique (id_bundle, id_domain)"
         ]
+        ,vm_which => [
+            "index(id_vm)"
+            ,"unique(id_vm,command,path)"
+        ]
     );
     my $if_not_exists = '';
     $if_not_exists = ' IF NOT EXISTS ' if $CONNECTOR->dbh->{Driver}{Name} =~ /sqlite|mariadb/i;
@@ -2461,6 +2465,14 @@ sub _sql_create_tables($self) {
                 ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
             }
         ]
+        ,
+        [vm_which => {
+                id => 'integer PRIMARY KEY AUTO_INCREMENT',
+                ,id_vm => 'integer NOT NULL references `vms` (`id`) ON DELETE CASCADE',
+                ,command => 'char(40)'
+                ,path => 'varchar(255)'
+            }
+        ]
 
     );
     for my $new_table (@tables ) {
@@ -2936,7 +2948,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','volatile_clones','int NOT NULL default 0');
     $self->_upgrade_table('domains','comment',"varchar(80) DEFAULT ''");
 
-    $self->_upgrade_table('domains','client_status','varchar(32)');
+    $self->_upgrade_table('domains','client_status','varchar(64)');
     $self->_upgrade_table('domains','client_status_time_checked','int NOT NULL default 0');
     $self->_upgrade_table('domains','pools','int NOT NULL default 0');
     $self->_upgrade_table('domains','pool_clones','int NOT NULL default 0');
@@ -2960,6 +2972,9 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','post_hibernated','int not null default 0');
     $self->_upgrade_table('domains','is_compacted','int not null default 0');
     $self->_upgrade_table('domains','has_backups','int not null default 0');
+    $self->_upgrade_table('domains','has_clones','int default NULL');
+    $self->_upgrade_table('domains','has_host_devices','int default NULL');
+    $self->_upgrade_table('domains','is_locked','int not null default 0');
     $self->_upgrade_table('domains','auto_compact','int default NULL');
     $self->_upgrade_table('domains','date_status_change' , 'datetime');
     $self->_upgrade_table('domains','show_clones' , 'int not null default 1');
@@ -4372,14 +4387,16 @@ sub _do_execute_command {
     $request->status('working','') unless $request->status() eq 'working';
     $request->pid($$);
     my $t0 = [gettimeofday];
+    $request->lock_domain();
     eval {
         $sub->($self,$request);
     };
     my $err = ( $@ or '');
     my $elapsed = tv_interval($t0,[gettimeofday]);
     $request->run_time($elapsed);
-    $request->error(''.$err)   if $err;
+    $request->unlock_domain();
     if ($err) {
+        $request->error(''.$err);
         my $user = $request->defined_arg('user');
         if ($user && ref($user)) {
             my $subject = $err;
@@ -4424,7 +4441,8 @@ sub _set_domain_changed($self, $request) {
     $sth_date->execute($id_domain);
     my ($date) = $sth_date->fetchrow();
 
-    my $sth = $CONNECTOR->dbh->prepare("UPDATE domains set date_changed=CURRENT_TIMESTAMP"
+    my $sth = $CONNECTOR->dbh->prepare("UPDATE domains "
+        ." set is_locked=0, date_changed=CURRENT_TIMESTAMP"
         ." WHERE id=? ");
     $sth->execute($id_domain);
 
@@ -4490,8 +4508,9 @@ sub _cmd_manage_pools($self, $request) {
                 );
                 $count_active++;
             } else {
-                $count_active++ if !$clone->client_status
-                                || $clone->client_status =~ /disconnected/i;
+                my $status = $clone->client_status();
+                $count_active++ if !$status
+                                || $status =~ /disconnected/i;
             }
         }
     }
@@ -5827,7 +5846,7 @@ sub _cmd_refresh_machine($self, $request) {
             $domain->remove(Ravada::Utils::user_daemon);
             return;
         }
-        $domain->_fetch_networking_mode();
+        $domain->_fetch_networking_mode() if $domain->is_known();
     }
     $domain->info($user);
     $domain->client_status(1) if $is_active;
@@ -6405,11 +6424,11 @@ sub _refresh_active_domain($self, $domain, $active_domain) {
     my $status = 'shutdown';
     if ( $is_active ) {
         $status = 'active';
+        $domain->client_status(1);
     }
     $domain->_set_data(status => $status);
     $domain->info(Ravada::Utils::user_daemon)             if $is_active;
     $active_domain->{$domain->id} = $is_active;
-    $domain->client_status(1);
 
     $domain->_post_shutdown()
     if $domain->_data('status') eq 'shutdown' && !$domain->_data('post_shutdown')
