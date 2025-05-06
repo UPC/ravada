@@ -5339,7 +5339,6 @@ sub _cmd_download {
 sub _download_local_and_rsync($self, $request, $vm, $iso) {
     my $vm_local = $vm->new(host => 'localhost');
     my $found = $vm_local->search_volume_path_re(qr($iso->{file_re}));
-    warn $vm_local->name." found=".($found or '')." ".$iso->{file_re};
 
     if (!$found) {
         my $req_local = Ravada::Request->download(

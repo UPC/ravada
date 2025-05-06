@@ -181,7 +181,9 @@ ravadaApp.directive("solShowMachine", swMach)
         } else {
             $scope.isos = undefined;
         }
-        ws_list_isos.send('list_isos/'+id_vm) ;
+        if (typeof(ws_list_isos) != 'undefined') {
+            ws_list_isos.send('list_isos/'+id_vm) ;
+        }
       };
 
       $scope.subscribe_list_isos = function(id_vm) {
@@ -1211,7 +1213,6 @@ ravadaApp.directive("solShowMachine", swMach)
 
             $http.post("/v1/exists/vms",JSON.stringify(args))
                 .then(function(response) {
-                    console.log(response.data);
                     $scope.hostname_duplicated = response.data.id;
             });
         };
