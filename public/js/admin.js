@@ -95,13 +95,10 @@ ravadaApp.directive("solShowMachine", swMach)
                   if(typeof($scope.backend) == 'undefined') {
                       $scope.backend = node.type;
                   }
-                  if (typeof($scope.node) == 'undefined' && node.is_local) {
-                      $scope.node = node;
-                  }
               }
               $scope.backends=Object.keys($scope.nodes);
+              $scope.change_backend();
               $scope.subscribe_list_isos($scope.node.id);
-              $scope.loadTemplates();
           });
       }
 
@@ -146,6 +143,28 @@ ravadaApp.directive("solShowMachine", swMach)
           });
           $scope.list_machine_types($scope.backend);
           $scope.list_storage_pools($scope.backend);
+      }
+
+      default_node = function() {
+          $scope.node = undefined;
+          var node;
+          for (var i=0; i<$scope.nodes[$scope.backend].length; i++) {
+              var current_node = $scope.nodes[$scope.backend][i];
+              if (typeof(node) == 'undefined') {
+                  node = current_node;
+              }
+              if (typeof($scope.node) == 'undefined' && current_node.is_local ) {
+                  $scope.node = current_node;
+              }
+          }
+          if (typeof($scope.node) == 'undefined') {
+              $scope.node=node;
+          }
+      }
+
+      $scope.change_backend = function() {
+            $scope.loadTemplates();
+            default_node();
       }
 
       /*
