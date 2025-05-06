@@ -450,6 +450,9 @@ ravadaApp.directive("solShowMachine", swMach)
                   if ( $scope.filter) { $scope.show_filter() };
               });
           }
+          if (typeof(ws_list_isos) != 'undefined') {
+              $scope.change_list_isos($scope.node.id);
+          }
       }
       subscribe_list_requests = function(url) {
           $scope.show_requests = false;
