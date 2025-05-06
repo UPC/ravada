@@ -303,6 +303,7 @@
                 <button type="reset" class="btn btn-outline-secondary mr-2" onclick = "location='/admin/machines'"><%=l 'Cancel' %></button>
                 <input type="submit" class="btn btn-primary" name="submit" value="<%=l 'Create' %>"
                      ng-disabled="new_machineForm.$invalid || name_duplicated || (id_iso && !id_iso.id)
+                     || !node
                     || (id_iso && id_iso.has_cd && !id_iso.url
                         && (!iso_file || iso_file == '' || iso_file == '<NONE')
                     )

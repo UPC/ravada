@@ -561,15 +561,23 @@ sub search_volume_path_re {
     my $self = shift;
     my $pattern = shift;
 
-    die "TODO remote" if !$self->is_local;
+    return $self->_search_volume_path_re_remote($pattern) if !$self->is_local;
 
     opendir my $ls,$self->dir_img or die $!;
     while (my $file = readdir $ls) {
-        return $self->dir_img."/".$file if $file =~ m{$pattern};
+        return $self->dir_img."/".$file if $file =~ $pattern;
     }
     closedir $ls;
     return;
 
+}
+
+sub _search_volume_path_re_remote($self,$pattern) {
+    my ($out, $err) = $self->run_command("ls",$self->dir_img);
+    for my $name ( split /\n/,$out) {
+        return $self->dir_img."/$name" if $name =~ $pattern;
+    }
+    return;
 }
 
 sub remove_file($self, @files) {
@@ -747,6 +755,7 @@ sub _iso_name($self, $iso, $request=undef, $verbose=0) {
     $name =~ s/(.*)\.\*(.*)/$1$2/;
     $name =~ s/(.*)\.\+(.*)/$1.$2/;
     $name =~ s/(.*)\[\\d.*?\]\+(.*)/${1}1$2/;
+    $name =~ s/^\^(.*)\$$/$1/;
     confess $name if $name =~ m{[*+\\]};
 
     $name = $self->_storage_path($self->default_storage_pool_name)."/".$name unless $name =~ m{^/};
@@ -756,6 +765,11 @@ sub _iso_name($self, $iso, $request=undef, $verbose=0) {
         ." SET device=? WHERE id=?"
     );
     $sth->execute($name, $iso->{id});
+
+    open my $out,">",$name or die "$! $name";
+    print $out "...\n";
+    close $out;
+
     return $name;
 }
 
@@ -883,6 +897,17 @@ sub remove_storage_pool($self, $name) {
     }
 
     $self->write_file($file_sp, Dump( \@sp2));
+}
+
+sub copy_file($self, $orig, $dst) {
+    if ($self->is_local) {
+        copy($orig, $dst) or die "$! $orig $dst";
+    } else {
+        $dst =~ tr/[a-zA-Z0-9_\-\.\/]/_/c;
+        die "Invalid file '$orig'" unless $orig =~ /^[a-zA-Z0-9_\-\.\/]+$/;
+        die "Invalid file '$dst'" unless $dst =~ /^[a-zA-Z0-9_\-\.\/]+$/;
+        $self->run_command("cp",$orig,$dst);
+    }
 }
 
 #########################################################################3

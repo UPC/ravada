@@ -5728,13 +5728,18 @@ sub _cmd_set_driver {
 
 sub _cmd_refresh_storage($self, $request=undef) {
 
-    my $vm;
-    if ($request && $request->defined_arg('id_vm')) {
-        $vm = Ravada::VM->open($request->defined_arg('id_vm'));
+    my @id_vm;
+    if ( $request && $request->defined_arg('id_vm')) {
+        push @id_vm,($request->defined_arg('id_vm'))
     } else {
-        $vm = $self->search_vm('KVM');
+        push @id_vm,$self->_list_vms_id();
     }
-    $vm->refresh_storage();
+    for my $id (@id_vm) {
+        my $vm;
+        $vm = Ravada::VM->open($id);
+        next if !$vm || !$vm->vm;
+        $vm->refresh_storage();
+    }
 }
 
 sub _list_mnt($vm, $type) {

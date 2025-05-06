@@ -98,7 +98,6 @@ ravadaApp.directive("solShowMachine", swMach)
               }
               $scope.backends=Object.keys($scope.nodes);
               $scope.change_backend();
-              $scope.subscribe_list_isos($scope.node.id);
           });
       }
 
@@ -165,6 +164,7 @@ ravadaApp.directive("solShowMachine", swMach)
       $scope.change_backend = function() {
             $scope.loadTemplates();
             default_node();
+            $scope.subscribe_list_isos($scope.node.id);
       }
 
       /*
