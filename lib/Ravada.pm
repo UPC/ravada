@@ -789,8 +789,8 @@ sub _update_isos {
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => "https://cdimage.kali.org/kali-$year".'.\d+/'
-            ,file_re => "kali-linux-$year.".'\d+-installer-amd64.iso'
+            ,url => "https://cdimage.kali.org/kali-$year".'.\d+.*/'
+            ,file_re => "kali-linux-$year.".'\d+.*-installer-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,min_disk_size => '10'
         }
@@ -800,8 +800,8 @@ sub _update_isos {
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => "https://cdimage.kali.org/kali-$year".'.\d+/'
-            ,file_re => "kali-linux-$year.".'\d+-installer-netinst-amd64.iso'
+            ,url => "https://cdimage.kali.org/kali-$year".'.\d+.*/'
+            ,file_re => "kali-linux-$year.".'\d+.*-installer-netinst-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,min_disk_size => '10'
         }
@@ -2433,7 +2433,8 @@ sub _sql_create_tables($self) {
             bundles => {
                 id => 'integer PRIMARY KEY AUTO_INCREMENT',
                 name => 'char(255) NOT NULL',
-                private_network => 'integer NOT NULL default 0'
+                private_network => 'integer NOT NULL default 0',
+                isolated => 'integer NOT NULL default 0'
             }
         ],
         [
@@ -2458,6 +2459,7 @@ sub _sql_create_tables($self) {
                 ,'dhcp_end' => 'char(15)'
                 ,'is_active' => 'integer not null default 1'
                 ,'is_public' => 'integer not null default 0'
+                ,'forward_mode' => 'char(20)'
                 ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
             }
         ]
@@ -2972,6 +2974,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','date_status_change' , 'datetime');
     $self->_upgrade_table('domains','show_clones' , 'int not null default 1');
     $self->_upgrade_table('domains','config_no_hd' , 'text');
+    $self->_upgrade_table('domains','networking' , 'varchar(32)');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
@@ -3665,6 +3668,18 @@ List all the Virtual Machine Managers
 
 sub list_vms($self) {
     return @{$self->vm};
+}
+
+sub _list_vms_id($self) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms"
+    );
+    $sth->execute();
+    my @vms;
+    while (my ($id) = $sth->fetchrow) {
+        push @vms,($id);
+    }
+    return @vms;
 }
 
 =head2 list_domains
@@ -4943,6 +4958,12 @@ sub _net_bundle($self, $domain, $user0) {
     my $data = decode_json($req_new_net->output);
     $req_new_net->status('done');
 
+    if ($bundle->{'isolated'}) {
+        $data->{forward_mode} = 'none'
+    } else {
+        $data->{forward_mode} = 'nat'
+    }
+
     my $req_network = Ravada::Request->create_network(
         uid => Ravada::Utils::user_daemon->id
         ,id_vm => $domain->_vm->id
@@ -5766,6 +5787,7 @@ sub _cmd_refresh_machine($self, $request) {
             $domain->remove(Ravada::Utils::user_daemon);
             return;
         }
+        $domain->_fetch_networking_mode();
     }
     $domain->info($user);
     $domain->client_status(1) if $is_active;
@@ -6126,7 +6148,9 @@ sub _clean_requests($self, $command, $request=undef, $status='requested') {
 sub _refresh_active_vms ($self) {
 
     my %active_vm;
-    for my $vm ($self->list_vms) {
+    for my $id ($self->_list_vms_id) {
+        my $vm;
+        eval{ $vm = Ravada::VM->open($id) };
         next if !$vm;
         if ( !$vm->vm || !$vm->enabled() || !$vm->is_active ) {
             $vm->shutdown_domains();
@@ -7047,16 +7071,18 @@ sub _cmd_close_exposed_ports($self, $request) {
     $domain->_close_exposed_port($port);
 
     if ($request->defined_arg('clean')) {
-        my $query = "UPDATE domain_ports SET public_port=NULL"
+        my $query = "UPDATE domain_ports SET public_port=?"
                     ." WHERE id_domain=? ";
         $query .=" AND internal_port=?" if $port;
 
         my $sth_update = $CONNECTOR->dbh->prepare($query);
 
         if ($port) {
-            $sth_update->execute($domain->id, $port);
+            $sth_update->execute($domain->_vm->_new_free_port()
+                ,$domain->id, $port);
         } else {
-            $sth_update->execute($domain->id);
+            $sth_update->execute($domain->_vm->_new_free_port()
+                ,$domain->id);
         }
     }
 }
@@ -7206,6 +7232,7 @@ sub _cmd_remove_network($self, $request) {
 sub _check_user_authorized_network($request, $id_network) {
 
     my $user=Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: user ".$request->args('uid')." not found" if !$user;
 
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT * FROM virtual_networks WHERE id=?"
@@ -7233,7 +7260,16 @@ sub _cmd_change_network($self, $request) {
     $data->{internal_id} = $network->{internal_id} if !$data->{internal_id};
     my $vm = Ravada::VM->open($network->{id_vm});
 
+    my $forward_mode;
+
+    $forward_mode = $data->{forward_mode} if $data->{forward_mode};
+    my $network_name = $data->{name};
+
     $vm->change_network($data, $request->args('uid'));
+
+    if ($forward_mode) {
+        $vm->_set_active_machines_isolated($network_name);
+    }
 }
 
 sub _cmd_active_storage_pool($self, $request) {

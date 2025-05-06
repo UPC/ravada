@@ -73,14 +73,15 @@ sub test_expose_port($vm) {
         ,id_domain => $domain->id
         ,remote_ip => $remote_ip2
     );
-    wait_request();
+    wait_request(debug=>0);
+    is($req->error,'');
 
     my @out_nat = split /\n/, `iptables-save -t nat`;
     my @prerouting= (grep /--to-destination $internal_ip:22/, @out_nat);
     is(scalar(@prerouting),1);
     my @out= split /\n/, `iptables-save`;
     my @forward = (grep /-s $remote_ip2\/32 -d $internal_ip.* --dport 22.*-j ACCEPT/, @out);
-    is(scalar(@forward),1,"-s $remote_ip2\/32 -d $internal_ip.* --dport 22.*-j ACCEPT") or die Dumper([grep /FORWARD/,@out]);
+    is(scalar(@forward),1,"-s $remote_ip2\/32 -d $internal_ip.* --dport 22.*-j ACCEPT") or die $domain->name." ". Dumper([grep /FORWARD/,@out]);
     remove_domain($domain0);
 }
 

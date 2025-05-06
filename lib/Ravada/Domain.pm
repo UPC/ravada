@@ -299,11 +299,40 @@ sub _vm_disconnect {
     $self->_vm->disconnect();
 }
 
+sub _fetch_networking_mode($self) {
+
+    my $is_active = $self->is_active;
+    my $networking_old = $self->_data('networking');
+
+    my $networking = '';
+    my @interfaces = $self->get_controller('network');
+    my @virtual_networks = Ravada::VM::list_virtual_networks_data($self->_data('id_vm'));
+    for my $item (@interfaces) {
+        next if lc($item->{type}) ne 'nat';
+        next if !$item->{network};
+        for my $network (@virtual_networks) {
+            next unless $network->{name} eq $item->{network};
+            next unless $network->{forward_mode};
+            if( $network->{forward_mode} eq 'nat') {
+                $networking = 'nat';
+            } elsif ($network->{forward_mode} eq 'none') {
+                $networking = 'isolated' unless $networking eq 'nat';
+            }
+            last;
+        }
+        last if $networking eq 'nat';
+    }
+    if (!$is_active || $networking eq 'isolated' || !$self->_data('networking')) {
+        $self->_data('networking' => $networking);
+    }
+}
+
 sub _around_start($orig, $self, @arg) {
 
     $self->_post_hibernate() if $self->is_hibernated && !$self->_data('post_hibernated');
     if ( !$self->is_active ) {
         $self->_unlock_host_devices(0);
+        $self->_fetch_networking_mode();
     }
 
     $self->_start_preconditions(@arg);
@@ -1349,8 +1378,14 @@ sub _store_display($self, $display, $display_old=undef) {
     $self->_set_display_ip(\%display_new) if !exists $display->{ip} || !$display->{ip};
     if (!exists $display_new{ip} || !$display_new{ip}) {
         unlock_hash(%display_new);
-        $display_new{ip} = $self->_vm->ip;
-        $display_new{listen_ip} = $display_new{ip};
+        $display_new{listen_ip} = $self->_vm->ip;
+        my $display_ip = ( $self->_vm->nat_ip
+            or $self->_vm->display_ip
+            or $self->_vm->public_ip
+            or $self->_vm->ip
+        );
+
+        $display_new{ip} = $display_ip;
     }
 
     if ( !$display_old ) {
@@ -1360,7 +1395,6 @@ sub _store_display($self, $display, $display_old=undef) {
         $display_old = $self->_get_display($display->{driver})
     }
 
-    my $ip = ( $display_new{ip} or $display_old->{ip} );
     my $driver = ( $display_new{driver} or $display_old->{driver} );
     if (exists $display_new{port} && $display_new{port}
         && (!exists $display_new{id_vm} || !$display_new{id_vm}) ) {
@@ -1462,6 +1496,9 @@ sub _insert_display( $self, $display ) {
     if !defined $display->{is_builtin};
 
     confess Dumper($display) if $display->{driver} =~ /-tls/ && !$display->{is_secondary};
+
+    $display->{listen_ip} = $self->_vm->ip
+    if !exists $display->{listen_ip} || !$display->{listen_ip};
 
     lock_hash(%$display);
     $self->_clean_display_order($display->{n_order}) if $display->{n_order};
@@ -2126,6 +2163,59 @@ sub display($self, $user) {
     return $display;
 }
 
+sub _display_file_rdp($self,$display) {
+
+    my $ret = "screen mode id:i:2
+use multimon:i:0
+desktopwidth:i:1280
+desktopheight:i:1024
+session bpp:i:32
+winposstr:s:0,1,14,5,1280,1000
+compression:i:1
+keyboardhook:i:2
+audiocapturemode:i:0
+videoplaybackmode:i:1
+connection type:i:7
+networkautodetect:i:1
+bandwidthautodetect:i:1
+displayconnectionbar:i:1
+enableworkspacereconnect:i:0
+disable wallpaper:i:0
+allow font smoothing:i:0
+allow desktop composition:i:0
+disable full window drag:i:1
+disable menu anims:i:1
+disable themes:i:0
+disable cursor setting:i:0
+bitmapcachepersistenable:i:1
+full address:s:".$display->{ip}.":".$display->{port}."\n"
+."audiomode:i:0
+redirectprinters:i:0
+redirectcomports:i:0
+redirectsmartcards:i:0
+redirectclipboard:i:1
+redirectposdevices:i:0
+autoreconnection enabled:i:1
+authentication level:i:0
+prompt for credentials:i:0
+negotiate security layer:i:1
+remoteapplicationmode:i:0
+alternate shell:s:
+shell working directory:s:
+gatewayhostname:s:
+gatewayusagemethod:i:4
+gatewaycredentialssource:i:4
+gatewayprofileusagemethod:i:0
+promptcredentialonce:i:0
+gatewaybrokeringtype:i:0
+use redirection server name:i:0
+rdgiskdcproxy:i:0
+kdcproxyname:s:
+drivestoredirect:s:*
+username:s:
+";
+}
+
 # taken from isard-vdi thanks to @tuxinthejungle Alberto Larraz
 sub _display_file_spice($self,$display, $tls = 0) {
 
@@ -2228,6 +2318,7 @@ sub info($self, $user) {
         ,auto_compact => ($self->auto_compact or 0)
         ,date_changed => $self->_data('date_changed')
         ,is_volatile => $self->_data('is_volatile')
+        ,networking => $self->_data('networking')
     };
 
     $info->{alias} = ( $self->_data('alias') or $info->{name} );
@@ -3244,9 +3335,6 @@ sub _pre_shutdown {
     $self->list_disks;
     $self->_remove_start_requests();
 
-    my $ip = $self->ip;
-    $self->_delete_ip_rule ([undef,$ip,'nat' ]) if $ip;
-
 }
 
 sub _remove_start_requests($self) {
@@ -3683,8 +3771,13 @@ sub _add_expose($self, $internal_port, $name, $restricted) {
         confess $@;
     }
 
-    $self->_open_exposed_port($internal_port, $name, $restricted)
-        if $self->is_active && $self->ip;
+    if ($self->is_active) {
+        my $ip_info = $self->ip_info;
+        if ( $ip_info && exists $ip_info->{addr} && $ip_info->{addr}) {
+            $self->_open_exposed_port($internal_port, $name, $restricted);
+        }
+    }
+
     return $public_port;
 }
 
@@ -3765,16 +3858,18 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
     my ($id_port, $public_port) = $sth->fetchrow();
 
     my $internal_ip;
+    my $internal_ip_info;
     for ( 1 .. 5 ) {
-        $internal_ip = $self->ip;
-        last if $internal_ip;
+        $internal_ip_info = $self->ip_info;
+        last if $internal_ip_info && exists $internal_ip_info->{addr} && $internal_ip_info->{addr};
         sleep 1;
     }
+    $internal_ip = $internal_ip_info->{addr} if exists $internal_ip_info->{addr};
+
     die "Error: I can't get the internal IP of ".$self->name." ".($internal_ip or '<UNDEF>').". Retry."
         if !$internal_ip || $internal_ip !~ /^(\d+\.\d+)/;
 
-    die "Error: No NAT ip in domain ".$self->name." found. Retry.\n"
-    if !$self->_vm->_is_ip_nat($internal_ip);
+    return unless exists $internal_ip_info->{type} && $internal_ip_info->{type} =~ /^(bridge|nat)$/i;
 
     if ($public_port
         && ( $self->_used_ports_iptables($public_port, "$internal_ip:$internal_port")
@@ -3793,6 +3888,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
             ." WHERE id_domain=? AND internal_port=?"
     );
     $sth->execute($internal_ip, $self->id, $internal_port);
+
     $self->_update_display_port_exposed($name, $local_ip, $public_port, $internal_port);
 
     if ( !$> && $public_port ) {
@@ -3800,7 +3896,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
             , $internal_port, $debug_ports);
         $self->_delete_iptables_forward($internal_ip, $internal_port);
 
-        warn $self->name." open $public_port ->"
+        warn $self->name."[ $internal_ip_info->{type} ] open $public_port ->"
         ." $internal_ip:$internal_port\n"
         if $debug_ports;
 
@@ -3812,7 +3908,30 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
             ,dport => $public_port
             ,j => 'DNAT'
             ,'to-destination' => "$internal_ip:$internal_port"
-        ) if !$>;
+        );
+        if ($internal_ip_info->{type} eq 'bridge') {
+
+            my @iptables_arg = ("0.0.0.0/0"
+                        ,$internal_ip, 'nat', 'POSTROUTING', 'SNAT',
+                        ,{'protocol' => 'tcp'
+                            ,'d_port' => $internal_port
+                            ,'to_source' => $local_ip
+                        });
+
+            $self->_log_iptable(iptables => \@iptables_arg
+                , user => Ravada::Utils::user_daemon
+                , remote_ip => "0.0.0.0/0");
+
+            $self->_vm->iptables_unique(
+                t => 'nat'
+                ,A => 'POSTROUTING'
+                ,p => 'tcp'
+                ,d => $internal_ip
+                ,dport => $internal_port
+                ,j => 'SNAT'
+                ,'to-source' => $local_ip
+            );
+        }
 
         $self->_open_iptables_state();
         $self->_open_exposed_port_client($internal_port, $restricted, $remote_ip);
@@ -3853,10 +3972,14 @@ sub _update_display_port_exposed($self, $name, $local_ip, $public_port, $interna
         ." SET ip=?,listen_ip=?,port=?,is_active=?,id_vm=? "
         ." WHERE driver=? AND id_domain=?"
     );
+    my $display_ip = ( $self->_vm->nat_ip
+            or $self->_vm->display_ip
+            or $local_ip );
+
     my $is_builtin;
     for (1 .. 10) {
         eval {
-            $sth->execute($local_ip, $local_ip, $public_port,1, $self->_vm->id
+            $sth->execute($display_ip, $local_ip, $public_port,1, $self->_vm->id
                 ,$name, $self->id);
         };
         warn "Warning: $@".Dumper([$name, $public_port]) if $@;
@@ -3960,19 +4083,11 @@ sub open_exposed_ports($self, $remote_ip=undef) {
     my @ports = $self->list_ports();
     return if !@ports;
     return if !$self->is_active;
-
-    if (!$self->has_nat_interfaces) {
-        $self->_set_ports_direct();
-        return;
-    }
+    return if $self->_data('networking') eq 'isolated';
 
     my $ip = $self->ip;
     if ( ! $ip ) {
         die "Error: No ip in domain ".$self->name.". Retry.\n";
-    }
-
-    if (!$self->_vm->_is_ip_nat($ip)) {
-        die "Error: No NAT ip in domain ".$self->name." found. Retry.\n";
     }
 
     $self->display_info(Ravada::Utils::user_daemon);
@@ -3980,15 +4095,6 @@ sub open_exposed_ports($self, $remote_ip=undef) {
         $self->_open_exposed_port($expose->{internal_port}, $expose->{name}
             ,$expose->{restricted}, $remote_ip);
     }
-}
-
-sub _set_ports_direct($self) {
-    my $sth_update = $$CONNECTOR->dbh->prepare(
-        "UPDATE domain_ports set public_port=NULL "
-        ." WHERE id_domain=?"
-    );
-    $sth_update->execute($self->id);
-
 }
 
 sub _close_exposed_port($self,$internal_port_req=undef) {
@@ -4179,6 +4285,7 @@ sub _remove_iptables {
     my %rule;
     for my $row (@iptables) {
         my ($id, $id_vm, $iptables) = @$row;
+
         next if !$id_vm;
         push @{$rule{$id_vm}},[ $id, $iptables ];
     }
@@ -4367,32 +4474,25 @@ sub _post_start {
 
 sub _check_port_conflicts($self) {
     my @displays = $self->_get_controller_display();
-    my $sth = $self->_dbh->prepare("SELECT id,id_domain,internal_port FROM domain_ports"
-        ." WHERE public_port=? AND is_active=1 AND id_domain <> ?"
-    );
-    for my $display ( @displays ) {
-        for my $port ($display->{port}) {
-            $sth->execute($port, $self->id);
-            while ( my ($id, $id_domain, $internal_port) = $sth->fetchrow ) {
-                # Updating the graphics port is not possible rightnow libvirt 5.0
-                # my $new_port = $self->_vm->new_free_port();
-                # $self->_update_device_graphics($display->{driver},{port => $new_port});
-
-                my $req_close= Ravada::Request->close_exposed_ports(
+    my %dupe_port;
+    for my $display (@displays) {
+        $dupe_port{$display->{port}}++ if $display->{port};
+    }
+    for my $port (keys %dupe_port) {
+        next if $dupe_port{$port}<2;
+        my $req_close= Ravada::Request->close_exposed_ports(
                            uid => Ravada::Utils::user_daemon->id
-                         ,port => $internal_port
-                    ,id_domain => $id_domain
+                    ,id_domain => $self->id
                         ,clean => 1
-                );
-                my $req = Ravada::Request->open_exposed_ports(
-                           uid => Ravada::Utils::user_daemon->id
-                    ,id_domain => $id_domain
-                ,after_request => $req_close->id
-                ,retry => 20
+        );
+        my $req = Ravada::Request->open_exposed_ports(
+                       uid => Ravada::Utils::user_daemon->id
+                ,id_domain => $self->id
+            ,after_request => $req_close->id
+                    ,retry => 20
                 ,_force => 1
-                );
-            }
-        }
+        );
+
     }
 }
 
@@ -4460,51 +4560,59 @@ sub _delete_ip_rule ($self, $iptables, $vm = $self->_vm) {
     confess if !ref($vm);
     return if !$vm->is_active;
 
-    my ($s, $d, $filter, $chain, $jump, $extra) = @$iptables;
-    lock_hash %$extra;
+    my ($s, $d, $filter, $chain, $jump, $extra0) = @$iptables;
+
+    if ( $extra0 && exists $extra0->{s_port} && $extra0->{s_port}==0 ) {
+        delete $extra0->{s_port};
+    }
+    lock_hash %$extra0;
 
     $filter = 'filter' if !$filter;
 
     if ($s) {
         $s = undef if $s =~ m{^0\.0\.0\.0};
         $s .= "/32" if defined $s && $s !~ m{/};
+    } else {
+        $s = "0.0.0.0/0";
     }
     $d .= "/32" if defined $d && $d !~ m{/};
 
-    my $iptables_list = $vm->iptables_list();
+    $extra0 = {} if !defined $extra0;
 
-    my $removed = 0;
-    for my $line (@{$iptables_list->{$filter}}) {
-        my %args = @$line;
-        next if defined $chain && $args{A} ne $chain;
-        next if $args{A} =~ /LIBVIRT_/;
-        if((!defined $jump || ( exists $args{j} && $args{j} eq $jump ))
-           && ( !defined $s || (exists $args{s} && $args{s} eq $s))
-           && ( !defined $d || ( exists $args{d} && $args{d} eq $d))
-           && (exists $extra->{d_port} && $args{dport} eq $extra->{d_port}))
-        {
+    my $extra = dclone($extra0);
+    my @cmd = ("iptables", "-t", $filter, "-D", $chain,"-j",$jump);
+    unlock_hash(%$extra);
+    push @cmd, ("-s",$s) if $s;
+    push @cmd, ("-d",$d) if $d;
 
-           my $curr_chain = delete $args{A};
-           if ($vm->is_active) {
-                my @cmd = ("iptables", "-t", $filter, "-D", $curr_chain);
-                my $m = delete $args{m};
-                my $p = delete $args{p};
-                push @cmd,("-m" => $m) if $m;
-                push @cmd,("-p" => $m) if $p;
-                for my $key ( sort keys  %args) {
-                    my $dash = '-';
-                    $dash = '--' if length($key)>1;
-                    push @cmd, ("$dash$key" => $args{$key});
-                }
-                my ($out, $err) = $vm->run_command(@cmd);
-                warn $err if $err;
-           }
-           $removed++;
-        }
-
+    my $protocol = delete $extra->{protocol};
+    if ($protocol) {
+        push @cmd,("-m",$protocol,"-p",$protocol);
     }
-    return $removed;
+    for my $key ( sort keys %$extra) {
+        my $dash = '-';
+        $dash = '--' if length($key)>1;
+        my $option = $key;
+        $option = 'to-source' if $option eq 'to_source';
+        $option =~ s/^(.*)_(.*)/$1$2/;
+        my $value = $extra->{$key};
+
+        if (
+            ($option eq 'd' || $option eq 's')
+                && $value !~ m{/}) {
+            $value .= "/32";
+        }
+        push @cmd, ("$dash$option" => $value);
+    }
+    my ($out, $err) = $vm->run_command(@cmd);
+    # warn $out if $out;
+    # warn Dumper([$extra0,"@cmd\n$err"]);# if $err && $chain ne 'RAVADA';
+
+    warn $err if $err && $err !~ /does a matching rule exist in that chain/;
+    return 1 if !$err;
+    return 0;
 }
+
 sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT') {
     confess "local port undefined " if !$local_port;
 
@@ -4512,7 +4620,7 @@ sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT
 
     my @iptables_arg = ($remote_ip
                         ,$local_ip, 'filter', $IPTABLES_CHAIN, $jump,
-                        ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
+                        ,{'protocol' => 'tcp', 'd_port' => $local_port});
 
     $self->_vm->iptables_unique(
                 A => $IPTABLES_CHAIN
@@ -4603,11 +4711,15 @@ sub _log_iptable {
         if $user && $uid;
     confess "ERROR: Supply user or uid" if !defined $user && !defined $uid;
 
+    confess "ERROR: duplicated d ".Dumper([$remote_ip,$iptables])
+    if $iptables->[5]->{d} && $iptables->[1];
+
     lock_hash(%args);
 
     $uid = $user->id if !$uid;
 
-
+    confess if $iptables && exists $iptables->[5]
+    && exists $iptables->[5]->{s_port} && $iptables->[5]->{s_port} == 0;
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO iptables "
         ."(id_domain, id_user, remote_ip, time_req, iptables, id_vm)"
@@ -5573,7 +5685,7 @@ sub list_vms($self, $check_host_devices=0, $only_available=0) {
         next if $only_available && ( !$is_active || !$enabled);
         my $t1 = time;
         if ($only_available && $cached_down) {
-            next if time-$cached_down < $self->timeout_down_cache();
+            next if time-$cached_down < $self->_vm->timeout_down_cache();
         }
         if ($id_request && $only_available) {
             $sth_req->execute($id_request);
@@ -6381,6 +6493,10 @@ sub _add_hardware_disk($orig, $self, $index, $data) {
 sub _around_add_hardware($orig, $self, $hardware, $index, $data=undef) {
     confess "Error: minimal add hardware index>=0 , got '$index'" if defined $index && $index <0;
 
+
+    die "Error: Virtual Machines with host devices can not be modified while running"
+    if $self->is_active && $self->list_host_devices_locked;
+
     my $data_orig = undef;
     $data_orig = dclone($data ) if ref($data);
 
@@ -6413,6 +6529,9 @@ sub _delete_db_display_by_driver($self, $driver) {
 
 sub _around_remove_hardware($orig, $self, $hardware, $index=undef, $options=undef) {
     confess "Error: supply either index or options when removing hardware " if !defined $index && !defined $options;
+
+    die "Error: Virtual Machines with host devices can not be modified while running"
+    if $self->is_active && $self->list_host_devices_locked;
 
     my $id_filesystem;
     if ( $hardware eq 'filesystem') {
@@ -7364,10 +7483,23 @@ sub refresh_ports($self, $request=undef) {
         my $is_port_active_txt = "up";
         $is_port_active_txt = "down" if !$is_port_active;
         $msg .= " $port->{internal_port}:$is_port_active_txt";
+
+        Ravada::Request->open_exposed_ports(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_domain => $self->id
+            ,retry => 20
+            ,_force => 1
+        ) if $is_active && !defined $port->{public_port}
+            && $self->_data('networking') ne 'isolated';
+
     }
-    die "Virtual machine ".$self->name." is not up. retry.\n"if !$ip;
-    die "Virtual machine ".$self->name." $ip has ports down: $msg. retry.\n"
-    if $port_down;
+    if ($is_active && $self->_data('networking') eq 'isolated') {
+        $msg = "Virtual machine ".$self->name." isolated. No ports exposed.";
+    } else {
+        die "Virtual machine ".$self->name." is not up. retry.\n"if !$ip;
+        die "Virtual machine ".$self->name." $ip has ports down: $msg. retry.\n"
+        if $port_down;
+    }
 
     if (($msg) && ($request))
     {

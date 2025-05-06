@@ -749,7 +749,7 @@ sub _discover() {
             if ($hostname ne 'localhost') {
                 my $domain = rvd_front->search_domain($name);
                 if (!$domain) {
-                    confess if $name !~ /\d+$/;
+                    confess if $name !~ /\d+$/ && $name !~ /tst_mojo_\d+/;
                     Ravada::Request->create_domain(
                         id_owner => user_admin->id
                         ,vm => $vm_type
@@ -924,12 +924,16 @@ sub _remove_old_domains_vm($vm_name) {
     for my $domain ( sort { $b->name cmp $a->name }  @domains) {
         next if $domain->name !~ /^$base_name/i;
 
-        eval { $domain->shutdown_now($USER_ADMIN); };
-        warn "Error shutdown ".$domain->name." $@" if $@ && $@ !~ /No DB info/i;
+        eval { $domain->shutdown_now($USER_ADMIN) if $domain->is_active };
+        warn "Error shutdown ".$domain->name." $@" if $@ && $@ !~ /No DB info/i
+            && $@ !~ /libvirt error code: 55,/
+        ;
 
         $domain = $vm->search_domain($domain->name);
         eval {$domain->remove( $USER_ADMIN ) }  if $domain;
-        warn $@ if $@;
+        warn "Error shutdown ".$domain->name." $@" if $@ && $@ !~ /No DB info/i
+            && $@ !~ /libvirt error code: 55,/
+        ;
         if ( $@ && $@ =~ /No DB info/i ) {
             eval { $domain->domain->undefine($Sys::Virt::Domain::UNDEFINE_NVRAM) if $domain->domain };
         }
@@ -1446,7 +1450,7 @@ sub wait_request {
                 $done{$req->{id}}++;
                 if ($check_error && $req->command ne 'set_time') {
                     if ($req->command =~ /remove/) {
-                        like($req->error,qr(^$|Unknown domain|Domain not found));
+                        like($req->error,qr(^$|Unknown domain|Domain not found)) or confess $req->command;
                     } elsif($req->command eq 'set_time') {
                         like($req->error,qr(^$|libvirt error code));
                     } else {
@@ -1628,12 +1632,12 @@ sub remove_networks_req() {
     $sth->execute(base_domain_name."%");
     while (my ($id, $id_vm, $name, $node) = $sth->fetchrow) {
         my $req = Ravada::Request->remove_network(
-            uid => user_admin()->id
+            uid => Ravada::Utils::user_daemon()->id
             ,id => $id
             ,id_vm => $id_vm
         );
     }
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 }
 
 sub remove_qemu_networks($vm=undef) {
@@ -3218,31 +3222,44 @@ sub create_ram_fs($dir=undef,$size=1024*1024) {
 sub wait_ip($id_domain0, $seconds=60) {
 
     my $domain;
+    if (!ref($id_domain0) && $id_domain0 =~ /^\d+$/) {
+        $domain = Ravada::Front::Domain->open($id_domain0);
+    }
     for my $count ( 0 .. $seconds ) {
         my $id_domain = $id_domain0;
-        if (ref($id_domain0)) {
-            if (ref($id_domain0) =~ /Ravada/) {
-                $id_domain = $id_domain0->id;
+        $id_domain = $domain->id if $domain;
+        if (!$domain) {
+            if (ref($id_domain0)) {
+                if (ref($id_domain0) =~ /Ravada/) {
+                    $id_domain = $id_domain0->id;
+                } else {
+                    $id_domain = $id_domain0->{id};
+                }
             } else {
-                $id_domain = $id_domain0->{id};
+                if ($id_domain0 !~ /^\d+$/) {
+                    $id_domain = _search_domain_by_name($id_domain0);
+                    if ( !$id_domain ) {
+                        sleep 1;
+                        next;
+                    }
+                } else {
+                    $id_domain = $id_domain0;
+                }
             }
-        }
 
-        if ($id_domain0 !~ /^\d+$/) {
-            $id_domain = _search_domain_by_name($id_domain);
-            next if !$id_domain;
+            eval{ $domain = Ravada::Front::Domain->open($id_domain) };
+            warn $@ if $@ && $@ !~ /Unknown domain/;
         }
 
         Ravada::Request->refresh_machine(
             id_domain => $id_domain
             ,uid => user_admin->id
+            ,_force => 1
         );
+        wait_request();
 
         my $info;
-        eval {
-        $domain = Ravada::Front::Domain->open($id_domain);
         $info = $domain->info(user_admin);
-        };
         warn $@ if $@ && $@ !~ /Unknown domain/;
         return if $@ || ($count && !$domain->is_active);
         return $info->{ip} if exists $info->{ip} && $info->{ip};

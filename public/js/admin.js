@@ -926,7 +926,8 @@ ravadaApp.directive("solShowMachine", swMach)
             $http.get('/v2/network/new/'+id_vm)
                 .then(function(response) {
                     $scope.network=response.data;
-                    console.log(response.data);
+                    $scope.form_network.$setDirty();
+                    $scope.search_users();
             });
         };
 
@@ -935,13 +936,41 @@ ravadaApp.directive("solShowMachine", swMach)
                 .then(function(response) {
                 $scope.network = response.data;
                 $scope.network._old_name = $scope.network.name;
+                $scope.form_network.$setPristine();
+                $scope.search_users();
             });
+
+        };
+        $scope.search_users = function() {
+            if ($scope.name_search == undefined) {
+                $scope.name_search = $scope.network._owner.name;
+            }
+            $scope.searching_user = true;
+            $scope.user_found = '';
+            $http.get("/search_user/"+$scope.name_search)
+                .then(function(response) {
+                    $scope.user_found = response.data.found;
+                    $scope.user_count = response.data.count;
+                    $scope.list_users = response.data.list;
+                    $scope.searching_user=false;
+                    if ($scope.user_count == 1) {
+                        $scope.name_search = response.data.found;
+                    }
+                    for ( var n=0 ; n<$scope.list_users.length ; n++) {
+                        if ($scope.list_users[n].name == $scope.name_search) {
+                            $scope.network._owner = $scope.list_users[n];
+                            break;
+                        }
+                    }
+                });
 
         };
 
         $scope.update_network = function() {
-
+            $scope.form_network.$setPristine();
             var update = $scope.network['id'];
+            $scope.network.id_owner = $scope.network._owner.id;
+            $scope.name_search = $scope.network._owner.name;
             $http.post('/v2/network/set/'
                 , JSON.stringify($scope.network))
                 .then(function(response) {
