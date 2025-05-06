@@ -318,6 +318,7 @@ sub BUILD {
     }
     $self->id;
 
+    $self->_which_cache_fetch();
 }
 
 sub _open_type {
@@ -552,15 +553,20 @@ sub _around_create_domain {
 
     return $base->_search_pool_clone($owner) if $from_pool;
 
-    if ($self->is_local && $base && $base->is_base && $args_create{volatile} && !$base->list_host_devices) {
+    if ($self->is_local && $base && $base->is_base && $args_create{volatile} && !$base->list_host_devices ) {
         $request->status("balancing")                       if $request;
         my $vm = $self->balance_vm($owner->id, $base);
 
         if (!$vm) {
             die "Error: No free nodes available.\n";
         }
+        if (!$vm->is_local) {
+            if ( $base->_base_files_in_vm($vm)
+                 && $base->_check_all_parents_in_node($vm)) {
+                $self = $vm;
+            }
+        }
         $request->status("creating machine on ".$vm->name)  if $request;
-        $self = $vm;
         $args_create{listen_ip} = $self->listen_ip($remote_ip);
     }
 
@@ -1411,8 +1417,9 @@ sub is_locked($self) {
         next if defined $at && $at < time + 2;
         next if !$args;
         my $args_d = decode_json($args);
-        if ( exists $args_d->{id_vm} && $args_d->{id_vm} == $self->id ) {
-            warn "locked by $command\n";
+        if ( exists $args_d->{id_vm}
+            && $args_d->{id_vm} =~ /^\d+$/
+            && $args_d->{id_vm} == $self->id ) {
             return 1;
         }
     }
@@ -1846,6 +1853,7 @@ sub _do_is_active($self, $force=undef) {
 }
 
 sub _cached_active($self, $value=undef) {
+    $self->_which_cache_flush() if defined $value && $value && !$self->_data('is_active');
     return $self->_data('is_active', $value);
 }
 
@@ -2810,8 +2818,50 @@ sub _list_qemu_bridges($self) {
     return keys %bridge;
 }
 
-sub _which($self, $command) {
+sub _which_cache_fetch($self) {
+    my $sth = $self->_dbh->prepare(
+        "SELECT command,path FROM vm_which "
+        ." WHERE id_vm=?"
+    );
+    $sth->execute($self->id);
+    while (my ($command, $path)) {
+        $self->{_which}->{$command} = $path;
+    }
+    $sth->finish;
+}
+
+
+sub _which_cache_get($self, $command) {
     return $self->{_which}->{$command} if exists $self->{_which} && exists $self->{_which}->{$command};
+}
+
+sub _which_cache_set($self, $command, $path) {
+    $self->{_which}->{$command} = $path;
+
+    eval {
+        my $sth = $self->_dbh->prepare(
+        "INSERT INTO vm_which (id_vm, command, path)"
+        ." VALUES (?,?,?) "
+        );
+        $sth->execute($self->id, $command, $path);
+    };
+    warn("Warning: $@ vm_which = ( ".$self->id.", $command, $path )")
+    if $@ && $@ !~ /Duplicate entry/i
+          && $@ !~ /UNIQUE constraint failed/i
+    ;
+}
+
+sub _which_cache_flush($self) {
+    my $sth = $self->_dbh->prepare(
+        "DELETE FROM vm_which where id_vm=?"
+    );
+    $sth->execute($self->id);
+}
+
+sub _which($self, $command) {
+
+    my $cached = $self->_which_cache_get($command);
+    return $cached if $cached;
 
     my $bin_which = $self->{_which}->{which};
     if (!$bin_which) {
@@ -2827,7 +2877,9 @@ sub _which($self, $command) {
     my @cmd = ( $bin_which,$command);
     my ($out,$err) = $self->run_command(@cmd);
     chomp $out;
-    $self->{_which}->{$command} = $out;
+
+    $self->_which_cache_set($command,$out);
+
     return $out;
 }
 

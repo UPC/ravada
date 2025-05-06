@@ -447,6 +447,9 @@ sub test_mdev_kvm_state($vm) {
     test_old_in_locked($domain);
     test_timer($domain,'present' => 'yes');
 
+    # TODO:
+    # test_locked_hd($domain);
+
     _req_shutdown($domain);
     $domain->_dettach_host_devices();
 
@@ -457,6 +460,20 @@ sub test_mdev_kvm_state($vm) {
     $domain->remove(user_admin);
     $hd->remove();
 
+}
+
+sub test_locked_hd($domain) {
+    my $sth = connector->dbh->prepare("DELETE FROM host_devices_domain_locked WHERE id_domain=?");
+        $sth->execute($domain->id);
+
+    my @domain_hds = $domain->list_host_devices_attached();
+    Ravada::Request->refresh_machine(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request();
+    @domain_hds = $domain->list_host_devices_attached();
+    is($domain_hds[0]->{is_locked},1);
 }
 
 sub test_old_in_locked($domain) {
@@ -882,6 +899,28 @@ sub test_volatile_clones($vm, $domain, $host_device) {
     $domain->_data('volatile_clones' => 0);
     is($host_device->list_available_devices(), $max_n_device) or exit;
 }
+
+sub test_start_failed($vm) {
+    return if $vm->type eq 'Void'; # Void HDs will not fail
+    my $hd = _create_mdev($vm);
+
+    my $dir = _prepare_dir_mdev();
+    $hd->_data('list_command' => "ls $dir");
+
+    my $domain = create_domain($vm);
+    $domain->add_host_device($hd->id);
+
+    my $req = Ravada::Request->start_domain(uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request( check_error => 0);
+
+    test_xml_no_hd($domain);
+
+    remove_domain($domain);
+    $hd->remove();
+}
+
 
 ####################################################################
 

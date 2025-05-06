@@ -213,8 +213,7 @@ after 'screenshot' => \&_post_screenshot;
 
 after '_select_domain_db' => \&_post_select_domain_db;
 
-before 'migrate' => \&_pre_migrate;
-after 'migrate' => \&_post_migrate;
+around 'migrate' => \&_around_migrate;
 
 around 'get_info' => \&_around_get_info;
 around 'set_max_mem' => \&_around_set_max_mem;
@@ -358,7 +357,7 @@ sub _around_start($orig, $self, @arg) {
     $enable_host_devices = 1 if !defined $enable_host_devices;
     my $is_volatile = ($self->is_volatile || $arg{is_volatile});
 
-    for (1 .. 5) {
+    for (1 .. 2) {
         eval { $self->_start_checks(%arg, enable_host_devices => $enable_host_devices) };
         my $error = $@;
         if ($error) {
@@ -404,6 +403,8 @@ sub _around_start($orig, $self, @arg) {
         warn $error if $error;
         last if !$error;
 
+        $self->_dettach_host_devices() if $enable_host_devices && !$self->is_active();
+
         my $vm_name = Ravada::VM::_get_name_by_id($self->_data('id_vm'));
 
         die "Error: starting ".$self->name." on ".$vm_name." $error"
@@ -418,12 +419,10 @@ sub _around_start($orig, $self, @arg) {
         && $error !~ /Could not run .*swtpm/i
         && $error !~ /virtiofs/
         && $error !~ /child process/i
+        && $error !~ /host doesn.t support/
+        && $error !~ /device not found/
         ;
 
-        if ($error && $self->is_known && $self->id_base && !$self->is_local && $self->_vm->enabled) {
-            $self->_request_set_base();
-            next;
-        }
         die $error;
     }
     $self->_post_start(%arg);
@@ -608,16 +607,11 @@ sub _start_checks($self, @args) {
     my $id_base = $self->id_base;
     if ($id_base && !$is_volatile) {
         $self->_check_tmp_volumes();
-#        $self->_set_last_vm(1)
-        if ( !$self->is_local
-            && ( !$self->_vm->enabled || !base_in_vm($id_base,$self->_vm->id)
-                || !$self->_vm->ping) ) {
-            $self->_set_vm($vm_local, 1);
-        }
         if ( !$vm->is_alive ) {
             $vm->disconnect();
             $vm->connect;
             $vm = $vm_local if !$vm->is_local && !$vm->is_alive;
+            die "Error: node ".$vm->name." is not alive" if !$vm->is_alive;
         };
         if ($id_vm) {
             $self->_set_vm($vm);
@@ -1214,22 +1208,19 @@ sub _check_free_vm_memory {
 sub _check_tmp_volumes($self) {
     confess "Error: only clones temporary volumes can be checked."
         if !$self->id_base;
-    my $vm_local = $self->_vm->new( host => 'localhost' );
-    for my $vol ( $self->list_volumes_info) {
-        next unless $vol->file && $vol->file =~ /\.(TMP|SWAP)\./;
-        next if $vm_local->file_exists($vol->file);
-        $vol->delete();
+    my $vm = $self->_vm;
 
-        my $base = Ravada::Domain->open($self->id_base);
-        my @volumes = $base->list_files_base_target;
+    my $base = Ravada::Domain->open($self->id_base);
+    my @volumes = $base->list_files_base_target;
+    for my $vol ( $self->list_volumes_info) {
+        next unless $vol->file && $vol->file =~ /\.(TMP|SWAP)\.\w+$/;
         my ($file_base) = grep { $_->[1] eq $vol->info->{target} } @volumes;
-        if (!$file_base) {
-            warn "Error: I can't find base volume for target ".$vol->info->{target}
-                .Dumper(\@volumes);
-        }
+        next if !$file_base;
+
+        $vol->delete();
         my $vol_base = Ravada::Volume->new( file => $file_base->[0]
             , is_base => 1
-            , vm => $vm_local
+            , vm => $vm
         );
         $vol_base->clone(file => $vol->file);
     }
@@ -5447,6 +5438,14 @@ sub _post_migrate($self, $node, $request = undef) {
     # TODO: update db instead set this value
     $self->{_migrated} = 1;
 
+}
+
+sub _around_migrate($orig, $self, $node, $request=undef) {
+    return if $self->_vm->id == $node->id;
+
+    $self->_pre_migrate($node, $request);
+    $self->$orig($node, $request);
+    $self->_post_migrate($node, $request);
 }
 
 sub _id_base_in_vm($self, $id_vm) {

@@ -1665,6 +1665,10 @@ sub _add_indexes_generic($self) {
             "index(id_domain)"
             ,"unique (id_bundle, id_domain)"
         ]
+        ,vm_which => [
+            "index(id_vm)"
+            ,"unique(id_vm,command,path)"
+        ]
     );
     my $if_not_exists = '';
     $if_not_exists = ' IF NOT EXISTS ' if $CONNECTOR->dbh->{Driver}{Name} =~ /sqlite|mariadb/i;
@@ -2457,6 +2461,14 @@ sub _sql_create_tables($self) {
                 ,'is_public' => 'integer not null default 0'
                 ,'forward_mode' => 'char(20)'
                 ,date_changed => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+            }
+        ]
+        ,
+        [vm_which => {
+                id => 'integer PRIMARY KEY AUTO_INCREMENT',
+                ,id_vm => 'integer NOT NULL references `vms` (`id`) ON DELETE CASCADE',
+                ,command => 'char(40)'
+                ,path => 'varchar(255)'
             }
         ]
 
