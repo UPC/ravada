@@ -33,7 +33,7 @@ require Exporter;
 
 @EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin rvd_front init init_vm clean new_pool_name new_volume_name
 create_domain
-    create_domain_v2
+    create_domain_v2 create_base
     import_domain
     test_chain_prerouting
     find_ip_rule
@@ -81,6 +81,7 @@ create_domain
     mojo_create_domain
     mojo_login
     mojo_check_login
+    mojo_logout
     mojo_request
     mojo_request_url
     mojo_request_url_post
@@ -298,6 +299,12 @@ sub import_domain($vm, $name=$BASE_NAME, $import_base=1) {
         ,spinoff_disks => 0
         ,import_base => $import_base
     );
+    return $domain;
+}
+
+sub create_base($vm) {
+    my $domain = create_domain_v2(vm => $vm);
+    $domain->prepare_base(user_admin);
     return $domain;
 }
 
@@ -832,6 +839,11 @@ sub remove_domain(@bases) {
         $base = Ravada::Domain->open($id)
         unless ref($base) =~ /^Ravada::/;
 
+        if (!defined $base) {
+            warn "I can't find base '$id'";
+            next;
+        }
+
         for my $clone ($base->clones) {
             my $d_clone = Ravada::Domain->open($clone->{id});
             if ( $d_clone ) {
@@ -1057,15 +1069,21 @@ sub mojo_clean($wait=1) {
 
 sub mojo_check_login( $t, $user=$MOJO_USER , $pass=$MOJO_PASSWORD ) {
     $t->ua->get("/user.json");
-    return if $t->tx && $t->tx->res->code =~ /^(101|200|302)$/;
+    return $user if $t->tx && $t->tx->res->code =~ /^(101|200|302)$/;
     mojo_login($t, $user,$pass);
+    return $user;
+}
+
+sub mojo_logout($t) {
+    $t->ua->get($URL_LOGOUT);
+    $t->reset_session();
 }
 
 sub mojo_login( $t, $user, $pass ) {
-    $t->ua->get($URL_LOGOUT);
+    mojo_logout($t);
 
     $t->post_ok('/login' => form => {login => $user, password => $pass});
-    like($t->tx->res->code(),qr/^(200|302)$/) or die $t->tx->res->body;
+    like($t->tx->res->code(),qr/^(200|302)$/) or die Dumper([$user, $pass]);# $t->tx->res->body;
     #    ->status_is(302);
     $MOJO_USER = $user;
     $MOJO_PASSWORD = $pass;
@@ -3125,7 +3143,7 @@ sub ping_backend() {
         $now[1]--;
         my $now2 = "".($now[5]+1900)."-$now[4]-$now[3] $now[2]:$now[1]";
         my $sth = rvd_back->connector->dbh->prepare(
-            "SELECT date_changed,status FROM requests ORDER BY date_changed DESC LIMIT 10"
+            "SELECT id,command,date_changed,status FROM requests ORDER BY date_changed DESC LIMIT 10"
         );
         $sth->execute();
         my $n = 100;
@@ -3134,7 +3152,8 @@ sub ping_backend() {
             return 1 if $date_changed =~ /^($now|$now2)/;
             last if $n--<0;
         }
-        rvd_front->ping_backend();
+        my $ping = rvd_front->ping_backend();
+        return $ping if $ping;
     }
 
     return rvd_front->ping_backend();

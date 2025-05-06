@@ -310,6 +310,7 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.list_machines_time = 0;
         $scope.n_active=0;
         $scope.show_active=false;
+        var ws_list_machines;
         if( $scope.check_netdata && $scope.check_netdata != "0" ) {
             var url = $scope.check_netdata;
             $scope.check_netdata = 0;
@@ -333,8 +334,22 @@ ravadaApp.directive("solShowMachine", swMach)
           subscribe_list_requests(url);
           subscribe_ping_backend(url);
       };
+
+      var refresh_show_clones = function() {
+          $scope.n_clones=0;
+          var show=Object.keys($scope.show_clones);
+          for (var i=0; i<show.length; i++) {
+                  ws_list_machines.send("list_machines_tree/show_clones/"+show[i]+"=false");
+                  ws_list_machines.send("list_machines_tree/show_clones/"+show[i]+"="
+                      +$scope.show_clones[show[i]]);
+          }
+          return show.length;
+      };
+
       subscribe_list_machines= function(url) {
           ws_connected = false;
+          $scope.list_machines = {};
+          $scope.n_clones = 0;
           $timeout(function() {
               if (!ws_connected) {
                 $scope.ws_fail = true;
@@ -342,13 +357,35 @@ ravadaApp.directive("solShowMachine", swMach)
           }, 5 * 1000 );
 
           var ws = new WebSocket(url);
+          ws_list_machines=ws;
+
+          ws.onerror = function(event) {
+              console.log("error ",event);
+              console.log(event);
+              if ($scope.ws_connection_lost) {
+                window.location.reload();
+              }
+          };
           ws.onopen    = function (event) {
+              $scope.ws_connection_lost = false;
               ws_connected = true ;
               $scope.ws_fail = false;
-              ws.send('list_machines_tree');
+              if ($scope.show_active) {
+                  ws.send("list_machines_tree/show_active/true");
+              }
+              if ($scope.filter) {
+                  ws_list_machines.send("list_machines_tree/show_name/"+$scope.filter);
+              }
+              if (! refresh_show_clones() || !$scope.show_active || !$scope.filter ) {
+                  ws.send('list_machines_tree');
+              }
           };
           ws.onclose = function() {
-              ws = new WebSocket(url);
+              $scope.$apply(function() {
+                  $timeout(function() {
+                    $scope.ws_connection_lost = true;
+                  }, 5*1000);
+              });
           };
           ws.onmessage = function (event) {
 
@@ -356,45 +393,79 @@ ravadaApp.directive("solShowMachine", swMach)
                   return;
               }
               $scope.list_machines_time++;
-              var data = JSON.parse(event.data);
+              var data0 = JSON.parse(event.data);
 
               $scope.$apply(function () {
                   var mach;
-                  if (Object.keys($scope.list_machines).length != data.length) {
-                      $scope.list_machines = {};
-                  }
                   var n_active_current = 0;
-                  $scope.n_active_hidden = 0;
-                  $scope.n_clones = 0;
-                  for (var i=0, iLength = data.length; i<iLength; i++){
-                      mach = data[i];
-                      if (mach.id_base>0) { $scope.n_clones++ }
-                      if (typeof $scope.list_machines[i] == 'undefined'
-                            || $scope.list_machines[i].id != mach.id
-                            || $scope.list_machines[i].date_changed != mach.date_changed
-                      ){
-                        var show=false;
-                        if (mach._level == 0 && !$scope.filter && !$scope.show_active) {
-                            mach.show=true;
-                        }
-                        if ($scope.show_machine[mach.id]) {
-                            mach.show = $scope.show_machine[mach.id];
-                        } else if(mach.id_base && $scope.show_clones[mach.id_base]) {
-                            mach.show = true;
-                        }
-                        if (typeof $scope.show_clones[mach.id] == 'undefined') {
-                //            $scope.show_clones[mach.id] = false;
-                        }
-                        $scope.list_machines[i] = mach;
-                      }
-                      if (mach.status == 'active') {
-                          n_active_current++;
-                          if (!mach.show) {
-                              $scope.n_active_hidden++;
+                  var action = data0.action;
+                  var data = data0.data;
+                  if (typeof(data) == 'undefined') {
+                      return;
+                  }
+                  $scope.n_active=data0.n_active;
+                  if(action == 'new' || Object.keys($scope.list_machines).length==0) {
+                      $scope.list_machines.length = data.length;
+                      for (var i=0, iLength = data.length; i<iLength; i++){
+                          mach = data[i];
+                          if (mach.id_base>0) { $scope.n_clones++ }
+                          if (typeof $scope.list_machines[i] == 'undefined'
+                              || $scope.list_machines[i].id != mach.id
+                              || $scope.list_machines[i].date_changed != mach.date_changed
+                              || ($scope.show_active && mach.is_active )
+                          ){
+                              var show=false;
+                              if (mach._level == 0 && !$scope.filter && !$scope.show_active) {
+                                  mach.show=true;
+                              }
+                              if ($scope.show_machine[mach.id]) {
+                                  mach.show = $scope.show_machine[mach.id];
+                              } else if(mach.id_base && $scope.show_clones[mach.id_base]) {
+                                  mach.show = true;
+                              }
+                              if ($scope.show_active && mach.status=='active') {
+                                  mach.show=true;
+                              }
+                              $scope.list_machines[i] = mach;
                           }
                       }
+                  } else {
+                    var change = {};
+                    for (var i=0, iLength = data.length; i<iLength; i++){
+                        mach = data[i];
+                        change[mach.id] = mach;
+                    }
+                    var keys = Object.keys($scope.list_machines);
+                    for ( var n_key=0 ; n_key<keys.length ; n_key++) {
+                        mach = $scope.list_machines[n_key];
+                        var mach2;
+                        if ( typeof(mach) != 'undefined' ) {
+                            mach2 = change[mach.id];
+                        }
+                        if (typeof(mach2) != 'undefined' && typeof(mach) != 'undefined') {
+                            mach2._level = mach._level;
+                              var show=false;
+                              if (mach2.name != mach.name || mach2.id_base != mach.id_base) {
+                                  ws.send("list_machines_tree");
+                              }
+                              if (mach2._level == 0 && !$scope.filter && !$scope.show_active) {
+                                  mach2.show=true;
+                              }
+                              if ($scope.show_machine[mach.id]) {
+                                  mach2.show = $scope.show_machine[mach.id];
+                              } else if(mach.id_base && $scope.show_clones[mach.id_base]) {
+                                  mach2.show = true;
+                              }
+                              if ($scope.show_active && mach2.is_active) {
+                                  mach2.show=true;
+                              }
+
+                              $scope.list_machines[n_key] = mach2;
+                                if (mach2.id_base>0) { $scope.n_clones++ }
+                        }
+                    }
+
                   }
-                  $scope.n_active=n_active_current;
                   if ( $scope.show_active ) { $scope.do_show_active() };
                   if ( $scope.filter) { $scope.show_filter() };
               });
@@ -455,6 +526,9 @@ ravadaApp.directive("solShowMachine", swMach)
       else $scope.orderParam = [type1,'-'+type2];
     }
     $scope.hide_clones = true;
+    $scope.toggle_show_all_clones = function() {
+        $scope.showClones($scope.hide_clones);
+    };
     $scope.showClones = function(value){
         $scope.auto_hide_clones = false;
         $scope.show_active = false;
@@ -492,11 +566,16 @@ ravadaApp.directive("solShowMachine", swMach)
         else {
             $http.get('/'+target+'/'+action+'/'+machineId+'.json')
                .then(function(response) {
-                   if(response.status == 300 ) {
+                   if(response.status == 300 || response.status == 403) {
                    console.error('Reponse error', response.status);
                    window.location.reload();
-               }
-            });
+                    }
+                }).catch(function(data) {
+                    if (data.status == 403) {
+                        window.location.reload();
+                    }
+                })
+            ;
         }
     };
     $scope.set_autostart= function(machineId, value) {
@@ -525,6 +604,9 @@ ravadaApp.directive("solShowMachine", swMach)
     };
 
     $scope.can_manage_base = function(machine) {
+        if (typeof(machine) == 'undefined') {
+            return;
+        }
         if (machine.is_base) {
             return $scope.can_remove_base(machine);
         } else {
@@ -548,14 +630,12 @@ ravadaApp.directive("solShowMachine", swMach)
           machine.info=response.data;
       }
       ,function errorCallback(response) {
-          console.log(response);
           window.location.reload();
       });
     }
     $scope.cancel_modal=function(machine,field){
         $scope.modalOpened=false;
         if (typeof(machine)!='undefined' && typeof(field)!='undefined') {
-            console.log(field);
             if (machine[field]) {
                 machine[field]=0;
             } else {
@@ -573,8 +653,7 @@ ravadaApp.directive("solShowMachine", swMach)
             $scope.show_active = false;
             $scope.hide_clones = true;
         }
-       $scope.n_active_hidden = 0;
-       $scope.n_active = 0;
+        ws_list_machines.send("list_machines_tree/show_clones/"+id+"="+$scope.show_clones[id]);
        for (var [key, mach ] of Object.entries($scope.list_machines)) {
             if (mach.id_base == id) {
                 mach.show = $scope.show_clones[id];
@@ -583,13 +662,6 @@ ravadaApp.directive("solShowMachine", swMach)
                     $scope.set_show_clones(mach.id, false);
                 }
             }
-
-           if (mach.status == 'active') {
-               $scope.n_active++;
-               if (!mach.show) {
-                   $scope.n_active_hidden++;
-               }
-           }
         }
         $scope.lock_show_active=false;
     }
@@ -620,11 +692,20 @@ ravadaApp.directive("solShowMachine", swMach)
             show_parents(machine_base(id_base));
         }
     };
+    $scope.toggle_show_active = function() {
+        var show = !$scope.show_active;
+        ws_list_machines.send("list_machines_tree/show_active/"+show);
+        if (!$scope.show_active) {
+            $scope.do_show_active();
+        } else {
+            $scope.reload_list();
+            $scope.showClones(false);
+        }
+    };
     $scope.do_show_active = function() {
         $scope.filter = '';
         $scope.show_active=true;
         $scope.hide_clones = true;
-        $scope.n_active_hidden = 0;
         var n_show = 0;
         for (var [key, mach ] of Object.entries($scope.list_machines)) {
             if (mach.status =='active') {
@@ -639,49 +720,53 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.n_show = n_show;
     };
     $scope.reload_list = function() {
-        $scope.show_active=false;
-        $scope.hide_clones = true;
-        $scope.n_active_hidden = 0;
+        if ($scope.filter) {
+            $scope.filter = '';
+        } else {
+            $scope.show_active=false;
+            $scope.hide_clones = true;
+        }
         for (var [key, mach ] of Object.entries($scope.list_machines)) {
             if (mach._level == 0 ) {
                 mach.show = true;
             } else {
                 mach.show = false;
-                if (mach.status == 'active') {
-                    $scope.n_active_hidden++;
-                }
             }
+        }
+    };
+
+    $scope.list_machines_name = function() {
+        ws_list_machines.send("list_machines_tree/show_name/"+$scope.filter);
+        $scope.show_filter();
+        if (!$scope.filter) {
+            refresh_show_clones();
         }
     };
 
     $scope.show_filter = function() {
         $scope.hide_clones = true;
         $scope.show_active = false;
-        $scope.n_active_current = 0;
-        $scope.n_active_hidden = 0;
+        var n_show=0;
         var filter = $scope.filter.toLowerCase();
         for (var [key, mach ] of Object.entries($scope.list_machines)) {
-            if ($scope.filter.length > 0) {
+            if (mach.name && $scope.filter.length > 0) {
                 var name = mach.name.toLowerCase();
                 if ( name.indexOf(filter)>= 0) {
                     mach.show = true;
+                    n_show++;
                 } else {
                     mach.show = false;
                 }
-            } else {
+            } else if (mach.name) {
                 if (mach._level > 0 ) {
                     mach.show = false;
                 } else {
                     mach.show = true;
-                }
-            }
-            if (mach.status == 'active') {
-                $scope.n_active_current++;
-                if (!mach.show) {
-                    $scope.n_active_hidden++;
+                    n_show++;
                 }
             }
         }
+        $scope.n_show = n_show;
     };
 
     //On load code
@@ -1138,7 +1223,6 @@ ravadaApp.directive("solShowMachine", swMach)
 
             $http.post("/v1/exists/vms",JSON.stringify(args))
                 .then(function(response) {
-                    console.log(response.data);
                     $scope.hostname_duplicated = response.data.id;
             });
         };
@@ -1197,7 +1281,6 @@ ravadaApp.directive("solShowMachine", swMach)
                     ,'directory': $scope.directory})
             ).then(function(response) {
                 if (response.data.ok == 1 ) {
-                    console.log(response.data);
                     $scope.request = {
                         'id': response.data.request
                     };
@@ -1399,7 +1482,6 @@ ravadaApp.directive("solShowMachine", swMach)
                 $scope.error = $scope.route.name + " network can't be removed";
                 return;
             }
-            console.log(id_network);
             $http.get('/v2/route/remove/'+id_network).then(function(response) {
                 window.location.assign('/admin/routes');
             });

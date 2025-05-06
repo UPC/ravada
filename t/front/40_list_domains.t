@@ -3,7 +3,9 @@ use strict;
 
 use Carp qw(confess);
 use Data::Dumper;
+use Storable qw(dclone);
 use Test::More;
+use Ravada::WebSocket;
 
 use lib 't/lib';
 use Test::Ravada;
@@ -48,6 +50,168 @@ sub test_create_domain {
     );
 
     return $domain;
+}
+
+sub _create_bases_and_clones($vm_name, $base0=undef) {
+
+    my @bases;
+    my ($n_bases, $n_domains) = ( 0,0 );
+    for my $n ( 1 .. 3 ) {
+        my $base;
+        if (!$base0) {
+            $base = create_domain($vm_name);
+        } else {
+            $base = $base0->clone(
+                name => new_domain_name()
+                ,user => user_admin
+            );
+        }
+        push @bases,($base);
+        $n_domains++;
+        Ravada::Request->prepare_base(uid => user_admin->id
+            ,id_domain => $base->id
+        );
+        wait_request();
+        $base->is_public(1);
+        next if $n == 1;
+
+        Ravada::Request->clone(uid => user_admin->id
+            ,id_domain => $base->id
+            ,number => 3
+        );
+        wait_request();
+        $n_domains += 3;
+    }
+    return (\@bases, scalar(@bases), $n_domains);
+
+}
+
+
+sub test_list_domains_clones($vm_name) {
+
+    my ($bases, $n_bases, $n_domains) = _create_bases_and_clones($vm_name);
+
+    my $list_domains = rvd_front->list_domains();
+    is(scalar@$list_domains, $n_domains ,Dumper([map { [$_->{id}." ".$_->{name}, $_->{id_base}] } @$list_domains]));
+
+    $list_domains = rvd_front->list_domains(id_base => undef);
+    is(scalar@$list_domains, $n_bases ,Dumper($list_domains));
+
+    for my $base ( @$bases ) {
+
+        $list_domains = rvd_front->list_domains(id_base => $base->id);
+        is(scalar@$list_domains, $base->has_clones(1),Dumper([map { [$_->{id}." ".$_->{name}, $_->{id_base}] } @$list_domains])) or exit;
+
+        my $curr_n_domains = $n_bases + $base->has_clones;
+        $list_domains = rvd_front->list_domains(id_base => [undef, $base->id]);
+
+        is(scalar@$list_domains, $curr_n_domains ,Dumper([map { [$_->{id}." ".$_->{name}, $_->{id_base}] } @$list_domains])) or exit;
+    }
+
+    my @id_base = ( undef );
+
+    my $curr_n_domains = $n_bases;
+    for my $base ( @$bases ) {
+
+        $curr_n_domains += $base->has_clones();
+        push @id_base,($base->id);
+
+        $list_domains = rvd_front->list_domains(id_base => \@id_base);
+        is(scalar@$list_domains, $curr_n_domains,Dumper([map { [$_->{id}." ".$_->{name}, $_->{id_base}] } @$list_domains])) or exit;
+
+    }
+
+    $curr_n_domains = $n_bases;
+    @id_base = ( undef );
+    for my $base ( @$bases ) {
+
+        $curr_n_domains += $base->has_clones();
+        push @id_base,($base->id);
+
+        $list_domains = rvd_front->list_domains(id_base => \@id_base, date_changed => '2024-01-01');
+        is(scalar@$list_domains, $curr_n_domains,Dumper([map { [$_->{id}." ".$_->{name}, $_->{id_base}] } @$list_domains])) or exit;
+
+    }
+
+    $curr_n_domains = $n_bases;
+    @id_base = ( undef );
+    my ($clone) = $bases->[-1]->clones();
+    for my $base ( @$bases ) {
+
+        $curr_n_domains += $base->has_clones();
+        push @id_base,($base->id);
+
+        $list_domains = rvd_front->list_domains(id_base => \@id_base, date_changed => '2024-01-01'
+        , name => $clone->{name});
+
+        my $exp = $curr_n_domains;
+        my ($found) = grep { $_->{name} eq $clone->{name} } $base->clones;
+        $exp++ if !$found;
+
+        is(scalar@$list_domains, $exp, Dumper([map { [$_->{id}." ".$_->{name}, $_->{id_base}] } @$list_domains])) or exit;
+
+    }
+
+    remove_domain(@$bases);
+}
+
+sub test_list_domains_active($vm_name) {
+
+    my ($bases, $n_bases, $n_domains) = _create_bases_and_clones($vm_name);
+
+    my ($bases2) = _create_bases_and_clones($vm_name, $bases->[0]);
+    my ($bases3) = _create_bases_and_clones($vm_name, $bases2->[0]);
+    my ($bases4) = _create_bases_and_clones($vm_name, $bases3->[-1]);
+
+    for my $bases ( $bases3, $bases4 ) {
+        my ($clone) = $bases->[1]->clones;
+        Ravada::Request->start_domain(uid => user_admin->id
+        ,id_domain => $clone->{id}
+        );
+        wait_request();
+        diag($clone->{name});
+    }
+
+    my @id_base = ( $bases->[2]->id );
+    my %show_clones = map { $_ => 1 } @id_base;
+
+    my %ws_args = ( show_clones => \%show_clones, 'show_active'=>1 , login => user_admin->name );
+    my $found = 0;
+    my $ws_list_data;
+    for ( 1 .. 5 ) {
+        my $ws_list = Ravada::WebSocket::_list_machines_tree(rvd_front, \%ws_args);
+        #        __dump_list_domains($ws_list->{data});
+        if (scalar(@{$ws_list->{data}})) {
+            my $active = grep { $_->{status} eq 'active' } @{$ws_list->{data}};
+            $ws_list_data = $ws_list->{data};
+            if ($active == 2 ) {
+                $found++;
+                last;
+            } else {
+                __dump_list_domains($ws_list_data);
+            }
+        }
+
+        sleep 1;
+    }
+    ok($found) ||
+    __dump_list_domains($ws_list_data);
+
+    my $list_domains = rvd_front->list_domains(id_base => [undef,@id_base], status => 'active');
+
+    my $active = grep { $_->{status} eq 'active' } @{$list_domains};
+    is($active,2);
+
+    remove_domain(@$bases3, @$bases2, @$bases);
+}
+
+sub __dump_list_domains($list_domains=rvd_front->list_domains()) {
+
+    warn Dumper([map { $_->{id}." ".($_->{id_base} or ' ')." "
+                .($_->{is_base} or ' ')." "
+                .$_->{status}." "
+                .$_->{name}
+            } @$list_domains]);
 }
 
 sub test_list_domains {
@@ -287,6 +451,10 @@ for my $vm_name (reverse sort @VMS) {
         skip $msg,10    if !$vm;
 
         use_ok($CLASS);
+
+        test_list_domains_active($vm_name);
+
+        test_list_domains_clones($vm_name);
 
         test_list_bases_show_clones($vm);
 
