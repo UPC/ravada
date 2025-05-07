@@ -340,13 +340,13 @@ sub test_auto_shutdown_disconnected($vm, $grace=0) {
     $clone->start(user => user_admin, remote_ip => '1.2.3.4');
     _mock_connected($clone);
     ok(-e $clone->_rrd_file('status')) or die;
-    for (1 .. 2) {
+    for (1 .. 10) {
         last if $clone->client_status(1) eq 'disconnected';
         sleep 1;
         diag("waiting for ".$clone->name." to disconnect "
             .$clone->client_status);
     }
-    is($clone->client_status, 'disconnected');
+    is($clone->client_status, 'disconnected') or exit;
     my $req = Ravada::Request->enforce_limits( _force => 1);
     wait_request(debug => 0);
     is($req->status,'done');
@@ -794,13 +794,12 @@ for my $vm_name ( vm_names() ) {
 
         my $clone1 = $domain->clone( user=>user_admin, name=>new_domain_name );
         ok($clone1, "Expecting clone ");
-        ok($domain->has_clones==1,"[$vm_name] has_clones expecting 1, got ".$domain->has_clones);
+        ok($domain->has_clones(1)==1,"[$vm_name] has_clones expecting 1, got ".$domain->has_clones);
         $clone1->shutdown_now($USER);
-
 
         my $clone2 = $domain->clone(user=>$USER,name=>new_domain_name);
         ok($clone2, "Expecting clone ");
-        ok($domain->has_clones==2,"[$vm_name] has_clones expecting 2, got ".$domain->has_clones);
+        ok($domain->has_clones(1)==2,"[$vm_name] has_clones expecting 2, got ".$domain->has_clones);
         $clone2->shutdown_now($USER);
 
         test_json($vm_name, $domain->name);

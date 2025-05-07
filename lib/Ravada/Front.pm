@@ -329,71 +329,45 @@ sub list_domains($self, %args) {
     my $query = "SELECT d.name,d.alias, d.id, id_base, is_base, id_vm, status, is_public "
         ."      ,vms.name as node , is_volatile, client_status, id_owner "
         ."      ,comment, is_pool, show_clones"
+        ."      ,d.has_clones, d.is_locked"
+        ."      ,d.client_status, d.date_status_change, d.autostart "
         ."      ,d.date_changed"
         ." FROM domains d LEFT JOIN vms "
         ."  ON d.id_vm = vms.id ";
 
-    my $where = '';
-    for my $field ( sort keys %args ) {
-        $where .= " AND " if $where;
-        if (!defined $args{$field}) {
-            $where .= " $field IS NULL ";
-            delete $args{$field};
-            next;
-        }
-        $where .= " d.$field=?"
-    }
-    $where = "WHERE $where" if $where;
+    my ($where, $values) = $self->_create_where(\%args);
 
     my $sth = $CONNECTOR->dbh->prepare("$query $where ORDER BY d.id");
-    $sth->execute(map { $args{$_} } sort keys %args);
+    $sth->execute(@$values);
 
     my @domains = ();
     while ( my $row = $sth->fetchrow_hashref) {
-        for (qw(is_locked is_hibernated is_paused
-                has_clones )) {
+        for (qw(is_hibernated is_paused)) {
             $row->{$_} = 0;
         }
-        my $domain ;
-        my $t0 = time;
-        eval { $domain   = $self->search_domain($row->{name}) };
-        warn $@ if $@;
         $row->{remote_ip} = undef;
-        if ( $row->{is_volatile} && !$domain ) {
-            $self->_remove_domain_db($row->{id});
-            next;
-        }
 
         $row->{name}=Encode::decode_utf8($row->{alias})
         if defined $row->{alias} && length($row->{alias});
 
-        $row->{has_clones} = 0 if !exists $row->{has_clones};
-        $row->{is_locked} = 0 if !exists $row->{is_locked};
         $row->{is_active} = 0;
         $row->{remote_ip} = undef;
-        if ( $domain ) {
-            $row->{is_locked} = $domain->is_locked;
+        {
             if ($row->{status} =~ /active|starting/) {
                 $row->{is_active} = 1;
                 $row->{is_hibernated} = 0;
                 $row->{is_paused} = 0;
+                $row->{remote_ip} = Ravada::Domain::remote_ip($row->{id});
             } else {
                 $row->{is_active} = 0;
-                $row->{is_hibernated} = ( $domain->is_hibernated or 0);
-                $row->{is_paused} = 1 if $domain->is_paused;
+                $row->{is_hibernated} = 1 if $row->{status} eq 'hibernated';
+                $row->{is_paused} = 1 if $row->{status} eq 'paused';
             }
-            $row->{has_clones} = $domain->has_clones;
-#            $row->{disk_size} = ( $domain->disk_size or 0);
-#            $row->{disk_size} /= (1024*1024*1024);
-#            $row->{disk_size} = 1 if $row->{disk_size} < 1;
-            $row->{remote_ip} = $domain->remote_ip if $row->{is_active};
-            $row->{node} = $domain->_vm->name if $domain->_vm;
-            $row->{remote_ip} = $domain->client_status
-                if $domain->client_status && $domain->client_status !~ /^connected/;
-            if  ($domain->remote_ip && $domain->client_status && $domain->client_status =~ /^connected \((.*?)\)/ ) {
-                $row->{remote_ip} = $domain->remote_ip.".$1";
+            $row->{node} = $self->_node_name($row->{id_vm});
+            if (defined $row->{client_status}) {
+                ($row->{remote_ip}) = $row->{client_status} =~ /onnected.*?\((.*)\)/;
+                $row->{remote_ip} = $row->{client_status} if ! $row->{remote_ip};
             }
-            $row->{autostart} = $domain->_data('autostart');
             if (!$row->{status} ) {
                 if ($row->{is_active}) {
                     $row->{status} = 'active';
@@ -403,7 +377,7 @@ sub list_domains($self, %args) {
                     $row->{status} = 'down';
                 }
             }
-            $row->{date_status_change} = $domain->_date_status_change();
+            $row->{date_status_change} = Ravada::Domain::_date_status_change($row->{date_status_change});
         }
         delete $row->{spice_password};
         push @domains, ($row);
@@ -411,6 +385,67 @@ sub list_domains($self, %args) {
     $sth->finish;
 
     return \@domains;
+}
+
+sub _create_where($self, $args) {
+    my $where = '';
+    my @values;
+
+    my $date_changed = delete $args->{date_changed};
+    for my $field ( sort keys %$args ) {
+        $where .= " OR " if $where;
+        if (!defined $args->{$field}) {
+            $where .= " $field IS NULL ";
+            next;
+        }
+        my $operation = "=";
+        $operation = ">=" if $field eq 'date_changed';
+        $operation = "like" if $field eq 'name';
+        if (!ref($args->{$field})) {
+            $where .= " d.$field $operation ?";
+            if ($field eq 'name') {
+                push @values,('%'.$args->{$field}.'%');
+            } else {
+                push @values,($args->{$field});
+            }
+        } else {
+            my $option = '';
+            for my $value ( @{$args->{$field}} ) {
+                $option .= " OR " if $option;
+                if (!defined $value) {
+                    $option .= " d.$field IS NULL ";
+                    next;
+                }
+                $option .= " d.$field=? ";
+                push @values,($value);
+            }
+            $where .= " ($option) ";
+        }
+    }
+    if ($date_changed) {
+        $where = " ( $where ) AND " if $where ;
+        $where .= " d.date_changed >= ? ";
+        push @values, ($date_changed);
+    }
+
+    $where = "WHERE $where" if $where;
+
+    return ($where,\@values);
+}
+
+
+sub _node_name($self, $id_vm) {
+    return $self->{_node_name}->{$id_vm}
+    if $self->{_node_name}->{$id_vm};
+
+    my $sth = $self->_dbh->prepare("SELECT name FROM vms "
+        ." WHERE id=?"
+    );
+    $sth->execute($id_vm);
+    my ($name) = $sth->fetchrow;
+    $self->{_node_name}->{$id_vm} = $name;
+
+    return $name;
 }
 
 =head2 filter_base_without_clones
@@ -917,6 +952,8 @@ sub wait_request {
     }
     $req->status("timeout")
         if $req->status eq 'working';
+
+    $req->refresh();
     return $req;
 
 }
@@ -1141,6 +1178,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'manage_pools'
                 || $command eq 'list_storage_pools'
                 || $command eq 'list_cpu_models'
+                || $command eq 'list_networks'
                 ;
         next if ( $command eq 'force_shutdown'
                 || $command eq 'force_reboot'
@@ -1794,6 +1832,7 @@ sub list_networks($self, $id_vm ,$id_user) {
         $self->_search_user($row->{id_owner},\%owner);
         $row->{_owner} = $owner{$row->{id_owner}};
         $row->{_can_change}=0;
+        $row->{is_active}=0 if !defined $row->{is_active};
 
         $row->{_can_change}=1
         if $user->is_admin || $user->can_manage_all_networks
@@ -2049,6 +2088,21 @@ sub bundle_private_network($self, $id_bundle, $value=1){
         "UPDATE bundles set private_network=? WHERE id=?");
     $sth->execute($value, $id_bundle);
 }
+
+=head2 bundle_isolated
+
+Sets the bundle network isolated
+
+Arguments : id_bundle, value ( defaults 1 )
+
+=cut
+
+sub bundle_isolated($self, $id_bundle, $value=1){
+    my $sth = $self->_dbh->prepare(
+        "UPDATE bundles set isolated=? WHERE id=?");
+    $sth->execute($value, $id_bundle);
+}
+
 
 =head2 add_to_bundle
 

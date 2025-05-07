@@ -482,7 +482,7 @@
                             update_info_settings();
                         }
                     });
-                    _select_new_base();
+                    //_select_new_base();
                 }
             };
 
@@ -584,8 +584,12 @@
                 ws.onmessage = function(event) {
                     var data = JSON.parse(event.data);
                     $scope.$apply(function () {
-                        $scope.bases = data;
-                        _select_new_base();
+                        if (typeof($scope.bases) == 'undefined'
+                        || $scope.bases.length != data.length) {
+                            $scope.bases = data;
+                            $scope.new_base=undefined;
+                            _select_new_base();
+                        }
                     });
                 }
             };
@@ -939,6 +943,10 @@
                     return;
                 }
 
+            }
+            if(typeof($scope.showmachine.hardware[hardware][index]["_index"])
+                !== 'undefined') {
+                index=$scope.showmachine.hardware[hardware][index]._index;
             }
             $scope.request('remove_hardware',{
                     'id_domain': $scope.showmachine.id
@@ -1321,7 +1329,7 @@
             $scope.search_shared_user = function() {
                 $scope.searching_shared_user = true;
                 $scope.shared_user_found = '';
-                $http.get("/search_user/"+$scope.user_share)
+                $http.get("/search_other_user/"+$scope.user_share)
                 .then(function(response) {
                     $scope.shared_user_found = response.data.found;
                     $scope.shared_user_count = response.data.count;
