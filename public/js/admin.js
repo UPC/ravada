@@ -76,17 +76,36 @@ ravadaApp.directive("solShowMachine", swMach)
 
   function newMachineCtrl($scope, $http) {
 
+      var ws_list_isos;
+      var isos_cache = {};
+
       $scope.init = function(url) {
+          $scope.disconnected = false;
           $scope.url = url;
           $scope.images = [];
-          subscribe_list_isos(url);
           subscribe_list_machines(url);
-          $http.get('/list_vm_types.json').then(function(response) {
-              $scope.backends = response.data;
-              $scope.backend = response.data[0];
-              $scope.loadTemplates();
+          $http.get('/list_nodes.json').then(function(response) {
+              $scope.nodes = {};
+              for (var i=0; i<response.data.length; i++) {
+                  var node = response.data[i];
+                  if (typeof($scope.nodes[node.type]) == 'undefined') {
+                      $scope.nodes[node.type] = [];
+                  }
+                  $scope.nodes[node.type].push(node);
+                  if(typeof($scope.backend) == 'undefined') {
+                      $scope.backend = node.type;
+                  }
+              }
+              $scope.backends=Object.keys($scope.nodes);
+              $scope.change_backend();
           });
       }
+
+      $scope.connect = function() {
+          $scope.disconnected=false;
+          subscribe_list_machines($scope.url);
+          $scope.subscribe_list_isos($scope.node.id);
+      };
 
       $scope.list_machine_types = function(backend) {
           $http.get('/list_machine_types.json?vm_type='+backend).then(function(response) {
@@ -117,9 +136,35 @@ ravadaApp.directive("solShowMachine", swMach)
       };
 
       $scope.loadTemplates = function() {
+          $scope.iso_file = '';
+          $http.get('/list_images.json').then(function(response) {
+              $scope.images = response.data;
+          });
           $scope.list_machine_types($scope.backend);
           $scope.list_storage_pools($scope.backend);
-          subscribe_list_images($scope.backend);
+      }
+
+      default_node = function() {
+          $scope.node = undefined;
+          var node;
+          for (var i=0; i<$scope.nodes[$scope.backend].length; i++) {
+              var current_node = $scope.nodes[$scope.backend][i];
+              if (typeof(node) == 'undefined') {
+                  node = current_node;
+              }
+              if (typeof($scope.node) == 'undefined' && current_node.is_local ) {
+                  $scope.node = current_node;
+              }
+          }
+          if (typeof($scope.node) == 'undefined') {
+              $scope.node=node;
+          }
+      }
+
+      $scope.change_backend = function() {
+            $scope.loadTemplates();
+            default_node();
+            $scope.subscribe_list_isos($scope.node.id);
       }
 
       /*
@@ -128,13 +173,38 @@ ravadaApp.directive("solShowMachine", swMach)
       });
       */
 
-      subscribe_list_isos = function() {
-          var ws = new WebSocket($scope.url);
-          ws.onopen = function(event) { ws.send('list_isos') };
-          ws.onmessage = function(event) {
+      $scope.change_list_isos = function(id_vm) {
+        $scope.iso_file = '';
+        if (typeof(isos_cache[id_vm]) != 'undefined') {
+            $scope.isos = isos_cache[id_vm];
+            $scope.iso_file = $scope.change_iso($scope.id_iso);
+        } else {
+            $scope.isos = undefined;
+        }
+        if (typeof(ws_list_isos) != 'undefined') {
+            ws_list_isos.send('list_isos/'+id_vm) ;
+        }
+      };
+
+      $scope.subscribe_list_isos = function(id_vm) {
+          $scope.iso_file = '';
+          $scope.isos=[];
+          if (typeof(ws_list_isos) != 'undefined') {
+              ws_list_isos.close();
+          }
+          ws_list_isos = new WebSocket($scope.url);
+          ws_list_isos.onopen = function(event) { ws_list_isos.send('list_isos/'+id_vm) };
+          ws_list_isos.onclose = function(event) {
+              $scope.disconnected=true;
+          };
+          ws_list_isos.onmessage = function(event) {
               var data = JSON.parse(event.data);
               $scope.$apply(function () {
                   $scope.isos = data;
+                  isos_cache[$scope.node.id] = data;
+                  if (!$scope.iso_file && $scope.id_iso) {
+                      $scope.iso_file = $scope.change_iso($scope.id_iso);
+                  }
               });
           }
       };
@@ -149,20 +219,6 @@ ravadaApp.directive("solShowMachine", swMach)
               });
           }
       };
-
-      subscribe_list_images = function(backend) {
-          $scope.images = [];
-          var ws = new WebSocket($scope.url);
-          ws.onopen = function(event) { ws.send('list_iso_images/'+backend) };
-          ws.onmessage = function(event) {
-              var data = JSON.parse(event.data);
-              $scope.$apply(function () {
-                  $scope.images = data;
-              });
-          }
-      };
-
-
       /*
       $http.get('/list_lxc_templates.json').then(function(response) {
               $scope.templates_lxc = response.data;
@@ -200,7 +256,24 @@ ravadaApp.directive("solShowMachine", swMach)
           if ( $scope.swap.value < iso.min_swap_size ) {
               $scope.swap.value = iso.min_swap_size + 0.1;
           }
-          return (iso.device != null) ? iso.device : "";
+          if (iso.file_re ) {
+              file_re = new RegExp(iso.file_re);
+          } else {
+              return '';
+          }
+          if (typeof($scope.isos) != 'undefined' ) {
+              var name_re = /.*\/(.+\.iso$)/;
+              for (var i=0 ; i<$scope.isos.length ; i++) {
+                  var found = name_re.exec($scope.isos[i]);
+                  if (found.length && file_re.test(found[1])) {
+                      if ($scope.isos[i].downloading) {
+                          $scope.isos[i].downloading=false;
+                      }
+                      return $scope.isos[i];
+                  }
+              }
+          }
+          return "";
       };
 
       $scope.onIdIsoSelected = function() {
@@ -279,18 +352,17 @@ ravadaApp.directive("solShowMachine", swMach)
 
       $scope.refresh_storage = function() {
           $scope.refresh_working = true;
+          $scope.iso_file = undefined;
+          $scope.isos = undefined;
+          isos_cache[$scope.node.id] = undefined;
           $http.post('/request/refresh_storage/',
               JSON.stringify({})
           ).then(function(response) {
+              $scope.refresh_working = false;
+              $scope.change_list_isos($scope.node.id);
               if(response.status == 300 ) {
                   console.error('Response error', response.status);
               }
-              setTimeout(function(){
-                  $http.get('/iso_file.json').then(function(response) {
-                      $scope.isos = response.data;
-                      $scope.refresh_working = false;
-                  });
-              }, 3000);
           }
         );
       };
@@ -469,6 +541,9 @@ ravadaApp.directive("solShowMachine", swMach)
                   if ( $scope.show_active ) { $scope.do_show_active() };
                   if ( $scope.filter) { $scope.show_filter() };
               });
+          }
+          if (typeof(ws_list_isos) != 'undefined') {
+              $scope.change_list_isos($scope.node.id);
           }
       }
       subscribe_list_requests = function(url) {

@@ -100,10 +100,11 @@ sub _list_bases($rvd, $args) {
 }
 
 sub _list_isos($rvd, $args) {
-    my ($type) = $args->{channel} =~ m{/(.*)};
-    $type = 'KVM' if !defined $type;
+    my ($id_vm) = $args->{channel} =~ m{/(.*)};
+    my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
+    my $user = Ravada::Auth::SQL->new(name => $login) or die "Error: uknown user $login";
 
-    return $rvd->iso_file($type);
+    return $rvd->iso_file($id_vm, $user->id);
 }
 
 sub _list_iso_images($rvd, $args) {

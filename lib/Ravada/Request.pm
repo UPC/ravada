@@ -58,6 +58,7 @@ our %VALID_ARG = (
            ,data => 2
            ,options => 2
            ,storage => 2
+           ,id_vm => 2
     }
     ,open_iptables => $args_manage_iptables
       ,remove_base => $args_remove_base
@@ -148,7 +149,7 @@ our %VALID_ARG = (
     ,list_network_interfaces => { uid => 1, vm_type => 1, type => 2 }
 
     #isos
-    ,list_isos => { vm_type => 1 }
+    ,list_isos => { id_vm => 1 }
 
     ,manage_pools => { uid => 2, id_domain => 2 }
     ,ping_backend => {}
@@ -288,7 +289,7 @@ our %CMD_VALIDATE = (
     ,move_volume => \&_validate_change_hardware
     ,compact => \&_validate_compact
     ,spinoff => \&_validate_compact
-    ,prepare_base => \&_validate_compact
+    ,prepare_base => \&_validate_prepare_base
     ,remove_base => \&_validate_remove_base
 );
 
@@ -394,8 +395,8 @@ sub create_domain {
 
     my $args = _check_args('create_domain', @_ );
 
-    confess "ERROR: Argument vm required without id_base"
-        if !exists $args->{vm} && !exists $args->{id_base};
+    confess "ERROR: Argument vm or id_vm required without id_base"
+        if !exists $args->{vm} && !exists $args->{id_base} && !exists $args->{id_vm};
 
     my $self = {};
     if ($args->{network}) {
@@ -911,10 +912,16 @@ sub _validate_remove_base($self) {
     my @reqs_base = grep { $_->command eq 'prepare_base' || $_->command eq 'remove_base'}
         $domain->list_requests;
 
-    if (scalar(@reqs_base) && $reqs_base[-1] eq 'prepare_base'
-            && $reqs_base[-1]->status eq 'requesed') {
+    my $n = scalar(@reqs_base);
+
+    if ($n >= 2
+            && $reqs_base[$n-2]->command eq 'prepare_base'
+            && $reqs_base[$n-2]->status eq 'requested'
+            && $reqs_base[$n-1]->command eq 'remove_base'
+            && $reqs_base[$n-1]->status eq 'requested'
+        ) {
         $reqs_base[-1]->status('done');
-        $self->status('done');
+        $reqs_base[-2]->status('done');
     }
 }
 
@@ -947,6 +954,17 @@ sub _validate_start_domain($self) {
         next if $req->at_time;
         next if $command eq 'start' && !$req->after_request();
         $self->after_request($req->id) if $req && $req->id < $self->id;
+    }
+}
+
+sub _validate_prepare_base($self) {
+    $self->_validate_compact();
+
+    my $req_create = $self->_search_request('create'
+        , id_base=> $self->args('id_domain'));
+
+    if ($req_create) {
+        $req_create->after_request($self->id);
     }
 }
 
@@ -1127,6 +1145,12 @@ sub _validate_clone($self
         $self->error("Error: user id='$uid' does not exist");
         return;
     }
+
+    my ($req_base) = grep { $_->command eq 'prepare_base' }
+        $base->list_requests;
+
+    $self->after_request($req_base->id) if $req_base;
+
     return if $user->is_admin;
     return if $user->can_clone_all;
     return $self->_status_error('done'
