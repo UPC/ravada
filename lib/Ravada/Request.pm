@@ -289,7 +289,8 @@ our %CMD_VALIDATE = (
     ,move_volume => \&_validate_change_hardware
     ,compact => \&_validate_compact
     ,spinoff => \&_validate_compact
-    ,prepare_base => \&_validate_compact
+    ,prepare_base => \&_validate_prepare_base
+    ,remove_base => \&_validate_remove_base
 );
 
 sub _init_connector {
@@ -905,6 +906,25 @@ sub _validate($self) {
     $method->($self);
 }
 
+sub _validate_remove_base($self) {
+    my $id_domain = $self->args('id_domain');
+    my $domain = Ravada::Front::Domain->open($id_domain);
+    my @reqs_base = grep { $_->command eq 'prepare_base' || $_->command eq 'remove_base'}
+        $domain->list_requests;
+
+    my $n = scalar(@reqs_base);
+
+    if ($n >= 2
+            && $reqs_base[$n-2]->command eq 'prepare_base'
+            && $reqs_base[$n-2]->status eq 'requested'
+            && $reqs_base[$n-1]->command eq 'remove_base'
+            && $reqs_base[$n-1]->status eq 'requested'
+        ) {
+        $reqs_base[-1]->status('done');
+        $reqs_base[-2]->status('done');
+    }
+}
+
 sub _validate_remove_hardware($self) {
     my $name = $self->args('name');
 
@@ -934,6 +954,17 @@ sub _validate_start_domain($self) {
         next if $req->at_time;
         next if $command eq 'start' && !$req->after_request();
         $self->after_request($req->id) if $req && $req->id < $self->id;
+    }
+}
+
+sub _validate_prepare_base($self) {
+    $self->_validate_compact();
+
+    my $req_create = $self->_search_request('create'
+        , id_base=> $self->args('id_domain'));
+
+    if ($req_create) {
+        $req_create->after_request($self->id);
     }
 }
 
@@ -1114,6 +1145,12 @@ sub _validate_clone($self
         $self->error("Error: user id='$uid' does not exist");
         return;
     }
+
+    my ($req_base) = grep { $_->command eq 'prepare_base' }
+        $base->list_requests;
+
+    $self->after_request($req_base->id) if $req_base;
+
     return if $user->is_admin;
     return if $user->can_clone_all;
     return $self->_status_error('done'
