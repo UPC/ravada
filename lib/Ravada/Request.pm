@@ -289,6 +289,7 @@ our %CMD_VALIDATE = (
     ,compact => \&_validate_compact
     ,spinoff => \&_validate_compact
     ,prepare_base => \&_validate_compact
+    ,remove_base => \&_validate_remove_base
 );
 
 sub _init_connector {
@@ -902,6 +903,19 @@ sub _validate($self) {
     my $method = $CMD_VALIDATE{$self->command};
     return if !$method;
     $method->($self);
+}
+
+sub _validate_remove_base($self) {
+    my $id_domain = $self->args('id_domain');
+    my $domain = Ravada::Front::Domain->open($id_domain);
+    my @reqs_base = grep { $_->command eq 'prepare_base' || $_->command eq 'remove_base'}
+        $domain->list_requests;
+
+    if (scalar(@reqs_base) && $reqs_base[-1] eq 'prepare_base'
+            && $reqs_base[-1]->status eq 'requesed') {
+        $reqs_base[-1]->status('done');
+        $self->status('done');
+    }
 }
 
 sub _validate_remove_hardware($self) {
