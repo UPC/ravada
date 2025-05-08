@@ -3466,12 +3466,15 @@ sub _post_shutdown {
     my $request;
     $request = $arg{request} if exists $arg{request};
     if ( !$self->is_local && !$self->is_volatile && $self->has_non_shared_storage()) {
-        my $req = Ravada::Request->rsync_back(
+        my @instances = $self->list_instances();
+        my ($instance_local) = grep { $_->{id_vm} == $self->_id_vm_local() } @instances;
+        my $req;
+        $req = Ravada::Request->rsync_back(
             uid => Ravada::Utils::user_daemon->id
             ,id_domain => $self->id
             ,id_node => $self->_vm->id
             ,at => time + Ravada::setting(undef,"/backend/delay_migrate_back")
-        );
+        ) if $instance_local;
     }
 
     $self->_schedule_compact();

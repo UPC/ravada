@@ -3588,17 +3588,13 @@ sub remove_domain {
     };
     warn "Warning: $@" if $@;
 
-    my $vm = Ravada::VM->open(type => $vm_type);
-    my $domain;
-    eval { $domain = Ravada::Domain->open(id => $id, _force => 1, id_vm => $vm->id) };
-    warn $@ if $@;
-    if (!$domain) {
-            warn "Warning: I can't find domain [$id ] '$name' in ".$vm->name.", maybe already removed.\n";
+    if (!$domain0) {
+            warn "Warning: I can't find domain [$id ] '$name' , maybe already removed.\n";
             Ravada::Domain::_remove_domain_data_db($id);
             return;
     };
 
-    $domain->remove( $user);
+    $domain0->remove( $user);
 }
 
 =head2 search_domain
@@ -3665,7 +3661,16 @@ sub search_domain($self, $name, $import = 0) {
 =cut
 
 sub search_domain_by_id($self, $id) {
-    return Ravada::Domain->open($id);
+    my $domain = Ravada::Domain->open($id);
+    return $domain if $domain;
+
+    $self->_check_domain_nodes($id);
+
+    my $sth = $CONNECTOR->dbh->prepare("SELECT name FROM domains WHERE id=?");
+    $sth->execute($id);
+
+    my ($name) = $sth->fetchrow;
+    die "Error: Domain ".($name or $id)." not found";
 }
 
 =head2 list_vms
