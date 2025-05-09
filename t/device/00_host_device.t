@@ -492,7 +492,7 @@ sub test_domain_path_kvm($domain, $path) {
     confess if !$path;
 
     my @nodes = $doc->findnodes($path);
-    is(scalar @nodes, 1, "Expecting $path in ".$domain->name) or exit;
+    is(scalar @nodes, 1, "Expecting $path in ".$domain->name) or confess;
 
 }
 
@@ -570,6 +570,7 @@ sub test_host_device_gpu($vm) {
     }
     like ($@,qr{^($|.*Unable to stat|.*device not found.*mediated)} , $base->name) or exit;
 
+    $base->_attach_host_devices();
     test_hostdev_gpu($base);
 
     diag("Remove host device ".$list_hostdev[0]->name);
@@ -590,12 +591,13 @@ sub test_xmlns($vm) {
     eval { $base->start(user_admin) };
     like ($@,qr{^($|.*Unable to stat|.*device not found.*mediated|.*there is no device "hostdev)}m , $base->name) or exit;
 
+    $base->_attach_host_devices();
     my $doc = XML::LibXML->load_xml( string => $base->domain->get_xml_description);
     my ($domain_xml) = $doc->findnodes("/domain");
 
     my ($xmlns) = $domain_xml =~ m{xmlns:qemu=["'](.*?)["']}m;
     my ($line1) = $domain_xml =~ m{(<domain.*)}m;
-    ok($xmlns,"Expecting xmlns:qemu namespace in ".$line1) or exit;
+    ok($xmlns,"Expecting xmlns:qemu namespace in ".$line1) or die $base->name;
     is($xmlns, "http://libvirt.org/schemas/domain/qemu/1.0") or exit;
 
     $list_hostdev[0]->remove();
