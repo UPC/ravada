@@ -4893,8 +4893,8 @@ sub _cmd_clone($self, $request) {
         if ( $request->defined_arg('number') && $request->defined_arg('number') > 1)
             || (! $request->defined_arg('name') && $request->defined_arg('add_to_pool'));
 
-    my $domain = Ravada::Domain->open($request->args('id_domain'))
-        or confess "Error: Domain ".$request->args('id_domain')." not found";
+    my $domain = $self->search_domain_by_id($request->args('id_domain'))
+    or die "Error: Domain ".$request->args('id_domain')." not found";
 
     my $args = $request->args();
     $args->{request} = $request;
@@ -5076,6 +5076,32 @@ sub _req_clone_many($self, $request) {
     return @reqs;
 }
 
+sub _check_domain_nodes($self, $id_domain) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT v.id, v.name, v.is_active, v.enabled "
+        ." FROM domains d,vms v"
+        ." WHERE d.id=?"
+        ."   AND d.id_vm=v.id "
+    );
+    $sth->execute($id_domain);
+
+    my ($id_vm, $name, $is_active, $enabled) = $sth->fetchrow;
+
+    die "Error: node $name is disabled\n" if !$enabled;
+
+    if ($is_active) {
+        my $vm;
+        eval {
+            $vm = Ravada::VM->open($id_vm);
+            $vm->is_active(1);
+            $is_active = $vm->is_active;
+        };
+        warn $@ if $@;
+    }
+
+    die "Error: node $name is down\n" if !$is_active;
+}
+
 sub _cmd_start {
     my $self = shift;
     my $request = shift;
@@ -5085,13 +5111,8 @@ sub _cmd_start {
     $id_domain = $request->defined_arg('id_domain');
 
     my $domain;
-    $domain = $self->search_domain($name)               if $name;
-    $domain = Ravada::Domain->open($id_domain)          if $id_domain;
-
-    if(!$domain) {
-        $self->_remove_inactive_gone($id_domain);
-        die "Unknown machine '".($name or $id_domain)."'\n";
-    }
+    $domain = $self->search_domain($name)               if $name && !$id_domain;
+    $domain = $self->search_domain_by_id($id_domain)    if $id_domain;
 
     $domain->status('starting');
 
@@ -6218,7 +6239,9 @@ sub _refresh_active_vms ($self) {
         eval{ $vm = Ravada::VM->open($id) };
         next if !$vm;
         if ( !$vm->vm || !$vm->enabled() || !$vm->is_active ) {
-            $vm->shutdown_domains();
+            if ($vm->vm && $vm->is_active) {
+                $vm->shutdown_domains();
+            }
             $active_vm{$vm->id} = 0;
             $vm->disconnect();
             next;
@@ -6282,7 +6305,7 @@ sub _refresh_down_nodes($self, $request = undef ) {
         my $vm;
         eval { $vm = Ravada::VM->open($id) };
         warn $@ if $@;
-        $vm->is_active() if $vm;
+        $vm->is_active(1) if $vm;
     }
 }
 
@@ -6404,7 +6427,7 @@ sub _refresh_disabled_nodes($self, $request = undef ) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT d.id, d.name, vms.name FROM domains d, vms "
         ." WHERE d.id_vm = vms.id "
-        ."    AND ( vms.enabled = 0 || vms.is_active = 0 )"
+        ."    AND vms.enabled = 0 "
         ."    AND d.status = 'active'"
     );
     $sth->execute();
@@ -6459,8 +6482,7 @@ sub _refresh_down_domains($self, $active_domain, $active_vm) {
         next if !$domain || $domain->is_hibernated;
 
         if (defined $id_vm && !$active_vm->{$id_vm} ) {
-            $domain->_set_data(status => 'shutdown');
-            $domain->_post_shutdown()
+            # just skip when domain down
         } else {
             my $status = 'shutdown';
             $status = 'active' if $domain->is_active;
@@ -6499,8 +6521,11 @@ sub _remove_unnecessary_downs($self, $domain) {
 
 sub _refresh_volatile_domains($self) {
    my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id, name, id_vm, id_owner, vm FROM domains WHERE is_volatile=1 "
-        ." AND date_changed < ? "
+        "SELECT d.id, d.name, d.id_vm, d.id_owner, d.vm "
+        ." FROM domains d , vms v"
+        ." WHERE d.is_volatile=1 "
+        ." AND d.date_changed < ? "
+        ." AND d.id_vm=v.id AND v.is_active=1"
     );
     $sth->execute(Ravada::Utils::date_now(-$Ravada::Domain::TTL_REMOVE_VOLATILE));
     while ( my ($id_domain, $name, $id_vm, $id_owner, $type) = $sth->fetchrow ) {
@@ -6509,10 +6534,12 @@ sub _refresh_volatile_domains($self) {
         next if $domain && $domain->is_locked;
         if ( !$domain || $domain->status eq 'down' || !$domain->is_active) {
             if ($domain && !$domain->is_locked ) {
-                Ravada::Request->shutdown_domain(
-                    uid => $USER_DAEMON->id
-                    ,id_domain => $id_domain
-                );
+                if ($domain->_vm && $domain->_vm->is_active(1)) {
+                    Ravada::Request->shutdown_domain(
+                        uid => $USER_DAEMON->id
+                        ,id_domain => $id_domain
+                    );
+                }
             } else {
                 my $user;
                 eval { $user = Ravada::Auth::SQL->search_by_id($id_owner) };
@@ -6986,14 +7013,32 @@ sub _clean_temporary_users($self) {
     }
 }
 
+sub _list_vms_down($self) {
+    my $vms_down;
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,name FROM vms WHERE is_active=0"
+    );
+    $sth->execute();
+    while ( my $row = $sth->fetchrow_hashref) {
+        $vms_down->{$row->{id}} = $row;
+    }
+
+    return $vms_down;
+}
+
 sub _clean_volatile_machines($self, %args) {
     my $request = delete $args{request};
 
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)
         if keys %args;
 
+    my $vm_down = $self->_list_vms_down();
+
     my $sth_remove = $CONNECTOR->dbh->prepare("DELETE FROM domains where id=?");
     for my $domain ( $self->list_domains_data( is_volatile => 1 )) {
+        next if $vm_down->{$domain->{id_vm}};
+
         my $domain_real = Ravada::Domain->open(
             id => $domain->{id}
             ,_force => 1

@@ -3483,6 +3483,16 @@ sub _post_shutdown {
                                 && !$is_active;
 }
 
+sub _id_vm_local($self) {
+    my $sth = $self->_dbh->prepare(
+        "SELECT id FROM vms "
+        ." WHERE vm_type=?"
+        ."  AND ( hostname='127.0.0.1'"
+        ."      OR hostname='localhost') "
+    );
+    $sth->execute($self->_vm->type);
+}
+
 sub _schedule_compact($self) {
 
     return if !Ravada::Front::setting(undef,"/backend/auto_compact");
