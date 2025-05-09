@@ -26,7 +26,7 @@
                 <div class="col-lg-9">
                     <select ng-model="node" name="id_vm"
                         ng-options="item.name for item in nodes[backend] track by item.id"
-                        ng-change="change_list_isos(node.id)"
+                        ng-change="change_list_isos()"
                         ></select>
                         <span class="error" ng-show="nodes && node && !node.is_active"><%=l 'This node is down' %></span>
                 </div>

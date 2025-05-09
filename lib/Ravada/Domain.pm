@@ -3466,18 +3466,31 @@ sub _post_shutdown {
     my $request;
     $request = $arg{request} if exists $arg{request};
     if ( !$self->is_local && !$self->is_volatile && $self->has_non_shared_storage()) {
-        my $req = Ravada::Request->rsync_back(
+        my @instances = $self->list_instances();
+        my ($instance_local) = grep { $_->{id_vm} == $self->_id_vm_local() } @instances;
+        my $req;
+        $req = Ravada::Request->rsync_back(
             uid => Ravada::Utils::user_daemon->id
             ,id_domain => $self->id
             ,id_node => $self->_vm->id
             ,at => time + Ravada::setting(undef,"/backend/delay_migrate_back")
-        );
+        ) if $instance_local;
     }
 
     $self->_schedule_compact();
     $self->needs_restart(0) if $self->is_known()
                                 && $self->needs_restart()
                                 && !$is_active;
+}
+
+sub _id_vm_local($self) {
+    my $sth = $self->_dbh->prepare(
+        "SELECT id FROM vms "
+        ." WHERE vm_type=?"
+        ."  AND ( hostname='127.0.0.1'"
+        ."      OR hostname='localhost') "
+    );
+    $sth->execute($self->_vm->type);
 }
 
 sub _schedule_compact($self) {
