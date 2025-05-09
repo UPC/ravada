@@ -419,10 +419,12 @@ sub _around_start($orig, $self, @arg) {
         && $error !~ /Could not run .*swtpm/i
         && $error !~ /virtiofs/
         && $error !~ /child process/i
-        && $error !~ /host doesn.t support/
-        && $error !~ /device not found/
         ;
 
+        if ($error && $self->is_known && $self->id_base && !$self->is_local && $self->_vm->enabled) {
+            $self->_request_set_base();
+            next;
+        }
         die $error;
     }
     $self->_post_start(%arg);
@@ -594,13 +596,8 @@ sub _start_checks($self, @args) {
     # check the requested id_vm is suitable
     if ($id_vm) {
         $vm = Ravada::VM->open($id_vm);
-        if ( !$vm->enabled || !$vm->ping ) {
-            $vm = $vm_local;
-            $id_vm = undef;
-        } elsif ($enable_host_devices && !$self->_available_hds($id_vm)) {
-            $vm = $vm_local;
-            $id_vm = undef;
-        }
+        die "Error: node ".$vm->name." not available.\n"
+            if !$vm->enabled || !$vm->ping;
     }
 
     # if it is a clone ( it is not a base )
@@ -610,7 +607,6 @@ sub _start_checks($self, @args) {
         if ( !$vm->is_alive ) {
             $vm->disconnect();
             $vm->connect;
-            $vm = $vm_local if !$vm->is_local && !$vm->is_alive;
             die "Error: node ".$vm->name." is not alive" if !$vm->is_alive;
         };
         if ($id_vm) {
@@ -967,10 +963,6 @@ sub _around_prepare_base($orig, $self, @args) {
     }
     $self->_pre_prepare_base($user, $request);
 
-    if (!$self->is_local) {
-        my $vm_local = $self->_vm->new( host => 'localhost' );
-        $self->_vm($vm_local);
-    }
     $self->pre_prepare_base();
     my @base_img = $self->$orig($with_cd);
 
@@ -1078,11 +1070,6 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
             $self->force_shutdown($user);
             sleep 1;
         }
-    }
-    #    $self->_post_remove_base();
-    if (!$self->is_local) {
-        my $vm_local = Ravada::VM->open( type => $self->vm );
-        $self->migrate($vm_local, $request);
     }
     $self->_check_free_space_prepare_base();
 }
@@ -1210,14 +1197,17 @@ sub _check_tmp_volumes($self) {
         if !$self->id_base;
     my $vm = $self->_vm;
 
-    my $base = Ravada::Domain->open($self->id_base);
-    my @volumes = $base->list_files_base_target;
     for my $vol ( $self->list_volumes_info) {
-        next unless $vol->file && $vol->file =~ /\.(TMP|SWAP)\.\w+$/;
-        my ($file_base) = grep { $_->[1] eq $vol->info->{target} } @volumes;
-        next if !$file_base;
 
+        next unless $vol->file && $vol->file =~ /\.(TMP|SWAP)\./;
         $vol->delete();
+        my $base = Ravada::Domain->open($self->id_base);
+        my @volumes = $base->list_files_base_target;
+        my ($file_base) = grep { $_->[1] eq $vol->info->{target} } @volumes;
+        if (!$file_base) {
+            warn "Error: I can't find base volume for target ".$vol->info->{target}
+                .Dumper(\@volumes);
+        }
         my $vol_base = Ravada::Volume->new( file => $file_base->[0]
             , is_base => 1
             , vm => $vm
@@ -1496,9 +1486,6 @@ sub _insert_display( $self, $display ) {
     if !defined $display->{is_builtin};
 
     confess Dumper($display) if $display->{driver} =~ /-tls/ && !$display->{is_secondary};
-
-    $display->{listen_ip} = $self->_vm->ip
-    if !exists $display->{listen_ip} || !$display->{listen_ip};
 
     lock_hash(%$display);
     $self->_clean_display_order($display->{n_order}) if $display->{n_order};
@@ -2661,7 +2648,10 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
         next if $instance->{id_vm} == $self->_vm->id;
         my $vm;
         eval { $vm = Ravada::VM->open($instance->{id_vm}) };
-        die $@ if $@ && $@ !~ /I can't find VM ||libvirt error code: 38,/i;
+        if ( $@ && $@ !~ /I can't find VM ||libvirt error code: 38,/i ) {
+            warn ''.$@ if $@;
+            die $@;
+        }
         my $domain;
         $@ = '';
         eval { $domain = $vm->search_domain($domain_name) } if $vm;
@@ -2751,7 +2741,7 @@ sub _remove_files_base {
 
     for my $file ( $self->list_files_base ) {
         next if $file =~ /\.iso$/;
-        unlink $file or die "$! $file" if -e $file;
+        $self->_vm->remove_file($file) if $self->_vm->file_exists($file);
     }
 }
 
@@ -3197,10 +3187,6 @@ sub clone {
     my $vm = $self->_vm;
     if ($volatile) {
         $vm = $vm->balance_vm($uid, $self);
-    } elsif( !$vm->is_local ) {
-        for my $node ($self->_vm->list_nodes) {
-            $vm = $node if $node->is_local;
-        }
     }
 
     my $clone;

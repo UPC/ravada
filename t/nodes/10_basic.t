@@ -1940,11 +1940,7 @@ sub test_migrate_clone($node1, $node2) {
     my $clone2 = Ravada::Domain->open(id => $clone->id);
     is($clone2->_data('id_vm'),$node2->id, "Expecting ".$clone2->name." in ".$node2->name) or die;
     my @instances = $clone2->list_instances();
-    my ($i_n1) = grep { $_->{id_vm} == $node1->id } @instances;
-    ok($i_n1,"Expecting instance in ".$node1->name);
-    my ($i_n2) = grep { $_->{id_vm} == $node2->id } @instances;
-    ok($i_n2,"Expecting instance in ".$node2->name);
-    is(@instances,2) or exit;
+    is(@instances,1) or exit;
 
     test_remove_instances($clone, $node1, $node2);
     test_remove_instances($base, $node1, $node2);
@@ -2029,22 +2025,14 @@ sub test_remove_instances($base, @nodes) {
     my @volumes = $base->list_volumes();
     my @files_base = $base->list_files_base();
     $base->remove(user_admin);
-    for my $file ( @volumes, @files_base ) {
-        if ($file =~ /\.iso$/) {
-            ok(-e $file);
-        } else {
-            ok(! -e $file, "Expecting no file '$file' in localhost") or exit;
-        }
-        for my $node (@nodes) {
-
+    my $vm = $base->_vm;
+    for my $vm ( $base->_vm, @nodes ) {
+        for my $file ( @volumes, @files_base ) {
             if ($file =~ /\.iso$/) {
-                ok($node->file_exists($file));
-                next;
+                ok($vm->file_exists($file));
+            } else {
+                ok(!$vm->file_exists($file), "Expecting no file '$file' in ".$vm->name) or exit;
             }
-            ok(!$node->file_exists($file));
-            my ($out, $err) = $node->run_command("ls", $file);
-            ok(!$out, "Expecting no file '$file' in ".$node->name) or exit;
-
         }
     }
 
