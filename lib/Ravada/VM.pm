@@ -683,10 +683,14 @@ sub _set_alias_unique($self, $alias) {
 }
 
 sub _add_instance_db($self, $id_domain) {
+    _add_instance_db_data($self->id, $id_domain);
+}
+
+sub _add_instance_db_data($id_vm, $id_domain) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domain_instances "
         ." WHERE id_domain=? AND id_vm=?"
     );
-    $sth->execute($id_domain, $self->id);
+    $sth->execute($id_domain, $id_vm);
     my ($row) = $sth->fetchrow;
     return if $row;
 
@@ -694,7 +698,7 @@ sub _add_instance_db($self, $id_domain) {
         ." VALUES (?, ?)"
     );
     eval {
-        $sth->execute($id_domain, $self->id);
+        $sth->execute($id_domain, $id_vm);
     };
     confess $@ if $@;
 }

@@ -1119,8 +1119,6 @@ sub spinoff {
     my $self = shift;
 
     $self->_do_force_shutdown() if $self->is_active;
-    confess "Error: spinoff from remote nodes not available. Node: ".$self->_vm->name
-        if !$self->is_local;
 
     for my $volume ($self->list_volumes_info ) {
         next if !$volume->file || $volume->file =~ /\.iso$/i;
@@ -2640,6 +2638,10 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
     my $domain_name = $self->name or confess "Unknown my self name $self ".Dumper($self->{_data});
 
     my @instances = $self->list_instances();
+    my $bases_vm = $self->_bases_vm();
+    for my $id_vm ( keys %$bases_vm) {
+        push @instances,( { id_vm => $id_vm });
+    }
     return if !scalar(@instances);
 
     my $sth_delete = $$CONNECTOR->dbh->prepare("DELETE FROM domain_instances "
@@ -3154,6 +3156,18 @@ sub clone {
 
     return $self->_clone_from_pool(@_) if $from_pool;
 
+    if ($self->is_active) {
+        warn $self->name." is active, req shutdown";
+        my $req = Ravada::Request->shutdown(uid => $user->id
+            ,id_domain => $self->id
+        );
+        if ($request && $req) {
+            $request->after_request($req->id);
+            $request->retry(2);
+        }
+        die "Warning: virtual machine ".$self->name." is active when cloning. Retry.\n";
+    }
+
     my %args2 = @_;
     delete $args2{from_pool};
     return $self->_copy_clone(%args2)   if !$self->is_base && $self->id_base();
@@ -3280,8 +3294,9 @@ sub _copy_volumes($self, $copy) {
     my %volumes = map { $_->info->{target} => $_->file } @volumes;
     my %copy_volumes = map { $_->info->{target} => $_->file } @copy_volumes;
     for my $target (keys %volumes) {
-        copy($volumes{$target}, $copy_volumes{$target})
-            or die "$! $volumes{$target}, $copy_volumes{$target}"
+        my $dst = $copy_volumes{$target};
+        $self->_vm->remove_file($dst) if $self->_vm->file_exists($dst);
+        $self->_vm->copy_file($volumes{$target}, $copy_volumes{$target});
     }
 }
 
@@ -4938,10 +4953,11 @@ sub clean_swap_volumes {
             next if !$self->_vm->file_exists($vol->file);
             my $backing_file;
             eval { $backing_file = $vol->backing_file };
-            confess $@ if $@ && $@ !~ /No backing file/i;
+            my $error = $@;
+            confess $error if $error && $error !~ /No backing file/i;
             next if !$backing_file;
             next if !$self->_vm->file_exists($backing_file);
-            $vol->restore() if !$@;
+            $vol->restore() if !$error;
         }
     }
 }
@@ -5439,7 +5455,6 @@ sub _rsync_volumes_back($self, $node, $request=undef) {
         $request->status("syncing") if $request;
         $request->error($msg)       if $request;
         warn "$msg\n" if $DEBUG_RSYNC;
-        my $t0 = time;
         $rsync->exec(src => 'root@'.$node->host.":".$file ,dest => $file );
         if ( $rsync->err ) {
             $request->status("done",join(" ",@{$rsync->err}))   if $request;
@@ -5466,7 +5481,9 @@ sub _pre_migrate($self, $node, $request = undef) {
         if !$base->base_in_vm($node->id);
         confess "ERROR: base id ".$self->id_base." not found."  if !$base;
 
-        return unless $self->_check_all_parents_in_node($node);
+        if ( ! $self->_check_all_parents_in_node($node, $request) ) {
+            die "Warning: base not in node. Retry.\n";
+        }
 
     }
     $node->_add_instance_db($self->id);
@@ -5477,6 +5494,7 @@ sub _post_migrate($self, $node, $request = undef) {
     $self->_vm($node);
     $self->_update_id_vm();
 
+    $node->_add_instance_db($node->id);
     # TODO: update db instead set this value
     $self->{_migrated} = 1;
 
@@ -5607,7 +5625,7 @@ sub set_base_vm($self, %args) {
     return $self->_set_base_vm_db($vm->id, $value);
 }
 
-sub _check_all_parents_in_node($self, $vm) {
+sub _check_all_parents_in_node($self, $vm, $request=undef) {
     my @bases;
     my $base = $self;
     for ( ;; ) {
@@ -5618,9 +5636,19 @@ sub _check_all_parents_in_node($self, $vm) {
     }
     return 1 if !@bases;
     my $req;
+    if ($request && $request->after_request) {
+        $req = Ravada::Request->open($request->after_request);
+    }
     for my $base ( reverse @bases) {
         $base->_set_base_vm_db($vm->id,0);
         my @after_req;
+        @after_req = ( after_request_ok => $req->id) if $req;
+        $req = Ravada::Request->migrate(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_domain => $base->id
+            ,id_node => $vm->id
+            ,@after_req
+        );
         @after_req = ( after_request_ok => $req->id) if $req;
         $req = Ravada::Request->set_base_vm(
             uid => Ravada::Utils::user_daemon->id
@@ -5628,6 +5656,9 @@ sub _check_all_parents_in_node($self, $vm) {
             ,id_vm => $vm->id
             ,@after_req
         );
+    }
+    if ($request) {
+        $request->after_request($req->id);
     }
     return 0;
 }
@@ -7364,6 +7395,7 @@ sub list_instances($self, $id=undef) {
         lock_hash(%$row);
         push @instances, ( $row );
     }
+
     return @instances;
 }
 

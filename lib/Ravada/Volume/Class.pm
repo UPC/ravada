@@ -96,6 +96,7 @@ sub copy_file($self, $src, $dst) {
     my @cmd = ('/bin/cp' ,$src, $dst );
     my ($out, $err) = $self->vm->run_command(@cmd);
     die $err if $err;
+    return $dst;
 }
 
 sub backup($self) {

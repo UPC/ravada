@@ -1914,6 +1914,7 @@ sub test_clone_only_remote($base,$start, $volatile=0) {
 
     return $clone;
 }
+
 sub test_migrate_clone($node1, $node2) {
     my $base = _req_create($node1);
     Ravada::Request->prepare_base(uid => user_admin->id
@@ -1940,7 +1941,7 @@ sub test_migrate_clone($node1, $node2) {
     my $clone2 = Ravada::Domain->open(id => $clone->id);
     is($clone2->_data('id_vm'),$node2->id, "Expecting ".$clone2->name." in ".$node2->name) or die;
     my @instances = $clone2->list_instances();
-    is(@instances,1) or exit;
+    is(@instances,2);
 
     test_remove_instances($clone, $node1, $node2);
     test_remove_instances($base, $node1, $node2);
@@ -1983,6 +1984,7 @@ sub test_spinoff_remote($vm, $node) {
     test_remove_instances($clone, $vm, $node);
     test_remove_instances($base, $vm, $node);
 }
+
 sub test_base_only_in_node($vm, $node, $start=0) {
 
     diag("Test base only in node , start=$start");
@@ -2099,7 +2101,6 @@ for my $vm_name (reverse vm_names() ) {
 
         test_base_only_in_node($vm, $node, 1); #start after create = 1
         test_base_only_in_node($vm, $node);
-        goto NEXT;
 
         test_removed_base_file($vm, $node);
 

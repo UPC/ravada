@@ -63,7 +63,7 @@ sub clone($self, $file_clone) {
     my $n = 10;
     for (;;) {
         my @stat = stat($self->file);
-        last if time-$stat[9] || $n--<0;
+        last if @stat || !defined $stat[9] || time-$stat[9] || $n--<0;
         sleep 1;
         die "Error: ".$self->file." looks active" if $n-- <0;
     }
