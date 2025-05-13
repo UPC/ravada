@@ -2055,7 +2055,7 @@ clean();
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
 my $tls;
 
-for my $vm_name (reverse vm_names() ) {
+for my $vm_name (vm_names() ) {
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
 

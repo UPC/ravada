@@ -1249,11 +1249,8 @@ sub _domain_create_from_base {
     confess "argument id_base or base required ".Dumper(\%args)
         if !$args{id_base} && !$args{base};
 
-    my $vm_local = $self;
-    $vm_local = $self->new( host => 'localhost') if !$vm_local->is_local;
-
     my $base = $args{base};
-    $base = $vm_local->_search_domain_by_id($args{id_base}) if $args{id_base};
+    $base = $self->_search_domain_by_id($args{id_base}) if $args{id_base};
 
     confess "Unknown base id: $args{id_base}" if !$base;
     my $volatile;
@@ -3314,6 +3311,39 @@ sub change_network($self, $data) {
     warn "Warning: unexpected args ".Dumper($data) if keys %$data;
 
     return $changed;
+}
+
+sub _search_pool_volume($self, $file) {
+    confess "ERROR: undefined file" if !defined $file;
+
+    my ($name) = $file =~ m{.*/(.*)};
+    $name = $file if !defined $name;
+
+    my $vol;
+    for my $pool (_list_storage_pools($self->vm)) {
+        next if !$pool->is_active;
+        eval { $vol = $pool->get_volume_by_name($name) };
+        die $@ if $@ && $@ !~ /^libvirt error code: 50,/;
+        return ($pool, $vol) if $vol;
+    }
+
+}
+
+sub copy_file($self, $orig, $dst) {
+    my ($sp,$vol) = $self->_search_pool_volume($orig);
+    die "Error: volume $orig not found" if !$vol;
+
+    my $xml = XML::LibXML->load_xml(string => $vol->get_xml_description());
+
+    my ($name) = $dst =~ m{.*/(.*)};
+    $xml->findnodes("/volume/name/text()")->[0]->setData($name);
+    $xml->findnodes("/volume/key/text()")->[0]->setData($dst);
+    $xml->findnodes("/volume/target/path/text()")->[0]->setData($dst);
+
+    my $vol_dst;
+    eval { $vol_dst = $sp->clone_volume($xml, $vol) };
+    confess $@ if $@;
+
 }
 
 1;
