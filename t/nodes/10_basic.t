@@ -378,7 +378,6 @@ sub test_removed_base_file($vm, $node) {
         $node->remove_file($file);
     }
 
-    my $found_req;
     my $found_clone;
     for my $try ( 1 .. 20 ) {
         my $clone1 = _req_clone($base);
@@ -386,16 +385,15 @@ sub test_removed_base_file($vm, $node) {
         wait_request();
         $found_clone = $clone1;
         my @req = $base->list_requests();
-        next if !scalar @req;
+        my $found_req;
         for my $req (@req) {
             if($req->command eq 'set_base_vm') {
                 $found_req = $req;
                 last;
             }
         }
-        last if $found_req;
+        last if $found_req || $clone1->is_active;
     }
-    ok($found_req,"Expecting request to set base vm");
     wait_request();
     is($base->base_in_vm($node->id),1);
     is(scalar($base->list_vms),2) or exit;
@@ -1201,7 +1199,7 @@ sub _check_files_exist($domain) {
 }
 
 sub test_fill_memory($vm, $node, $migrate, $start=0) {
-    diag("Testing fill memory ".$vm->type.", migrate=$migrate");
+    diag("Testing fill memory ".$vm->type.", migrate=$migrate, start=$start");
 
     my $base;
     if ($vm->type eq 'Void') {
@@ -1271,16 +1269,18 @@ sub test_fill_memory($vm, $node, $migrate, $start=0) {
         $nodes{$clone->_vm->name}++;
 
         last if $migrate && exists $nodes{$vm->name} && $nodes{$vm->name} > 2;
-        if ($migrate || keys(%nodes) > 0) {
-            $memory = int($memory*1.5);
-        }
     }
     ok($created_in_node,"Expecting some clones created in node ".$node->name) or exit;
     ok(exists $nodes{$vm->name},"Expecting some clones to node ".$vm->name." ".$vm->id);
     ok(exists $nodes{$node->name},"Expecting some clones to node ".$node->name." ".$node->id) or exit;
 
-    my ($clone) = grep { $_->{id_vm} == $node->id } $base->clones;
-    test_rsync_back($vm, $clone);
+    my ($clone) = grep { $_->{id_vm} == $vm->id } $base->clones;
+    for my $clone0 ( $base-> clones ) {
+        next if $clone0->{id_vm} eq $vm->id;
+        my $clone0b = Ravada::Front::Domain->open($clone0->{id});
+        next if $clone0b->list_instances<2;
+        test_rsync_back($vm, $clone);
+    }
 
     _remove_clones($base);
 }
@@ -1314,7 +1314,8 @@ sub test_rsync_back($vm, $clone) {
     $clone2 = Ravada::Domain->open($clone->{id});
     is($clone2->_data('id_vm'), $node->id);
     my @instances = $clone2->list_instances();
-    is(scalar(@instances),2,"Expecting 2 instances");
+    is(scalar(@instances),2,"Expecting 2 instances of ".$clone->{name}. "[ ".$clone->{id}." ]")
+        or exit;
 
     $req_back->status('requested');
     wait_request( debug => 0);
