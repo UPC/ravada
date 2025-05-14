@@ -3559,21 +3559,28 @@ sub remove_domain {
     my $self = shift;
     my %arg = @_;
 
-    my $name = delete $arg{name} or confess "Argument name required ";
+    my $name = delete $arg{name};
+    my $id_domain = delete $arg{id_domain};
+
+    die "Error: Argument name or id required" if !$name && !$id_domain;
 
     confess "Argument uid required "
         if !$arg{uid};
 
     lock_hash(%arg);
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id,vm FROM domains WHERE name = ?");
-    $sth->execute($name);
+    if (!$id_domain ) {
+        my $sth = $CONNECTOR->dbh->prepare("SELECT id,vm FROM domains WHERE name = ?");
+        $sth->execute($name);
 
-    my ($id,$vm_type)= $sth->fetchrow;
-    if (!$id) {
-        warn "Error: Unknown domain $name, maybe already removed.\n";
-        return;
+        ($id_domain)= $sth->fetchrow;
+
+        if (!$id_domain) {
+            warn "Error: Unknown domain $name, maybe already removed.\n";
+            return;
+        }
     }
+    my $id = $id_domain;
 
     my $user = Ravada::Auth::SQL->search_by_id( $arg{uid});
     die "Error: user id:$arg{uid} removed\n" if !$user;
@@ -3589,7 +3596,17 @@ sub remove_domain {
     warn "Warning: $@" if $@;
 
     if (!$domain0) {
-            warn "Warning: I can't find domain [$id ] '$name' , maybe already removed.\n";
+            warn "Warning: I can't find domain [$id] '"
+            .($name or '')
+            ."' , maybe already removed.\n";
+
+            my $domain = Ravada::Front::Domain->open($id);
+            my @volumes = $domain->list_volumes();
+            my $vm = Ravada::VM->open($domain->_data('id_vm'));
+            for my $vol (@volumes) {
+                next if $vol->file =~ /\.iso$/;
+                $vm->remove_file($vol->file)
+            }
             Ravada::Domain::_remove_domain_data_db($id);
             return;
     };
@@ -4803,7 +4820,15 @@ sub _cmd_remove {
     confess "Unknown user id ".$request->args->{uid}
         if !defined $request->args->{uid};
 
-    $self->remove_domain(name => $request->args('name'), uid => $request->args('uid'));
+    my $name = $request->defined_arg('name');
+    my $id_domain = $request->defined_arg('id_domain');
+
+    die "Error: Missing domain name or id" if !$name && !$id_domain;
+    my @args;
+    push @args,(name => $name)            if $name && !$id_domain;
+    push @args,(id_domain => $id_domain ) if $id_domain;
+
+    $self->remove_domain(@args, uid => $request->args('uid'));
 }
 
 sub _cmd_remove_clones($self, $request) {
@@ -5114,7 +5139,7 @@ sub _cmd_start {
     $domain = $self->search_domain($name)               if $name && !$id_domain;
     $domain = $self->search_domain_by_id($id_domain)    if $id_domain;
 
-    die "Error: machine not found ".($name or $id_domain)   if !$domain;
+    die "Error: machine unknown ".($name or $id_domain)   if !$domain;
 
     $domain->status('starting');
 
@@ -5559,7 +5584,9 @@ sub _cmd_shutdown {
         } else {
             $domain = $self->search_domain($name);
         }
-        die "Unknown domain '$name'\n" if !$domain;
+        if (!$domain) {
+            die "Unknown domain '$name'\n";
+        }
     }
     if ($id_domain) {
         my $domain2 = Ravada::Domain->open(id => $id_domain, id_vm => $id_vm);
@@ -6535,12 +6562,23 @@ sub _refresh_volatile_domains($self) {
         eval { $domain = Ravada::Domain->open(id => $id_domain, _force => 1) } ;
         next if $domain && $domain->is_locked;
         if ( !$domain || $domain->status eq 'down' || !$domain->is_active) {
+            warn "Not domain" if !$domain;
+            warn $domain->status." is_active=".$domain->is_active if $domain;
             if ($domain && !$domain->is_locked ) {
                 if ($domain->_vm && $domain->_vm->is_active(1)) {
-                    Ravada::Request->shutdown_domain(
+                    my $req_shutdown = Ravada::Request->shutdown_domain(
                         uid => $USER_DAEMON->id
                         ,id_domain => $id_domain
                     );
+                    my @after;
+                    @after = ( after_request => $req_shutdown->id)
+                        if $req_shutdown;
+                    Ravada::Request->remove_domain(
+                        uid => $USER_DAEMON->id
+                        ,id_domain => $id_domain
+                        ,name => $name
+                        ,@after
+                    )
                 }
             } else {
                 my $user;

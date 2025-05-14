@@ -40,6 +40,8 @@ sub test_hybernate_clone {
     my ($vm_name, $domain) = @_;
 
     $domain->is_public(1);
+    $domain->shutdown_now(user_admin) if $domain->is_active;
+
     my $clone = $domain->clone(name => new_domain_name(), user => $USER);
 
     eval {$clone->start($USER)  if !$clone->is_active };
@@ -78,7 +80,6 @@ sub test_remove_hybernated {
 
     eval{ $clone->remove($USER) };
     ok(!$@,"Expecting no error removing , got : ".($@ or ''));
-
 
 }
 

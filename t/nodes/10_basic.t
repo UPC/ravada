@@ -382,7 +382,7 @@ sub test_removed_base_file($vm, $node) {
     for my $try ( 1 .. 20 ) {
         my $clone1 = _req_clone($base);
         Ravada::Request->start_domain(uid => user_admin->id, id_domain => $clone1->id);
-        wait_request();
+        wait_request(check_error => 0);
         $found_clone = $clone1;
         my @req = $base->list_requests();
         my $found_req;
@@ -687,6 +687,7 @@ sub test_volatile_req($vm, $node) {
 
     shutdown_domain_internal($clone);
     _wait_machine_removed($clone);
+    diag("Checking ". $clone->name." removed");
     for my $vol ( $clone->list_volumes ) {
         ok(!$vm->file_exists($vol),$vol) or exit;
         ok(!$node->file_exists($vol),$vol." in ".$node->name) or exit;
@@ -702,10 +703,10 @@ sub _wait_machine_removed($clone) {
         last if !$clone2;
 
         rvd_back->_cmd_refresh_vms();
-        wait_request();
+        wait_request(debug => 1);
 
     }
-    wait_request();
+    wait_request(debug => 1);
 }
 
 sub test_domain_gone($vm, $node) {
@@ -2091,6 +2092,8 @@ for my $vm_name (vm_names() ) {
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
         start_node($node);
+
+        test_volatile_req($vm, $node);
 
         test_migrate_clone($node, $vm);
         test_migrate_clone($vm, $node);

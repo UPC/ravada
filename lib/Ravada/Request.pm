@@ -66,7 +66,7 @@ our %VALID_ARG = (
      ,spinoff => { id_domain => 1, uid => 1 }
      ,pause_domain => $args_manage
     ,resume_domain => {%$args_manage, remote_ip => 1 }
-    ,remove_domain => $args_manage
+    ,remove_domain => {%$args_manage, id_domain => 2 }
     ,restore_domain => { id_domain => 1, uid => 1 }
     ,shutdown_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2
                        , check => 2
@@ -426,8 +426,10 @@ sub remove_domain {
     my $class=ref($proto) || $proto;
 
     my %args = @_;
-    confess "Missing domain name"   if !$args{name};
-    confess "Name is not scalar"    if ref($args{name});
+    confess "Missing domain name or id"
+    if !$args{name} && !$args{id_domain};
+
+    confess "Name is not scalar"    if $args{name} && ref($args{name});
     confess "Missing uid"           if !$args{uid};
 
     for (keys %args) {
