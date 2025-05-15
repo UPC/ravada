@@ -3193,6 +3193,19 @@ sub _set_active_machines_isolated($self, $network) {
     }
 }
 
+sub _migrate_domains($self, $id_node) {
+    confess "Error: node undefined" if !defined $id_node;
+    for my $domain ( $self->list_domains) {
+        warn ref($domain);
+        Ravada::Request->migrate(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_domain => $domain->id
+            ,id_node => $id_node
+            ,shutdown => 1
+        );
+    }
+}
+
 1;
 
 

@@ -5610,7 +5610,21 @@ sub set_base_vm($self, %args) {
 
     } else {
         $request->status("working","Removing base")     if $request;
-        $vm->remove_base();
+        $self->_set_base_vm_db($vm->id, $value);
+        my $bases_vm = $self->_bases_vm();
+        my $count=0;
+        my $node2;
+        for my $id_vm ( keys %$bases_vm) {
+            if ($bases_vm->{$id_vm}) {
+                $node2 = $id_vm;
+                $count++;
+            }
+        }
+        if (!$count) {
+            $self->remove_base();
+        } else {
+            $vm->_migrate_domains($node2);
+        }
     }
 
     return $self->_set_base_vm_db($vm->id, $value);

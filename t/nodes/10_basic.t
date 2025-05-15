@@ -1070,6 +1070,7 @@ sub test_base_unset($vm, $node) {
     $base->set_base_vm(id_vm => $node->id,value => 0, user => user_admin);
     is($base->base_in_vm($node->id),0) or exit;
     is(Ravada::Domain::base_in_vm($base->id,$node->id),0) or exit;
+    wait_request(debug => 1);
     my $clone2 = Ravada::Domain->open($clone->id);
     $clone2->start(user_admin);
 
