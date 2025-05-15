@@ -3786,7 +3786,7 @@ sub new_machine {
             $c->redirect_to("/admin/machines");
         }
     } else {
-        my $req = Ravada::Request->refresh_storage();
+        my $req = Ravada::Request->refresh_storage(uid => Ravada::Utils::user_daemon->id);
         $RAVADA->_cache_delete('list_isos');
         # TODO handle possible errors
     }

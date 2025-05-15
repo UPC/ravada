@@ -5589,17 +5589,11 @@ sub set_base_vm($self, %args) {
         $id_request = $request->id;
     }
     $self->_set_base_vm_db($vm->id, $value, $id_request);
-
-    if ($vm->is_local) {
-        $self->_set_vm($vm,1); # force set vm on domain
-        if (!$value) {
-            $request->status("working","Removing base")     if $request;
-            $self->remove_base($user);
-        } else {
-            $self->prepare_base($user) if !$self->is_base();
+    if ($value) {
+        if ( !$self->is_base() ) {
             $request->status("working","Preparing base")    if $request;
+            $self->prepare_base($user) 
         }
-    } elsif ($value) {
         $self->_check_all_parents_in_node($vm);
         $request->status("working", "Syncing base volumes to ".$vm->host)
             if $request;
@@ -5611,17 +5605,14 @@ sub set_base_vm($self, %args) {
             $self->_set_base_vm_db($vm->id, 0);
             die $err;
         }
+        $vm->_add_instance_db($self->id);
         $self->_set_clones_autostart(0);
+
     } else {
-        $self->_set_vm($vm,1); # force set vm on domain
-        $self->_do_remove_base($user);
+        $request->status("working","Removing base")     if $request;
+        $vm->remove_base();
     }
 
-    if (!$vm->is_local) {
-        my $vm_local = $self->_vm->new( host => 'localhost' );
-        $self->_set_vm($vm_local, 1);
-    }
-    $vm->_add_instance_db($self->id);
     return $self->_set_base_vm_db($vm->id, $value);
 }
 

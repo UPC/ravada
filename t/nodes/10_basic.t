@@ -382,7 +382,7 @@ sub test_removed_base_file($vm, $node) {
     for my $try ( 1 .. 20 ) {
         my $clone1 = _req_clone($base);
         Ravada::Request->start_domain(uid => user_admin->id, id_domain => $clone1->id);
-        wait_request(check_error => 0);
+        wait_request(check_error => 0, debug => 1);
         $found_clone = $clone1;
         my @req = $base->list_requests();
         my $found_req;
@@ -2093,6 +2093,8 @@ for my $vm_name (vm_names() ) {
 
         start_node($node);
 
+        test_base_unset($vm,$node);
+        test_removed_base_file($vm, $node);
         test_volatile_req($vm, $node);
 
         test_migrate_clone($node, $vm);
