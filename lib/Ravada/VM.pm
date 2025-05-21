@@ -1109,6 +1109,11 @@ sub _data($self, $field, $value=undef) {
         $sth->execute($value, $self->id);
         $sth->finish;
 
+        Ravada::Request->list_host_devices(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_vm => $self->id
+        ) if ($field eq 'is_active' || $field eq 'enabled') && $value;
+
         return $value;
     }
 
