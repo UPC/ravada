@@ -5618,6 +5618,7 @@ sub set_base_vm($self, %args) {
             if ($bases_vm->{$id_vm}) {
                 $node2 = $id_vm;
                 $count++;
+                last if Ravada::VM::is_local($id_vm);
             }
         }
         if (!$count) {
@@ -5646,6 +5647,12 @@ sub _check_all_parents_in_node($self, $vm, $request=undef) {
     }
     for my $base ( reverse @bases) {
         $base->_set_base_vm_db($vm->id,0);
+        my @instances = $base->list_instances();
+        for my $i (@instances) {
+            next if $i->{id_vm} == $vm->id;
+            $base->_data(id_vm => $i->{id_vm});
+            last;
+        }
         my @after_req;
         @after_req = ( after_request_ok => $req->id) if $req;
         $req = Ravada::Request->migrate(
@@ -7397,6 +7404,7 @@ sub list_instances($self, $id=undef) {
 
     my @instances;
     while (my $row = $sth->fetchrow_hashref) {
+        $row->{is_local} = Ravada::VM::is_local($row->{id_vm});
         lock_hash(%$row);
         push @instances, ( $row );
     }
