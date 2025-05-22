@@ -177,7 +177,8 @@ sub _init_connector {
                                                 && defined $Ravada::Front::CONNECTOR;
 }
 
-sub _dbh($self) {
+sub _dbh($self=undef) {
+    _init_connector();
     return $$CONNECTOR->dbh();
 }
 
@@ -1391,10 +1392,25 @@ Returns wether this virtual manager is in the local host
 =cut
 
 sub is_local($self) {
+    if (ref($self)) {
     return 1 if !$self->host
         || $self->host eq 'localhost'
         || $self->host eq '127.0.0,1'
         ;
+    } elsif ($self =~ /^\d+$/) {
+        my $id=$self;
+        my $sth = _dbh->prepare("SELECT hostname "
+            ." FROM vms "
+            ." WHERE id=?"
+        );
+        $sth->execute($id);
+        my ($host) = $sth->fetchrow;
+        return 1 if !$host
+            || $host eq 'localhost'
+            || $host eq '127.0.0,1'
+        ;
+
+    }
     return 0;
 }
 
@@ -3196,7 +3212,6 @@ sub _set_active_machines_isolated($self, $network) {
 sub _migrate_domains($self, $id_node) {
     confess "Error: node undefined" if !defined $id_node;
     for my $domain ( $self->list_domains) {
-        warn ref($domain);
         Ravada::Request->migrate(
             uid => Ravada::Utils::user_daemon->id
             ,id_domain => $domain->id
