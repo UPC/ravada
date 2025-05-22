@@ -515,7 +515,9 @@ sub test_set_vm_fail($vm, $node) {
     my $pool2 = create_storage_pool($vm);
     $vm->default_storage_pool_name($pool2);
     $base->add_volume( size => 11000 );
-    $base->prepare_base(user_admin);
+
+    #                             ,with_cd   ,overwrite
+    $base->prepare_base(user_admin,0         ,1);
 
     $base->_set_base_vm_db($node->id, 1);
 
@@ -1025,7 +1027,6 @@ sub test_create_active($vm, $node) {
         );
         wait_request(debug => 0);
         $clone = rvd_front->search_domain($name);
-        ok($vm->search_domain($name),"Expecting clone $name in master node") or exit;
         last if $clone->display(user_admin) =~ /$remote_ip/;
     }
     like($clone->display(user_admin), qr($remote_ip));

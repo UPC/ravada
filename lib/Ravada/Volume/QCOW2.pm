@@ -25,7 +25,8 @@ sub prepare_base($self) {
     my $base_img = $self->base_filename();
     confess $base_img if $base_img !~ /\.ro/;
 
-    confess "Error: '$base_img' already exists" if -e $base_img;
+    confess "Error: '$base_img' already exists"
+    if $self->vm->file_exists($base_img);
     confess if $file_img =~ /\.iso$/i;
 
     my @cmd = _cmd_convert($file_img,$base_img);
