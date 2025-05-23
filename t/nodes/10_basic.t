@@ -1136,9 +1136,10 @@ sub test_change_clone($vm, $node) {
         ok(-e $vol);
         ok($node->file_exists($vol), $vol)  if $vol !~ /iso$/;
     }
+    my $node_clone = $clone->_vm;
     for my $vol (@volumes_clone) {
-        ok(-e $vol, $vol);
-        ok(!$node->file_exists($vol), $vol) if $vol !~ /iso$/;
+        ok($node_clone->file_exists($vol), $vol) or exit
+        if $vol !~ /iso$/;
     }
     $clone->remove(user_admin);
     $base->remove(user_admin);
@@ -2124,6 +2125,7 @@ for my $vm_name (vm_names() ) {
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
         start_node($node);
+        test_change_clone($vm, $node);
 
         test_fill_memory($vm, $node, 1); # migrate
         test_base_unset($vm,$node);

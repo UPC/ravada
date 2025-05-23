@@ -812,12 +812,16 @@ Returns a reference to a list of the ISOs known by the system
 
 sub iso_file ($self, $id_vm, $uid) {
 
+    confess "Error: undefined id node"
+    if !defined $id_vm;
+
     my $key = "list_isos_$id_vm";
     my $cache = $self->_cache_get($key);
     return $cache if $cache;
 
     Ravada::Request->refresh_storage(
         id_vm=> $id_vm
+        ,uid => Ravada::Utils->user_daemon->id
     );
 
     my $req = Ravada::Request->list_isos(
