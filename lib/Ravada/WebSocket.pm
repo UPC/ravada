@@ -827,7 +827,6 @@ sub unsubscribe($self, $ws) {
 
 sub unsubscribe_all($self) {
     for my $ws ( keys %{$self->clients()} ) {
-        warn $ws;
         delete $self->clients->{$ws};
     }
 }
