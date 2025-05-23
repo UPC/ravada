@@ -2316,6 +2316,9 @@ sub start_node($node) {
     }
     eval { $node2->run_command("hwclock","--hctosys") };
     is($@,'',"Expecting no error setting clock on ".$node->name." ".($@ or ''));
+
+    my $sth = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE name=?");
+    $sth->execute($domain->name);
 }
 
 sub remove_node($node) {

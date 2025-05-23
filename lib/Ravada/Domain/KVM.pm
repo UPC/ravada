@@ -4288,12 +4288,20 @@ sub get_stats($self) {
 
     my $mem;
     my $cpu_time;
-    my $mem_stats = $self->domain->memory_stats();
+    my @cpu_stats;
+    @cpu_stats = $self->domain->get_cpu_stats(-1,1)
+            if Ravada::Front->setting(undef,'/backend/stats/cpu');
+
+    $cpu_time = int($cpu_stats[0]->{cpu_time}/1024/1024);
+
+    my $mem_stats;
+    $mem_stats = $self->domain->memory_stats()
+            if Ravada::Front->setting('/backend/stats/memory');
+
     if (exists $mem_stats->{rss} && exists $mem_stats->{actual_balloon}) {
         $mem = int(($mem_stats->{rss}/$mem_stats->{actual_balloon})*100);
     }
-    my @cpu_stats = $self->domain->get_cpu_stats(-1,1);
-    $cpu_time = int($cpu_stats[0]->{cpu_time}/1024/1024);
+
     return ($cpu_time, $mem);
 }
 

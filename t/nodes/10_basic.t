@@ -516,8 +516,7 @@ sub test_set_vm_fail($vm, $node) {
     $vm->default_storage_pool_name($pool2);
     $base->add_volume( size => 11000 );
 
-    #                             ,with_cd   ,overwrite
-    $base->prepare_base(user_admin,0         ,1);
+    $base->prepare_base(user => user_admin, overwrite => 1);
 
     $base->_set_base_vm_db($node->id, 1);
 

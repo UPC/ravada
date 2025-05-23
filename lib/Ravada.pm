@@ -2794,6 +2794,22 @@ sub _sql_insert_defaults($self){
                 ,name => 'startup_ram'
                 ,value => 1
             }
+            ,{
+                id_parent => '/backend'
+                ,name => 'stats'
+                ,value => undef
+            }
+
+            ,{
+                id_parent => '/backend/stats'
+                ,name => 'cpu'
+                ,value => 0
+            }
+            ,{
+                id_parent => '/backend/stats'
+                ,name => 'memory'
+                ,value => 0
+            }
 
 
         ]

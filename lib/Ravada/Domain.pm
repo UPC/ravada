@@ -951,7 +951,7 @@ sub _around_list_volumes_info($orig, $self, $attribute=undef, $value=undef) {
 
 sub _around_prepare_base($orig, $self, @args) {
     #sub _around_prepare_base($orig, $self, $user, $request = undef) {
-    my ($user, $request, $with_cd);
+    my ($user, $request, $with_cd, $overwrite);
     if(ref($args[0]) =~/^Ravada::/) {
         ($user, $request) = @args;
     } else {
@@ -959,12 +959,13 @@ sub _around_prepare_base($orig, $self, @args) {
         $user = delete $args{user};
         $request = delete $args{request};
         $with_cd = delete $args{with_cd};
+        $overwrite = delete $args{overwrite};
         confess "Error: uknown args". Dumper(\%args) if keys %args;
     }
     $self->_pre_prepare_base($user, $request);
 
     $self->pre_prepare_base();
-    my @base_img = $self->$orig($with_cd);
+    my @base_img = $self->$orig($with_cd, $overwrite);
 
     die "Error: No information files returned from prepare_base"
         if !scalar (\@base_img);
@@ -6121,7 +6122,10 @@ sub log_status($self, $name, $value, $time='N') {
     return if exists $self->{_log_status_time} &&  $self->{_log_status_time} == $time0;
     $self->{_log_status_time} = $time0;
 
-    my ($cpu_time, $mem) = $self->get_stats();
+    my ($cpu_time, $mem);
+    ($cpu_time, $mem) = $self->get_stats()
+            if Ravada::Front->setting('/backend/stats/cpu')
+            || Ravada::Front->setting('/backend/stats/memory');
     if ($cpu_time || $mem) {
         RRDs::update ($file , "--template", "$name:cpu:memory", "$time:$value:$cpu_time:$mem");
     } else {
