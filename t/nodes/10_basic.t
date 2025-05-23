@@ -391,7 +391,7 @@ sub test_removed_base_file($vm, $node) {
     for my $try ( 1 .. 20 ) {
         my $clone1 = _req_clone($base);
         Ravada::Request->start_domain(uid => user_admin->id, id_domain => $clone1->id);
-        wait_request(check_error => 0, debug => 1);
+        wait_request(check_error => 0, debug => 0);
         $found_clone = $clone1;
         my @req = $base->list_requests();
         my $found_req;
@@ -713,10 +713,10 @@ sub _wait_machine_removed($clone) {
         last if !$clone2;
 
         rvd_back->_cmd_refresh_vms();
-        wait_request(debug => 1);
+        wait_request(debug => 0);
 
     }
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 }
 
 sub test_domain_gone($vm, $node) {
@@ -757,7 +757,7 @@ sub test_volatile_req_clone($vm, $node, $machine='pc-i440fx') {
     $base->volatile_clones(1);
     ok($base->base_in_vm($node->id));
     _check_base_in_vm_db($base, $node->id,$req->id, 1);
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     _check_base_in_vm_db($base, $node->id,undef, 1);
 
     my $clone;
@@ -1079,7 +1079,7 @@ sub test_base_unset($vm, $node) {
     $base->set_base_vm(id_vm => $node->id,value => 0, user => user_admin);
     is($base->base_in_vm($node->id),0) or exit;
     is(Ravada::Domain::base_in_vm($base->id,$node->id),0) or exit;
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     my $clone2 = Ravada::Domain->open($clone->id);
     $clone2->start(user_admin);
 
@@ -1274,7 +1274,7 @@ sub test_fill_memory($vm, $node, $migrate, $start=0) {
             ,memory => int($memory)
             ,start => $start
         );
-        wait_request(debug => 1, check_error => 0);
+        wait_request(debug => 0, check_error => 0);
         like($req->error, qr/^(No free memory|$)/);
         is($req->status,'done');
         push @clones,($clone_name);
@@ -1291,7 +1291,7 @@ sub test_fill_memory($vm, $node, $migrate, $start=0) {
             ,shutdown => 1
             ,shutdown_timeout => 1
         ) if $migrate;
-        wait_request(debug => 1);
+        wait_request(debug => 0);
         eval { $clone->start(user_admin) };
         $error = $@;
         diag($error) if $error;
@@ -1847,7 +1847,7 @@ sub test_start_remote($domain) {
         uid => user_admin->id
         ,id_domain => $domain->id
     );
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     is($req->error,'');
 
     my $domain2 = Ravada::Domain->open($domain->id);
