@@ -387,6 +387,7 @@ sub search_volume_re($self,$pattern,$refresh=0) {
 
 sub remove_file($self,@files) {
     for my $file (@files) {
+        warn $self->name." ".$file if $file =~ /\.ro\./;
         my $vol = $self->search_volume($file);
         if (!$vol) {
             $self->_refresh_storage_pools();

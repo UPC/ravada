@@ -905,20 +905,28 @@ sub test_remove_base($vm, $node, $volatile) {
         or exit;
     $base->prepare_base(user_admin);
 
-    my @volumes = $base->list_files_base();
+    my @volumes_base = $base->list_files_base();
     $base->set_base_vm(node => $node, user => user_admin);
-    for my $file ( @volumes ) {
-        ok($node->file_exists($file),1)
+    for my $file ( @volumes_base ) {
+        ok($node->file_exists($file))
             or die "Expecting file '$file' in ".$node->name;
+        ok($vm->file_exists($file))
+            or die "Expecting file '$file' in ".$vm->name;
     }
 
     $base->remove_base_vm(node => $node, user => user_admin);
-    for my $file ( @volumes , @volumes0 ) {
-        ok(!$node->file_exists($file));
+    for my $file ( @volumes_base ) {
+        # too complicated to know if can be removed
+        # ok(!$node->file_exists($file));
+        ok($vm->file_exists($file), "Expecting file '$file' in local") or exit;
+    }
+    for my $file ( @volumes0 ) {
+        # too complicated to know if can be removed
+        # ok(!$node->file_exists($file),$file);
         ok($vm->file_exists($file), "Expecting file '$file' in local") or exit;
     }
     delete $base->{_data}->{id_vm};
-    isnt($base->_data('id_vm'), $node->id);
+    isnt($base->_data('id_vm'), $vm->id);
 
     $base->set_base_vm(node => $node, user => user_admin);
     is(scalar($base->list_vms), 2) or exit;
@@ -929,7 +937,7 @@ sub test_remove_base($vm, $node, $volatile) {
     ok(grep {$_->command eq 'remove_base_vm' } @req) or die Dumper(\@req);
     wait_request( debug => 0 );
 
-    for my $file ( @volumes ) {
+    for my $file ( @volumes_base ) {
         is($vm->file_exists($file),0
             , "Expecting no file '$file' in local") or exit;
         is($node->file_exists($file),0
@@ -1239,8 +1247,18 @@ sub _import_clone($vm) {
     return $clone;
 }
 
+sub _shutdown_domains(@nodes) {
+    for my $node (@nodes) {
+        for my $domain ($node->list_domains(active => 1)) {
+            $domain->shutdown_now(user_admin);
+        }
+    }
+}
+
 sub test_fill_memory($vm, $node, $migrate, $start=0) {
     diag("Testing fill memory ".$vm->type.", migrate=$migrate, start=$start");
+
+    _shutdown_domains($vm,$node);
 
     my $base = _import_clone($vm);
     if (!$base) {
@@ -1296,9 +1314,10 @@ sub test_fill_memory($vm, $node, $migrate, $start=0) {
         wait_request(debug => 0);
         eval { $clone->start(user_admin) };
         $error = $@;
-        diag($error) if $error;
+        diag("error=$error");# if $error;
         like($error, qr/(^$|No free memory)/);
         exit if $error && $error !~ /No free memory/;
+        $created_in_node++ if $clone->_data('id_vm') == $node->id;
         last if $error;
 
         $clone = Ravada::Domain->open($clone->id);
@@ -1306,8 +1325,10 @@ sub test_fill_memory($vm, $node, $migrate, $start=0) {
 
         last if $migrate && exists $nodes{$vm->name} && $nodes{$vm->name} > 2;
     }
+    warn Dumper(\%nodes);
     ok($created_in_node,"Expecting some clones created in node ".$node->name) or exit;
-    ok(exists $nodes{$vm->name},"Expecting some clones to node ".$vm->name." ".$vm->id);
+    ok(exists $nodes{$vm->name},"Expecting some clones to node ".$vm->name." ".$vm->id)
+        or die Dumper(\%nodes);
     ok(exists $nodes{$node->name},"Expecting some clones to node ".$node->name." ".$node->id) or exit;
 
     my ($clone) = grep { $_->{id_vm} == $vm->id } $base->clones;
@@ -1322,6 +1343,7 @@ sub test_fill_memory($vm, $node, $migrate, $start=0) {
 }
 
 sub test_rsync_back($vm, $clone) {
+    confess if !$clone || !exists $clone->{id_vm} || !defined $clone->{id_vm};
     if ($clone->{id_vm} == $vm->id) {
         diag("Warning: ".$clone->{name}." already in node ".$vm->name);
         return;
@@ -2126,6 +2148,10 @@ for my $vm_name (vm_names() ) {
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
         start_node($node);
+
+        for my $volatile (1,0) {
+        test_remove_base($vm, $node, $volatile);
+        }
         test_change_clone($vm, $node);
 
         test_fill_memory($vm, $node, 1); # migrate

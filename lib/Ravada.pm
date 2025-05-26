@@ -6578,8 +6578,6 @@ sub _refresh_volatile_domains($self) {
         eval { $domain = Ravada::Domain->open(id => $id_domain, _force => 1) } ;
         next if $domain && $domain->is_locked;
         if ( !$domain || $domain->status eq 'down' || !$domain->is_active) {
-            warn "Not domain" if !$domain;
-            warn $domain->status." is_active=".$domain->is_active if $domain;
             if ($domain && !$domain->is_locked ) {
                 if ($domain->_vm && $domain->_vm->is_active(1)) {
                     my $req_shutdown = Ravada::Request->shutdown_domain(

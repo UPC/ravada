@@ -3211,6 +3211,7 @@ sub _set_active_machines_isolated($self, $network) {
 
 sub _migrate_domains($self, $id_node) {
     confess "Error: node undefined" if !defined $id_node;
+    $id_node = $id_node->id if ref($id_node);
     for my $domain ( $self->list_domains) {
         Ravada::Request->migrate(
             uid => Ravada::Utils::user_daemon->id

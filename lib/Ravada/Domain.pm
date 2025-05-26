@@ -2652,8 +2652,6 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
     }
     return if !scalar(@instances);
 
-    my $sth_delete = $$CONNECTOR->dbh->prepare("DELETE FROM domain_instances "
-        ." WHERE id=? ");
     for my $instance ( @instances ) {
         next if $instance->{id_vm} == $self->_vm->id;
         my $vm;
@@ -2666,12 +2664,27 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
         $@ = '';
         eval { $domain = $vm->search_domain($domain_name) } if $vm;
         warn $@ if $@;
-        eval {
-            $domain->remove($user, $cascade) if $domain;
-        };
-        warn $@ if $@;
-        $sth_delete->execute($instance->{id});
+        $domain->_remove_instance($user, $cascade, $instance->{id}) if $domain;
     }
+}
+
+sub _remove_instance($self, $user, $cascade, $id_instance=undef) {
+
+    my $sth = $self->_dbh->prepare(
+        "SELECT id FROM domain_instances WHERE id_domain=? AND id_vm=?"
+    );
+    $sth->execute($self->id, $self->_data('id_vm'));
+    my ($id_instance2) = $sth->fetchrow;
+    warn Dumper([$id_instance, $id_instance2]);
+    $id_instance = $id_instance2 if !defined $id_instance;
+    my $sth_delete = $$CONNECTOR->dbh->prepare("DELETE FROM domain_instances "
+        ." WHERE id=? ");
+    eval {
+            $self->remove($user, $cascade);
+    };
+    warn $@ if $@;
+    $sth_delete->execute($id_instance) if defined $id_instance;
+
 }
 
 sub _remove_domain_data_db($id, $type=undef) {
@@ -2749,8 +2762,10 @@ sub _finish_requests_db($id) {
 sub _remove_files_base {
     my $self = shift;
 
+    warn $self->_vm->name;
     for my $file ( $self->list_files_base ) {
         next if $file =~ /\.iso$/;
+        warn $file;
         $self->_vm->remove_file($file) if $self->_vm->file_exists($file);
     }
 }
@@ -5624,7 +5639,7 @@ sub set_base_vm($self, %args) {
         my $node2;
         for my $id_vm ( keys %$bases_vm) {
             if ($bases_vm->{$id_vm}) {
-                $node2 = $id_vm;
+                $node2 = Ravada::VM->open($id_vm);
                 $count++;
                 last if Ravada::VM::is_local($id_vm);
             }
@@ -5633,6 +5648,7 @@ sub set_base_vm($self, %args) {
             $self->remove_base();
         } else {
             $vm->_migrate_domains($node2);
+            $self->_remove_instance($user,1);
         }
     }
 
