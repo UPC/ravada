@@ -387,7 +387,6 @@ sub search_volume_re($self,$pattern,$refresh=0) {
 
 sub remove_file($self,@files) {
     for my $file (@files) {
-        warn $self->name." ".$file if $file =~ /\.ro\./;
         my $vol = $self->search_volume($file);
         if (!$vol) {
             $self->_refresh_storage_pools();
@@ -3330,7 +3329,10 @@ sub _search_pool_volume($self, $file) {
 
 }
 
-sub copy_file($self, $orig, $dst) {
+sub copy_file($self, $orig, $dst, %args) {
+
+    my $mode = delete $args{mode};
+
     my ($sp,$vol) = $self->_search_pool_volume($orig);
     die "Error: volume $orig not found" if !$vol;
 
@@ -3340,6 +3342,9 @@ sub copy_file($self, $orig, $dst) {
     $xml->findnodes("/volume/name/text()")->[0]->setData($name);
     $xml->findnodes("/volume/key/text()")->[0]->setData($dst);
     $xml->findnodes("/volume/target/path/text()")->[0]->setData($dst);
+
+    $xml->findnodes("/volume/target/permissions/mode/text()")->[0]
+        ->setData($mode) if $mode;
 
     my $vol_dst;
     eval { $vol_dst = $sp->clone_volume($xml, $vol) };

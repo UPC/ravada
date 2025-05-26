@@ -2595,10 +2595,15 @@ sub _check_active_node($self) {
 
 sub _after_remove_domain($self, $user, $cascade=undef) {
 
+    my $vm_local = $self->_vm->new( host => 'localhost' );
+
     $self->_rrd_remove();
     $self->_remove_iptables( );
     $self->remove_expose();
-    $self->_remove_domain_cascade($user)   if !$cascade;
+
+    return if $cascade;
+
+    $self->_remove_domain_cascade($user);
     my $id_base;
     $id_base = $self->_data('id_base') if $self->is_known();
 
@@ -2675,12 +2680,13 @@ sub _remove_instance($self, $user, $cascade, $id_instance=undef) {
     );
     $sth->execute($self->id, $self->_data('id_vm'));
     my ($id_instance2) = $sth->fetchrow;
-    warn Dumper([$id_instance, $id_instance2]);
     $id_instance = $id_instance2 if !defined $id_instance;
     my $sth_delete = $$CONNECTOR->dbh->prepare("DELETE FROM domain_instances "
         ." WHERE id=? ");
+
+    my $vm_local = $self->_vm->new( host => 'localhost' );
     eval {
-            $self->remove($user, $cascade);
+            $self->remove_instance($user);
     };
     warn $@ if $@;
     $sth_delete->execute($id_instance) if defined $id_instance;
@@ -2762,10 +2768,8 @@ sub _finish_requests_db($id) {
 sub _remove_files_base {
     my $self = shift;
 
-    warn $self->_vm->name;
     for my $file ( $self->list_files_base ) {
         next if $file =~ /\.iso$/;
-        warn $file;
         $self->_vm->remove_file($file) if $self->_vm->file_exists($file);
     }
 }
@@ -3030,51 +3034,31 @@ sub _cascade_remove_base_in_nodes($self) {
 }
 
 sub _do_remove_base($self, $user) {
-    return
-        if $self->is_base && $self->is_local
-        && $self->_cascade_remove_base_in_nodes();
 
-    $self->is_base(0) if $self->is_local;
-    my $vm_local = $self->_vm->new( host => 'localhost' );
+    $self->is_base(0);
     for my $vol ($self->list_volumes_info) {
         next if !$vol->file || $vol->file =~ /\.iso$/;
         next if !$self->_vm->file_exists($vol->file);
 
         my ($dir) = $vol->file =~ m{(.*)/};
 
-        next if !$self->is_local && $self->_vm->shared_storage($vm_local, $dir);
         my $backing_file = $vol->backing_file;
         next if !$backing_file;
         #        confess "Error: no backing file for ".$vol->file if !$backing_file;
-        if (!$self->is_local) {
-            my ($dir) = $backing_file =~ m{(.*/)};
-            next if $self->_vm->shared_storage($vm_local, $dir);
-            $self->_vm->remove_file($vol->file);
-            $self->_vm->remove_file($backing_file);
-            $self->_vm->refresh_storage_pools();
-            next;
-        }
         $vol->block_commit();
-        unlink $vol->file or die "$! ".$vol->file;
-        my @stat = stat($backing_file) or confess "Error: missing $backing_file";
-        move($backing_file, $vol->file) or die "$! $backing_file -> ".$vol->file;
-        my $mask = oct(7777);
-        my $mode = $stat[2] & $mask;
-        my $w = oct(200);
-        $mode = $mode ^ $w;
-        chmod($mode,$vol->file);
-        chown($stat[4],$stat[5], $vol->file);
+        $self->_vm->remove_file($vol->file);
+        $self->_vm->copy_file($backing_file, $vol->file,mode => '0700');
+        # move($backing_file, $vol->file) or die "$! $backing_file -> ".$vol->file;
     }
 
     for my $file ($self->list_files_base) {
         next if $file =~ /\.iso$/i;
         next if ! $self->_vm->file_exists($file);
-        my ($dir) = $file =~ m{(.*/)};
-        next if !$self->_vm->is_local && $self->_vm->shared_storage($vm_local, $dir);
 
         $self->_vm->remove_file($file);
     }
 
+    $self->_cascade_remove_base_in_nodes();
 }
 
 sub _pre_remove_base {
@@ -5648,7 +5632,8 @@ sub set_base_vm($self, %args) {
             $self->remove_base();
         } else {
             $vm->_migrate_domains($node2);
-            $self->_remove_instance($user,1);
+            my $instance = $vm->search_domain($self->name);
+            $instance->_remove_instance($user,1) if $instance;
         }
     }
 

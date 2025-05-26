@@ -341,6 +341,13 @@ sub remove {
 
 }
 
+sub remove_instance($self, $user) {
+    
+    eval { $self->domain->undefine(Sys::Virt::Domain::UNDEFINE_NVRAM)    if $self->domain && !$self->is_removed };
+    confess $@ if $@ && $@ !~ /libvirt error code: 42/;
+    eval { $self->remove_disks() if $self->is_known };
+    confess $@ if $@ && $@ !~ /libvirt error code: 42/;
+}
 
 sub _remove_file_image {
     my $self = shift;

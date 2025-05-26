@@ -35,6 +35,7 @@ require Exporter;
 create_domain
     create_domain_v2 create_base
     import_domain
+    import_clone
     test_chain_prerouting
     find_ip_rule
     search_id_iso
@@ -300,6 +301,37 @@ sub import_domain($vm, $name=$BASE_NAME, $import_base=1) {
         ,import_base => $import_base
     );
     return $domain;
+}
+
+sub import_clone($vm, %options) {
+
+    my $base0;
+    if ($vm->type eq 'Void') {
+        $base0 = create_domain_v2(vm => $vm, swap => 1 , data => 1);
+    } else {
+        $base0 = rvd_front()->search_domain($BASE_NAME);
+        $base0 = import_domain($vm->type, $BASE_NAME, 1) if !$base0;
+    }
+    return if !$base0;
+    my $name = new_domain_name();
+    Ravada::Request->clone(
+        name => $name
+        ,uid => user_admin->id
+        ,id_domain => $base0->id
+    );
+    wait_request();
+    my $clone = rvd_back()->search_domain($name);
+    my $req = Ravada::Request->spinoff(
+        uid => user_admin->id
+        ,id_domain => $clone->id
+    );
+    Ravada::Request->prepare_base(
+        uid => user_admin->id
+        ,id_domain => $clone->id
+        ,after_request => $req->id
+    );
+    wait_request();
+    return $clone;
 }
 
 sub create_base($vm) {

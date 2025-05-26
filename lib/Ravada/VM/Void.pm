@@ -900,7 +900,8 @@ sub remove_storage_pool($self, $name) {
     $self->write_file($file_sp, Dump( \@sp2));
 }
 
-sub copy_file($self, $orig, $dst) {
+sub copy_file($self, $orig, $dst, %args) {
+    my $mode = delete $args{mode};
     if ($self->is_local) {
         copy($orig, $dst) or die "$! $orig $dst";
     } else {
