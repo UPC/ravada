@@ -934,6 +934,12 @@ sub test_remove_base($vm, $node, $volatile) {
         ok($vm->file_exists($file), "Expecting file '$file' in local") or exit;
     }
 
+    my $bases_vm = $base->_bases_vm();
+    for my $id_vm ( keys %$bases_vm) {
+        delete $bases_vm->{$id_vm} if !$bases_vm->{$id_vm};
+    }
+    is(scalar(keys %$bases_vm),1);
+
     $base = Ravada::Domain->open($base->id);
     is($base->domain->get_uuid_string(), $uuid);
     delete $base->{_data}->{id_vm};
@@ -941,6 +947,12 @@ sub test_remove_base($vm, $node, $volatile) {
 
     $base->set_base_vm(node => $node, user => user_admin);
     is(scalar($base->list_vms), 2) or exit;
+    $bases_vm = $base->_bases_vm();
+    for my $id_vm ( keys %$bases_vm) {
+        delete $bases_vm->{$id_vm} if !$bases_vm->{$id_vm};
+    }
+    is(scalar(keys %$bases_vm),2);
+
 
     test_domain_internal($base->name,$vm, $node);
     wait_request( debug => 0 );

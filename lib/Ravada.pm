@@ -6652,6 +6652,7 @@ sub _do_cmd_set_base_vm($self, $uid, $id_vm, $id_domain, $value, $request) {
         ,user => $user
         ,value => $value
         ,request => $request
+        ,migrate => $request->defined_arg('migrate')
     );
 }
 

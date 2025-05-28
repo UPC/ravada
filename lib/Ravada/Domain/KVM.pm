@@ -342,8 +342,6 @@ sub remove {
 }
 
 sub remove_instance($self, $user) {
-    
-    warn $self->_vm->name." ".$self->domain;
     eval {
         $self->domain->undefine(Sys::Virt::Domain::UNDEFINE_NVRAM)    if $self->domain;# && !$self->is_removed 
     };

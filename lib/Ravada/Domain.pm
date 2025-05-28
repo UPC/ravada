@@ -3001,8 +3001,8 @@ Makes the domain a regular, non-base virtual machine and removes the base files.
 =cut
 
 sub remove_base($self, $user) {
-    $self->_cascade_remove_base_in_nodes();
-    $self->_do_remove_base($user);
+    $self->_cascade_remove_base_in_nodes()
+        or $self->_do_remove_base($user);
 }
 
 sub _cascade_remove_base_in_nodes($self) {
@@ -3052,11 +3052,10 @@ sub _do_remove_base($self, $user) {
 
         my $backing_file = $vol->backing_file;
         next if !$backing_file;
-        #        confess "Error: no backing file for ".$vol->file if !$backing_file;
         $vol->block_commit();
         $self->_vm->remove_file($vol->file);
         $self->_vm->copy_file($backing_file, $vol->file,mode => '0700');
-        # move($backing_file, $vol->file) or die "$! $backing_file -> ".$vol->file;
+        $self->_vm->remove_file($backing_file);
     }
 
     for my $file ($self->list_files_base) {
@@ -5599,9 +5598,6 @@ sub set_base_vm($self, %args) {
 
     $value = 1 if !defined $value;
 
-    warn "preparing base=$value from [".$self->_vm->id."] "
-    .$self->_vm->name." to "
-    ."[".$vm->id."]".$vm->name;
 
 
     my $id_request;
@@ -5637,11 +5633,9 @@ sub set_base_vm($self, %args) {
 
     } else {
         $request->status("working","Removing base")     if $request;
-        $self->_set_base_vm_db($vm->id, $value);
         my $bases_vm = $self->_bases_vm();
         my @nodes;
         my $node2;
-        warn Dumper($bases_vm);
         for my $id_vm ( keys %$bases_vm) {
             next if $id_vm == $vm->id;
             if ($bases_vm->{$id_vm}) {
@@ -5653,6 +5647,7 @@ sub set_base_vm($self, %args) {
         ($node2) = @nodes if !$node2;
         $vm->_migrate_domains($node2) if $node2 && $migrate;
         if (!@nodes) {
+            $self->_vm($vm);
             $self->_do_remove_base($user);
         } else {
             my $instance = $vm->search_domain($self->name);
@@ -5755,13 +5750,7 @@ Removes a base in a Virtual Machine Manager node.
 =cut
 
 sub remove_base_vm($self, %args) {
-    my $user = delete $args{user};
-    my $vm = delete $args{vm};
-    $vm = delete $args{node} if !$vm;
-    confess "ERROR: Unknown arguments ".join(',',sort keys %args).", valid are user and vm."
-        if keys %args;
-
-    return $self->set_base_vm(vm => $vm, user => $user, value => 0);
+    return $self->set_base_vm(%args, value => 0);
 }
 
 =head2 file_screenshot
