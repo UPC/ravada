@@ -898,55 +898,102 @@ sub _test_clones($base, $vm) {
 }
 
 sub test_remove_base($vm, $node, $volatile) {
-    my $base = create_domain($vm);
+    my $base = create_domain_v2(vm => $vm, disk => 0.5, data => 0, swap => 0);
+    my $uuid = $base->domain->get_uuid_string();
     $base->volatile_clones($volatile);
     my @volumes0 = $base->list_volumes( device => 'disk');
     ok(!grep(/iso$/,@volumes0),"Expecting no iso files on device list ".Dumper(\@volumes0))
         or exit;
     $base->prepare_base(user_admin);
+    is($base->domain->get_uuid_string(), $uuid);
 
     my @volumes_base = $base->list_files_base();
     $base->set_base_vm(node => $node, user => user_admin);
+    is($base->domain->get_uuid_string(), $uuid) or exit;
     for my $file ( @volumes_base ) {
         ok($node->file_exists($file))
             or die "Expecting file '$file' in ".$node->name;
         ok($vm->file_exists($file))
             or die "Expecting file '$file' in ".$vm->name;
     }
+    test_domain_internal($base->name,$vm, $node);
 
     $base->remove_base_vm(node => $node, user => user_admin);
+    test_domain_internal($base->name,$vm);
+    test_domain_internal_not($base->name, $node);
+    is($base->domain->get_uuid_string(), $uuid);
+
+    my $base_gone = $node->search_domain($base->name);
+    ok(!$base_gone,"Expecting ".$base->name." removed in ".$node->name) or exit;
     for my $file ( @volumes_base ) {
-        # too complicated to know if can be removed
-        # ok(!$node->file_exists($file));
+        ok(!$node->file_exists($file));
         ok($vm->file_exists($file), "Expecting file '$file' in local") or exit;
     }
     for my $file ( @volumes0 ) {
-        # too complicated to know if can be removed
-        # ok(!$node->file_exists($file),$file);
+        ok(!$node->file_exists($file),$file);
         ok($vm->file_exists($file), "Expecting file '$file' in local") or exit;
     }
+
+    $base = Ravada::Domain->open($base->id);
+    is($base->domain->get_uuid_string(), $uuid);
     delete $base->{_data}->{id_vm};
-    isnt($base->_data('id_vm'), $vm->id);
+    is($base->_data('id_vm'), $vm->id);
 
     $base->set_base_vm(node => $node, user => user_admin);
     is(scalar($base->list_vms), 2) or exit;
-    $base->remove_base(user_admin);
 
-    my @req = $base->list_requests();
-    is(scalar @req,2);
-    ok(grep {$_->command eq 'remove_base_vm' } @req) or die Dumper(\@req);
+    test_domain_internal($base->name,$vm, $node);
     wait_request( debug => 0 );
+
+    is($base->domain->get_uuid_string(), $uuid) or exit;
+    $base = Ravada::Domain->open($base->id);
+    diag("*******************remove base");
+    diag("*******************remove base");
+    $base->remove_base(user_admin);
+    is($base->domain->get_uuid_string(), $uuid);
+
+    #    my @req = $base->list_requests();
+    #    is(scalar @req,2);
+    # ok(grep {$_->command eq 'remove_base_vm' } @req) or die Dumper(\@req);
+    wait_request( debug => 1 );
 
     for my $file ( @volumes_base ) {
         is($vm->file_exists($file),0
             , "Expecting no file '$file' in local") or exit;
         is($node->file_exists($file),0
-            , "Expecting no file '$file' in local") or exit;
+            , "Expecting no file '$file' in node") or exit;
     }
 
     $base->remove(user_admin);
 }
 
+sub test_domain_internal($name, @vms) {
+
+    for my $vm (@vms) {
+        if (ref($vm) =~ /KVM$/) {
+            my $domain;
+            eval { $domain = $vm->vm->get_domain_by_name($name) };
+            my $error = ($@ or '');
+            ok($domain,"Expecting $name in ".$vm->name." $error") or confess;
+        } else {
+            die "TODO" . ref($vm);
+        }
+    }
+}
+
+sub test_domain_internal_not($name, @vms) {
+
+    for my $vm (@vms) {
+        if (ref($vm) =~ /KVM$/) {
+            my $domain;
+            eval { $domain = $vm->vm->get_domain_by_name($name) };
+            my $error = ($@ or '');
+            ok(!$domain,"Expecting not $name in ".$vm->name) or confess;
+        } else {
+            die "TODO" . ref($vm);
+        }
+    }
+}
 sub _check_internal_autostart($domain, $expected) {
     if ($domain->type eq 'KVM') {
         ok($domain->domain->get_autostart)  if $expected;

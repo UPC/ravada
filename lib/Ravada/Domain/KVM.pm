@@ -343,9 +343,14 @@ sub remove {
 
 sub remove_instance($self, $user) {
     
-    eval { $self->domain->undefine(Sys::Virt::Domain::UNDEFINE_NVRAM)    if $self->domain && !$self->is_removed };
+    warn $self->_vm->name." ".$self->domain;
+    eval {
+        $self->domain->undefine(Sys::Virt::Domain::UNDEFINE_NVRAM)    if $self->domain;# && !$self->is_removed 
+    };
+    warn $@ if $@;
     confess $@ if $@ && $@ !~ /libvirt error code: 42/;
     eval { $self->remove_disks() if $self->is_known };
+    warn $@ if $@;
     confess $@ if $@ && $@ !~ /libvirt error code: 42/;
 }
 
@@ -582,9 +587,10 @@ sub _set_backing_store($self, $disk, $backing_file) {
 
 sub _set_volumes_backing_store($self) {
     my $doc = XML::LibXML->load_xml(string
-            => $self->xml_description(Sys::Virt::Domain::XML_INACTIVE))
+            => $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE))
         or die "ERROR: $!\n";
 
+    my ($uuid) = $doc->findnodes("/domain/uuid/text()");
     my @volumes_info = grep { defined($_) && $_->file } $self->list_volumes_info;
     my %vol = map { $_->file => $_ } @volumes_info;
     for my $disk ($doc->findnodes('/domain/devices/disk')) {
@@ -2877,7 +2883,8 @@ sub _check_uuid($self, $doc, $node) {
 
     my @other_uuids;
     for my $domain ($node->vm->list_all_domains, $self->_vm->vm->list_all_domains) {
-        push @other_uuids,($domain->get_uuid_string);
+        push @other_uuids,($domain->get_uuid_string)
+        unless $domain->get_name eq $self->name;
     }
     return if !(grep /^$uuid$/,@other_uuids);
 
@@ -2963,6 +2970,11 @@ sub is_removed($self) {
 }
 
 sub internal_id($self) {
+    confess "ERROR: Missing internal domain"    if !$self->domain;
+    return $self->domain->get_id();
+}
+
+sub _internal_uuid($self) {
     confess "ERROR: Missing internal domain"    if !$self->domain;
     return $self->domain->get_id();
 }

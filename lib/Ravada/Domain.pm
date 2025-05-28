@@ -2684,7 +2684,6 @@ sub _remove_instance($self, $user, $cascade, $id_instance=undef) {
     my $sth_delete = $$CONNECTOR->dbh->prepare("DELETE FROM domain_instances "
         ." WHERE id=? ");
 
-    my $vm_local = $self->_vm->new( host => 'localhost' );
     eval {
             $self->remove_instance($user);
     };
@@ -3002,13 +3001,20 @@ Makes the domain a regular, non-base virtual machine and removes the base files.
 =cut
 
 sub remove_base($self, $user) {
-    return $self->_do_remove_base($user);
+    $self->_cascade_remove_base_in_nodes();
+    $self->_do_remove_base($user);
 }
 
 sub _cascade_remove_base_in_nodes($self) {
     my $req_nodes;
+    my $vm_local;
+    warn "cascade";
     for my $vm ( $self->list_vms ) {
-        next if $vm->is_local;
+        if ( $vm->is_local ) {
+            $vm_local= $vm;
+            next;
+        }
+        warn $vm->name;
         my @after;
         push @after,(after_request => $req_nodes->id) if $req_nodes;
         $req_nodes = Ravada::Request->remove_base_vm(
@@ -3016,20 +3022,22 @@ sub _cascade_remove_base_in_nodes($self) {
             ,id_domain => $self->id
             ,uid => Ravada::Utils::user_daemon->id
             ,_force => 1
+            ,migrate => 0
             ,@after
         );
     }
-    if ( $req_nodes ) {
-        my $vm_local = $self->_vm->new( host => 'localhost' );
-        Ravada::Request->remove_base_vm(
+    return if !$vm_local;
+    my @after;
+    push @after,(after_request => $req_nodes->id) if $req_nodes;
+    Ravada::Request->remove_base_vm(
             id_vm => $vm_local->id
             ,id_domain => $self->id
             ,uid => Ravada::Utils::user_daemon->id
-            ,after_request => $req_nodes->id
+            ,migrate => 0
             ,_force => 1
-        );
-        $self->is_base(0);
-    }
+            ,@after
+    );
+    $self->is_base(0);
     return $req_nodes;
 }
 
@@ -3058,7 +3066,6 @@ sub _do_remove_base($self, $user) {
         $self->_vm->remove_file($file);
     }
 
-    $self->_cascade_remove_base_in_nodes();
 }
 
 sub _pre_remove_base {
@@ -3077,7 +3084,6 @@ sub _pre_remove_base {
 
 sub _post_remove_base {
     my $self = shift;
-    return if !$self->_vm->is_local;
     $self->_remove_base_db(@_);
     $self->_post_remove_base_domain();
 
@@ -5570,6 +5576,8 @@ sub set_base_vm($self, %args) {
     my $vm    = delete $args{vm};
     my $node  = delete $args{node};
     my $request = delete $args{request};
+    my $migrate = delete $args{migrate};
+    $migrate = 1 if !defined $migrate;
 
     confess "ERROR: Unknown arguments, valid are id_vm, value, user, node and vm "
         .Dumper(\%args) if keys %args;
@@ -5580,6 +5588,7 @@ sub set_base_vm($self, %args) {
 
     confess "ERROR: user required"  if !$user;
 
+
     $request->status("working") if $request;
     $vm = $node if $node;
     $vm = Ravada::VM->open($id_vm)  if !$vm;
@@ -5589,6 +5598,11 @@ sub set_base_vm($self, %args) {
     }
 
     $value = 1 if !defined $value;
+
+    warn "preparing base=$value from [".$self->_vm->id."] "
+    .$self->_vm->name." to "
+    ."[".$vm->id."]".$vm->name;
+
 
     my $id_request;
     if ($request) {
@@ -5604,10 +5618,16 @@ sub set_base_vm($self, %args) {
         $self->_check_all_parents_in_node($vm);
         $request->status("working", "Syncing base volumes to ".$vm->host)
             if $request;
+
+        warn "migrating ".$self->name." from ".$self->_vm->name
+            ." to ".$vm->name;
+
         eval {
             $self->migrate($vm, $request);
         };
         my $err = $@;
+        warn "migrated err='".($err or '')."'";
+        warn $err if $err;
         if ( $err ) {
             $self->_set_base_vm_db($vm->id, 0);
             die $err;
@@ -5619,25 +5639,47 @@ sub set_base_vm($self, %args) {
         $request->status("working","Removing base")     if $request;
         $self->_set_base_vm_db($vm->id, $value);
         my $bases_vm = $self->_bases_vm();
-        my $count=0;
+        my @nodes;
         my $node2;
+        warn Dumper($bases_vm);
         for my $id_vm ( keys %$bases_vm) {
+            next if $id_vm == $vm->id;
             if ($bases_vm->{$id_vm}) {
-                $node2 = Ravada::VM->open($id_vm);
-                $count++;
-                last if Ravada::VM::is_local($id_vm);
+                my $node = Ravada::VM->open($id_vm);
+                push @nodes,($node);
+                $node2 = $node if $node->is_local();
             }
         }
-        if (!$count) {
-            $self->remove_base();
+        ($node2) = @nodes if !$node2;
+        $vm->_migrate_domains($node2) if $node2 && $migrate;
+        if (!@nodes) {
+            $self->_do_remove_base($user);
         } else {
-            $vm->_migrate_domains($node2);
             my $instance = $vm->search_domain($self->name);
             $instance->_remove_instance($user,1) if $instance;
+            $self->_remove_files_not_shared(@nodes);
+            $self->_vm($node2);
+            $self->_data('id_vm' => $node2->id);
         }
     }
 
     return $self->_set_base_vm_db($vm->id, $value);
+}
+
+sub _remove_files_not_shared($self, @nodes){
+
+    for my $file ($self->list_volumes,$self->list_files_base) {
+        next if $file =~ /\.iso$/;
+        next if !$self->_vm->file_exists($file);
+
+        my ($dir) = $file =~ m{(.*)/};
+        my $shared=0;
+        for my $node(@nodes) {
+            $shared++ if $self->_vm->shared_storage($node, $dir);
+            last if $shared;
+        }
+        $self->_vm->remove_file($file) if !$shared;
+    }
 }
 
 sub _check_all_parents_in_node($self, $vm, $request=undef) {
@@ -5757,7 +5799,6 @@ Returns a list for virtual machine managers where this domain is base
 =cut
 
 sub list_vms($self, $check_host_devices=0, $only_available=0) {
-    confess "Domain is not base" if !$self->is_base;
 
     $check_host_devices = 1 if !defined $check_host_devices;
 

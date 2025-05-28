@@ -393,7 +393,7 @@ sub remove_file($self,@files) {
             $vol = $self->search_volume($file);
         }
         if (!$vol) {
-            warn "Warning: '$file' not found\n";
+            confess "Warning: '$file' not found\n";
         }
         $vol->delete if $vol;
     }
@@ -604,7 +604,13 @@ Returns true if the file exists in this virtual manager storage
 =cut
 
 sub file_exists($self, $file) {
-    return -e $file if $self->is_local;
+    if ($self->is_local) {
+        if (-e $file) {
+            return 1;
+        } else {
+            return 0;
+        }
+    }
     return $self->_file_exists_remote($file);
 }
 
@@ -613,7 +619,7 @@ sub _file_exists_remote($self, $file) {
     return 1 if $found;
 
     $file = $self->_follow_link($file) unless $file =~ /which$/;
-    return if !$self->vm;
+    return 0 if !$self->vm;
     for my $pool ($self->vm->list_all_storage_pools ) {
         next if !$pool->is_active;
         $self->_wait_storage( sub { $pool->refresh() } );

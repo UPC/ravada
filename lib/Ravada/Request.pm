@@ -94,7 +94,7 @@ our %VALID_ARG = (
     ,active_storage_pool => { uid => 1, id_vm => 1, name => 1, value => 1}
     ,check_storage => { uid => 1 }
     ,create_storage_pool => { uid => 1, id_vm => 1, name => 1, directory => 1 }
-    ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2 }
+    ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2, migrate => 2 }
     ,cleanup => { timeout => 2 }
     ,clone => { uid => 1, id_domain => 1, name => 2, memory => 2, number => 2, volatile => 2, id_owner => 2
                 # If base has pools, from_pool = 1 if undefined

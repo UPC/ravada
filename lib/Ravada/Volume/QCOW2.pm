@@ -133,7 +133,8 @@ sub spinoff($self) {
     my $file = $self->file;
     my $volume_tmp  = $self->file.".$$.tmp";
 
-    $self->vm->remove_file($volume_tmp);
+    $self->vm->remove_file($volume_tmp)
+        if $self->vm->file_exists($volume_tmp);
 
     my @cmd = ($QEMU_IMG
         ,'convert'
