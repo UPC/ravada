@@ -5802,7 +5802,6 @@ sub list_vms($self, $check_host_devices=0, $only_available=0) {
     my @host_devices = $self->list_host_devices();
     while (my ($id_vm, $name_vm, $id_request, $is_active, $enabled, $cached_down) = $sth->fetchrow) {
         next if $only_available && ( !$is_active || !$enabled);
-        my $t1 = time;
         if ($only_available && $cached_down) {
             next if time-$cached_down < $self->_vm->timeout_down_cache();
         }
@@ -5814,7 +5813,6 @@ sub list_vms($self, $check_host_devices=0, $only_available=0) {
         next if $check_host_devices && !$self->_available_hds($id_vm, \@host_devices);
         my $vm;
         eval { $vm = Ravada::VM->open($id_vm) };
-        warn "id_domain: ".$self->id."\n".$@ if $@;
         push @vms,($vm) if $vm;
     }
     return @vms;

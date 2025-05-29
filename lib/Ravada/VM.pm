@@ -554,7 +554,8 @@ sub _around_create_domain {
 
     if ($base && $base->is_base) {
         $request->status("balancing")                       if $request;
-        my $vm = $self->balance_vm($owner->id, $base);
+        my $check_hd= ($active or $args_create{volatile} or 0);
+        my $vm = $self->balance_vm($owner->id, $base, undef, $check_hd);
 
         if (!$vm) {
             die "Error: No free nodes available.\n";
@@ -2252,6 +2253,8 @@ sub balance_vm($self, $uid, $base=undef, $id_domain=undef, $host_devices=1) {
         push @vms_active,($vm) if $vm && $vm->vm && $vm->is_active && $vm->enabled;
     }
     return $vms_active[0] if scalar(@vms_active)==1;
+
+    die "Error: No free nodes available.\n" if !scalar(@vms_active);
 
     if ($base && $base->_data('balance_policy') == 1 ) {
         my $vm = $self->_balance_already_started($uid, $id_domain, \@vms_active);

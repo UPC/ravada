@@ -434,7 +434,8 @@ sub _remove_tmp($domain, $vm = $domain->_vm) {
         if ( $vol =~ /SWAP/ ) {
             $found_swap = 1;
         }
-        $vm->remove_file($vol) if $vm->file_exists($vol);
+        $vm->remove_file($vol)
+        if $vol =~ /TMP|SWAP/ && $vm->file_exists($vol);
     }
     die "Error: no swap found in ".$domain->name if !$found_swap;
     die "Error: no tmp found in ".$domain->name if !$found_tmp;
@@ -898,17 +899,19 @@ sub _test_clones($base, $vm) {
 
 sub test_remove_base($vm, $node, $volatile) {
     my $base = create_domain_v2(vm => $vm, disk => 0.5, data => 0, swap => 0);
-    my $uuid = $base->domain->get_uuid_string();
+    my $uuid;
+    $uuid = $base->domain->get_uuid_string() if $vm->type eq 'KVM';
     $base->volatile_clones($volatile);
     my @volumes0 = $base->list_volumes( device => 'disk');
     ok(!grep(/iso$/,@volumes0),"Expecting no iso files on device list ".Dumper(\@volumes0))
         or exit;
     $base->prepare_base(user_admin);
-    is($base->domain->get_uuid_string(), $uuid);
+    is($base->domain->get_uuid_string(), $uuid) if $vm->type eq 'KVM';
+
 
     my @volumes_base = $base->list_files_base();
     $base->set_base_vm(node => $node, user => user_admin);
-    is($base->domain->get_uuid_string(), $uuid) or exit;
+    is($base->domain->get_uuid_string(), $uuid) if $vm->type eq 'KVM';
     for my $file ( @volumes_base ) {
         ok($node->file_exists($file))
             or die "Expecting file '$file' in ".$node->name;
@@ -920,7 +923,7 @@ sub test_remove_base($vm, $node, $volatile) {
     $base->remove_base_vm(node => $node, user => user_admin);
     test_domain_internal($base->name,$vm);
     test_domain_internal_not($base->name, $node);
-    is($base->domain->get_uuid_string(), $uuid);
+    is($base->domain->get_uuid_string(), $uuid) if $vm->type eq 'KVM';
 
     my $base_gone = $node->search_domain($base->name);
     ok(!$base_gone,"Expecting ".$base->name." removed in ".$node->name) or exit;
@@ -1227,7 +1230,6 @@ sub _machine_types($vm) {
             $types{$1} = [ $version,$machine ]
             if !exists $types{$1} || $version > $types{$1}->[0];
         }
-        warn Dumper(\%types);
         for (keys %types) {
             push @types,($types{$_}->[1]);
         }
@@ -1381,7 +1383,6 @@ sub test_fill_memory($vm, $node, $migrate, $start=0) {
 
         last if $migrate && exists $nodes{$vm->name} && $nodes{$vm->name} > 2;
     }
-    warn Dumper(\%nodes);
     ok($created_in_node,"Expecting some clones created in node ".$node->name) or exit;
     ok(exists $nodes{$vm->name},"Expecting some clones to node ".$vm->name." ".$vm->id)
         or die Dumper(\%nodes);
