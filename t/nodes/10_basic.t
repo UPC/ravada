@@ -281,13 +281,12 @@ sub _create_2_clones_same_port($vm, $node, $base, $ip_local, $ip_remote) {
 }
 
 sub _start_clone_in_node($vm, $node, $base) {
+    ok(scalar($base->list_vms) >1) or confess Dumper([map { $_->name } $base->list_vms]);
     my $found_clone;
     for my $try ( 1 .. 20 ) {
         my $clone1 = $base->clone(name => new_domain_name, user => user_admin);
-        _remove_tmp($clone1,$vm);
-        ok(scalar($base->list_vms) >1) or confess Dumper([map { $_->name } $base->list_vms]);
         eval { $clone1->start(user_admin) };
-        is($@,'') or die "Error $@ starting ".$clone1->name;
+        is($@,'') or confess "Error $@ starting ".$clone1->name;
         $found_clone = $clone1;
         last if $clone1->_vm->id == $node->id;
         ok(scalar($base->list_vms) >1) or confess Dumper([map { $_->name } $base->list_vms]);
@@ -426,16 +425,16 @@ sub _remove_base_files($base, $node) {
 }
 
 sub _remove_tmp($domain, $vm = $domain->_vm) {
+    $vm->refresh_storage_pools();
     my ($found_swap, $found_tmp);
     for my $vol ( $domain->list_volumes ) {
         if ( $vol =~ /TMP/ ) {
-            $vm->remove_file($vol);
             $found_tmp= 1;
         }
         if ( $vol =~ /SWAP/ ) {
-            $vm->remove_file($vol);
             $found_swap = 1;
         }
+        $vm->remove_file($vol) if $vm->file_exists($vol);
     }
     die "Error: no swap found in ".$domain->name if !$found_swap;
     die "Error: no tmp found in ".$domain->name if !$found_tmp;
@@ -959,15 +958,13 @@ sub test_remove_base($vm, $node, $volatile) {
 
     is($base->domain->get_uuid_string(), $uuid) or exit;
     $base = Ravada::Domain->open($base->id);
-    diag("*******************remove base");
-    diag("*******************remove base");
     $base->remove_base(user_admin);
     is($base->domain->get_uuid_string(), $uuid);
 
     #    my @req = $base->list_requests();
     #    is(scalar @req,2);
     # ok(grep {$_->command eq 'remove_base_vm' } @req) or die Dumper(\@req);
-    wait_request( debug => 1 );
+    wait_request( debug => 0 );
 
     for my $file ( @volumes_base ) {
         is($vm->file_exists($file),0
@@ -2144,13 +2141,14 @@ sub test_remove_instances($base, @nodes) {
     my @volumes = $base->list_volumes();
     my @files_base = $base->list_files_base();
     $base->remove(user_admin);
+    wait_request(debug => 0);
     my $vm = $base->_vm;
     for my $vm ( $base->_vm, @nodes ) {
         for my $file ( @volumes, @files_base ) {
             if ($file =~ /\.iso$/) {
                 ok($vm->file_exists($file));
             } else {
-                ok(!$vm->file_exists($file), "Expecting no file '$file' in ".$vm->name) or exit;
+                ok(!$vm->file_exists($file), "Expecting no file '$file' in ".$vm->name) or confess;
             }
         }
     }

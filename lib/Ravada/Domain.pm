@@ -1203,10 +1203,11 @@ sub _check_tmp_volumes($self) {
         if !$self->id_base;
     my $vm = $self->_vm;
 
+    $self->_vm->refresh_storage_pools();
     for my $vol ( $self->list_volumes_info) {
 
         next unless $vol->file && $vol->file =~ /\.(TMP|SWAP)\./;
-        $vol->delete();
+        $vol->delete() ;
         my $base = Ravada::Domain->open($self->id_base);
         my @volumes = $base->list_files_base_target;
         my ($file_base) = grep { $_->[1] eq $vol->info->{target} } @volumes;
@@ -2608,7 +2609,6 @@ sub _after_remove_domain($self, $user, $cascade=undef) {
     $id_base = $self->_data('id_base') if $self->is_known();
 
     if ($self->is_known && $self->is_base) {
-        #        $self->_do_remove_base($user);
         $self->_remove_files_base();
     }
     for my $backup ( $self->list_backups ) {
@@ -2688,6 +2688,7 @@ sub _remove_instance($self, $user, $cascade, $id_instance=undef) {
             $self->remove_instance($user);
     };
     warn $@ if $@;
+    $self->_remove_files_base();
     $sth_delete->execute($id_instance) if defined $id_instance;
 
 }
@@ -3008,13 +3009,11 @@ sub remove_base($self, $user) {
 sub _cascade_remove_base_in_nodes($self) {
     my $req_nodes;
     my $vm_local;
-    warn "cascade";
     for my $vm ( $self->list_vms ) {
         if ( $vm->is_local ) {
             $vm_local= $vm;
             next;
         }
-        warn $vm->name;
         my @after;
         push @after,(after_request => $req_nodes->id) if $req_nodes;
         $req_nodes = Ravada::Request->remove_base_vm(
@@ -5615,14 +5614,10 @@ sub set_base_vm($self, %args) {
         $request->status("working", "Syncing base volumes to ".$vm->host)
             if $request;
 
-        warn "migrating ".$self->name." from ".$self->_vm->name
-            ." to ".$vm->name;
-
         eval {
             $self->migrate($vm, $request);
         };
         my $err = $@;
-        warn "migrated err='".($err or '')."'";
         warn $err if $err;
         if ( $err ) {
             $self->_set_base_vm_db($vm->id, 0);
