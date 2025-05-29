@@ -3025,7 +3025,7 @@ sub _cascade_remove_base_in_nodes($self) {
             ,@after
         );
     }
-    return if !$vm_local;
+    return if !$vm_local || !$req_nodes;
     my @after;
     push @after,(after_request => $req_nodes->id) if $req_nodes;
     Ravada::Request->remove_base_vm(
