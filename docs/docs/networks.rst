@@ -64,3 +64,37 @@ next to the virtual machine buttons.
 Select the Hardware tab, next to the Network interface click on
 the *edit* button to change the virtual machine network settings.
 There you can change the virtual network where it is connected.
+
+Isolated Networks
+=================
+
+Isolated networks, where packets can not reach nor come from outside,
+can be created. A typical use case is in cybersecurity environments
+or for legacy systems with no security updates.
+
+Change the value in the *Forward* setting.
+Possible options are:
+
+- NAT: default value, does Network Address Translation
+- none: isolated
+
+NAT networks access outside through the host IP. Internally the
+virtual machines have an IP from this network. Typically is in
+the rage of 192.168.122.0/24.
+
+Setting the Network isolated
+----------------------------
+
+Virtual machines inside *isolated networks* can not reach outside
+and can only communicate with other virtual machines in the same
+network.
+
+When a network is set as *isolated*, the virtual machines attached
+are disconnected and no further packages can reach nor come from
+outside.
+
+Revert to default
+-----------------
+Setting the network back to *NAT* is not enough for the virtual
+machines to be connected again. A full shutdown, and start must
+be performed.
