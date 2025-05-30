@@ -27,6 +27,7 @@ sub test_download($vm, $iso0, $test=0) {
             , id_vm => $vm->id
             #            , delay => 4
             , test => $test
+            , uid => user_admin->id
     );
     is($req1->status, 'requested');
 

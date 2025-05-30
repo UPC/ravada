@@ -5411,6 +5411,11 @@ sub _cmd_download {
     my $device_cdrom = $vm->search_volume_path_re(qr($iso->{file_re}));
 
     if ($device_cdrom) {
+        my $sth = $CONNECTOR->dbh->prepare(
+            "UPDATE iso_images SET device = ? "
+            ." WHERE id=?"
+        );
+        $sth->execute($device_cdrom,$id_iso);
         $request->status('done',"$iso->{name} already downloaded");
         return;
     }
@@ -5421,7 +5426,9 @@ sub _cmd_download {
         $self->_download_local_and_rsync($request, $vm, $iso);
     }
 
-    Ravada::Request->refresh_storage(id_vm => $vm->id);
+    Ravada::Request->refresh_storage(id_vm => $vm->id
+        ,uid => Ravada::Utils->user_daemon->id
+    );
 }
 
 sub _download_local_and_rsync($self, $request, $vm, $iso) {

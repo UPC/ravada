@@ -1213,7 +1213,8 @@ sub _check_tmp_volumes($self) {
         my ($file_base) = grep { $_->[1] eq $vol->info->{target} } @volumes;
         if (!$file_base) {
             warn "Error: I can't find base volume for target ".$vol->info->{target}
-                .Dumper(\@volumes);
+                ."\n";
+            next;
         }
         my $vol_base = Ravada::Volume->new( file => $file_base->[0]
             , is_base => 1

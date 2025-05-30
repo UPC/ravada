@@ -252,6 +252,33 @@ sub test_small {
 
 }
 
+sub test_download {
+
+    my $vm_name = shift;
+
+     my $id_iso = search_id_iso('Alpine');
+    my $req = Ravada::Request->download(
+        vm => $vm_name
+        ,id_iso => $id_iso
+        ,uid => user_admin->id
+        ,test => 1
+    );
+
+    wait_request(debug => 0);
+
+
+    my $sth = connector->dbh->prepare(
+        "SELECT device FROM iso_images "
+        ." WHERE id=?"
+    );
+    $sth->execute($id_iso);
+
+    my ($device) = $sth->fetchrow;
+
+    ok($device) or exit;
+
+}
+
 #######################################################################
 
 clean();
@@ -281,6 +308,8 @@ for my $vm_name ( vm_names() ) {
         skip $msg,10    if !$vm_ok;
 
         use_ok("Ravada::VM::$vm_name");
+
+        test_download($vm_name);
         test_args($vm_name);
         test_small($vm_name);
     };
