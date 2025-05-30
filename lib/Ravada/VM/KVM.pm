@@ -1548,7 +1548,6 @@ sub _download_file_external($self, $url, $device, $verbose=1, $test=0) {
     # return $url;
 
 
-    warn join(" ",@cmd)."\n";
     warn join(" ",@cmd)."\n"    if $verbose;
     my ($out, $err) = $self->run_command(@cmd);
     warn "out=$out" if $out && $verbose;

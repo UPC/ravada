@@ -3532,6 +3532,7 @@ sub _add_extra_iso($domain, $request, $previous_request) {
     if $previous_request;
 
     my $req = Ravada::Request->refresh_storage(id_vm => $domain->_vm->id
+                                        ,uid => Ravada::Utils->user_daemon->id
                                         ,@after_request);
 
     @after_request = ( after_request => $req->id ) if $req;
