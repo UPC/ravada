@@ -3180,10 +3180,9 @@ sub _create_vm_kvm {
 
     $vm_kvm = Ravada::VM::KVM->new( );
 
-    my ($internal_vm , $storage);
-    $storage = $vm_kvm->dir_img();
+    my $internal_vm;
     $internal_vm = $vm_kvm->vm;
-    $vm_kvm = undef if !$internal_vm || !$storage;
+    $vm_kvm = undef if !$internal_vm;
 
     return $vm_kvm;
 }
@@ -5699,13 +5698,15 @@ sub _cmd_set_driver {
 
 sub _cmd_refresh_storage($self, $request=undef) {
 
-    my $vm;
+    my @vm;
     if ($request && $request->defined_arg('id_vm')) {
-        $vm = Ravada::VM->open($request->defined_arg('id_vm'));
+	    push @vm,Ravada::VM->open($request->defined_arg('id_vm'));
     } else {
-        $vm = $self->search_vm('KVM');
+	    push @vm,(@{$self->vm});
     }
-    $vm->refresh_storage();
+    for my $vm ( @vm ) {
+        $vm->refresh_storage();
+    }
 }
 
 sub _list_mnt($vm, $type) {
