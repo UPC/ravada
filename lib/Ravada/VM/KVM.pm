@@ -1538,7 +1538,8 @@ sub _download_file_external($self, $url, $device, $verbose=1, $test=0) {
             $device = $self->dir_img()."/".$device;
         }
         confess "I can't find filename in '$url'" unless $device;
-        $self->write_file($device,"mock") unless $self->file_exists($device);
+        $self->write_file($device,"mock")
+        if !$self->file_exists($device) && !$<;
         return $self->_download_file_external_headers($url);
     }
     return $url if $self->file_exists($device);
