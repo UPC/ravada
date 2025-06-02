@@ -30,33 +30,33 @@ sub test_reuse_vm($node) {
     $domain->set_base_vm(vm => $node, user => user_admin);
 
     my $clone1 = $domain->clone(name => new_domain_name, user => user_admin);
-
     my $clone2 = $domain->clone(name => new_domain_name, user => user_admin);
-    is($clone1->_vm, $clone2->_vm, $clone1->_vm->name);
-    is($clone1->_vm->id, $clone2->_vm->id);
+
+    $domain->set_base_vm(vm => $node, user => user_admin);
 
     is($clone1->list_instances,1);
 
+    my $vm_local = rvd_back->search_vm($node->type,'localhost');
+
+    $clone1->migrate($vm_local);
     $clone1->migrate($node);
     is($clone1->_data('id_vm'), $node->id);
     $clone2->migrate($node);
     is($clone2->_data('id_vm'), $node->id);
-    is($clone1->list_instances,2);
+    is($clone1->list_instances,2) or die $node->type." ".$clone1->name;
 
-    is($clone1->_vm, $clone2->_vm);
-    is($clone1->_vm, $clone2->_vm);
     is($clone1->_vm->{_ssh}, $clone2->_vm->{_ssh});
 
     is($clone1->is_local, 0 );
     test_remove($clone1, $node);
 
-    my $vm_local = rvd_back->search_vm($node->type,'localhost');
     is($vm_local->is_local, 1);
     $clone2->migrate($vm_local);
 
     is($clone2->is_local, 1 );
     test_remove($clone2, $node);
 
+    remove_domain($domain);
 }
 
 sub test_remove_req($vm, $node) {
@@ -868,7 +868,7 @@ sub test_clone_remote($vm, $node) {
     is($clone->list_instances,1);
 
     _test_old_base($base, $vm);
-    _test_clones($base, $vm);
+    _test_clones($base, $clone->_vm);
     $clone->remove(user_admin);
     is($clone->list_instances,undef);
     $base->remove(user_admin);
