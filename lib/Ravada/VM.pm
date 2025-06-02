@@ -3027,7 +3027,27 @@ sub dir_backup($self) {
             die "Error on mkdir -p $dir_backup $error" if $error;
         }
     }
+    $self->_create_pool_backup($dir_backup);
     return $dir_backup;
+}
+
+sub _create_pool_backup($self, $dir) {
+    my %pool_name;
+    for my $pool ($self->list_storage_pools(1)) {
+        my $path = $pool->{path};
+        if ($path && $path eq $dir) {
+            return;
+        }
+        $pool_name{$pool->{name}}++;
+    }
+    my ($name0) = $dir =~ m{.*/(.*)};
+    my $name = $name0;
+    my $cont=2;
+    for (;;) {
+        last if !$pool_name{$name};
+        $name = $name0."_".$cont++;
+    }
+    $self->create_storage_pool($name, $dir);
 }
 
 sub _follow_link($self, $file) {
