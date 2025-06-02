@@ -1504,10 +1504,10 @@ ravadaApp.directive("solShowMachine", swMach)
     function settings_node($scope, $http, $timeout) {
         var url_ws;
         var id_node;
+        var listed_sp = false;
         $scope.init = function(id, url) {
             id_node = id;
             url_ws = url;
-            list_storage_pools(id_node);
             list_bases(id_node);
             list_templates(id_node);
             subscribe_node_info(id_node, url);
@@ -1517,11 +1517,19 @@ ravadaApp.directive("solShowMachine", swMach)
             var ws = new WebSocket(url);
             ws.onopen = function(event) { ws.send('node_info/'+id_node) };
             ws.onmessage = function(event) {
+                if (!$scope.formNode.$pristine) {
+                    return;
+                }
                 var data = JSON.parse(event.data);
                 $scope.$apply(function () {
                     $scope.node = data;
                     $scope.node._old_name = data.name;
                     $scope.old_node =$.extend({}, data);
+
+                    if (data.is_active && !listed_sp) {
+                        listed_sp = true;
+                        list_storage_pools(id_node);
+                    }
                 });
             }
         };

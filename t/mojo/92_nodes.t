@@ -59,12 +59,41 @@ sub test_new_node($t) {
     $body = $t->tx->res->body;
     eval { $body_json = decode_json($body)};
 
-    my $new_node = grep {$_->{name} eq $name } @$body_json;
+    my ($new_node) = grep {$_->{name} eq $name } @$body_json;
     ok($new_node);
     return $new_node;
 }
 
 sub test_update_node($t, $node) {
+    $t->get_ok("/node/settings/".$node->{id}.".html");
+
+    my $dom = Mojo::DOM->new($t->tx->res->body);
+    my $form = $dom->find('form')->grep( sub {$_->attr('name') eq 'formNode'});
+
+    my $collection = $form->[0]->find('input');
+
+    $t->get_ok("/node/info/".$node->{id}.".json")->status_is(200);
+
+    my $ws_args = {
+            channel => '/'.$node->{id}
+            ,login => user_admin->name
+    };
+
+    my $node2 = Ravada::WebSocket::_get_node_info
+                            (rvd_front(), $ws_args);
+
+    my ($net,$ip)=$node2->{hostname} =~ /(.*)\.(\d+)/;
+    $node2->{hostname}= "$net.".($ip+1);
+
+    $t->post_ok("/v1/node/set/" , json => $node2)->status_is(200);
+
+    $t->get_ok("/node/info/".$node->{id}.".json")->status_is(200);
+
+    my $body = $t->tx->res->body;
+    my $node3;
+    eval { $node3 = decode_json($body)};
+    is($node2->{hostname}, $node2->{hostname});
+
 }
 
 ##############################################################################3

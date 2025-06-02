@@ -5014,6 +5014,7 @@ sub _insert_fields($c, $table, $arg) {
 
 sub _update_fields($c, $table, $arg) {
     my $id = delete $arg->{id};
+    delete $arg->{bases};
     return _insert_fields($c, $table, $arg) if !$id;
 
     my $sth = $RAVADA->_dbh->prepare("SELECT * FROM $table WHERE id=?");
