@@ -56,6 +56,7 @@ _init_connector();
 
 requires 'name';
 requires 'remove';
+requires 'remove_instance';
 requires 'display_info';
 
 requires 'is_active';
@@ -5506,7 +5507,7 @@ sub _post_migrate($self, $node, $request = undef) {
     $self->_vm($node);
     $self->_update_id_vm();
 
-    $node->_add_instance_db($node->id);
+    $node->_add_instance_db($self->id);
     # TODO: update db instead set this value
     $self->{_migrated} = 1;
 

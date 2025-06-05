@@ -78,6 +78,8 @@ sub test_remove_req($vm, $node) {
     is($req->error, '');
 
     $domain->remove(user_admin);
+
+    check_leftovers();
 }
 
 sub test_remove($clone, $node) {
@@ -100,6 +102,8 @@ sub test_remove($clone, $node) {
         my ($out, $err) = $node->run_command("ls", $file);
         ok(!$out, "Expecting no file '$file' in ".$node->name) or exit;
     }
+
+    check_leftovers();
 }
 
 sub test_iptables($node, $node2) {
@@ -226,6 +230,7 @@ sub test_iptables_close($vm, $node) {
 
 sub _remove_clones($domain) {
     _remove_domain($domain,0);
+    check_leftovers();
 }
 
 sub _remove_domain($domain, $remove_base=0) {
@@ -242,6 +247,7 @@ sub _remove_domain($domain, $remove_base=0) {
     if $remove_base;
 
     wait_request();
+    check_leftovers();
 }
 
 sub _create_2_clones_same_port($vm, $node, $base, $ip_local, $ip_remote) {
@@ -415,6 +421,7 @@ sub test_removed_base_file($vm, $node) {
         $req->stop;
     }
     $base->remove(user_admin);
+    check_leftovers();
 }
 
 sub _remove_base_files($base, $node) {
@@ -716,6 +723,7 @@ sub _wait_machine_removed($clone) {
 
     }
     wait_request(debug => 0);
+    check_leftovers();
 }
 
 sub test_domain_gone($vm, $node) {
@@ -908,9 +916,9 @@ sub test_remove_base($vm, $node, $volatile) {
     $base->prepare_base(user_admin);
     is($base->domain->get_uuid_string(), $uuid) if $vm->type eq 'KVM';
 
-
     my @volumes_base = $base->list_files_base();
     $base->set_base_vm(node => $node, user => user_admin);
+    check_leftovers();
     is($base->domain->get_uuid_string(), $uuid) if $vm->type eq 'KVM';
     for my $file ( @volumes_base ) {
         ok($node->file_exists($file))
@@ -943,7 +951,7 @@ sub test_remove_base($vm, $node, $volatile) {
     is(scalar(keys %$bases_vm),1);
 
     $base = Ravada::Domain->open($base->id);
-    is($base->domain->get_uuid_string(), $uuid);
+    is($base->domain->get_uuid_string(), $uuid) if $vm->type eq 'KVM';
     delete $base->{_data}->{id_vm};
     is($base->_data('id_vm'), $vm->id);
 
@@ -959,10 +967,10 @@ sub test_remove_base($vm, $node, $volatile) {
     test_domain_internal($base->name,$vm, $node);
     wait_request( debug => 0 );
 
-    is($base->domain->get_uuid_string(), $uuid) or exit;
+    is($base->domain->get_uuid_string(), $uuid) if $vm->type eq 'KVM';
     $base = Ravada::Domain->open($base->id);
     $base->remove_base(user_admin);
-    is($base->domain->get_uuid_string(), $uuid);
+    is($base->domain->get_uuid_string(), $uuid) if $vm->type eq 'KVM';
 
     #    my @req = $base->list_requests();
     #    is(scalar @req,2);
@@ -977,6 +985,7 @@ sub test_remove_base($vm, $node, $volatile) {
     }
 
     $base->remove(user_admin);
+    check_leftovers();
 }
 
 sub test_domain_internal($name, @vms) {
@@ -988,7 +997,9 @@ sub test_domain_internal($name, @vms) {
             my $error = ($@ or '');
             ok($domain,"Expecting $name in ".$vm->name." $error") or confess;
         } else {
-            die "TODO" . ref($vm);
+            my $domain = $vm->search_domain($name);
+            my $config_file = $domain->_config_file;
+            ok($vm->file_exists($config_file));
         }
     }
 }
@@ -1002,7 +1013,12 @@ sub test_domain_internal_not($name, @vms) {
             my $error = ($@ or '');
             ok(!$domain,"Expecting not $name in ".$vm->name) or confess;
         } else {
-            die "TODO" . ref($vm);
+            my $domain = $vm->search_domain($name);
+            ok(!$domain);
+            if ($domain) {
+                my $config_file = $domain->_config_file;
+                ok(!$vm->file_exists($config_file));
+            }
         }
     }
 }
@@ -1308,7 +1324,11 @@ sub _import_clone($vm) {
 sub _shutdown_domains(@nodes) {
     for my $node (@nodes) {
         for my $domain ($node->list_domains(active => 1)) {
-            $domain->shutdown_now(user_admin);
+            my $base_name=base_domain_name();
+            if ( $domain->name =~ /$base_name/ ) {
+                warn $domain->name;
+                $domain->shutdown_now(user_admin);
+            }
         }
     }
 }
@@ -1317,6 +1337,7 @@ sub test_fill_memory($vm, $node, $migrate, $start=0) {
     diag("Testing fill memory ".$vm->type.", migrate=$migrate, start=$start");
 
     _shutdown_domains($vm,$node);
+    start_node($node);
 
     my $base = _import_clone($vm);
     if (!$base) {
@@ -2153,6 +2174,7 @@ sub test_remove_instances($base, @nodes) {
             }
         }
     }
+    check_leftovers();
 
 }
 
@@ -2208,7 +2230,7 @@ for my $vm_name (vm_names() ) {
         start_node($node);
 
         for my $volatile (1,0) {
-        test_remove_base($vm, $node, $volatile);
+            test_remove_base($vm, $node, $volatile);
         }
         test_change_clone($vm, $node);
 

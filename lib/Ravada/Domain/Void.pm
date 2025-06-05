@@ -210,9 +210,12 @@ sub resume {
     return $self->_store(is_paused => 0 );
 }
 
-sub remove {
-    my $self = shift;
+sub remove($self, $user) {
 
+    $self->remove_instance($user);
+}
+
+sub remove_instance($self, $user) {
     $self->remove_disks();
 
     my $config_file = $self->_config_file;
@@ -221,8 +224,9 @@ sub remove {
         warn $err if $err;
     }
     if ($self->_vm->file_exists($config_file.".lock")) {
-        $self->_vm->run_command("/bin/rm",$config_file.".lock");
+        $self->_vm->remove_file($config_file.".lock");
     }
+
 }
 
 sub can_hibernate { return 1; }

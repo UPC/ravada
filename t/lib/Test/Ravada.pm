@@ -110,6 +110,8 @@ create_domain
 
     config_host_devices
 
+    check_leftovers
+
     end
 );
 
@@ -2349,8 +2351,6 @@ sub start_node($node) {
     eval { $node2->run_command("hwclock","--hctosys") };
     is($@,'',"Expecting no error setting clock on ".$node->name." ".($@ or ''));
 
-    my $sth = $CONNECTOR->dbh->prepare("DELETE FROM domains WHERE name=?");
-    $sth->execute($domain->name);
 }
 
 sub remove_node($node) {
@@ -2695,6 +2695,10 @@ sub _check_leftovers {
     _check_leftovers_domains();
     _check_removed_nbd();
 
+}
+
+sub check_leftovers {
+    _check_leftovers();
 }
 
 sub _check_removed_nbd {

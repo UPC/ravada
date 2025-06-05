@@ -720,7 +720,10 @@ Returns true if the file exists in this virtual manager storage
 =cut
 
 sub file_exists( $self, $file ) {
-    return -e $file if $self->is_local;
+    if ( $self->is_local) {
+        return 1 if -e $file;
+        return 0;
+    }
 
     my $ssh = $self->_ssh;
     confess "Error: no ssh connection to ".$self->name if ! $ssh;
