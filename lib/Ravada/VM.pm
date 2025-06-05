@@ -1111,7 +1111,7 @@ sub _data($self, $field, $value=undef) {
 
         Ravada::Request->list_host_devices(
             uid => Ravada::Utils::user_daemon->id
-            ,id_vm => $self->id
+            ,id_node => $self->id
         ) if ($field eq 'is_active' || $field eq 'enabled') && $value;
 
         return $value;
