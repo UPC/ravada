@@ -7829,6 +7829,10 @@ sub _search_free_device($self, $host_device) {
        if (!$device) {
            $self->_data(status => 'down');
            $self->_unlock_host_devices();
+           my $req = Ravada::Request->list_host_devices(
+               uid => Ravada::Utils::user_daemon->id
+               ,id_host_device => $host_device->id
+           );
            die "Error: No available devices in ".$self->_vm->name." for ".$host_device->name."\n";
        }
     }

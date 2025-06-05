@@ -1,4 +1,15 @@
 <div class="card-body">
+    <div class="alert alert-warning"
+        ng-show="showmachine.is_base || (!showmachine.is_base && !showmachine.id_base)"
+    >
+        <span ng-show="showmachine.is_base">
+            <%=l 'A new clone of this base will be created.' %>
+        </span>
+        <span ng-show="!showmachine.is_base && !showmachine.id_base">
+        <%=l 'This virtual machine will be prepared as a  base, then cloned.' %>
+        </span>
+    </div>
+
         <div class="form-group">
             <div class="form-group row">
                 <div class="col-md-2 mt-2">

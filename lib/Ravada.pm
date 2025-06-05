@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '2.3.1-beta3';
+our $VERSION = '2.4.0';
 
 use utf8;
 
@@ -3198,10 +3198,9 @@ sub _create_vm_kvm {
 
     $vm_kvm = Ravada::VM::KVM->new( );
 
-    my ($internal_vm , $storage);
-    $storage = $vm_kvm->dir_img();
+    my $internal_vm;
     $internal_vm = $vm_kvm->vm;
-    $vm_kvm = undef if !$internal_vm || !$storage;
+    $vm_kvm = undef if !$internal_vm;
 
     return $vm_kvm;
 }
@@ -4684,12 +4683,27 @@ sub _cmd_create{
 
 sub _cmd_list_host_devices($self, $request) {
     my $id_host_device = $request->defined_arg('id_host_device');
+    my $id_node = $request->defined_arg('id_node');
 
     my @id_hd;
 
     if ( $id_host_device ) {
         @id_hd = ($id_host_device);
-    } else {
+    }
+    if ($id_node) {
+        my $sth = $CONNECTOR->dbh->prepare(
+            "SELECT id FROM host_devices "
+            ." WHERE id_vm=? "
+            ."   AND enabled=1"
+        );
+        $sth->execute($id_node);
+
+        while ( my ($id_hd) = $sth->fetchrow ) {
+            push @id_hd , ($id_hd );
+        }
+        return if !@id_hd;
+    }
+    if (!@id_hd) {
         my $sth = $CONNECTOR->dbh->prepare(
             "SELECT id,name FROM host_devices "
             ." WHERE enabled=1"
