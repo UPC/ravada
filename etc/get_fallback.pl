@@ -17,11 +17,21 @@ use feature qw(signatures);
 my $ua  = Mojo::UserAgent->new;
 $ua->max_redirects(4);
 
-my $FILE_CONFIG = 'etc/fallback.conf';
+my $FILE_CONFIG = getcwd.'/etc/fallback.conf';
 my $DIR_FALLBACK = getcwd.'/public/fallback';
+my $DIR_IMG = getcwd."/public/img";
+
+if (! -e $FILE_CONFIG && -e "/etc/ravada.conf") {
+    die "Error: run $0 from root.\n" if $<;
+    $FILE_CONFIG="/usr/share/ravada/fallback.conf";
+    $DIR_FALLBACK = "/usr/share/ravada/public/fallback";
+    $DIR_IMG = "/usr/share/ravada/public/img";
+}
 
 mkdir $DIR_FALLBACK or die "Error: $! $DIR_FALLBACK"
     if ! -e $DIR_FALLBACK;
+
+chdir $DIR_FALLBACK;
 
 sub download($url, $dst = $DIR_FALLBACK) {
 
@@ -39,7 +49,7 @@ sub download($url, $dst = $DIR_FALLBACK) {
         $dst .= $filename;
     }
 
-    return if -e $dst;
+    return $dst if -e $dst;
 
     print "get $url\n";
     my $res = $ua->get($url)->result;
@@ -53,6 +63,7 @@ sub download($url, $dst = $DIR_FALLBACK) {
                                     ." downloading $url\n";
                                     exit;
                                 }
+    chmod 0755,$dst if !$<;
     return $dst;
 }
 
@@ -65,13 +76,13 @@ sub get_version_badge {
     return if $VERSION =~/alpha/;
     #    $VERSION =~ s/-/--/;
     download("https://img.shields.io/badge/version-$VERSION-brightgreen.svg"
-        ,"../img/version-$VERSION-brightgreen.svg");
+        ,"$DIR_IMG/version-$VERSION-brightgreen.svg");
 }
 
 sub remove_old_version_badge {
     $VERSION =~ s/-/--/;
     my $current = "version-$VERSION-brightgreen.svg";
-    opendir my $dir,"public/img" or die "$! public/img";
+    opendir my $dir,$DIR_IMG or die "$! $DIR_IMG";
     while (my $file = readdir $dir) {
         next if $file !~ /^version-.*\.svg/;
         next if $file eq $current;
