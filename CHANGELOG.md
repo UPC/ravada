@@ -2,13 +2,14 @@
 
 **Implemented enhancements:**
 
-- Users can share virtual machines [\#2021]
-- Virtual networks management [\#1984]
-- GPU Mediated devices [\#1955]
-- Allow remove users via GUI [\#2023]
+- Isolated Networks [\#2144]
 
 **Bugfixes**
 
-- Node Option Not Available [\#2032]
 
 **Refactors**
+
+- Refactor: faster launch machine in node [\#2140]
+- Refactor: list machines [\#2141]
+- Improve LDAP filter hint [\#2149]
+- Improve Clone Base hint [\#2152]
