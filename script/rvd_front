@@ -534,6 +534,11 @@ sub _admin_host_devices($c) {
 
     _select_vm_by_type($c);
 
+    my $req = Ravada::Request->list_host_devices(
+        uid => Ravada::Utils::user_daemon->id
+    );
+    $RAVADA->wait_request($req);
+
     $c->stash(tab => ($c->param('tab') or ''));
     $c->stash('id' => $c->stash('id_vm'));
 

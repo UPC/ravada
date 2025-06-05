@@ -1109,6 +1109,11 @@ sub _data($self, $field, $value=undef) {
         $sth->execute($value, $self->id);
         $sth->finish;
 
+        Ravada::Request->list_host_devices(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_node => $self->id
+        ) if ($field eq 'is_active' || $field eq 'enabled') && $value;
+
         return $value;
     }
 
@@ -2260,8 +2265,15 @@ sub _filter_host_devices($self, $id_domain, @vms_all) {
         push @vms, ($vm);
     }
 
-    die "Error: No available devices in ".join(" , ",map { $_->name } @host_devices)."\n"
-    if !scalar(@vms);
+    if ( !scalar(@vms) ) {
+        for my $hd (@host_devices) {
+            Ravada::Request->list_host_devices(
+                uid => Ravada::Utils::user_daemon->id
+                ,id_host_device => $hd->id
+            );
+        }
+        die "Error: No available devices in ".join(" , ",map { $_->name } @host_devices)."\n";
+    }
 
     return @vms;
 }
