@@ -86,8 +86,7 @@ sub remove_old_version_badge {
     while (my $file = readdir $dir) {
         next if $file !~ /^version-.*\.svg/;
         next if $file eq $current;
-        $file = "public/img/$file";
-        unlink $file or die "$! $file";
+        unlink "$DIR_IMG/$file" or die "$! $DIR_IMG/$file";
     }
     closedir $dir;
 
