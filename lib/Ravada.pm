@@ -5886,16 +5886,29 @@ sub _cmd_refresh_vms($self, $request=undef) {
 sub _log_active_domains($self, $list) {
     my $active = 0;
 
+    my %active;
     for my $key (keys %$list) {
-            $active++ if $list->{$key}->{active}==1;
+            next unless $list->{$key}->{active}==1;
+            $active++;
+            next if !defined $list->{$key}->{id_base};
+
+            $active{$list->{$key}->{id_base}} = 0
+            if !exists $active{$list->{$key}->{id_base}};
+
+            $active{$list->{$key}->{id_base}}++;
     }
 
     my $sth2 = $CONNECTOR->dbh->prepare(
         "INSERT INTO log_active_domains "
-        ." (active,date_changed) "
-        ." values(?,?)"
+        ." (active, id_base, date_changed) "
+        ." values(?,?,?)"
     );
-    $sth2->execute(scalar($active),Ravada::Utils::date_now());
+    my $now = Ravada::Utils::date_now();
+    $sth2->execute($active,undef, $now );
+
+    for my $id_base ( keys %active ) {
+        $sth2->execute($active{$id_base}, $id_base, $now);
+    }
 }
 
 sub _cmd_shutdown_node($self, $request) {

@@ -1757,17 +1757,28 @@ sub _execute_request($self, $field, $value) {
 
 sub _log_active_domains($self) {
     my $sth = $self->_dbh->prepare(
-        "SELECT count(*) FROM domains "
+        "SELECT id_base FROM domains "
         ." WHERE status='active'"
     );
     $sth->execute();
-    my ($active) = $sth->fetchrow;
+    my $active=0;
+    my %active_base;
+
+    while ( my ($id_base) = $sth->fetchrow ) {
+        $active++;
+        $active_base{$id_base}++;
+
+    }
     my $sth2 = $self->_dbh->prepare(
         "INSERT INTO log_active_domains "
-        ." ( active) "
-        ." values(?)"
+        ." ( id_base, active) "
+        ." values(?,?)"
     );
-    $sth2->execute(scalar($active));
+    $sth2->execute(undef, $active);
+
+    for my $id_base ( keys %active_base ) {
+        $sth2->execute($id_base, $active_base{$id_base});
+    }
 
 }
 

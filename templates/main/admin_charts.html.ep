@@ -32,6 +32,12 @@ ent">
                   ng-change="load_chart('year')"
                   ></select>
         <div>
+            <div>
+                {{bases}}
+                <select ng-model="base" ng-options="base.name for base in bases">
+                </select>
+                {{base}}
+            </div>
             <canvas id="myChart"></canvas>
         </div>
       </div>

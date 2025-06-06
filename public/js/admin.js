@@ -1936,13 +1936,18 @@ ravadaApp.directive("solShowMachine", swMach)
 
             var ws = new WebSocket(url);
             ws.onopen = function(event) {
-                ws.send('log_active_domains/'+unit+'/'+time);
+                var id_base= '';
+                if (typeof($scope.base) != 'undefined' ) {
+                    id_base = $scope.base.id;
+                }
+                ws.send('log_active_domains/'+unit+'/'+time+'/'+id_base);
             };
             ws.onmessage = function(event) {
                 var data = JSON.parse(event.data);
                 $scope.$apply(function () {
                     $scope.data = data.data;
                     $scope.labels = data.labels;
+                    $scope.bases = data.bases;
 
                     chart_config.data.datasets[0].data = data.data;
                     chart_config.data.labels = data.labels;

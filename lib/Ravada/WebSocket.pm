@@ -574,9 +574,9 @@ sub _list_next_bookings_today($rvd, $args) {
 
 sub _log_active_domains($rvd, $args) {
 
-    my ($unit, $time) = $args->{channel} =~ m{/(\w+)/(\d+)};
+    my ($unit, $time, $id_base) = $args->{channel} =~ m{/(\w+)/(\d+)/(.*)};
 
-    return Ravada::Front::Log::list_active_recent($unit,$time);
+    return Ravada::Front::Log::list_active_recent($unit,$time, $id_base);
 }
 
 sub _list_networks($rvd, $args) {
