@@ -1710,7 +1710,7 @@ sub test_prepare_base_disk_missing($vm) {
 
     my ($two) = grep(!/iso$/i, reverse @volumes);
     unlink $two or die "$! $two";
-    is($vm->file_exists($two),undef);
+    is($vm->file_exists($two),0);
 
     eval {
     $domain->prepare_base(user_admin);
