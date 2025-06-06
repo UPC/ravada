@@ -780,7 +780,7 @@ sub manage_action($self, $ws, $channel, $action, $args) {
             return;
         }
     }
-    warn "Warning: unknown action for $channel / $action";
+    $self->clients->{$ws}->{channel} = "$channel/$action/$args";
 }
 
 sub subscribe($self, %args) {

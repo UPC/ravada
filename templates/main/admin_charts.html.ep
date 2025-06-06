@@ -10,6 +10,7 @@ ent">
     >
         <div id="admin-content" ng-cloak="1">
           <h2><%=l 'Charts' %></h2>
+          <%=l 'Time period' %>
           <select ng-model="hour"
                   ng-options="item.id as item.title for item in options_h"
                   ng-change="load_chart('hour')"
@@ -33,10 +34,11 @@ ent">
                   ></select>
         <div>
             <div>
-                {{bases}}
-                <select ng-model="base" ng-options="base.name for base in bases">
+                <%=l 'Base' %>
+                <select ng-model="base" ng-options="base.name for base in bases"
+                    ng-change="load_chart(last_type)"
+                    >
                 </select>
-                {{base}}
             </div>
             <canvas id="myChart"></canvas>
         </div>

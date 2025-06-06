@@ -5888,7 +5888,9 @@ sub _log_active_domains($self, $list) {
 
     my %active;
     for my $key (keys %$list) {
-            next unless $list->{$key}->{active}==1;
+            next unless exists $list->{$key}->{active}
+            && $list->{$key}->{active} && $list->{$key}->{active}==1;
+
             $active++;
             next if !defined $list->{$key}->{id_base};
 

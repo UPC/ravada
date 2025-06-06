@@ -105,7 +105,7 @@ sub list_active_recent($unit='hours',$time=1, $id_base=undef) {
     $sth = $$CONNECTOR->dbh->prepare(
         "SELECT name FROM domains where id=?"
     );
-    my @bases;
+    my @bases = ({ id => 0 , name => 'All'});
     for my $id (keys %bases) {
         $sth->execute($id);
         my ($name) = $sth->fetchrow;
@@ -113,7 +113,7 @@ sub list_active_recent($unit='hours',$time=1, $id_base=undef) {
     }
     return {
         labels => [ sort keys %data ]
-        , data => [map { $data{$_} } sort keys %data]
+        , data => [map { $data{$_} or 0 } sort keys %data]
         , bases =>\@bases 
     };
 }
