@@ -1059,8 +1059,8 @@ sub _domain_create_from_iso {
         if ( $iso_file ne "<NONE>" || $iso_file ) {
             $device_cdrom = $iso_file;
         }
-    } elsif ($iso->{has_cd}) {
-        $device_cdrom = $self->search_volume_path_re(qr($iso->{file_re}));
+    } elsif ($iso->{has_cd} && $iso->{url}) {
+        $device_cdrom = $self->search_volume_path_re(qr($iso->{file_re})) if $iso->{file_re};
         if (!$device_cdrom) {
             my $req_download = Ravada::Request->download(
                 uid => Ravada::Utils::user_daemon->id
@@ -1518,11 +1518,14 @@ sub _download_file_external_headers($self,$url) {
 }
 
 sub _download_file_external($self, $url, $device, $verbose=1, $test=0) {
-    $url .= "/" if $url !~ m{/$} && $url !~ m{.*/([^/]+\.[^/]+)$};
-
     my ($filename) = $device =~ m{.*/(.*)};
+    if ( $url !~ m{/$} && $url !~ m{.*/([^/]+\.[^/]+)$}) {
+        $url .= "/";
+    } else {
+        $filename = undef;
+    }
 
-    if ($url =~ m{[^*]}) {
+    if ($filename && $url =~ m{[^*]}) {
         my @found = $self->_search_url_file($url, $filename);
         die "Error: URL not found '$url'" if !scalar @found;
         $url = $found[-1];
@@ -1582,9 +1585,11 @@ sub _search_iso($self, $id_iso, $file_iso=undef) {
 
     return $row if $file_iso &&  $self->file_exists($file_iso);
 
+    my $file_re = $row->{file_re};
+    my $url = $row->{url};
     Ravada::Front::_fix_iso_file_re($row);
 
-    if ( !$row->{device} || ! $self->file_exists($row->{device}) ) {
+    if (( !$row->{device} || ! $self->file_exists($row->{device})) && $row->{file_re} ) {
         my $device_cdrom = $self->search_volume_path_re(qr($row->{file_re}));
         $row->{device} = $device_cdrom
             if ($device_cdrom);
@@ -1593,6 +1598,10 @@ sub _search_iso($self, $id_iso, $file_iso=undef) {
     ($row->{filename}) = $row->{device} =~ m{.*/(.*)}
     if $row->{device} && $self->file_exists($row->{device});
 
+    if (!$row->{filename}) {
+        $row->{file_re} = $file_re;
+        $row->{url} = $url;
+    }
     $self->_fetch_filename($row);#    if $row->{file_re};
     if ($VERIFY_ISO) {
         $self->_fetch_md5($row)         if !$row->{md5} && $row->{md5_url};
@@ -1761,8 +1770,7 @@ sub _fetch_filename {
         $sth->execute($row->{device}, $row->{id});
         return;
     } else {
-        warn Dumper([$row->{url}, $row->{file_re}]);
-        @found = $self->_search_url_file($row->{url}, $row->{file_re}) if !@found;
+        @found = $self->_search_url_file($row->{url}, $row->{file_re});
         die "No ".qr($row->{file_re})." found on $row->{url}" if !@found;
     }
 
@@ -1770,6 +1778,7 @@ sub _fetch_filename {
     my ($file) = $url =~ m{.*/(.*)};
 
     $row->{url} = $url;
+    $row->{file_re} = undef;
     $row->{filename} = ($row->{rename_file} or $file);
 
 #    $row->{url} .= "/" if $row->{url} !~ m{/$};
@@ -1787,7 +1796,8 @@ sub _search_url_file($self, $url_re, $file_re=undef) {
             $url_re =~ s{(.*)/.*/\.\.$}{$1};
         }
     } else {
-        $url_re =~ s{(.*)/.*$}{$1};
+        # this failed on http://cdimage.ubuntu.com/ubuntu-mate/releases/24.04.*/release
+        # $url_re =~ s{(.*)/.*$}{$1};
     }
 
     $file_re .= '$' if $file_re !~ m{\$$};
@@ -3352,8 +3362,11 @@ sub copy_file($self, $orig, $dst, %args) {
     $xml->findnodes("/volume/target/permissions/mode/text()")->[0]
         ->setData($mode) if $mode;
 
+    my ($dst_path) = $dst =~ m{(.*)/.*?};
+    die "Error: I can't find path in 'dst'" if !$dst_path;
+    my $sp_dst = $self->vm->get_storage_pool_by_target_path($dst_path);
     my $vol_dst;
-    eval { $vol_dst = $sp->clone_volume($xml, $vol) };
+    eval { $vol_dst = $sp_dst->clone_volume($xml, $vol) };
     confess $@ if $@;
 
 }

@@ -234,7 +234,7 @@ sub test_volumes_in_two_pools {
     test_base($domain);
 
     for my $file (@volumes) {
-        ok(-e $file,"Expecting volume $file exists, got : ".(-e $file or 0));
+        ok(-e $file,"Expecting volume $file exists, got : ".(-e $file or 0)) or die $domain->name;
     }
     $domain->remove($USER);
     for my $file (@volumes) {
@@ -871,6 +871,7 @@ SKIP: {
 
     skip($msg,10)   if !$vm;
 
+    test_volumes_in_two_pools($vm_name);
 
     test_create_pool_fail($vm);
 

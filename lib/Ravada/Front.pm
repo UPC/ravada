@@ -792,8 +792,11 @@ sub _fix_iso_file_re($row) {
     if ($row->{rename_file}) {
         $row->{file_re} = $row->{rename_file};
     } elsif ($row->{url} ) {
-        my ($file_re) = $row->{url} =~ m{.*/([^/]+)$};
-        $row->{file_re}= $file_re if $file_re;
+        my ($url,$file_re) = $row->{url} =~ m{(.*)/([^/]+)$};
+        if ($file_re && $url) {
+            $row->{file_re}= $file_re;
+            $row->{url}= $url;
+        }
     }
 
     if ($row->{file_re}) {

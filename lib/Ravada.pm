@@ -588,7 +588,7 @@ sub _update_isos {
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
             ,url => 'https://download.opensuse.org/distribution/leap/15.4/iso/'
-            ,file_re => 'openSUSE-Leap-15.\d-NET-x86_64-Current.iso'
+            ,file_re => 'openSUSE-Leap-15.\d-\w+-x86_64-Current.iso'
 
         }
         ,xubuntu_noble => {
@@ -5423,6 +5423,7 @@ sub _cmd_download {
     my $test = $request->defined_arg('test');
 
     my $iso = $vm->_search_iso($id_iso);
+    confess Dumper($iso) if !$iso->{file_re};
     my $device_cdrom = $vm->search_volume_path_re(qr($iso->{file_re}));
 
     if ($device_cdrom) {
@@ -5432,7 +5433,7 @@ sub _cmd_download {
         );
         $sth->execute($device_cdrom,$id_iso);
         $request->status('done',"$iso->{name} already downloaded");
-        return;
+        return if !$test;
     }
 
     if ($vm->is_local) {

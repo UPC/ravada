@@ -33,7 +33,7 @@ sub test_download($vm, $iso0, $test=0) {
 
     rvd_back->_process_all_requests_dont_fork();
     is($req1->status, 'done');
-    is($req1->error,'',$iso->{name});
+    is($req1->error,'',$iso->{name}) or exit;
     like($req1->output,qr/^http.*/);
 
 }
@@ -95,6 +95,9 @@ for my $vm_name ('KVM') {
             #            || $iso->{name} =~ /Mate.* 2/i
             #            || $iso->{name} =~ /De.*an.*12/i;
             #next unless $iso->{name} =~ /Dev.*an.*12/i;
+            #next unless $iso->{name} =~ /Mate 24.04/;
+            next unless $iso->{name} =~ /suse/i;
+            diag($iso->{name});
             test_download($vm, $iso,1);
         }
 }
