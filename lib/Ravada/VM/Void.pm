@@ -747,6 +747,7 @@ sub _search_iso($self, $id, $device = undef) {
     $sth->execute($id);
     my $row = $sth->fetchrow_hashref;
     $row->{device} = $device if defined $device;
+    Ravada::Front::_get_device_re($row);
     return $row;
 }
 

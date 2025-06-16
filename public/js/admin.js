@@ -260,8 +260,8 @@ ravadaApp.directive("solShowMachine", swMach)
           if ( $scope.swap.value < iso.min_swap_size ) {
               $scope.swap.value = iso.min_swap_size + 0.1;
           }
-          if (iso.file_re ) {
-              file_re = new RegExp(iso.file_re);
+          if (iso.device_re ) {
+              file_re = new RegExp(iso.device_re);
           } else {
               return '';
           }

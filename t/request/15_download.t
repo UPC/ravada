@@ -94,9 +94,7 @@ for my $vm_name ('KVM') {
             #            || $iso->{name} =~ /Mint.*22/i
             #            || $iso->{name} =~ /Mate.* 2/i
             #            || $iso->{name} =~ /De.*an.*12/i;
-            #next unless $iso->{name} =~ /Dev.*an.*12/i;
-            #next unless $iso->{name} =~ /Mate 24.04/;
-            next unless $iso->{name} =~ /suse/i;
+            # next unless $iso->{name} =~ /Kubuntu.*20/i;
             diag($iso->{name});
             test_download($vm, $iso,1);
         }

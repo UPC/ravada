@@ -667,6 +667,7 @@ Returns the directory where disk images are stored in this Virtual Manager
 sub dir_img {
     my $self = shift;
 
+    return '/var/tmp' if $<;
     my $pool = $self->_load_storage_pool();
     $pool = $self->_create_default_pool() if !$pool;
     my $xml = XML::LibXML->load_xml(string => $pool->get_xml_description());
@@ -1384,20 +1385,21 @@ sub _iso_name($self, $iso, $req=undef, $verbose=1) {
     $test = 1 if $req && $req->defined_arg('test');
 
     if ($test || !$device || ! $self->file_exists($device) ) {
-        $req->status("downloading ".$iso->{file_re}." file"
-                ,"Downloading ISO file for ".$iso->{file_re}
+        $req->status("downloading ".($iso->{file_re} or '')." file"
+                ,"Downloading ISO file for ".($iso->{file_re} or '')
                  ." from $iso->{url}. It may take several minutes"
         )   if $req;
         _fill_url($iso);
 
         $self->_set_iso_downloading($iso,1);
         if ( !$device ) {
-            $self->_fetch_filename($iso);
+            $self->_fetch_filename($iso, $test);
             $device = $self->dir_img()."/".$iso->{filename};
             my $sth = $self->_dbh->prepare("UPDATE iso_images set device=?"
                 ." WHERE id=?"
             );
             $sth->execute($device, $iso->{id});
+            $iso->{url} .= "/".$iso->{filename};
         }
         my $url = $self->_download_file_external($iso->{url}, $device, $verbose, $test);
         $self->_set_iso_downloading($iso,0);
@@ -1452,7 +1454,9 @@ sub _fill_url($iso) {
         $iso->{filename} = '';
         return;
     }
-    confess "Error: Missing field file_re for ".$iso->{name};
+    confess "Error: Missing field file_re for ".$iso->{name} if !$iso->{filename};
+    $iso->{url} .= "/" if $iso->{url} !~ m{/$};
+    $iso->{url} .= $iso->{filename};
 }
 
 sub _check_md5 {
@@ -1518,20 +1522,12 @@ sub _download_file_external_headers($self,$url) {
 }
 
 sub _download_file_external($self, $url, $device, $verbose=1, $test=0) {
-    my ($filename) = $device =~ m{.*/(.*)};
-    if ( $url !~ m{/$} && $url !~ m{.*/([^/]+\.[^/]+)$}) {
-        $url .= "/";
-    } else {
-        $filename = undef;
-    }
 
-    if ($filename && $url =~ m{[^*]}) {
-        my @found = $self->_search_url_file($url, $filename);
-        die "Error: URL not found '$url'" if !scalar @found;
+    if ($url =~ m{[^*]}) {
+        my ($url2, $filename) = $url =~ m{(.*)/(.*)};
+        my @found = $self->_search_url_file($url2, $filename);
+        confess "Error: URL not found '$url2' / $filename" if !scalar @found;
         $url = $found[-1];
-    }
-    if ( $url =~ m{/$} ) {
-        $url = "$url$filename";
     }
 
     $url =~ s{/./}{/}g;
@@ -1585,12 +1581,10 @@ sub _search_iso($self, $id_iso, $file_iso=undef) {
 
     return $row if $file_iso &&  $self->file_exists($file_iso);
 
-    my $file_re = $row->{file_re};
-    my $url = $row->{url};
-    Ravada::Front::_fix_iso_file_re($row);
+    Ravada::Front::_get_device_re($row);
 
-    if (( !$row->{device} || ! $self->file_exists($row->{device})) && $row->{file_re} ) {
-        my $device_cdrom = $self->search_volume_path_re(qr($row->{file_re}));
+    if ( !$row->{device} || ! $self->file_exists($row->{device}) ) {
+        my $device_cdrom = $self->search_volume_path_re(qr($row->{device_re}));
         $row->{device} = $device_cdrom
             if ($device_cdrom);
     }
@@ -1598,11 +1592,7 @@ sub _search_iso($self, $id_iso, $file_iso=undef) {
     ($row->{filename}) = $row->{device} =~ m{.*/(.*)}
     if $row->{device} && $self->file_exists($row->{device});
 
-    if (!$row->{filename}) {
-        $row->{file_re} = $file_re;
-        $row->{url} = $url;
-    }
-    $self->_fetch_filename($row);#    if $row->{file_re};
+    $self->_fetch_filename($row);
     if ($VERIFY_ISO) {
         $self->_fetch_md5($row)         if !$row->{md5} && $row->{md5_url};
         $self->_fetch_sha256($row)         if !$row->{sha256} && $row->{sha256_url};
@@ -1611,10 +1601,6 @@ sub _search_iso($self, $id_iso, $file_iso=undef) {
     if ( !$row->{device} && $row->{filename}) {
         if (my $volume = $self->search_volume_re(qr("^".$row->{filename}))) {
             $row->{device} = $volume->get_path;
-            my $sth = $$CONNECTOR->dbh->prepare(
-                "UPDATE iso_images SET device=? WHERE id=?"
-            );
-            $sth->execute($volume->get_path, $row->{id});
         }
     }
 
@@ -1731,9 +1717,7 @@ sub _cache_filename($url) {
     return "$dir/$file";
 }
 
-sub _fetch_filename {
-    my $self = shift;
-    my $row = shift;
+sub _fetch_filename($self, $row, $test=undef) {
 
     if (!$row->{file_re} && !$row->{url} && $row->{device}) {
          my ($file) = $row->{device} =~ m{.*/(.*)};
@@ -1741,16 +1725,18 @@ sub _fetch_filename {
          return;
     }
     return if !$row->{file_re} && !$row->{url} && !$row->{device};
-    if (!$row->{file_re}) {
+    if (!$row->{file_re} && !$row->{filename}) {
         my ($new_url, $file);
         ($new_url, $file) = $row->{url} =~ m{(.*)/(.*)} if $row->{url};
         ($file) = $row->{device} =~ m{.*/(.*)}
             if !$file && $row->{device};
+
         confess "No filename in $row->{name} $row->{url}" if !$file;
 
         $row->{url} = $new_url;
         $row->{file_re} = "^$file";
     }
+    $row->{file_re} = $row->{filename} if !$row->{file_re} && $row->{filename};
     confess "No file_re" if !$row->{file_re};
     $row->{file_re} .= '$'  if $row->{file_re} !~ m{\$$};
 
@@ -1768,18 +1754,18 @@ sub _fetch_filename {
             ." WHERE id=?"
         );
         $sth->execute($row->{device}, $row->{id});
-        return;
-    } else {
-        @found = $self->_search_url_file($row->{url}, $row->{file_re});
-        die "No ".qr($row->{file_re})." found on $row->{url}" if !@found;
+        return if !$test;
     }
 
-    my $url = $found[-1];
-    my ($file) = $url =~ m{.*/(.*)};
+        @found = $self->_search_url_file($row->{url}, $row->{file_re});
+        die "No ".qr($row->{file_re})." found on $row->{url}" if !@found;
 
-    $row->{url} = $url;
+    my $url = $found[-1];
+    my ($url_path,$file) = $url =~ m{(.*)/(.*)};
+
     $row->{file_re} = undef;
-    $row->{filename} = ($row->{rename_file} or $file);
+    $row->{url} = $url_path;
+    $row->{filename} = $file;
 
 #    $row->{url} .= "/" if $row->{url} !~ m{/$};
 #    $row->{url} .= $file;
@@ -1797,7 +1783,7 @@ sub _search_url_file($self, $url_re, $file_re=undef) {
         }
     } else {
         # this failed on http://cdimage.ubuntu.com/ubuntu-mate/releases/24.04.*/release
-        # $url_re =~ s{(.*)/.*$}{$1};
+        $url_re =~ s{(.*)/.*\..*$}{$1} if $url_re =~ /\.iso/;
     }
 
     $file_re .= '$' if $file_re !~ m{\$$};

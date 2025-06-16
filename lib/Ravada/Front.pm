@@ -12,7 +12,7 @@ Ravada::Front - Web Frontend library for Ravada
 use Carp qw(carp);
 use DateTime;
 use DateTime::Format::DateParse;
-use Hash::Util qw(lock_hash lock_keys);
+use Hash::Util qw(lock_hash lock_keys unlock_hash);
 use IPC::Run3 qw(run3);
 use JSON::XS;
 use Moose;
@@ -779,8 +779,8 @@ sub list_iso_images {
             if $row->{options};
         $row->{min_ram} = 0.2 if !$row->{min_ram};
 
+        _get_device_re($row);
         lock_keys(%$row);
-        _fix_iso_file_re($row);
 
         push @iso,($row);
     }
@@ -788,21 +788,29 @@ sub list_iso_images {
     return \@iso;
 }
 
-sub _fix_iso_file_re($row) {
+sub _get_device_re($row) {
+
+    return if !$row->{url};
+
     if ($row->{rename_file}) {
-        $row->{file_re} = $row->{rename_file};
+        $row->{device_re} = $row->{rename_file};
+    } elsif ($row->{file_re}) {
+        $row->{device_re} = $row->{file_re};
     } elsif ($row->{url} ) {
         my ($url,$file_re) = $row->{url} =~ m{(.*)/([^/]+)$};
         if ($file_re && $url) {
-            $row->{file_re}= $file_re;
-            $row->{url}= $url;
+            $row->{device_re}= $file_re;
         }
     }
 
-    if ($row->{file_re}) {
-        $row->{file_re} = '^'.$row->{file_re} unless $row->{file_re} =~ /\^/;
-        $row->{file_re} .= '$' unless $row->{file_re} =~ /\$/;
-    }
+    confess "Error: no device found in $row->{name} from "
+        .($row->{file_re} or '')
+        ." or ".($row->{rename_file} or '')
+        ." or ".$row->{url}
+    if !$row->{device_re};
+
+    $row->{device_re} = '^'.$row->{device_re} unless $row->{device_re} =~ /\^/;
+    $row->{device_re} .= '$' unless $row->{device_re} =~ /\$/;
 
 }
 

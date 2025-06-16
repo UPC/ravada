@@ -518,8 +518,7 @@ sub _update_isos {
            ,arch => 'x86_64'
             ,xml => 'alpine-amd64.xml'
      ,xml_volume => 'alpine381_64-volume.xml'
-            #,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.16/releases/x86_64/'
-            ,url => 'http://localhost/isos/'
+            ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.16/releases/x86_64/'
         ,file_re => 'alpine-standard-3.16.*-x86_64.iso'
         ,sha256_url => '$url/alpine-standard-3.16.*.iso.sha256'
             ,min_disk_size => '2'
@@ -532,8 +531,7 @@ sub _update_isos {
            ,arch => 'i686'
             ,xml => 'alpine-i386.xml'
      ,xml_volume => 'alpine381_32-volume.xml'
-            #,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.16/releases/x86/'
-            ,url => 'http://localhost/isos/'
+            ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.16/releases/x86/'
             ,options => { machine => 'pc-i440fx' }
         ,file_re => 'alpine-standard-3.16.*-x86.iso'
         ,sha256_url => '$url/alpine-standard-3.16.*.iso.sha256'
@@ -5423,8 +5421,8 @@ sub _cmd_download {
     my $test = $request->defined_arg('test');
 
     my $iso = $vm->_search_iso($id_iso);
-    confess Dumper($iso) if !$iso->{file_re};
-    my $device_cdrom = $vm->search_volume_path_re(qr($iso->{file_re}));
+    my $device_cdrom;
+    $device_cdrom = $vm->search_volume_path_re(qr($iso->{device_re})) if $iso->{device_re};
 
     if ($device_cdrom) {
         my $sth = $CONNECTOR->dbh->prepare(
@@ -5449,7 +5447,7 @@ sub _cmd_download {
 
 sub _download_local_and_rsync($self, $request, $vm, $iso) {
     my $vm_local = $vm->new(host => 'localhost');
-    my $found = $vm_local->search_volume_path_re(qr($iso->{file_re}));
+    my $found = $vm_local->search_volume_path_re(qr($iso->{device_re}));
 
     if (!$found) {
         my $req_local = Ravada::Request->download(
