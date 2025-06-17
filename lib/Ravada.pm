@@ -5462,21 +5462,19 @@ sub _download_local_and_rsync($self, $request, $vm, $iso) {
         die $msg;
     }
 
-    my ($path) = $found =~ m{(.*/)};
+    my ($path, $file) = $found =~ m{(.*/)(.*)};
     if ( $vm_local->shared_storage($vm, $path) ) {
         die "Warning: shared storage, $iso should be there";
 
     }
     my $rsync = File::Rsync->new(update => 1, sparse => 1, archive => 1);
 
-    my $dst = 'root@'.$vm->host.":".$found;
-    warn "$found -> $dst";
+    my $dst = 'root@'.$vm->host.":".$vm->dir_img()."/".$file;
     $rsync->exec(src => $found, dest => $dst);
     confess "error syncing from $found to $dst \n"
             .join(' ',@{$rsync->err})
         if $rsync->err;
 
-    warn "rsync done";
 }
 
 sub _cmd_add_hardware {
