@@ -1828,7 +1828,8 @@ sub _fetch_this($self, $row, $type, $file = $row->{filename}){
 
     $file=~ s{.*/(.+)}{$1} if $file =~ m{/} && $file !~ m{/$};
 
-    my ($url, $file2) = $row->{url} =~ m{(.*)/(.+)} if $row->{url} =~ m{\.iso.?$};
+    my ($url, $file2);
+    ($url, $file2) = $row->{url} =~ m{(.*)/(.+)} if $row->{url} =~ m{\.iso.?$};
     $url = $row->{url} if !$url;
     my $url_orig = $row->{"${type}_url"};
     $file = $file2 if $file2 && $file2 !~ /\*|\^/ && $file2 !~ m{/$};
