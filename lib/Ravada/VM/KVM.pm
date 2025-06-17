@@ -1583,6 +1583,7 @@ sub _search_iso($self, $id_iso, $file_iso=undef) {
 
     Ravada::Front::_get_device_re($row);
 
+    return $row if !$row->{device_re};
     if ( !$row->{device} || ! $self->file_exists($row->{device}) ) {
         my $device_cdrom = $self->search_volume_path_re(qr($row->{device_re}));
         $row->{device} = $device_cdrom
@@ -1611,7 +1612,7 @@ sub _download($self, $url) {
     $url =~ s{(http://.*)//(.*)}{$1/$2};
     if ($url =~ m{[^*]}) {
         my @found = $self->_search_url_file($url);
-        die "Error: URL not found '$url'" if !scalar @found;
+        confess "Error: URL not found '$url'" if !scalar @found;
         $url = $found[-1];
     }
 
@@ -1827,15 +1828,15 @@ sub _fetch_this($self, $row, $type, $file = $row->{filename}){
 
     $file=~ s{.*/(.+)}{$1} if $file =~ m{/} && $file !~ m{/$};
 
-    my ($url, $file2) = $row->{url} =~ m{(.*)/(.+)};
-    $url = $row->{url} if $row->{url} =~ m{/$};
+    my ($url, $file2) = $row->{url} =~ m{(.*)/(.+)} if $row->{url} =~ m{\.iso.?$};
+    $url = $row->{url} if !$url;
     my $url_orig = $row->{"${type}_url"};
     $file = $file2 if $file2 && $file2 !~ /\*|\^/ && $file2 !~ m{/$};
 
     $url_orig =~ s{(.*)\$url(.*)}{$1$url$2}  if $url_orig =~ /\$url/;
 
     confess "error: file missing '$file' ".Dumper($row) if $file =~ m{/$};
-    confess "error " if $url_orig =~ /\$/;
+    confess "error $url_orig" if $url_orig =~ /\$/;
 
     my $content = $self->_download($url_orig);
 

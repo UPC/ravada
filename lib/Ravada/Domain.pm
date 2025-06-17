@@ -1208,6 +1208,7 @@ sub _check_tmp_volumes($self) {
     for my $vol ( $self->list_volumes_info) {
 
         next unless $vol->file && $vol->file =~ /\.(TMP|SWAP)\./;
+        next unless $vol->backing_file;
         $vol->delete() ;
         my $base = Ravada::Domain->open($self->id_base);
         my @volumes = $base->list_files_base_target;
