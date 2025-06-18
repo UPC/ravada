@@ -1717,6 +1717,16 @@ sub remove_qemu_networks($vm=undef) {
 
 }
 
+sub _remove_dir($dir) {
+    die $dir if $dir !~ m{/tst_};
+    opendir (my $ls,$dir) or die "$! $dir";
+    while (my $file = readdir $ls) {
+        next if $file =~ /^\./;
+        unlink "$dir/$file" or die "$dir/$file";
+    }
+    closedir $ls;
+}
+
 sub remove_qemu_pools($vm=undef) {
     return if !$vm && (!$VM_VALID{'KVM'} || $>);
     return if defined $vm && $vm->type eq 'Void';
@@ -1743,6 +1753,13 @@ sub remove_qemu_pools($vm=undef) {
             diag("Removing ".$vm->name." storage_pool ".$pool->get_name);
             for my $vol ( $pool->list_volumes ) {
                 diag("Removing ".$pool->get_name." vol ".$vol->get_name);
+                my $xml = XML::LibXML->load_xml(string => $vol->get_xml_description());
+                my ($format_h) = $xml->findnodes("/volume/target/format");
+                my $format = $format_h->getAttribute('type');
+                if ( $format eq 'dir') {
+                    my $dir = $xml->findnodes('/volume/target/path/text()');
+                    _remove_dir($dir);
+                }
                 $vol->delete();
             }
         }

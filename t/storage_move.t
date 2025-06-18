@@ -81,7 +81,6 @@ sub test_do_not_overwrite($vm) {
 }
 
 sub _search_free_space($dir) {
-    diag($dir);
     open my $mounts,"<","/proc/mounts" or die $!;
     my $found;
     while (my $line = <$mounts>) {
@@ -181,7 +180,7 @@ sub test_queue_move($vm) {
     is($req2->after_request, $req1->id);
 
     remove_domain($domain);
-
+    $vm->remove_storage_pool($sp);
 }
 
 sub test_queue_change_hw($vm) {
@@ -219,6 +218,7 @@ sub test_queue_change_hw($vm) {
 
     $domain->remove(user_admin);
 
+    $vm->remove_storage_pool($sp);
     rmdir($dir) or die "$! $dir";
 
 }
@@ -240,7 +240,6 @@ sub test_move_volume($vm) {
         my ($filename)= $vol =~ m{.*/(.*)};
 
         if ( -e "$dir/$filename" ) {
-            diag("removing previously copied $dir/$filename");
             unlink("$dir/$filename") or die "$! $dir/$filename";
             $vm->refresh_storage();
         }
@@ -280,6 +279,7 @@ sub test_move_volume($vm) {
     for my $vol (@volumes) {
         ok(!-e $vol);
     }
+    $vm->remove_storage_pool($sp);
 
     rmdir($dir) or die "$! $dir";
 }
