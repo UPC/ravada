@@ -370,7 +370,6 @@ sub search_volume_re($self,$pattern,$refresh=0) {
            confess $@ if $@ && $@ !~ /libvirt error code: 50,/;
            next if !$file || $file !~ $pattern;
 
-
            return $vol if !wantarray;
            push @volume,($vol);
        }
