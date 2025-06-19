@@ -20,24 +20,32 @@ has 'capacity' => (
 our $QEMU_IMG = "qemu-img";
 
 sub prepare_base($self) {
-
-    my $file_img = $self->file;
-    my $base_img = $self->base_filename();
-    confess $base_img if $base_img !~ /\.ro/;
-
-    confess "Error: '$base_img' already exists" if -e $base_img;
-    confess if $file_img =~ /\.iso$/i;
-
-    my @cmd = _cmd_convert($file_img,$base_img);
-
     my $format;
     eval {
         $format = $self->_qemu_info('file format')
     };
     confess $@ if $@;
-    @cmd = _cmd_copy($file_img, $base_img)
-    if $format && $format eq 'qcow2';# && !$self->backing_file;
 
+    my $base_img = $self->base_filename();
+
+    confess "Error: '$base_img' already exists" if -e $base_img;
+
+    warn Dumper([$format, $self->file,$base_img]);
+
+    if ($format && $format eq 'qcow2') {
+        $self->_copy($base_img);
+    } else {
+        $self->_convert($base_img);
+    }
+
+    return $base_img;
+
+}
+
+sub _convert($self, $dst) {
+    my $file_img = $self->file;
+    my $base_img = $self->base_filename();
+    my @cmd = _cmd_convert($file_img,$base_img);
     my ($out, $err) = $self->vm->run_command( @cmd );
     warn $out  if $out;
     confess "$?: $err"   if $err;
@@ -54,8 +62,32 @@ sub prepare_base($self) {
     }
 
     chmod 0555,$base_img;
+}
 
-    return $base_img;
+sub _copy($self, $dst) {
+    my $src = $self->file;
+
+    my $vol = $self->vm->search_volume($src);
+    my $vol_capacity = $vol->get_info()->{capacity};
+    my $sp = $self->vm->vm->get_storage_pool_by_volume($vol);
+
+    my $pool_capacity = $sp->get_info()->{capacity};
+
+    die "Error: '$dst' too big to fit in ".$sp->get_name.". ".Ravada::Utils::number_to_size($vol_capacity)." > ".Ravada::Utils::number_to_size($pool_capacity)."\n"
+    if $vol_capacity>$pool_capacity;
+
+    my $xml = $vol->get_xml_description();
+    my $doc = XML::LibXML->load_xml(string => $xml);
+
+    my ($name) = $dst =~ m{.*/(.*)};
+
+    $doc->findnodes('/volume/name/text()')->[0]->setData($name);
+    $doc->findnodes('/volume/key/text()')->[0]->setData($dst);
+    $doc->findnodes('/volume/target/path/text()')->[0]->setData( $dst);
+
+    my $t0 = time;
+    my $vol_dst= $sp->clone_volume($doc->toString, $vol);
+    warn time - $t0;
 
 }
 
