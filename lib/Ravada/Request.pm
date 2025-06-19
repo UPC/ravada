@@ -1077,7 +1077,7 @@ sub _check_downloading($self) {
     if (! $req_download) {
         _mark_iso_downloaded($id_iso2);
     } else {
-        $self->after_request($req_download->id);
+        $self->after_request_ok($req_download->id);
     }
     $sth = $$CONNECTOR->dbh->prepare("SELECT args FROM requests"
             ." WHERE id=?"

@@ -1943,7 +1943,13 @@ sub run_command($self, @command) {
 
     my $ssh = $self->_ssh or confess "Error: Error connecting to ".$self->host;
 
-    my ($out, $err) = $ssh->capture2({timeout => 10},join " ",@command);
+    my $timeout = 10;
+
+    $timeout = 60*60 if $command[0] =~ /cp|qemu/;
+    my $t0 = time;
+    my ($out, $err) = $ssh->capture2({timeout => $timeout},join " ",@command);
+    warn ''.(time -$t0)." @command" if $command[0] =~ /cp|qemu/i && $command[1] ne 'info';
+
     chomp $err if $err;
     $err = '' if !defined $err;
 

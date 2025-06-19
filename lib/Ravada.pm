@@ -5455,7 +5455,7 @@ sub _download_local_and_rsync($self, $request, $vm, $iso) {
             ,id_iso => $iso->{id}
             ,test => $request->defined_arg('test')
         );
-        $request->after_request($req_local->id);
+        $request->after_request_ok($req_local->id);
         $request->retry(2);
         my $msg = "ISO pending to rsync. retry.\n";
         warn $msg;

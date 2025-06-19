@@ -1758,7 +1758,7 @@ sub _fetch_filename($self, $row, $test=undef) {
     }
 
         @found = $self->_search_url_file($row->{url}, $row->{file_re});
-        die "No ".qr($row->{file_re})." found on $row->{url}" if !@found;
+        die "No ".qr($row->{file_re})." found on $row->{url}\n" if !@found;
 
     my $url = $found[-1];
     my ($url_path,$file) = $url =~ m{(.*)/(.*)};
