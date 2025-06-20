@@ -3081,6 +3081,7 @@ sub _post_remove_base {
     return if !$self->_vm->is_local;
     $self->_remove_base_db(@_);
     $self->_post_remove_base_domain();
+    $self->_vm->refresh_storage();
 
 }
 

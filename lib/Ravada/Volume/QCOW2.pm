@@ -30,10 +30,8 @@ sub prepare_base($self) {
 
     confess "Error: '$base_img' already exists" if -e $base_img;
 
-    warn Dumper([$format, $self->file,$base_img]);
-
     if ($format && $format eq 'qcow2') {
-        $self->_copy($base_img);
+        $self->_copy($base_img, '0400');
     } else {
         $self->_convert($base_img);
     }
@@ -61,10 +59,10 @@ sub _convert($self, $dst) {
         .join(" ",@cmd);
     }
 
-    chmod 0555,$base_img;
+    _chmod($self->_vm,$base_img,'600');
 }
 
-sub _copy($self, $dst) {
+sub _copy($self, $dst, $mode=undef) {
     my $src = $self->file;
 
     my $vol = $self->vm->search_volume($src);
@@ -84,11 +82,14 @@ sub _copy($self, $dst) {
     $doc->findnodes('/volume/name/text()')->[0]->setData($name);
     $doc->findnodes('/volume/key/text()')->[0]->setData($dst);
     $doc->findnodes('/volume/target/path/text()')->[0]->setData( $dst);
+    $doc->findnodes('/volume/target/permissions/mode/text()')->[0]
+        ->setData( $mode ) if $mode;
 
-    my $t0 = time;
     my $vol_dst= $sp->clone_volume($doc->toString, $vol);
-    warn time - $t0;
 
+    _refresh_sp($self->vm, $vol);
+
+    return $vol_dst;
 }
 
 sub clone($self, $file_clone) {
@@ -117,7 +118,38 @@ sub clone($self, $file_clone) {
     }
     confess $self->vm->name." ".$err if $err;
 
+    my $vol;
+    for ( 1 .. 3 ) {
+        $vol = $self->vm->search_volume($file_clone);
+        last if $vol;
+    }
+    if ($vol) {
+        _refresh_sp($self->vm, $vol);
+    } else {
+        $self->vm->refresh_storage();
+    }
+    _chmod($self->vm, $file_clone, '0600');
+
     return $file_clone;
+}
+
+sub _refresh_sp($vm, $vol) {
+    my $sp;
+    $sp = $vm->vm->get_storage_pool_by_volume($vol);
+    for ( 1 .. 3 ) {
+        eval { $sp->refresh() };
+        my $err = $@;
+        last if !$err;
+        warn $err;
+        sleep 1;
+    }
+
+}
+
+sub _chmod($vm, $file,$mode) {
+    my ($out,$err) = $vm->run_command("chmod",$mode,$file);
+
+    die $err if $err;
 }
 
 sub _get_capacity($self) {
