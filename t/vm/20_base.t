@@ -9,6 +9,9 @@ use Mojo::JSON qw(decode_json);
 use XML::LibXML;
 use Test::More;
 
+use File::stat;
+use Fcntl qw(:mode);
+
 use lib 't/lib';
 use Test::Ravada;
 
@@ -1161,12 +1164,7 @@ sub _do_test_remove_base($domain, $base=undef) {
     my @files0 = $domain->list_files_base();
     ok(!scalar @files0,"Expecting no files base, got ".Dumper(\@files0)) or return;
     for my $file ( $domain->list_volumes) {
-        my @stat = stat($file);
-        if ($file =~ /\.iso$/) {
-            is($stat[2],33188,$file);
-        } else {
-            is($stat[2],33152,$file) or confess Dumper([$domain->name,$file]);
-        }
+        _check_volume_mode($file);
     }
 
     $domain->prepare_base( user_admin );
@@ -1175,8 +1173,8 @@ sub _do_test_remove_base($domain, $base=undef) {
     my @files = $domain->list_files_base();
     ok(scalar @files,"Expecting files base, got ".Dumper(\@files)) or return;
     for my $file ( $domain->list_files_base() ) {
-        my @stat = stat($file);
-        is($stat[2],33024,$file) or die;
+        _check_base_volume_mode($file);
+
     }
 
     $domain->remove_base( user_admin );
@@ -1191,13 +1189,7 @@ sub _do_test_remove_base($domain, $base=undef) {
         }
     }
     for my $file ( $domain->list_volumes) {
-        my @stat = stat($file);
-        ok(@stat,$file) or confess;
-        if ($file =~ /\.iso$/) {
-            is($stat[2],33188,$file);
-        } else {
-            is($stat[2],33152,$file);
-        }
+        _check_volume_mode($file);
     }
 
     if ($base) {
@@ -1205,6 +1197,37 @@ sub _do_test_remove_base($domain, $base=undef) {
             ok(-e $file) or die $file;
         }
     }
+}
+
+sub _check_volume_mode($file) {
+    my $mode = stat($file)->mode;
+    if ($file =~ /\.iso$/) {
+        ok($mode & S_IRUSR); # user can read
+
+        # ok(!($mode & S_IWGRP),"Group can not write $file") or confess;
+        ok(!($mode & S_IWOTH));  # Others can not write
+    } else {
+        ok($mode & S_IRUSR); # User can read
+        ok($mode & S_IWUSR); # User can write
+
+        ok(!($mode & S_IRGRP));   # Group can not read
+        ok(!($mode & S_IROTH));  # Others can not read
+        ok(!($mode & S_IWGRP));   # Group can not write
+        ok(!($mode & S_IWOTH));  # Others can not write
+    }
+
+}
+
+sub _check_base_volume_mode($file) {
+        my $mode = stat($file)->mode;
+
+        ok($mode & S_IRUSR); # User can read
+
+        ok(!($mode & S_IWUSR)); # User can not write
+        ok(!($mode & S_IRGRP));   # Group can not read
+        ok(!($mode & S_IROTH));  # Others can not read
+        ok(!($mode & S_IWGRP));   # Group can not write
+        ok(!($mode & S_IWOTH));  # Others can not write
 }
 
 sub test_dont_remove_base_cloned {

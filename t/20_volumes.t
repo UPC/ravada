@@ -12,6 +12,8 @@ use YAML qw(Dump Load);
 use lib 't/lib';
 use Test::Ravada;
 
+use File::stat;
+use Fcntl qw(:mode);
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -134,6 +136,7 @@ sub test_base($volume) {
 
     my $test = $TEST_BASE{$ext} or confess "Error: no test for $ext";
 
+    $volume->vm->refresh_storage();
     my $base = $volume->prepare_base();
 
     if ($ext ne 'iso') {
@@ -147,7 +150,22 @@ sub test_base($volume) {
     }
     $test->($volume, $base);
 
+    _check_volume_mode($volume->file);
+    _check_base_volume_mode($base);
+
     return $base;
+}
+
+sub _check_base_volume_mode($file) {
+    my $mode = stat($file)->mode;
+
+    ok($mode & S_IRUSR); # User can read
+
+    ok(!($mode & S_IWUSR)); # User can not write
+    ok(!($mode & S_IRGRP));   # Group can not read
+    ok(!($mode & S_IROTH));  # Others can not read
+    ok(!($mode & S_IWGRP));   # Group can not write
+    ok(!($mode & S_IWOTH));  # Others can not write
 }
 
 sub test_clone($vm, $base) {
@@ -173,6 +191,8 @@ sub test_clone($vm, $base) {
     unlike($clone->file,qr(\.ro\.\w+$)) or exit;
     like($clone->file,qr($ext$));
     like($clone->file,qr(\.SWAP\.$ext$)) if $base =~ /\.SWAP\./;
+
+    _check_volume_mode($clone->file);
 
     #ISOs should be identical and we test no more
     if ($ext eq 'iso') {
@@ -201,6 +221,7 @@ sub test_clone($vm, $base) {
     my $size_change = -s $clone->file;
     isnt($size_change,$size);
     $clone->restore();
+    _check_volume_mode($clone->file);
 
     _test_identical($clone->vm, $clone->file, $clone->file.".tmp");
     unlink($clone->file.".tmp");
@@ -322,6 +343,26 @@ sub test_rebase($volume) {
     return $file_base;
 }
 
+sub _check_volume_mode($file) {
+    my $mode = stat($file)->mode;
+    if ($file =~ /\.iso$/) {
+        ok($mode & S_IRUSR); # user can read
+
+        # ok(!($mode & S_IWGRP),"Group can not write $file") or confess;
+        ok(!($mode & S_IWOTH));  # Others can not write
+    } else {
+        ok($mode & S_IRUSR); # User can read
+        ok($mode & S_IWUSR); # User can write
+
+        ok(!($mode & S_IRGRP));   # Group can not read
+        ok(!($mode & S_IROTH));  # Others can not read
+        ok(!($mode & S_IWGRP));   # Group can not write
+        ok(!($mode & S_IWOTH));  # Others can not write
+    }
+
+}
+
+
 sub test_defaults($vm, $volume_type=undef) {
     diag("Testing defaults for ".$vm->name);
     my $domain = create_domain($vm);
@@ -331,11 +372,19 @@ sub test_defaults($vm, $volume_type=undef) {
     $domain->add_volume( type => 'data', size => 1024*1024, @format);
     for my $volume ( $domain->list_volumes_info ) {
         ok(-e $volume->file,$volume->file) or exit;
+
+        _check_volume_mode($volume->file);
+
         my $file_base = test_base($volume);
+        _check_base_volume_mode($file_base);
+        _check_volume_mode($volume->file);
+
         delete $volume->{_qemu_info};
         my $file_rebase = test_rebase($volume);
         next if !$file_rebase;
         isnt($file_base, $file_rebase) if $file_base !~ /iso$/;
+        _check_base_volume_mode($file_rebase);
+
         unlink $file_base or die "$! $file_base" if $file_base !~ /iso$/;
     }
     my $info = $domain->info(user_admin);

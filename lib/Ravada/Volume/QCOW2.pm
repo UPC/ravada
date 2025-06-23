@@ -59,13 +59,17 @@ sub _convert($self, $dst) {
         .join(" ",@cmd);
     }
 
-    _chmod($self->_vm,$base_img,'600');
 }
 
 sub _copy($self, $dst, $mode=undef) {
     my $src = $self->file;
 
+    if (!$self->vm || $self->vm->type ne 'KVM') {
+        return $self->_copy_sys($dst,$mode);
+    }
     my $vol = $self->vm->search_volume($src);
+
+    confess "Error: '$src' not found in ".$self->vm->name." [ ".$self->vm->type." ]" if !$vol;
     my $vol_capacity = $vol->get_info()->{capacity};
     my $sp = $self->vm->vm->get_storage_pool_by_volume($vol);
 
@@ -90,6 +94,16 @@ sub _copy($self, $dst, $mode=undef) {
     _refresh_sp($self->vm, $vol);
 
     return $vol_dst;
+}
+
+sub _copy_sys($self, $dst, $mode=undef) {
+    my $file = $self->file;
+    if ($self->vm) {
+        my ($out, $err) = $self->vm->run_command("cp",$file,$dst);
+    } else {
+        copy($file,$dst);
+    }
+    $self->_chmod($mode) if $mode;
 }
 
 sub clone($self, $file_clone) {
@@ -128,7 +142,6 @@ sub clone($self, $file_clone) {
     } else {
         $self->vm->refresh_storage();
     }
-    _chmod($self->vm, $file_clone, '0600');
 
     return $file_clone;
 }
@@ -144,12 +157,6 @@ sub _refresh_sp($vm, $vol) {
         sleep 1;
     }
 
-}
-
-sub _chmod($vm, $file,$mode) {
-    my ($out,$err) = $vm->run_command("chmod",$mode,$file);
-
-    die $err if $err;
 }
 
 sub _get_capacity($self) {

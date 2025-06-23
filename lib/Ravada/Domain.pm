@@ -3031,6 +3031,7 @@ sub _do_remove_base($self, $user) {
         my $backing_file = $vol->backing_file;
         next if !$backing_file;
         #        confess "Error: no backing file for ".$vol->file if !$backing_file;
+        $vol->_chmod(oct(600),$backing_file);
         if (!$self->is_local) {
             my ($dir) = $backing_file =~ m{(.*/)};
             next if $self->_vm->shared_storage($vm_local, $dir);
@@ -3043,12 +3044,7 @@ sub _do_remove_base($self, $user) {
         unlink $vol->file or die "$! ".$vol->file;
         my @stat = stat($backing_file) or confess "Error: missing $backing_file";
         move($backing_file, $vol->file) or die "$! $backing_file -> ".$vol->file;
-        my $mask = oct(7777);
-        my $mode = $stat[2] & $mask;
-        my $w = oct(200);
-        $mode = $mode ^ $w;
-        chmod($mode,$vol->file);
-        chown($stat[4],$stat[5], $vol->file);
+        $vol->_chmod(oct(600));
     }
 
     for my $file ($self->list_files_base) {
