@@ -49,7 +49,7 @@ sub _around_prepare_base($orig, $self) {
 
 sub _chmod($self, $mode, $file=$self->file) {
 
-    my $vm;
+    my $vm = $self->vm;
 
     if ($vm && !$vm->is_local) {
         my ($out,$err) = $vm->run_command("chmod",$mode,$file);

@@ -2888,6 +2888,7 @@ sub mangle_volume($vm,$name,@vol) {
             print $out ("c" x 20)."\n";
             close $out;
             _umount_qcow();
+            unload_nbd();
         } elsif ($file =~ /\.iso$/) {
             # do nothing
         } else {
