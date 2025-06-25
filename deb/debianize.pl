@@ -38,6 +38,8 @@ for ( qw(css fallback fonts img js favicon.ico )) {
 
 my %FILE = (
     'etc/rvd_front.conf.example' => 'etc/rvd_front.conf'
+    ,'etc/fallback.conf' => 'usr/share/ravada'
+    ,'etc/get_fallback.pl' => 'usr/share/ravada'
     ,'script/rvd_back' => 'usr/sbin/rvd_back'
     ,'script/rvd_front' => 'usr/sbin/rvd_front'
     ,'CHANGELOG.md'   => 'usr/share/doc/ravada/changelog'
@@ -267,6 +269,10 @@ sub chmod_ravada_conf {
     chmod 0600,"$DIR_DST/etc/ravada.conf" or die $!;
 }
 
+sub chmod_fallback {
+    chmod 0700,"$DIR_DST/usr/share/ravada/get_fallback.pl" or die $!;
+}
+
 sub tar {
     my $dist = shift;
     my @cmd = ('tar','czvf',"ravada_$VERSION.orig.tar.gz"
@@ -399,6 +405,7 @@ chown_files('usr/sbin',0755,0755);
 #chown_files('usr/share/ravada/templates');
 chown_files('etc');
 chmod_ravada_conf();
+chmod_fallback();
 chown_files('lib');
 #chown_files('lib/systemd');
 chown_files('var/lib/ravada');

@@ -55,6 +55,11 @@
     cursor: pointer; /* Cursor on hover */
 }
 
+.enabled {
+    color: red;
+    cursor: not-allowed;
+}
+
 .disabled {
     color: darkgray;
     cursor: not-allowed;

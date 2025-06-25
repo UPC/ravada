@@ -156,6 +156,7 @@ our %VALID_ARG = (
     ,list_host_devices => {
         uid => 1
         ,id_host_device => 2
+        ,id_node => 2
         ,_force => 2
     }
     ,remove_host_device => {
