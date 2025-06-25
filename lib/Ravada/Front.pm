@@ -778,6 +778,7 @@ sub list_iso_images {
         $row->{options} = decode_json($row->{options})
             if $row->{options};
         $row->{min_ram} = 0.2 if !$row->{min_ram};
+        $row->{min_swap_size} = 0 if !$row->{min_swap_size};
         push @iso,($row);
     }
     $sth->finish;
