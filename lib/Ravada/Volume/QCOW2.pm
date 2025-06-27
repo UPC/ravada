@@ -71,7 +71,13 @@ sub _copy($self, $dst, $mode=undef) {
 
     confess "Error: '$src' not found in ".$self->vm->name." [ ".$self->vm->type." ]" if !$vol;
     my $vol_capacity = $vol->get_info()->{capacity};
-    my $sp = $self->vm->vm->get_storage_pool_by_volume($vol);
+    #my $sp = $self->vm->vm->get_storage_pool_by_volume($vol);
+    my ($path) = $dst =~ m{(.*)/};
+    my $sp = $self->vm->vm->get_storage_pool_by_target_path($path);
+    if (!$sp) {
+        warn "Warning: pool not found in $path, reverting to ".$vol->get_path;
+        $sp = $self->vm->vm->get_storage_pool_by_volume($vol);
+    }
 
     my $pool_capacity = $sp->get_info()->{capacity};
 
@@ -91,7 +97,7 @@ sub _copy($self, $dst, $mode=undef) {
 
     my $vol_dst= $sp->clone_volume($doc->toString, $vol);
 
-    _refresh_sp($self->vm, $vol);
+    $sp->refresh();
 
     return $vol_dst;
 }
