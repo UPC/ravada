@@ -95,9 +95,29 @@ sub _copy($self, $dst, $mode=undef) {
     $doc->findnodes('/volume/target/permissions/mode/text()')->[0]
         ->setData( $mode ) if $mode;
 
-    my $vol_dst= $sp->clone_volume($doc->toString, $vol);
+    my $vol_dst;
+    my $err;
+    for ( 1 .. 5 ) {
+        eval {
+            $vol_dst = $sp->clone_volume($doc->toString, $vol);
+        };
+        $err = $@;
+        last if !$err
+            || (ref($err) eq 'Sys::Virt::Error'
+                && $err->code == 1) ; #internal error: pool 'default' has asynchronous jobs running
+        sleep 1;
+    }
+    die $err if $err;
 
-    $sp->refresh();
+    for ( 1 .. 3 ) {
+        eval { $sp->refresh() };
+        $err = $@;
+        last if !$err;
+        last if !$err
+            || (ref($err) eq 'Sys::Virt::Error'
+                && $err->code == 1) ; #internal error: pool 'default' has asynchronous jobs running
+        sleep 1;
+    }
 
     return $vol_dst;
 }
