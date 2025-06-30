@@ -109,15 +109,7 @@ sub _copy($self, $dst, $mode=undef) {
     }
     die $err if $err;
 
-    for ( 1 .. 3 ) {
-        eval { $sp->refresh() };
-        $err = $@;
-        last if !$err;
-        last if !$err
-            || (ref($err) eq 'Sys::Virt::Error'
-                && $err->code == 1) ; #internal error: pool 'default' has asynchronous jobs running
-        sleep 1;
-    }
+    _refresh_sp($self->vm,$vol_dst);
 
     return $vol_dst;
 }
