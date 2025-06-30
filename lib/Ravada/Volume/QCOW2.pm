@@ -79,6 +79,7 @@ sub _copy($self, $dst, $mode=undef) {
         $sp = $self->vm->vm->get_storage_pool_by_volume($vol);
     }
 
+    _refresh_sp($self->vm,$sp);
     my $pool_capacity = $sp->get_info()->{capacity};
 
     die "Error: '$dst' too big to fit in ".$sp->get_name.". ".Ravada::Utils::number_to_size($vol_capacity)." > ".Ravada::Utils::number_to_size($pool_capacity)."\n"
@@ -166,7 +167,11 @@ sub clone($self, $file_clone) {
 
 sub _refresh_sp($vm, $vol) {
     my $sp;
-    $sp = $vm->vm->get_storage_pool_by_volume($vol);
+    if (ref($vol) eq 'Sys::Virt::StoragePool') {
+        $sp = $vol;
+    } else {
+        $sp = $vm->vm->get_storage_pool_by_volume($vol);
+    }
     for ( 1 .. 3 ) {
         eval { $sp->refresh() };
         my $err = $@;
