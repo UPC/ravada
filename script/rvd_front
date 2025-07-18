@@ -1116,6 +1116,7 @@ get '/machine/info/(:id).(:type)' => sub {
     if ($domain->is_active && ( !exists $info->{ip} || !$info->{ip})) {
         Ravada::Request->refresh_machine(id_domain => $domain->id, uid => $USER->id);
     }
+    print("info: $info");
     return $c->render(json => $info);
 };
 
