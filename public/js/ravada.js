@@ -253,16 +253,6 @@
               $scope.modalOpened=true;
               $('#'+prefix+machine.id).modal({show:true})
             }
-            $scope.cancel_modal=function(machine,field){
-                $scope.modalOpened=false;
-                if (typeof(machine)!='undefined' && typeof(field)!='undefined') {
-                    if (machine[field]) {
-                        machine[field]=0;
-                    } else {
-                        machine[field]=1;
-                    }
-                }
-            }
 
             $scope.action = function(machine, action, confirmed) {
                 machine.action = false;
@@ -290,7 +280,7 @@
                     $scope.host_force_shutdown = 0;
                 } else if (action == 'shutdown' || action == 'hibernate' || action == 'force_shutdown' || action == 'reboot') {
                     // si machine.autostart == 1
-                    if (!confirmed && machine.autostart == 1) {
+                    if (!confirmed && (action == 'shutdown' || action == 'force_shutdown') && machine.autostart == 1) {
                         $scope.modalOpened=true;
                         $('#'+'afc_'+machine.id).modal({show:true})
                     }
