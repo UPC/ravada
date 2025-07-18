@@ -10,7 +10,7 @@ if you are only upgrading Ravada from a previous version already installed.
 Ubuntu
 ------
 
-.. note:: We only provide support for Ubuntu 20.04 and 22.04.
+.. note:: We only provide support for Ubuntu 20.04, 22.04 and 24.04.
 
 We provide *deb* Ubuntu packages on the `UPC ETSETB
 repository <http://infoteleco.upc.edu/img/debian/>`__.
@@ -19,7 +19,7 @@ repository <http://infoteleco.upc.edu/img/debian/>`__.
 Install the ravada package. Choose the one that matches your OS release:
 
 - ravada_2.4.0_ubuntu-18.04_all.deb
-- ravada_2.4.0_ubuntu-20.04_all.deb for Ubuntu 20.04 and Ubuntu 22.04
+- ravada_2.4.0_ubuntu-20.04_all.deb for Ubuntu 20.04, 22.04 and 24.04
 
 When you run dpkg now it may show some errors, it is ok, keep reading.
 
