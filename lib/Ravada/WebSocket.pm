@@ -331,12 +331,23 @@ sub _list_devices_node($rvd, $row) {
     if (%$devices) {
         $row->{_nodes} = [sort keys %{$devices}];
         for (@{$row->{_nodes}}) {
-            $row->{_n_devices} += scalar(@{$devices->{$_}});
+            my $current = $devices->{$_};
+            if (ref($current) eq 'ARRAY') {
+                $row->{_n_devices} += scalar(@{$devices->{$_}});
+            } elsif (ref($current) eq 'HASH') {
+                $row->{_n_devices} += scalar(@{$devices->{$_}->{list}});
+            }
         }
         $row->{_loading} = 0;
         for my $id_node ( keys %$devices ) {
             my @devs;
-            for my $name ( @{$devices->{$id_node}} ) {
+            my $current = $devices->{$id_node};
+            my $error =  '';
+            if (ref($current) eq 'HASH') {
+                $current = $devices->{$id_node}->{list};
+                $error = ($devices->{$id_node}->{error} or '');
+            }
+            for my $name ( @$current ) {
                 my $dev = { name => $name };
 
                 $dev->{domain} = $attached{"$id_node.$name"}
@@ -344,7 +355,7 @@ sub _list_devices_node($rvd, $row) {
 
                 push @devs,($dev);
             }
-            $ret{$id_node} = \@devs;
+            $ret{$id_node} = {error => $error , list => \@devs};
         }
     } else {
         $row->{_nodes} = [];

@@ -108,9 +108,11 @@ sub list_devices_nodes($self) {
             @current_devs = $self->list_devices($node->id)
                 if $node && $node->is_active;
         };
+        my $error = ($@ or '');
         warn $@ if $@;
         #        push @devices, @current_devs;
-        $devices{$ndata->[0]}=\@current_devs;
+        $devices{$ndata->[0]}={ list => \@current_devs , error => $error};
+
     }
 
     $self->_data( devices_node => \%devices );
