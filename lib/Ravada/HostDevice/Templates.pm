@@ -164,7 +164,6 @@ our @TEMPLATES_KVM  = (
 #        ]
 #    }
 #
- 
     ,
     { name => "GPU Mediated Device (display)"
         ,list_command => "mdevctl list"
@@ -256,6 +255,34 @@ our @TEMPLATES_VOID = (
 
         ]
     }
+     ,{
+        name => 'NVIDIA GRID'
+        ,list_command => 'plugins/list_vgpus.sh'
+        ,list_filter => ''
+        ,template_args => encode_json({
+                pci => '([0-9a-f:\.]+) '
+                ,domain =>'(^[0-9a-f]{4})'
+                ,bus => '....:([0-9a-f]+):'
+                ,slot => '^....:..:([0-9a-f]+)\.'
+                ,function => '^....:..:[0-9a-f]+\.([0-9a-f])'
+
+            })
+        ,templates => [
+            {path => "/hardware/host_devices"
+                ,type => 'node'
+                ,template => Dump( device => {
+                        pci => '<%= $pci%>'
+                        ,domain => '<%= $domain %>'
+                        ,bus => '<%= $bus %>'
+                        ,slot => '<%= $slot %>'
+                        ,function => '<%= $function %>'
+                    })
+            }
+
+        ]
+
+    }
+
 );
 
 my %TEMPLATES = (

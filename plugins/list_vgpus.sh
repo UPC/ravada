@@ -47,6 +47,10 @@ main() {
 	local vendor=$1
 	local filter_vgpu_type=$2
 
+    if [ -z "$vendor" ]; then
+        vendor="nvidia"
+    fi
+
 	for line in "${pcidevices[@]}"; do
 		local dev=$(echo "$line"| cut -d' ' -f1)
 

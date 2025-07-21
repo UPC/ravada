@@ -10,6 +10,7 @@ Ravada::HostDevice - Host Device basic library for Ravada
 =cut
 
 use Carp qw(croak cluck);
+use Cwd qw(getcwd);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
@@ -127,6 +128,13 @@ sub list_devices($self, $id_vm=$self->id_vm) {
 
     my @command = split /\s+/, $self->list_command;
 
+    if ($command[0] !~ m{^/} && $command[0] =~ /^plugins/) {
+        my ($dir) = $0 =~ m{(\.)/};
+        $dir = getcwd() if $dir eq '.';
+        $dir = "/usr/share/ravada" if !$dir;
+        $command[0] = "$dir/".$command[0];
+    }
+
     my ($out, $err) = $vm->run_command(@command);
     die $err if $err;
     my $filter = $self->list_filter();
@@ -200,6 +208,9 @@ sub list_available_devices_cached($self, $id_vm=$self->id_vm) {
         }
     }
     my $dnn = $dn->{$id_vm};
+    if (ref($dnn) eq 'HASH') {
+        $dnn = $dnn->{list};
+    }
     for my $dev_entry ( @$dnn ) {
         next if $self->_device_locked($dev_entry, $id_vm);
         push @device, ($dev_entry);
