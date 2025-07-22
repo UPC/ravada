@@ -83,7 +83,7 @@
                                 ng-click="machine.action=false;action(machine,'hibernate')">
                                 <i class="fa fa-snowflake" aria-hidden="true"></i>&nbsp;<%=l 'Hibernate' %></a>
                             <a ng-show="machine.is_active || machine.clone.is_active" class="dropdown-item"
-                                ng-click="machine.action=false;action(machine,'force_shutdown')">
+                                ng-click="machine.action=false;action(machine,'force_shutdown', false)">
                                 <i class="fa fa-times" aria-hidden="true"></i>&nbsp;<%=l 'Poweroff' %></a>
                             <a ng-show="machine.clone.can_remove" class="dropdown-item"
                                 ng-click="host_restore=machine.clone.id">
@@ -104,9 +104,10 @@
                                 <p><%=l 'Are you sure you want to shutdown the machine ' %> {{machine.name}} <%=l '?' %> </p>
                             </div>
                             <div class="modal-footer">
+                                <!-- TODO: Que pasa si la accion es 'force_shutdown' ? -->
                                 <button type="button" ng-click="action(machine, 'shutdown', true)" class="btn btn-danger" data-dismiss="modal"><%=l 'Yes' %></button>
                                 <button type="button" class="btn btn-secondary" data-dismiss="modal" 
-                                    ng-click="modalOpened=false"><%=l 'No' %></button>
+                                    ><%=l 'No' %></button>
                             </div>
                         </div>
 

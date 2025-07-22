@@ -249,10 +249,6 @@
                     }
                 }
             };
-            $scope.open_modal=function(prefix,machine){
-              $scope.modalOpened=true;
-              $('#'+prefix+machine.id).modal({show:true})
-            }
 
             $scope.action = function(machine, action, confirmed) {
                 machine.action = false;
@@ -279,10 +275,12 @@
                     $scope.host_shutdown = 0;
                     $scope.host_force_shutdown = 0;
                 } else if (action == 'shutdown' || action == 'hibernate' || action == 'force_shutdown' || action == 'reboot') {
-                    // si machine.autostart == 1
-                    if (!confirmed && (action == 'shutdown' || action == 'force_shutdown') && machine.autostart == 1) {
-                        $scope.modalOpened=true;
+                    if (machine.autostart == 1 && confirmed && (action == 'shutdown' || action == 'force_shutdown')) {
+                        action = tmp_action;
+                    }
+                    if (machine.autostart == 1 && (action == 'shutdown' || action == 'force_shutdown') && !confirmed) {
                         $('#'+'afc_'+machine.id).modal({show:true})
+                        tmp_action = action;
                     }
                     else {
                         $scope.host_restore = 0;
@@ -418,7 +416,7 @@
                     subscribe_list_bookings(url);
                 }
             };
-            $scope.modalOpened = false;
+            $scope.tmp_action = null;
             $scope.only_public = false;
             $scope.toggle_only_public=function() {
                     $scope.only_public = !$scope.only_public;
