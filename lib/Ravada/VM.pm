@@ -1776,7 +1776,7 @@ sub _around_list_networks($orig, $self) {
         $sth_delete->execute($id);
     }
 
-    $self->_check_networks() if $first_time;
+    $self->_check_networks() if $first_time && $self->vm;
 
     return @list;
 }

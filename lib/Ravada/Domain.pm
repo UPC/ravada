@@ -5752,6 +5752,7 @@ sub list_vms($self, $check_host_devices=0, $only_available=0) {
         warn "id_domain: ".$self->id."\n".$@ if $@;
         push @vms,($vm) if $vm;
     }
+    return $self->_vm if !@vms && !@host_devices && $self->is_base();
     return @vms;
 
 }
