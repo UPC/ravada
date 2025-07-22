@@ -7222,6 +7222,9 @@ sub _cmd_create_network($self, $request) {
 
     my $id = $request->args('id_vm') or die "Error: missing id_vm";
     my $vm = Ravada::VM->open($id);
+
+    die "Error: node $id not avaiable.\n" if !$vm || !$vm->vm;
+
     $request->output(encode_json({}));
     my $id_net = $vm->create_network($request->args('data'),$request->args('uid')
                     , $request);
