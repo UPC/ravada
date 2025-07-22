@@ -162,6 +162,8 @@ sub _check_default_storage($self) {
 
 sub _check_networks($self, $vm=$self->vm) {
 
+    return if !defined $vm;
+
     my @found;
     for my $net ($vm->list_all_networks) {
         return if $net->is_active;
