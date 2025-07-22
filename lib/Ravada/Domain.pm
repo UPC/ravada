@@ -1757,17 +1757,28 @@ sub _execute_request($self, $field, $value) {
 
 sub _log_active_domains($self) {
     my $sth = $self->_dbh->prepare(
-        "SELECT count(*) FROM domains "
+        "SELECT id_base FROM domains "
         ." WHERE status='active'"
     );
     $sth->execute();
-    my ($active) = $sth->fetchrow;
+    my $active=0;
+    my %active_base;
+
+    while ( my ($id_base) = $sth->fetchrow ) {
+        $active++;
+        $active_base{$id_base}++;
+
+    }
     my $sth2 = $self->_dbh->prepare(
         "INSERT INTO log_active_domains "
-        ." ( active) "
-        ." values(?)"
+        ." ( id_base, active) "
+        ." values(?,?)"
     );
-    $sth2->execute(scalar($active));
+    $sth2->execute(undef, $active);
+
+    for my $id_base ( keys %active_base ) {
+        $sth2->execute($id_base, $active_base{$id_base});
+    }
 
 }
 
@@ -5741,6 +5752,7 @@ sub list_vms($self, $check_host_devices=0, $only_available=0) {
         warn "id_domain: ".$self->id."\n".$@ if $@;
         push @vms,($vm) if $vm;
     }
+    return $self->_vm if !@vms && !@host_devices && $self->is_base();
     return @vms;
 
 }
@@ -7748,6 +7760,10 @@ sub _search_free_device($self, $host_device) {
        if (!$device) {
            $self->_data(status => 'down');
            $self->_unlock_host_devices();
+           my $req = Ravada::Request->list_host_devices(
+               uid => Ravada::Utils::user_daemon->id
+               ,id_host_device => $host_device->id
+           );
            die "Error: No available devices in ".$self->_vm->name." for ".$host_device->name."\n";
        }
     }
