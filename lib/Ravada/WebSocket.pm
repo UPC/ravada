@@ -34,6 +34,7 @@ my %SUB = (
                   ,list_iso_images  => \&_list_iso_images
                   ,list_nodes => \&_list_nodes
            ,list_host_devices => \&_list_host_devices
+               ,list_machines => \&_list_machines
           ,list_machines_tree => \&_list_machines_tree
           ,list_machines_user => \&_list_machines_user
           ,list_machines_user_including_privates => \&_list_machines_user_including_privates
