@@ -1766,7 +1766,7 @@ sub _log_active_domains($self) {
 
     while ( my ($id_base) = $sth->fetchrow ) {
         $active++;
-        $active_base{$id_base}++;
+        $active_base{$id_base}++ if $id_base;
 
     }
     my $sth2 = $self->_dbh->prepare(
