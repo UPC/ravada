@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '2.4.0';
+our $VERSION = '2.4.1';
 
 use utf8;
 
@@ -2287,6 +2287,7 @@ sub _sql_create_tables($self) {
             log_active_domains => {
             'id' => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,'active','integer not null default 0'
+            ,'id_base' => 'integer DEFAULT NULL references `domains`(`id`) ON DELETE CASCADE'
             ,'date_changed'
                     => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
 
@@ -5884,16 +5885,32 @@ sub _cmd_refresh_vms($self, $request=undef) {
 
 sub _log_active_domains($self, $list) {
     my $active = 0;
+
+    my %active;
     for my $key (keys %$list) {
-            $active++ if $list->{$key}==1;
+            next unless exists $list->{$key}->{active}
+            && $list->{$key}->{active} && $list->{$key}->{active}==1;
+
+            $active++;
+            next if !defined $list->{$key}->{id_base};
+
+            $active{$list->{$key}->{id_base}} = 0
+            if !exists $active{$list->{$key}->{id_base}};
+
+            $active{$list->{$key}->{id_base}}++;
     }
 
     my $sth2 = $CONNECTOR->dbh->prepare(
         "INSERT INTO log_active_domains "
-        ." (active,date_changed) "
-        ." values(?,?)"
+        ." (active, id_base, date_changed) "
+        ." values(?,?,?)"
     );
-    $sth2->execute(scalar($active),Ravada::Utils::date_now());
+    my $now = Ravada::Utils::date_now();
+    $sth2->execute($active,undef, $now );
+
+    for my $id_base ( keys %active ) {
+        $sth2->execute($active{$id_base}, $id_base, $now);
+    }
 }
 
 sub _cmd_shutdown_node($self, $request) {
@@ -6212,7 +6229,7 @@ sub _refresh_active_domains($self, $request=undef) {
             for my $domain_data (sort { $b->{date_changed} cmp $a->{date_changed} }
                                 @domains) {
                 $request->output("checking $domain_data->{name}") if $request;
-                next if $active_domain{$domain_data->{id}};
+                next if $active_domain{$domain_data->{id}}->{active};
                 my $domain;
                 eval { $domain = Ravada::Domain->open($domain_data->{id}) };
                 if ( $@ ) {
@@ -6391,7 +6408,9 @@ sub _refresh_active_domain($self, $domain, $active_domain) {
     }
     $domain->_set_data(status => $status);
     $domain->info(Ravada::Utils::user_daemon)             if $is_active;
-    $active_domain->{$domain->id} = $is_active;
+    my %data = ( active => $is_active , id_base => $domain->_data('id_base') );
+    lock_hash(%data);
+    $active_domain->{$domain->id} = \%data;
 
     $domain->_post_shutdown()
     if $domain->_data('status') eq 'shutdown' && !$domain->_data('post_shutdown')
