@@ -31,7 +31,6 @@
             .controller("notifCrtl", notifCrtl)
             .controller("run_domain_req",run_domain_req_ctrl)
             .controller("login",login_ctrl)
-            .controller("manage_nodes",manage_nodes)
 
     function newMachineCtrl($scope, $http) {
 
@@ -46,80 +45,6 @@
         });
 
 
-    };
-
-    function manage_nodes($scope, $http, $interval, $timeout) {
-        $scope.list_nodes = function() {
-            if (!$scope.modal_open) {
-                $http.get('/list_nodes.json').then(function(response) {
-                    $scope.nodes = response.data;
-                });
-            }
-        };
-        $scope.node_enable=function(id) {
-            $scope.modal_open = false;
-            $http.get('/node/enable/'+id+'.json').then(function() {
-                $scope.list_nodes();
-            });
-
-        };
-        $scope.node_disable=function(id) {
-            $scope.modal_open = false;
-            $http.get('/node/disable/'+id+'.json').then(function() {
-                $scope.list_nodes();
-            });
-        };
-        $scope.node_remove=function(id) {
-            $http.get('/v1/node/remove/'+id);
-            $scope.list_nodes();
-        };
-        $scope.confirm_disable_node = function(id , n_machines) {
-            if (n_machines > 0 ) {
-                $scope.modal_open = true;
-                $('#confirm_disable_'+id).modal({show:true})
-            } else {
-                $scope.node_disable(id);
-            }
-        };
-        $scope.node_start=function(id) {
-            $scope.modal_open = false;
-            $http.get('/node/start/'+id+'.json').then(function() {
-                $scope.list_nodes();
-            });
-
-        };
-        $scope.node_shutdown=function(id) {
-            $scope.modal_open = false;
-            $http.get('/node/shutdown/'+id+'.json').then(function() {
-                $scope.list_nodes();
-            });
-        };
-        $scope.node_connect = function(id) {
-            $scope.id_req = undefined;
-            $scope.request = undefined;
-            $http.get('/node/connect/'+id).then(function(response) {
-                $scope.id_req= response.data.id_req;
-                $timeout(function() {
-                    $scope.fetch_request($scope.id_req);
-                }, 2 * 1000 );
-            });
-        };
-        $scope.fetch_request = function(id_req) {
-            $http.get('/request/'+id_req+'.json').then(function(response) {
-                $scope.request = response.data;
-                if ($scope.request.status != "done") {
-                    $timeout(function() {
-                        $scope.fetch_request(id_req);
-                    }, 3 * 1000 );
-                } else {
-                    $scope.list_nodes()
-                }
-            });
-        };
-
-        $scope.modal_open = false;
-        $scope.list_nodes();
-        $interval($scope.list_nodes,30 * 1000);
     };
 
     function suppFormCtrl($scope){

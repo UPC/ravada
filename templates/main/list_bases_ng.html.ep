@@ -90,10 +90,9 @@
                                 <i class="fa fa-trash" aria-hidden="true"></i>&nbsp;<%=l 'Restore' %></a>
                         </div>
                     </div>
-                <!-- Ask for confirmation modal.-->
+                <!-- Pop-up window confirming the shutdown action and force shutdown. #issue 2185 -->
                 <div id="afc_{{machine.id}}" class="modal fade">
                     <div class="modal-dialog">
-
                         <!-- Modal content-->
                         <div class="modal-content">
                             <div class="modal-header">
@@ -104,7 +103,6 @@
                                 <p><%=l 'Are you sure you want to shutdown the machine ' %> {{machine.name}} <%=l '?' %> </p>
                             </div>
                             <div class="modal-footer">
-                                <!-- TODO: Que pasa si la accion es 'force_shutdown' ? -->
                                 <button type="button" ng-click="action(machine, 'shutdown', true)" class="btn btn-danger" data-dismiss="modal"><%=l 'Yes' %></button>
                                 <button type="button" class="btn btn-secondary" data-dismiss="modal" 
                                     ><%=l 'No' %></button>
@@ -113,7 +111,6 @@
 
                     </div>
                 </div>
-                <!-- FIN Modal -->
                 <a type="button" class="btn btn-primary text-white"
                     ng-show="!machine.is_base && !machine.action && !machine.is_active && machine.can_prepare_base"
                     ng-click="machine.action='prepare'"

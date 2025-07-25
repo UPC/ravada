@@ -199,7 +199,7 @@
                                </div>
                                <div class="modal-footer" ng-show="machine.info">
                                  <button type="button" class="btn btn-secondary" data-dismiss="modal" ng-click="cancel_modal(machine,'is_base')"><%=l 'No' %></button>
-                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal(machine);action('machine','remove_base',machine.id)" ng-show="!machine.is_base" data-dismiss="modal"><%=l 'Yes' %></button>
+                                 <button type="button" class="btn btn-primary" ng-click="cancel_modal(machine);action('machine','remove_base',machine)" ng-show="!machine.is_base" data-dismiss="modal"><%=l 'Yes' %></button>
                                  <button type="button" class="btn btn-primary" ng-click="cancel_modal();request('prepare_base',{ 'id_domain': machine.id, 'with_cd': with_cd })" ng-show="machine.is_base" data-dismiss="modal"><%=l 'Yes' %></button>
                                </div>
                              </div>
@@ -279,7 +279,7 @@
                     <td class="lgMachToggle" style="white-space:nowrap">
                       <div ng-hide="machine.is_locked||machine.is_base">
                         <button type="button" class="btn btn-success btn-sm"
-                         ng-click="action('machine','start',machine.id)"
+                         ng-click="action('machine','start',machine)"
                          ng-disabled="machine.is_active"
                          ng-show="machine.can_start"
                          title="<%=l 'Start' %>">
@@ -287,7 +287,7 @@
                         </button>
                         <button
                             type="button" class="btn btn-warning btn-sm"
-                         ng-click="action('machine','hibernate',machine.id)"
+                         ng-click="action('machine','hibernate',machine)"
                          ng-disabled="!machine.is_active"
                          ng-show="machine.can_hibernate"
                          title="<%=l 'Hibernate' %>">
@@ -295,14 +295,35 @@
                        </button>
                        <button
                             type="button" class="btn btn-danger btn-sm"
-                         ng-click="action('machine','shutdown',machine.id)"
+                            ng-click="action('machine','shutdown',machine, false)"
                          ng-disabled="!machine.is_active"
                          ng-show="machine.can_shutdown"
                          title="<%=l 'ShutDown' %>">
                           <i class="fa fa-power-off"></i>
                        </button>
+                        <!-- Pop-up window confirming the shutdown action and force shutdown. #issue 2185 -->
+                        <div id="afc_{{machine.id}}" class="modal fade">
+                            <div class="modal-dialog">
+                                <!-- Modal content-->
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h4 class="modal-title"><%=l 'Shutdown confirmation' %></h4>
+                                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p><%=l 'Are you sure you want to shutdown the machine ' %> {{machine.name}} <%=l '?' %> </p>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" ng-click="action('machine', 'shutdown', machine, true)" class="btn btn-danger" data-dismiss="modal"><%=l 'Yes' %></button>
+                                        <button type="button" ng-click="cancel_modal(machine, undefined)" class="btn btn-secondary" data-dismiss="modal" 
+                                            ><%=l 'No' %></button>
+                                    </div>
+                                </div>
+
+                            </div>
+                        </div>
                        <button type="button" class="btn btn-primary btn-sm"
-                         ng-click="action('machine','view-new-tab',machine.id)"
+                         ng-click="action('machine','view-new-tab',machine)"
                          ng-show="machine.can_view"
                          title="<%=l 'View' %>">
                           <i class="fa fa-desktop"></i>
