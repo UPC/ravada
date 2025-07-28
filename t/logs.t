@@ -99,8 +99,8 @@ sub test_add_missing($vm) {
     is($data->[0],3);
     is($data->[1],6);
     is($data->[2],15);
-    is($data->[3],undef);
-    is($data->[4],undef);
+    is($data->[3],0);
+    is($data->[4],0);
     is($data->[6],2);
 
     # last one just changed
