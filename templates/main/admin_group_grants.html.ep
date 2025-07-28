@@ -1,0 +1,31 @@
+<div class="card">
+    <div class="card-body">
+        <form method="post" action="/admin/group/<%= $group->id %>.html" ng-show="perm">
+        % for my $perm ($_user->list_all_permissions) {
+
+        %     if (!$perm->{is_int} ) {
+                <input type="checkbox" ng-model="perm['<%= $perm->{name} %>']"
+                ng-click="toggle_grant('<%= $perm->{name} %>')"
+                >
+        %     }
+        %     my $hide = $perm->{name} eq 'start_limit';
+        %     $hide = 0 if !$hide;
+        %     if ($perm->{is_int}) {
+                  <input type="number" name="perm_<%= $perm->{name} %>" min="0" ng-model="perm['<%= $perm->{name} %>']" max="999" style="margin-left: 15px; margin-bottom: 10px"
+                    size="4"
+                    ng-hide="<%= $hide %> && perm['start_many']"
+                    ng-change="update_grant('<%= $perm->{name} %>')"
+                  >
+
+        %     }
+              <label for="perm_<%= $perm->{name} %>"
+                    ng-hide="<%= $hide %> && perm['start_many']"
+              >
+                <span ng-show="<%= $perm->{name} ne 'start_limit'%>"><%= $perm->{name} %>:</span>
+                <%=l($perm->{description}) %>
+              </label>
+            <br ng-hide="<%= $hide %> && perm['start_many']"/>
+        % }
+        </form>
+    </div>
+</div>
