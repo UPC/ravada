@@ -227,9 +227,13 @@ sub _test_all_grants($expected_code) {
 
     my $user = create_user( $username, $password);
 
+    my $group = create_group();
+
+    $user->add_to_group($group);
+
     for my $grant ( user_admin->list_all_permissions) {
         my $value0 = ( $user->can_do($grant->{name}) or 0 );
-        for my $value ( !$value0, $value0) {
+        for my $value ( 1, 0) {
 
             my $value2 = ($value or 0 );
 
@@ -247,8 +251,38 @@ sub _test_all_grants($expected_code) {
             is($user->can_do($grant->{name}),$value2,"Expecting user ".$user->name." ".$user->id." can do $grant->{name} $value2") or die;
 
         }
+        if ($expected_code == 200 ) {
+            _test_group_grant($user, $group, $grant);
+        }
 
     }
+
+}
+
+sub _test_group_grant($user, $group, $grant) {
+    die "Error: it should be granted to 0 here"
+    if $user->can_do($grant->{name});
+
+    my $url = "/group/grant/".$group->id."/$grant->{name}/1";
+    $t->get_ok($url);
+    is($t->tx->res->code(), 200) or do {
+        open my $out ,">","error.html";
+        print $out $t->tx->res->to_string;
+        close $out;
+        exit;
+    };
+
+
+    $user->_reload_grants();
+    is($user->can_do($grant->{name}),1,"Expecting user ".$user->name." ".$user->id
+                ." can $grant->{name} ") or die;
+
+    $url = "/group/grant/".$group->id."/$grant->{name}/0";
+    $t->get_ok($url);
+
+    $user->_reload_grants();
+    is($user->can_do($grant->{name}),0,"Expecting user ".$user->name." ".$user->id
+                ." can not $grant->{name} ") or die;
 
 }
 

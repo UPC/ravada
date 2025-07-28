@@ -14,6 +14,7 @@ use Carp qw(carp);
 use Ravada;
 use Ravada::Utils;
 use Ravada::Front;
+use Data::Dumper;
 use Digest::SHA qw(sha1_hex);
 use Hash::Util qw(lock_hash);
 use Mojo::JSON qw(decode_json);

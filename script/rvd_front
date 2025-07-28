@@ -2059,7 +2059,11 @@ get '/group/grant/(:id_group)/(:grant)/(:value)' => sub($c) {
     } elsif ($USER->grant_type($grant) eq 'boolean' ) {
         $value = 1;
     }
-    $USER->grant_group($group,$grant);
+    eval { $USER->grant_group($group,$grant,$value) };
+    $error = $@;
+    my $info = _post_grant($c,  $group, $error, $value);
+    return $c->render(json => { error => $error, info => $info });
+
 };
 
 get '/user/grants/(:id)' => sub($c) {
@@ -2161,6 +2165,12 @@ get '/user/grant/(:id_user)/(:grant)/(:value)' => sub($c) {
     }
     eval { $USER->grant($user,$grant,$value) };
     $error = $@;
+    my $info = _post_grant($c,  $user, $error, $value);
+    return $c->render(json => { error => $error, info => $info });
+
+};
+
+sub _post_grant($c, $user, $error, $value) {
     my $info = '';
     if ($error) {
         $USER->send_message($error);
@@ -2179,7 +2189,7 @@ get '/user/grant/(:id_user)/(:grant)/(:value)' => sub($c) {
         $USER->send_message($info." ".Encode::decode_utf8($user->name)
             ." : $grant");
     }
-    return $c->render(json => { error => $error, info => $info });
+    return $info;
 };
 
 get '/user/list_groups/(#id_user)' => sub($c) {

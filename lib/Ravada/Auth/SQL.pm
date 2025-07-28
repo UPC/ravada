@@ -1381,8 +1381,8 @@ sub add_to_group($self, @group) {
         ." VALUES (?,?)"
     );
     for my $group (@group) {
-        die "Error: ".ref($group)." is not a group"
-        unless ref($group) && ref($group) eq'Ravada::Auth::Group';
+        confess "Error: '".ref($group)."' is not a group"
+        if ref($group) && ref($group) ne 'Ravada::Auth::Group';
         if (!ref($group)) {
             if ($group =~ /^\d+$/) {
                 $group = Ravada::Auth::Group->open($group);
