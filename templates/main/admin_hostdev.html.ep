@@ -58,7 +58,7 @@
         </span>
     </a>
     <span ng-show="!hdev._edit">
-    <b>{{hdev.name}}</b>
+    <span ng-class='{"enabled": hdev._ndevices, "disabled": !hdev._n_devices }'>{{hdev.name}}</span>
     <i ng-show="show_hdev[hdev.id]" ng-click="hdev._confirm_remove=true" class="far fa-trash-alt"></i>
     <i ng-show="show_hdev[hdev.id]" ng-click="hdev._edit=true; hdev._name=hdev.name" class="far fa-edit"></i>
     </span>

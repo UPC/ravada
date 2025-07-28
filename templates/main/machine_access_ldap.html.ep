@@ -1,11 +1,24 @@
 <div class="card">
     <div class="card-body">
         <%=l 'Type a typical LDAP user name to fetch the attribute list' %>
-        <input type="text" ng-model="cn" ng-change="dn_found=''"
+        <input type="text" ng-model="cn" ng-change="dn_found='';cn_changed=true"
         ng-init="cn='<%= $ldap_attributes_cn %>'">
         <button ng-enabled="cn"
             ng-click="list_ldap_attributes()">fetch</button>
-        <div class="alert alert-danger" role="alert" ng-hide="ldap_attributes || !cn || searching_ldap_attributes || dn_found">
+        <a ng-click="fetch_info=!fetch_info"><i class="fa fa-info"></i></a>
+            <div ng-show="fetch_info" class="border border-muted">
+            <div class="alert alert-warning m-4 p-4">
+            <span><%=l 'LDAP search field' %>:</span>
+            <b>{{ldap_field}}</b>
+            <a href="https://ravada.readthedocs.io/en/latest/docs/auth_ldap.html#example-field">
+                (<%=l 'read more' %>)</a>
+
+                <small>
+                <button class="button" type="btn" ng-click="fetch_info=false"><%=l 'dismiss' %></button>
+                </small>
+            </div>
+            </div>
+        <div class="alert alert-danger" role="alert" ng-hide="ldap_attributes || !cn || searching_ldap_attributes || dn_found || cn_changed">
             <div>
             <%=l 'User name' %>&nbsp;<b>{{cn}}</b>&nbsp;<%=l 'not found in LDAP server' %>
             </div>
@@ -25,12 +38,12 @@
                 title="<%=l 'hide attributes'%>"
             >-</button>
 
+            <span ng-show="check_allowed==1" class="bg-success text-white"><%=l 'access granted' %></span>
+            <span ng-show="check_allowed==0" class="bg-danger text-white"><%=l 'access denied' %></span>
             <span
             ng-class="{'text-secondary': !show_values, 'text-dark':show_values}"
             >{{dn_found}}</span>
 
-            <span ng-show="check_allowed==1" class="bg-success text-white"><%=l 'access granted' %></span>
-            <span ng-show="check_allowed==0" class="bg-danger text-white"><%=l 'access denied' %></span>
             </div>
             <div ng-show="show_values" class="container m-8 border border-secondary">
                 <div ng-repeat="name in ldap_attributes" class="row">

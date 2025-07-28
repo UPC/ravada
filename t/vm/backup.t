@@ -83,6 +83,44 @@ sub backup_different_id_vm($vm) {
     $sth->execute($vm2->id, $id_vm_old);
 }
 
+sub backup_auto_start($vm) {
+    my $domain = create_domain_v2(vm => $vm, swap => 1, data => 1
+    );
+    _remove_iso($domain);
+
+    my $req = Ravada::Request->domain_autostart(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request();
+
+    is($domain->autostart,1);
+
+    $domain->backup();
+    my ($backup) = $domain->list_backups();
+
+    my $name = $domain->name;
+    my $id = $domain->id;
+    $domain->remove(user_admin);
+
+    rvd_back->restore_backup($backup->{file},0);
+
+    my $domain_f = Ravada::Front::Domain->open($id);
+    is($domain_f->_data('autostart'),1);
+
+    my $domain2 = rvd_back->search_domain($name);
+    ok($domain2);
+    is($domain2->autostart,1);
+    is($domain2->_data('autostart'),1);
+    if ($vm->type eq 'KVM') {
+        is($domain2->domain->get_autostart(),1);
+    }
+    is($domain2->_internal_autostart(),1);
+
+    $domain2->remove(user_admin);
+
+}
+
 sub backup($vm,$remove_user=undef) {
     my $user = create_user();
     user_admin->make_admin($user->id);
@@ -108,7 +146,7 @@ sub backup($vm,$remove_user=undef) {
     }
 
     my ($backup) = $domain->list_backups();
-    $domain->restore_backup($backup,0);
+    $domain->restore_backup($backup);
 
     my @md5_restored = _vols_md5($domain);
     is_deeply(\@md5_restored, \@md5) or exit;
@@ -349,6 +387,53 @@ sub backup_clash_user($vm) {
     #TODO
 }
 
+sub test_req_backup($vm) {
+    my $domain = create_domain($vm);
+    my $user = create_user();
+
+    my $req = Ravada::Request->backup(
+        uid => $user->id
+        ,id_domain => $domain->id
+    );
+    wait_request(check_error => 0);
+    like($req->error,qr/not authorized/i);
+
+    $domain->start(user_admin);
+
+    $req = Ravada::Request->backup(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request(check_error => 0);
+    like($req->error,qr/is active/i);
+
+    my $req_shutdown = Ravada::Request->shutdown_domain(
+        uid => user_admin->id
+        ,id_domain=> $domain->id
+    );
+    wait_request();
+
+    $req->redo();
+
+    wait_request();
+    is($req->error,'');
+    like($req->output,qr /\//);
+
+    remove_domain($domain);
+
+    my $file = $req->output;
+    chomp $file;
+    return $file;
+}
+
+sub test_req_restore($vm, $file) {
+    my $req = Ravada::Request->restore_backup(
+        uid => user_admin->id
+        ,file => $file
+    );
+    wait_request();
+}
+
 ########################################################################
 
 init();
@@ -363,6 +448,11 @@ for my $vm_name ( vm_names() ) {
 
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
+
+        my $file = test_req_backup($vm);
+        test_req_restore($vm, $file);
+
+        backup_auto_start($vm);
 
         backup_clone_and_base($vm);
         backup_clone_base_different($vm);

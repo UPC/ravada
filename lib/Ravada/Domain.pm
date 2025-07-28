@@ -24,6 +24,7 @@ use JSON::XS;
 use Moose::Role;
 use NetAddr::IP;
 use IPC::Run3 qw(run3);
+use RRDs;
 use Storable qw(dclone);
 use Time::Piece;
 
@@ -42,13 +43,14 @@ our $CONNECTOR;
 our $MIN_FREE_MEMORY = 1024*1024;
 our $IPTABLES_CHAIN = 'RAVADA';
 
-our %PROPAGATE_FIELD = map { $_ => 1} qw( run_timeout shutdown_disconnected);
+our %PROPAGATE_FIELD = map { $_ => 1} qw( run_timeout shutdown_disconnected shutdown_grace_time);
 
-our $TIME_CACHE_NETSTAT = 60; # seconds to cache netstat data output
+our $TIME_CACHE_NETSTAT = 10; # seconds to cache netstat data output
 our $RETRY_SET_TIME=10;
 our $TTL_REMOVE_VOLATILE = 60;
 
 our $DEBUG_RSYNC = 0;
+our $DIR_RRD = "/var/lib/ravada_rrd";
 
 _init_connector();
 
@@ -211,8 +213,7 @@ after 'screenshot' => \&_post_screenshot;
 
 after '_select_domain_db' => \&_post_select_domain_db;
 
-before 'migrate' => \&_pre_migrate;
-after 'migrate' => \&_post_migrate;
+around 'migrate' => \&_around_migrate;
 
 around 'get_info' => \&_around_get_info;
 around 'set_max_mem' => \&_around_set_max_mem;
@@ -298,11 +299,40 @@ sub _vm_disconnect {
     $self->_vm->disconnect();
 }
 
+sub _fetch_networking_mode($self) {
+
+    my $is_active = $self->is_active;
+    my $networking_old = $self->_data('networking');
+
+    my $networking = '';
+    my @interfaces = $self->get_controller('network');
+    my @virtual_networks = Ravada::VM::list_virtual_networks_data($self->_data('id_vm'));
+    for my $item (@interfaces) {
+        next if lc($item->{type}) ne 'nat';
+        next if !$item->{network};
+        for my $network (@virtual_networks) {
+            next unless $network->{name} eq $item->{network};
+            next unless $network->{forward_mode};
+            if( $network->{forward_mode} eq 'nat') {
+                $networking = 'nat';
+            } elsif ($network->{forward_mode} eq 'none') {
+                $networking = 'isolated' unless $networking eq 'nat';
+            }
+            last;
+        }
+        last if $networking eq 'nat';
+    }
+    if (!$is_active || $networking eq 'isolated' || !$self->_data('networking')) {
+        $self->_data('networking' => $networking);
+    }
+}
+
 sub _around_start($orig, $self, @arg) {
 
     $self->_post_hibernate() if $self->is_hibernated && !$self->_data('post_hibernated');
     if ( !$self->is_active ) {
         $self->_unlock_host_devices(0);
+        $self->_fetch_networking_mode();
     }
 
     $self->_start_preconditions(@arg);
@@ -327,7 +357,7 @@ sub _around_start($orig, $self, @arg) {
     $enable_host_devices = 1 if !defined $enable_host_devices;
     my $is_volatile = ($self->is_volatile || $arg{is_volatile});
 
-    for (1 .. 5) {
+    for (1 .. 2) {
         eval { $self->_start_checks(%arg, enable_host_devices => $enable_host_devices) };
         my $error = $@;
         if ($error) {
@@ -373,6 +403,8 @@ sub _around_start($orig, $self, @arg) {
         warn $error if $error;
         last if !$error;
 
+        $self->_dettach_host_devices() if $enable_host_devices && !$self->is_active();
+
         my $vm_name = Ravada::VM::_get_name_by_id($self->_data('id_vm'));
 
         die "Error: starting ".$self->name." on ".$vm_name." $error"
@@ -387,16 +419,79 @@ sub _around_start($orig, $self, @arg) {
         && $error !~ /Could not run .*swtpm/i
         && $error !~ /virtiofs/
         && $error !~ /child process/i
+        && $error !~ /host doesn.t support/
+        && $error !~ /device not found/
         ;
 
-        if ($error && $self->is_known && $self->id_base && !$self->is_local && $self->_vm->enabled) {
-            $self->_request_set_base();
-            next;
-        }
         die $error;
     }
     $self->_post_start(%arg);
+    $self->_rrd_create('status');
 
+}
+
+sub _rrd_dir($self) {
+    my $dir_rrd = $DIR_RRD;
+
+    $dir_rrd = $Ravada::CONFIG->{dir_rrd}
+    if defined $Ravada::CONFIG && exists $Ravada::CONFIG->{dir_rrd}
+    && defined $Ravada::CONFIG->{dir_rrd};
+
+    return $dir_rrd;
+}
+
+sub _rrd_file($self, $name) {
+
+    my $file = $self->_rrd_dir."/".$self->name."_$name.rrd";
+
+    return $file;
+}
+
+sub _rrd_remove($self) {
+
+    my $file = $self->_rrd_file('status');
+    return if ! -e $file;
+
+    unlink $file or die "$! $file";
+}
+
+
+sub _rrd_create($self , $type, $start=time) {
+
+    my $step = 60;
+    my $heartbeat = $step*2;
+    my @ds;
+    if ($type eq 'status') {
+        @ds = (
+            "DS:connected:GAUGE:$heartbeat:0:1"
+            ,"DS:cpu:COUNTER:$heartbeat:0:U"
+            ,"DS:memory:GAUGE:$heartbeat:0:100"
+        );
+    } else {
+        croak "Error: unknown $type";
+    }
+    my $file = $self->_rrd_file($type);
+    my ($path) = '';
+
+    for my $item (split m{/+}, $self->_rrd_dir) {
+        next if !defined $item || !length($item);
+        $path .= "/$item";
+
+        mkdir $path or die "$! $path" if !-e $path;
+    }
+
+    my $samples = int(3600 / $step)*24*7;
+    my @cmd = ("rrdtool","create", $file
+         ,'--start', $start
+         ,"--step",$step
+         ,@ds
+         ,"RRA:AVERAGE:0.5:1:$samples"
+     );
+
+     my ($in, $out, $err);
+     run3(\@cmd,\$in, \$out,\$err);
+     warn "@cmd\n".$err if $err;
+     warn $out if $out;
 }
 
 sub _request_set_base($self, $id_vm=$self->_vm->id) {
@@ -512,16 +607,11 @@ sub _start_checks($self, @args) {
     my $id_base = $self->id_base;
     if ($id_base && !$is_volatile) {
         $self->_check_tmp_volumes();
-#        $self->_set_last_vm(1)
-        if ( !$self->is_local
-            && ( !$self->_vm->enabled || !base_in_vm($id_base,$self->_vm->id)
-                || !$self->_vm->ping) ) {
-            $self->_set_vm($vm_local, 1);
-        }
         if ( !$vm->is_alive ) {
             $vm->disconnect();
             $vm->connect;
             $vm = $vm_local if !$vm->is_local && !$vm->is_alive;
+            die "Error: node ".$vm->name." is not alive" if !$vm->is_alive;
         };
         if ($id_vm) {
             $self->_set_vm($vm);
@@ -1118,22 +1208,19 @@ sub _check_free_vm_memory {
 sub _check_tmp_volumes($self) {
     confess "Error: only clones temporary volumes can be checked."
         if !$self->id_base;
-    my $vm_local = $self->_vm->new( host => 'localhost' );
-    for my $vol ( $self->list_volumes_info) {
-        next unless $vol->file && $vol->file =~ /\.(TMP|SWAP)\./;
-        next if $vm_local->file_exists($vol->file);
-        $vol->delete();
+    my $vm = $self->_vm;
 
-        my $base = Ravada::Domain->open($self->id_base);
-        my @volumes = $base->list_files_base_target;
+    my $base = Ravada::Domain->open($self->id_base);
+    my @volumes = $base->list_files_base_target;
+    for my $vol ( $self->list_volumes_info) {
+        next unless $vol->file && $vol->file =~ /\.(TMP|SWAP)\.\w+$/;
         my ($file_base) = grep { $_->[1] eq $vol->info->{target} } @volumes;
-        if (!$file_base) {
-            warn "Error: I can't find base volume for target ".$vol->info->{target}
-                .Dumper(\@volumes);
-        }
+        next if !$file_base;
+
+        $vol->delete();
         my $vol_base = Ravada::Volume->new( file => $file_base->[0]
             , is_base => 1
-            , vm => $vm_local
+            , vm => $vm
         );
         $vol_base->clone(file => $vol->file);
     }
@@ -1291,8 +1378,14 @@ sub _store_display($self, $display, $display_old=undef) {
     $self->_set_display_ip(\%display_new) if !exists $display->{ip} || !$display->{ip};
     if (!exists $display_new{ip} || !$display_new{ip}) {
         unlock_hash(%display_new);
-        $display_new{ip} = $self->_vm->ip;
-        $display_new{listen_ip} = $display_new{ip};
+        $display_new{listen_ip} = $self->_vm->ip;
+        my $display_ip = ( $self->_vm->nat_ip
+            or $self->_vm->display_ip
+            or $self->_vm->public_ip
+            or $self->_vm->ip
+        );
+
+        $display_new{ip} = $display_ip;
     }
 
     if ( !$display_old ) {
@@ -1302,7 +1395,6 @@ sub _store_display($self, $display, $display_old=undef) {
         $display_old = $self->_get_display($display->{driver})
     }
 
-    my $ip = ( $display_new{ip} or $display_old->{ip} );
     my $driver = ( $display_new{driver} or $display_old->{driver} );
     if (exists $display_new{port} && $display_new{port}
         && (!exists $display_new{id_vm} || !$display_new{id_vm}) ) {
@@ -1404,6 +1496,9 @@ sub _insert_display( $self, $display ) {
     if !defined $display->{is_builtin};
 
     confess Dumper($display) if $display->{driver} =~ /-tls/ && !$display->{is_secondary};
+
+    $display->{listen_ip} = $self->_vm->ip
+    if !exists $display->{listen_ip} || !$display->{listen_ip};
 
     lock_hash(%$display);
     $self->_clean_display_order($display->{n_order}) if $display->{n_order};
@@ -1662,18 +1757,44 @@ sub _execute_request($self, $field, $value) {
 
 sub _log_active_domains($self) {
     my $sth = $self->_dbh->prepare(
-        "SELECT count(*) FROM domains "
+        "SELECT id_base FROM domains "
         ." WHERE status='active'"
     );
     $sth->execute();
-    my ($active) = $sth->fetchrow;
+    my $active=0;
+    my %active_base;
+
+    while ( my ($id_base) = $sth->fetchrow ) {
+        $active++;
+        $active_base{$id_base}++ if $id_base;
+
+    }
     my $sth2 = $self->_dbh->prepare(
         "INSERT INTO log_active_domains "
-        ." ( active) "
-        ." values(?)"
+        ." ( id_base, active) "
+        ." values(?,?)"
     );
-    $sth2->execute(scalar($active));
+    $sth2->execute(undef, $active);
 
+    for my $id_base ( keys %active_base ) {
+        $sth2->execute($id_base, $active_base{$id_base});
+    }
+
+}
+
+sub _json_equal($a, $b) {
+
+    return 0 if !defined $a && defined $b;
+    return 0 if defined $a && !defined $b;
+
+    return 0 if length($a) != length($b);
+    my $ha;
+    eval { $ha = decode_json($a) };
+
+    my $hb;
+    eval { $hb = decode_json($a) };
+
+    return Ravada::Utils::_different($ha, $hb);
 }
 
 sub _data($self, $field, $value=undef, $table='domains') {
@@ -1706,6 +1827,8 @@ sub _data($self, $field, $value=undef, $table='domains') {
         return if $field eq 'status'
         && $self->{$data}->{$field} eq 'active'
         && $value eq 'starting';
+
+        return if $field eq 'info' && _json_equal($value, $self->{$data}->{$field});
 
         $self->_assert_update($table, $field => $value);
         my $sth = $$CONNECTOR->dbh->prepare(
@@ -2068,6 +2191,59 @@ sub display($self, $user) {
     return $display;
 }
 
+sub _display_file_rdp($self,$display) {
+
+    my $ret = "screen mode id:i:2
+use multimon:i:0
+desktopwidth:i:1280
+desktopheight:i:1024
+session bpp:i:32
+winposstr:s:0,1,14,5,1280,1000
+compression:i:1
+keyboardhook:i:2
+audiocapturemode:i:0
+videoplaybackmode:i:1
+connection type:i:7
+networkautodetect:i:1
+bandwidthautodetect:i:1
+displayconnectionbar:i:1
+enableworkspacereconnect:i:0
+disable wallpaper:i:0
+allow font smoothing:i:0
+allow desktop composition:i:0
+disable full window drag:i:1
+disable menu anims:i:1
+disable themes:i:0
+disable cursor setting:i:0
+bitmapcachepersistenable:i:1
+full address:s:".$display->{ip}.":".$display->{port}."\n"
+."audiomode:i:0
+redirectprinters:i:0
+redirectcomports:i:0
+redirectsmartcards:i:0
+redirectclipboard:i:1
+redirectposdevices:i:0
+autoreconnection enabled:i:1
+authentication level:i:0
+prompt for credentials:i:0
+negotiate security layer:i:1
+remoteapplicationmode:i:0
+alternate shell:s:
+shell working directory:s:
+gatewayhostname:s:
+gatewayusagemethod:i:4
+gatewaycredentialssource:i:4
+gatewayprofileusagemethod:i:0
+promptcredentialonce:i:0
+gatewaybrokeringtype:i:0
+use redirection server name:i:0
+rdgiskdcproxy:i:0
+kdcproxyname:s:
+drivestoredirect:s:*
+username:s:
+";
+}
+
 # taken from isard-vdi thanks to @tuxinthejungle Alberto Larraz
 sub _display_file_spice($self,$display, $tls = 0) {
 
@@ -2167,13 +2343,14 @@ sub info($self, $user) {
         ,autostart => $self->autostart
         ,volatile_clones => $self->volatile_clones
         ,id_vm => $self->_data('id_vm')
-        ,auto_compact => $self->auto_compact
+        ,auto_compact => ($self->auto_compact or 0)
         ,date_changed => $self->_data('date_changed')
         ,is_volatile => $self->_data('is_volatile')
+        ,networking => $self->_data('networking')
     };
 
     $info->{alias} = ( $self->_data('alias') or $info->{name} );
-    for (qw(comment screenshot id_owner shutdown_disconnected is_compacted has_backups balance_policy)) {
+    for (qw(comment screenshot id_owner shutdown_disconnected is_compacted has_backups balance_policy shutdown_grace_time shutdown_timeout)) {
         $info->{$_} = $self->_data($_);
     }
     if ($self->is_known() ) {
@@ -2224,7 +2401,8 @@ sub info($self, $user) {
 }
 
 sub _date_status_change($self) {
-    my $date = $self->_data('date_status_change');
+    my $date = $self;
+    $date = $self->_data('date_status_change') if (ref($self));
     if (!$date) {
         return {
             date => ''
@@ -2435,9 +2613,12 @@ sub _check_active_node($self) {
 
 sub _after_remove_domain($self, $user, $cascade=undef) {
 
+    $self->_rrd_remove();
     $self->_remove_iptables( );
     $self->remove_expose();
     $self->_remove_domain_cascade($user)   if !$cascade;
+    my $id_base;
+    $id_base = $self->_data('id_base') if $self->is_known();
 
     if ($self->is_known && $self->is_base) {
         #        $self->_do_remove_base($user);
@@ -2457,6 +2638,11 @@ sub _after_remove_domain($self, $user, $cascade=undef) {
     _remove_domain_data_db($id, $type);
 
     $self->{_is_removed}=time;
+
+    if ($id_base) {
+        my $base = Ravada::Front::Domain->open($id_base);
+        $base->clones();
+    }
 }
 
 sub _remove_all_volumes($self) {
@@ -2633,7 +2819,7 @@ sub is_locked {
 
     $self->_init_connector() if !defined $$CONNECTOR;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,at_time FROM requests "
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,at_time,command FROM requests "
         ." WHERE id_domain=? AND status <> 'done'"
         ."   AND command <> 'open_exposed_ports'"
         ."   AND command <> 'open_iptables' "
@@ -2643,13 +2829,19 @@ sub is_locked {
         ."   AND command <> 'refresh_machine_ports'"
         ."   AND command <> 'screenshot'"
         ."   AND command <> 'add_hardware'"
+        ."   AND command <> 'refresh_machine'"
     );
     $sth->execute($self->id);
-    my ($id, $at_time) = $sth->fetchrow;
+    my $found=0;
+    while (my ($id, $at_time,$command) = $sth->fetchrow) {
+        next if $at_time && $at_time - time > 1;
+        $found = $id;
+        last;
+    };
     $sth->finish;
 
-    return 0 if $at_time && $at_time - time > 1;
-    return ($id or 0);
+    $self->_data('is_locked' => $found);
+    return $found;
 }
 
 =head2 id_owner
@@ -2708,6 +2900,7 @@ sub clones($self, %filter) {
         lock_hash(%$row);
         push @clones , $row;
     }
+    $self->_data('has_clones' => scalar(@clones));
     return @clones;
 }
 
@@ -2716,12 +2909,20 @@ Returns the number of clones from this virtual machine
     my $has_clones = $domain->has_clones
 =cut
 
-sub has_clones {
-    my $self = shift;
+sub has_clones($self, $check=0) {
+
+    my $has_clones;
+    if (!$check) {
+        $has_clones = $self->_data('has_clones');
+        return $has_clones if defined $has_clones;
+    }
 
     _init_connector();
 
-    return scalar $self->clones;
+    $has_clones = scalar $self->clones;
+
+    $self->_data('has_clones' => $has_clones);
+    return $has_clones;
 }
 
 
@@ -3162,7 +3363,7 @@ sub _pre_shutdown {
     if ($request && $request->defined_arg('check')) {
         my $check = $request->defined_arg('check');
         if ($check eq 'disconnected') {
-            die "Virtual machine reconnected"
+            die "Virtual machine reconnected.\n"
             if $self->client_status ne 'disconnected';
         } elsif ($check) {
             confess "Error: unknown shutdown check '$check'";
@@ -3182,9 +3383,6 @@ sub _pre_shutdown {
     }
     $self->list_disks;
     $self->_remove_start_requests();
-
-    my $ip = $self->ip;
-    $self->_delete_ip_rule ([undef,$ip,'nat' ]) if $ip;
 
 }
 
@@ -3622,8 +3820,13 @@ sub _add_expose($self, $internal_port, $name, $restricted) {
         confess $@;
     }
 
-    $self->_open_exposed_port($internal_port, $name, $restricted)
-        if $self->is_active && $self->ip;
+    if ($self->is_active) {
+        my $ip_info = $self->ip_info;
+        if ( $ip_info && exists $ip_info->{addr} && $ip_info->{addr}) {
+            $self->_open_exposed_port($internal_port, $name, $restricted);
+        }
+    }
+
     return $public_port;
 }
 
@@ -3704,16 +3907,18 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
     my ($id_port, $public_port) = $sth->fetchrow();
 
     my $internal_ip;
+    my $internal_ip_info;
     for ( 1 .. 5 ) {
-        $internal_ip = $self->ip;
-        last if $internal_ip;
+        $internal_ip_info = $self->ip_info;
+        last if $internal_ip_info && exists $internal_ip_info->{addr} && $internal_ip_info->{addr};
         sleep 1;
     }
+    $internal_ip = $internal_ip_info->{addr} if exists $internal_ip_info->{addr};
+
     die "Error: I can't get the internal IP of ".$self->name." ".($internal_ip or '<UNDEF>').". Retry."
         if !$internal_ip || $internal_ip !~ /^(\d+\.\d+)/;
 
-    die "Error: No NAT ip in domain ".$self->name." found. Retry.\n"
-    if !$self->_vm->_is_ip_nat($internal_ip);
+    return unless exists $internal_ip_info->{type} && $internal_ip_info->{type} =~ /^(bridge|nat)$/i;
 
     if ($public_port
         && ( $self->_used_ports_iptables($public_port, "$internal_ip:$internal_port")
@@ -3732,6 +3937,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
             ." WHERE id_domain=? AND internal_port=?"
     );
     $sth->execute($internal_ip, $self->id, $internal_port);
+
     $self->_update_display_port_exposed($name, $local_ip, $public_port, $internal_port);
 
     if ( !$> && $public_port ) {
@@ -3739,7 +3945,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
             , $internal_port, $debug_ports);
         $self->_delete_iptables_forward($internal_ip, $internal_port);
 
-        warn $self->name." open $public_port ->"
+        warn $self->name."[ $internal_ip_info->{type} ] open $public_port ->"
         ." $internal_ip:$internal_port\n"
         if $debug_ports;
 
@@ -3751,7 +3957,30 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
             ,dport => $public_port
             ,j => 'DNAT'
             ,'to-destination' => "$internal_ip:$internal_port"
-        ) if !$>;
+        );
+        if ($internal_ip_info->{type} eq 'bridge') {
+
+            my @iptables_arg = ("0.0.0.0/0"
+                        ,$internal_ip, 'nat', 'POSTROUTING', 'SNAT',
+                        ,{'protocol' => 'tcp'
+                            ,'d_port' => $internal_port
+                            ,'to_source' => $local_ip
+                        });
+
+            $self->_log_iptable(iptables => \@iptables_arg
+                , user => Ravada::Utils::user_daemon
+                , remote_ip => "0.0.0.0/0");
+
+            $self->_vm->iptables_unique(
+                t => 'nat'
+                ,A => 'POSTROUTING'
+                ,p => 'tcp'
+                ,d => $internal_ip
+                ,dport => $internal_port
+                ,j => 'SNAT'
+                ,'to-source' => $local_ip
+            );
+        }
 
         $self->_open_iptables_state();
         $self->_open_exposed_port_client($internal_port, $restricted, $remote_ip);
@@ -3792,10 +4021,14 @@ sub _update_display_port_exposed($self, $name, $local_ip, $public_port, $interna
         ." SET ip=?,listen_ip=?,port=?,is_active=?,id_vm=? "
         ." WHERE driver=? AND id_domain=?"
     );
+    my $display_ip = ( $self->_vm->nat_ip
+            or $self->_vm->display_ip
+            or $local_ip );
+
     my $is_builtin;
     for (1 .. 10) {
         eval {
-            $sth->execute($local_ip, $local_ip, $public_port,1, $self->_vm->id
+            $sth->execute($display_ip, $local_ip, $public_port,1, $self->_vm->id
                 ,$name, $self->id);
         };
         warn "Warning: $@".Dumper([$name, $public_port]) if $@;
@@ -3899,19 +4132,11 @@ sub open_exposed_ports($self, $remote_ip=undef) {
     my @ports = $self->list_ports();
     return if !@ports;
     return if !$self->is_active;
-
-    if (!$self->has_nat_interfaces) {
-        $self->_set_ports_direct();
-        return;
-    }
+    return if $self->_data('networking') eq 'isolated';
 
     my $ip = $self->ip;
     if ( ! $ip ) {
         die "Error: No ip in domain ".$self->name.". Retry.\n";
-    }
-
-    if (!$self->_vm->_is_ip_nat($ip)) {
-        die "Error: No NAT ip in domain ".$self->name." found. Retry.\n";
     }
 
     $self->display_info(Ravada::Utils::user_daemon);
@@ -3919,15 +4144,6 @@ sub open_exposed_ports($self, $remote_ip=undef) {
         $self->_open_exposed_port($expose->{internal_port}, $expose->{name}
             ,$expose->{restricted}, $remote_ip);
     }
-}
-
-sub _set_ports_direct($self) {
-    my $sth_update = $$CONNECTOR->dbh->prepare(
-        "UPDATE domain_ports set public_port=NULL "
-        ." WHERE id_domain=?"
-    );
-    $sth_update->execute($self->id);
-
 }
 
 sub _close_exposed_port($self,$internal_port_req=undef) {
@@ -4118,6 +4334,7 @@ sub _remove_iptables {
     my %rule;
     for my $row (@iptables) {
         my ($id, $id_vm, $iptables) = @$row;
+
         next if !$id_vm;
         push @{$rule{$id_vm}},[ $id, $iptables ];
     }
@@ -4306,32 +4523,25 @@ sub _post_start {
 
 sub _check_port_conflicts($self) {
     my @displays = $self->_get_controller_display();
-    my $sth = $self->_dbh->prepare("SELECT id,id_domain,internal_port FROM domain_ports"
-        ." WHERE public_port=? AND is_active=1 AND id_domain <> ?"
-    );
-    for my $display ( @displays ) {
-        for my $port ($display->{port}) {
-            $sth->execute($port, $self->id);
-            while ( my ($id, $id_domain, $internal_port) = $sth->fetchrow ) {
-                # Updating the graphics port is not possible rightnow libvirt 5.0
-                # my $new_port = $self->_vm->new_free_port();
-                # $self->_update_device_graphics($display->{driver},{port => $new_port});
-
-                my $req_close= Ravada::Request->close_exposed_ports(
+    my %dupe_port;
+    for my $display (@displays) {
+        $dupe_port{$display->{port}}++ if $display->{port};
+    }
+    for my $port (keys %dupe_port) {
+        next if $dupe_port{$port}<2;
+        my $req_close= Ravada::Request->close_exposed_ports(
                            uid => Ravada::Utils::user_daemon->id
-                         ,port => $internal_port
-                    ,id_domain => $id_domain
+                    ,id_domain => $self->id
                         ,clean => 1
-                );
-                my $req = Ravada::Request->open_exposed_ports(
-                           uid => Ravada::Utils::user_daemon->id
-                    ,id_domain => $id_domain
-                ,after_request => $req_close->id
-                ,retry => 20
+        );
+        my $req = Ravada::Request->open_exposed_ports(
+                       uid => Ravada::Utils::user_daemon->id
+                ,id_domain => $self->id
+            ,after_request => $req_close->id
+                    ,retry => 20
                 ,_force => 1
-                );
-            }
-        }
+        );
+
     }
 }
 
@@ -4399,51 +4609,59 @@ sub _delete_ip_rule ($self, $iptables, $vm = $self->_vm) {
     confess if !ref($vm);
     return if !$vm->is_active;
 
-    my ($s, $d, $filter, $chain, $jump, $extra) = @$iptables;
-    lock_hash %$extra;
+    my ($s, $d, $filter, $chain, $jump, $extra0) = @$iptables;
+
+    if ( $extra0 && exists $extra0->{s_port} && $extra0->{s_port}==0 ) {
+        delete $extra0->{s_port};
+    }
+    lock_hash %$extra0;
 
     $filter = 'filter' if !$filter;
 
     if ($s) {
         $s = undef if $s =~ m{^0\.0\.0\.0};
         $s .= "/32" if defined $s && $s !~ m{/};
+    } else {
+        $s = "0.0.0.0/0";
     }
     $d .= "/32" if defined $d && $d !~ m{/};
 
-    my $iptables_list = $vm->iptables_list();
+    $extra0 = {} if !defined $extra0;
 
-    my $removed = 0;
-    for my $line (@{$iptables_list->{$filter}}) {
-        my %args = @$line;
-        next if defined $chain && $args{A} ne $chain;
-        next if $args{A} =~ /LIBVIRT_/;
-        if((!defined $jump || ( exists $args{j} && $args{j} eq $jump ))
-           && ( !defined $s || (exists $args{s} && $args{s} eq $s))
-           && ( !defined $d || ( exists $args{d} && $args{d} eq $d))
-           && (exists $extra->{d_port} && $args{dport} eq $extra->{d_port}))
-        {
+    my $extra = dclone($extra0);
+    my @cmd = ("iptables", "-t", $filter, "-D", $chain,"-j",$jump);
+    unlock_hash(%$extra);
+    push @cmd, ("-s",$s) if $s;
+    push @cmd, ("-d",$d) if $d;
 
-           my $curr_chain = delete $args{A};
-           if ($vm->is_active) {
-                my @cmd = ("iptables", "-t", $filter, "-D", $curr_chain);
-                my $m = delete $args{m};
-                my $p = delete $args{p};
-                push @cmd,("-m" => $m) if $m;
-                push @cmd,("-p" => $m) if $p;
-                for my $key ( sort keys  %args) {
-                    my $dash = '-';
-                    $dash = '--' if length($key)>1;
-                    push @cmd, ("$dash$key" => $args{$key});
-                }
-                my ($out, $err) = $vm->run_command(@cmd);
-                warn $err if $err;
-           }
-           $removed++;
-        }
-
+    my $protocol = delete $extra->{protocol};
+    if ($protocol) {
+        push @cmd,("-m",$protocol,"-p",$protocol);
     }
-    return $removed;
+    for my $key ( sort keys %$extra) {
+        my $dash = '-';
+        $dash = '--' if length($key)>1;
+        my $option = $key;
+        $option = 'to-source' if $option eq 'to_source';
+        $option =~ s/^(.*)_(.*)/$1$2/;
+        my $value = $extra->{$key};
+
+        if (
+            ($option eq 'd' || $option eq 's')
+                && $value !~ m{/}) {
+            $value .= "/32";
+        }
+        push @cmd, ("$dash$option" => $value);
+    }
+    my ($out, $err) = $vm->run_command(@cmd);
+    # warn $out if $out;
+    # warn Dumper([$extra0,"@cmd\n$err"]);# if $err && $chain ne 'RAVADA';
+
+    warn $err if $err && $err !~ /does a matching rule exist in that chain/;
+    return 1 if !$err;
+    return 0;
 }
+
 sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT') {
     confess "local port undefined " if !$local_port;
 
@@ -4451,7 +4669,7 @@ sub _open_port($self, $user, $remote_ip, $local_ip, $local_port, $jump = 'ACCEPT
 
     my @iptables_arg = ($remote_ip
                         ,$local_ip, 'filter', $IPTABLES_CHAIN, $jump,
-                        ,{'protocol' => 'tcp', 's_port' => 0, 'd_port' => $local_port});
+                        ,{'protocol' => 'tcp', 'd_port' => $local_port});
 
     $self->_vm->iptables_unique(
                 A => $IPTABLES_CHAIN
@@ -4542,11 +4760,15 @@ sub _log_iptable {
         if $user && $uid;
     confess "ERROR: Supply user or uid" if !defined $user && !defined $uid;
 
+    confess "ERROR: duplicated d ".Dumper([$remote_ip,$iptables])
+    if $iptables->[5]->{d} && $iptables->[1];
+
     lock_hash(%args);
 
     $uid = $user->id if !$uid;
 
-
+    confess if $iptables && exists $iptables->[5]
+    && exists $iptables->[5]->{s_port} && $iptables->[5]->{s_port} == 0;
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO iptables "
         ."(id_domain, id_user, remote_ip, time_req, iptables, id_vm)"
@@ -4936,6 +5158,11 @@ sub _listen_ip($self, $remote_ip=undef) {
 
 sub remote_ip($self) {
 
+    _init_connector();
+
+    my $id = $self;
+    $id = $self->id() if ref($self);
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT remote_ip, iptables FROM iptables "
         ." WHERE "
@@ -4943,7 +5170,7 @@ sub remote_ip($self) {
         ."    AND time_deleted IS NULL"
         ." ORDER BY time_req DESC "
     );
-    $sth->execute($self->id);
+    $sth->execute($id);
     my %ip;
     my $first_ip;
     while ( my ($remote_ip, $iptables_json ) = $sth->fetchrow() ) {
@@ -5267,6 +5494,14 @@ sub _post_migrate($self, $node, $request = undef) {
 
 }
 
+sub _around_migrate($orig, $self, $node, $request=undef) {
+    return if $self->_vm->id == $node->id;
+
+    $self->_pre_migrate($node, $request);
+    $self->$orig($node, $request);
+    $self->_post_migrate($node, $request);
+}
+
 sub _id_base_in_vm($self, $id_vm) {
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT id FROM bases_vm "
@@ -5504,7 +5739,7 @@ sub list_vms($self, $check_host_devices=0, $only_available=0) {
         next if $only_available && ( !$is_active || !$enabled);
         my $t1 = time;
         if ($only_available && $cached_down) {
-            next if time-$cached_down < $self->timeout_down_cache();
+            next if time-$cached_down < $self->_vm->timeout_down_cache();
         }
         if ($id_request && $only_available) {
             $sth_req->execute($id_request);
@@ -5517,6 +5752,7 @@ sub list_vms($self, $check_host_devices=0, $only_available=0) {
         warn "id_domain: ".$self->id."\n".$@ if $@;
         push @vms,($vm) if $vm;
     }
+    return $self->_vm if !@vms && !@host_devices && $self->is_base();
     return @vms;
 
 }
@@ -5805,20 +6041,57 @@ sub client_status($self, $force=0) {
 
     return $self->_data('client_status')    if $self->readonly;
 
+=pod
+
     my $time_checked = time - $self->_data('client_status_time_checked');
     if ( $time_checked < $TIME_CACHE_NETSTAT && !$force ) {
         return $self->_data('client_status');
     }
+
+=cut
     my $status = '';
-    if ( !$self->is_active || !$self->remote_ip ) {
+    if ( !$self->is_active) {
         $status = '';
     } else {
         $status = $self->_client_connection_status( $force );
+        $status = 'disconnected' if !defined $status || !length($status);
     }
     $self->_data('client_status', $status);
-    $self->_data('client_status_time_checked', time );
+#    $self->_data('client_status_time_checked', time );
+
+    if ( $status ) {
+        my $value = 1;
+        if ($status eq 'disconnected') {
+            $value = 0;
+        }
+        $self->log_status('connected',$value);
+    }
 
     return $status;
+}
+
+sub clean_status($self, $type) {
+    confess;
+}
+
+sub log_status($self, $name, $value, $time='N') {
+    my $file = $self->_rrd_file('status');
+    $self->_rrd_create('status') if ! -e $file;
+
+    my $time0 = $time;
+    $time0 = time() if$time0 eq 'N';
+
+    return if exists $self->{_log_status_time} &&  $self->{_log_status_time} == $time0;
+    $self->{_log_status_time} = $time0;
+
+    my ($cpu_time, $mem) = $self->get_stats();
+    if ($cpu_time || $mem) {
+        RRDs::update ($file , "--template", "$name:cpu:memory", "$time:$value:$cpu_time:$mem");
+    } else {
+        RRDs::update ($file , "--template", $name, "$time:$value");
+    }
+    my $err = RRDs::error;
+    confess $err if $err && $err !~ /illegal attempt to update/i;
 }
 
 sub _run_netstat($self, $force=undef) {
@@ -5847,11 +6120,34 @@ sub _run_iptstate($self, $force=undef) {
     return $out;
 }
 
+sub _just_started($self) {
+    my $sth = $self->_dbh->prepare(
+       "SELECT id,command "
+        ." FROM requests "
+        ." WHERE id_domain=?"
+        ." AND ( start_time>? "
+        ."      OR status <> 'done' "
+        ."      OR start_time IS NULL "
+        ." ) "
+    );
+    my $start_time = time - 10;
+    $sth->execute($self->id,$start_time);
+    while ( my ($id, $command) = $sth->fetchrow ) {
+        return 1 if $command =~ /create|clone|start|open/i;
+    }
+    return 0;
+}
 
 sub _client_connection_status($self, $force=undef) {
 
+    if ( $self->_just_started() ) {
+        my $data = $self->_data('client_status');
+        return $data if $data && $data =~ /\d+\./;
+        return 'connected';
+    }
+
     my $status = $self->_client_connection_status_display($force);
-    return $status if $status =~ /^connected/;
+    return $status if $status =~ /^connected/ || $status =~ /\d+\.\d+\.\d+\.\d+/;
 
     $status = $self->_client_connection_status_port($force);
     return $status;
@@ -5867,7 +6163,13 @@ sub _client_connection_status_display($self, $force) {
         for my $line (@out) {
             my @netstat_info = split(/\s+/,$line);
             if ( $netstat_info[2] =~ /:$port$/ ) {
-                return 'connected ('.$display->{driver}.")";
+                my ($ip_src) = $netstat_info[3] =~ /(\d+\.\d+\.\d+\.\d+)/;
+                if($ip_src) {
+                    $ip_src.=":";
+                } else {
+                    $ip_src = '';
+                }
+                return "connected ($ip_src".$display->{driver}.")";
             }
         }
     }
@@ -5881,10 +6183,10 @@ sub _client_connection_status_port($self, $force) {
     for my $port ( $self->list_ports ) {
         my $public_port = $port->{public_port} or next;
         for my $line (split /\n/,$iptstate_out) {
-            my ($ip_port,$status) = $line =~/^[0-9.:]+\s+\d+\.\d+\.\d+\.\d+:(\d+)\s+\w+\s+(\w+)/;
+            my ($ip_src,$ip_port,$status) = $line =~/^(\d+\.\d+\.\d+\.\d+)\:\d+\s+\d+\.\d+\.\d+\.\d+:(\d+)\s+\w+\s+(\w+)/;
             next if !defined $ip_port || $public_port != $ip_port;
             last if $status ne 'ESTABLISHED';
-            return 'connected ('.($port->{name} or $port->{internal_port}).")";
+            return "connected ($ip_src:".($port->{name} or $port->{internal_port}).")";
         }
     }
     return 'disconnected';
@@ -6273,6 +6575,10 @@ sub _add_hardware_disk($orig, $self, $index, $data) {
 sub _around_add_hardware($orig, $self, $hardware, $index, $data=undef) {
     confess "Error: minimal add hardware index>=0 , got '$index'" if defined $index && $index <0;
 
+
+    die "Error: Virtual Machines with host devices can not be modified while running"
+    if $self->is_active && $self->list_host_devices_locked;
+
     my $data_orig = undef;
     $data_orig = dclone($data ) if ref($data);
 
@@ -6305,6 +6611,9 @@ sub _delete_db_display_by_driver($self, $driver) {
 
 sub _around_remove_hardware($orig, $self, $hardware, $index=undef, $options=undef) {
     confess "Error: supply either index or options when removing hardware " if !defined $index && !defined $options;
+
+    die "Error: Virtual Machines with host devices can not be modified while running"
+    if $self->is_active && $self->list_host_devices_locked;
 
     my $id_filesystem;
     if ( $hardware eq 'filesystem') {
@@ -7256,10 +7565,23 @@ sub refresh_ports($self, $request=undef) {
         my $is_port_active_txt = "up";
         $is_port_active_txt = "down" if !$is_port_active;
         $msg .= " $port->{internal_port}:$is_port_active_txt";
+
+        Ravada::Request->open_exposed_ports(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_domain => $self->id
+            ,retry => 20
+            ,_force => 1
+        ) if $is_active && !defined $port->{public_port}
+            && $self->_data('networking') ne 'isolated';
+
     }
-    die "Virtual machine ".$self->name." is not up. retry.\n"if !$ip;
-    die "Virtual machine ".$self->name." $ip has ports down: $msg. retry.\n"
-    if $port_down;
+    if ($is_active && $self->_data('networking') eq 'isolated') {
+        $msg = "Virtual machine ".$self->name." isolated. No ports exposed.";
+    } else {
+        die "Virtual machine ".$self->name." is not up. retry.\n"if !$ip;
+        die "Virtual machine ".$self->name." $ip has ports down: $msg. retry.\n"
+        if $port_down;
+    }
 
     if (($msg) && ($request))
     {
@@ -7276,7 +7598,12 @@ sub add_host_device($self, $host_device) {
     my $id_hd = $host_device;
     $id_hd = $host_device->id if ref($host_device);
 
-    confess if !$id_hd;
+    my $sth0 = $$CONNECTOR->dbh->prepare("SELECT id FROM host_devices_domain "
+        ." WHERE id_host_device=? AND id_domain=?"
+    );
+    $sth0->execute($id_hd, $self->id);
+    my ($found) = $sth0->fetchrow;
+    return if $found;
 
     my $sth = $$CONNECTOR->dbh->prepare("INSERT INTO host_devices_domain "
         ."(id_host_device, id_domain) "
@@ -7433,6 +7760,10 @@ sub _search_free_device($self, $host_device) {
        if (!$device) {
            $self->_data(status => 'down');
            $self->_unlock_host_devices();
+           my $req = Ravada::Request->list_host_devices(
+               uid => Ravada::Utils::user_daemon->id
+               ,id_host_device => $host_device->id
+           );
            die "Error: No available devices in ".$self->_vm->name." for ".$host_device->name."\n";
        }
     }
@@ -7689,17 +8020,6 @@ sub backup($self) {
     return $file_backup;
 }
 
-sub _confirm_restore($self) {
-    if ($ENV{TERM}) {
-            print "Virtual Machine ".$self->name." already exists."
-            ." All the data will be overwritten."
-            ." Are you sure you want to restore a backup ?";
-            my $answer = <STDIN>;
-            return 0 unless $answer =~ /^y/i;
-    }
-    return 1;
-}
-
 sub _parse_file($file) {
     CORE::open my $f,"<",$file or confess "$! $file";
     my $json = join "",<$f>;
@@ -7792,20 +8112,13 @@ sub _check_parent_base_volumes($data, $file) {
 
 }
 
-sub restore_backup($self, $backup, $interactive, $rvd_back=undef) {
+sub restore_backup($self, $backup) {
     my $file = $backup;
     $file = $backup->{file} if ref($backup);
 
     die "Error: missing file  '$file'" if ! -e $file;
 
     my ($name) = $file =~ m{.*/(.*?).\d{4}-\d\d-\d\d_\d\d-\d\d-};
-    if (!$self) {
-        $self = $rvd_back->search_domain($name);
-    }
-    die "Error: ".$self->name." is active, shut it down to restore.\n"
-    if $self && $self->is_active;
-
-    return if $self && $interactive && !$self->_confirm_restore();
 
     my $data = _extract_metadata($file,$name);
     _check_metadata_before_restore($data);
@@ -7829,6 +8142,9 @@ sub restore_backup($self, $backup, $interactive, $rvd_back=undef) {
 
     if($self->_data('is_base')) {
         $self->_set_base_vm_db($self->_vm->id,1);
+    }
+    if($data->{autostart}) {
+        $self->autostart(1, Ravada::Utils::user_daemon());
     }
     return $self;
 }
@@ -7994,4 +8310,57 @@ sub _volatile_active($self) {
     return 1;
 
 }
+
+=pod check_grace
+
+Argument: type of grace to check
+
+Returns: 1 if we reached the end of grace time
+         0 if dont
+
+=cut
+
+sub check_grace($self,$type) {
+
+    my $grace_time = $self->_data('shutdown_grace_time');
+
+    return 1 if !$grace_time;
+
+    my $rrd_file = $self->_rrd_file('status');
+    return 1 if !-e $rrd_file;
+
+    my $start_req = time - 60*$grace_time;
+    my ($start,$step,$names,$data) = RRDs::fetch($rrd_file,'AVERAGE',"--start"
+        ,$start_req);
+    my $err=RRDs::error;
+    die $err if $err;
+
+    if ( $start>$start_req && $start - $start_req > int($grace_time*60/2) ) {
+        #        warn "No enough data";
+        return;
+    }
+
+    my $index;
+    for my $n (0 .. scalar(@$names)-1) {
+        if ($names->[$n] eq $type) {
+            $index=$n;
+            last;
+        }
+    }
+    if (!defined $index) {
+        warn "Error: $type not found in ".join(",",@$names)." $rrd_file";
+        return;
+    }
+
+    my $active=0;
+    for my $item (@$data) {
+        $active++ if $item && defined $item->[$index] && $item->[$index];
+    }
+    return 0 if $active;
+    return 1;
+}
+
+sub get_stats($self) {
+}
+
 1;

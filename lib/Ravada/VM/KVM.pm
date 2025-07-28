@@ -162,6 +162,8 @@ sub _check_default_storage($self) {
 
 sub _check_networks($self, $vm=$self->vm) {
 
+    return if !defined $vm;
+
     my @found;
     for my $net ($vm->list_all_networks) {
         return if $net->is_active;
@@ -615,6 +617,7 @@ sub file_exists($self, $file) {
 }
 
 sub _file_exists_remote($self, $file) {
+    return 1 if $self->search_volume($file);
     $file = $self->_follow_link($file) unless $file =~ /which$/;
     return if !$self->vm;
     for my $pool ($self->vm->list_all_storage_pools ) {
@@ -1417,7 +1420,7 @@ sub _iso_name($self, $iso, $req=undef, $verbose=1) {
             $verified++;
         }
         return if $test;
-        die "WARNING: $device signature not verified ".Dumper($iso)    if !$verified;
+        warn "WARNING: $device signature not verified ".Dumper($iso)    if !$verified;
 
         $req->status("done","File $iso->{filename} downloaded") if $req;
         $downloaded = 1;
@@ -1597,8 +1600,9 @@ sub _download($self, $url) {
         last if $res;
     }
     die $@ if $@;
-    confess "ERROR ".$res->code." ".$res->message." : $url"
-        unless $res->code == 200 || $res->code == 301 || $res->code == 302;
+    confess "ERROR ".($res->code or '<UNDEF>')." ".$res->message." : $url"
+        unless defined $res->code
+        && ( $res->code == 200 || $res->code == 301 || $res->code == 302 );
 
     return $self->_cache_store($url,$res->body);
 }
@@ -2951,7 +2955,7 @@ sub list_machine_types($self) {
 
 sub _is_ip_nat($self, $ip0) {
     my $ip = NetAddr::IP->new($ip0);
-    for my $net ( $self->vm->list_networks ) {
+    for my $net ( $self->vm->list_all_networks ) {
         my $xml = XML::LibXML->load_xml(string
             => $net->get_xml_description());
         my ($xml_ip) = $xml->findnodes("/network/ip");
@@ -3027,6 +3031,9 @@ sub list_virtual_networks($self) {
             $ip = $ip_doc->getAttribute('address');
             $netmask = $ip_doc->getAttribute('netmask');
         }
+        my ($forward) = $doc->findnodes("/network/forward");
+        my $forward_mode = 'none';
+        $forward_mode = $forward->getAttribute('mode') if $forward;
         my $data= {
             is_active => $net->is_active()
             ,autostart => $net->get_autostart()
@@ -3036,6 +3043,7 @@ sub list_virtual_networks($self) {
             ,ip_address => $ip
             ,ip_netmask => $netmask
             ,internal_id => ''.$net->get_uuid_string
+            ,forward_mode => $forward_mode
         };
         if ($ip_doc) {
             my ($dhcp_range) = $ip_doc->findnodes("dhcp/range");
@@ -3072,9 +3080,24 @@ sub new_network($self, $name='net') {
             }
 
         }
+        if ( $field eq 'name' && $name ne 'net' ) {
+            my $value = $base{$field};
+            $value =~ s/(.*-.).*(\..*)/$1$2/;
+            if (exists $old{$value}) {
+                $value = $base{$field};
+            }
+            if (!exists $old{$value}) {
+                $new->{$field}=$value;
+                next;
+            }
+        }
+
         my ($last) = reverse sort keys %old;
         my ($z,$n) = $last =~ /.*?(0*)(\d+)/;
-        $z=$last if !defined $z;
+        if (!defined $z) {
+            ($z) = $last =~ /.*?(\d+$)/;
+            $z='' if !defined $z;
+        }
         $n=0 if !defined $n;
         $n++;
         $n = "$z$n";
@@ -3100,6 +3123,7 @@ sub new_network($self, $name='net') {
         }
         $new->{$field} = $value;
     }
+    $new->{forward_mode} = "nat";
     return $new;
 }
 
@@ -3113,7 +3137,11 @@ sub create_network($self, $data) {
     my ($xml_net) = $xml->findnodes("/network");
 
     my $forward = $xml_net->addNewChild(undef,'forward');
-    $forward->setAttribute('mode' => 'nat');
+    if (exists $data->{forward_mode}) {
+        $forward->setAttribute('mode' => $data->{forward_mode});
+    } else {
+        $forward->setAttribute('mode' => 'nat');
+    }
 
     my $ip = $xml_net->addNewChild(undef,'ip');
     $ip->setAttribute('address' => $data->{ip_address});
@@ -3226,10 +3254,33 @@ sub change_network($self, $data) {
         }
     }
 
+    my $forward_mode = delete $data->{forward_mode};
+
+    if (defined $forward_mode) {
+        my $curr_fw_mode='none';
+        my ($xml_forward) = $doc->findnodes("/network/forward");
+        $curr_fw_mode = $xml_forward->getAttribute('mode') if $xml_forward;
+        if ( $curr_fw_mode ne $forward_mode) {
+            $changed++;
+            my $is_active = $network->is_active;
+            $network->destroy() if $network->is_active;
+            if (!$xml_forward) {
+                my ($xml_network) = $doc->findnodes("network");
+                $xml_forward = $xml_network->addNewChild(undef,"forward");
+            }
+            $xml_forward->setAttribute('mode' => $forward_mode);
+            my ($xml_nat) = $xml_forward->findnodes("nat");
+            $xml_forward->removeChild($xml_nat) if $forward_mode ne 'nat' && $xml_nat;
+            $network= $self->vm->define_network($doc->toString);
+            $network->create() if $is_active;
+        }
+    }
+
+
     for ('id_vm','internal_id','id' ,'_old_name', 'date_changed') {
         delete $data->{$_};
     }
-    die "Error: unexpected args ".Dumper($data) if keys %$data;
+    warn "Warning: unexpected args ".Dumper($data) if keys %$data;
 
     return $changed;
 }

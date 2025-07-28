@@ -245,8 +245,53 @@ sub test_view_clones {
     $user->remove();
 }
 
-sub test_shutdown_clone($vm_name, $grant_group=0) {
+sub test_list_clones($user, $action, $base, $clone) {
+    is($user->can_list_clones_from_own_base(),1);
 
+    my $list = rvd_front->list_machines($user);
+
+    my ($found_base) = grep { $_->{name} eq $base->name} @$list;
+    ok($found_base,"Expecting ".$base->name);
+    my ($found_clone) = grep { $_->{name} eq $clone->name} @$list;
+    ok($found_clone,"Expecting ".$clone->name);
+
+    is($found_clone->{can_manage},0);
+
+    is($user->can_do_domain( $action, $found_clone->{id}),1,"Expecting user can $action") or confess;
+
+    my $found_action=0;
+    for my $key (keys %$found_clone) {
+        next unless $key =~ /^can_/;
+        if ($key eq "can_$action"
+            || ( $action eq 'shutdown' && $key eq 'can_hibernate' && $user->can_shutdown($found_clone->{id}) )
+        ) {
+            $found_action++;
+            is($found_clone->{$key},1,"Expecting $key allowed");
+        } else {
+            is($found_clone->{$key},0,"Expecting $key not allowed")
+                or confess;
+        }
+    }
+    ok($found_action,"Expecting can_$action found in ".Dumper($found_clone));
+
+    return $found_clone;
+}
+
+sub test_list_requests($user) {
+
+    my $requests = rvd_front->list_requests;
+    my @found = grep { $_->{command} =~ /base/ } @$requests;
+    ok(!@found,"Expecting no other requests found") or die Dumper(\@found);
+    for my $req_data (@$requests) {
+        next if !exists $req_data->{uid} || $req_data->{uid} == $user->id;
+        my $req = Ravada::Request->open($req_data->{id});
+        die $req->uid." != ".$user->id;
+
+    }
+}
+
+sub test_shutdown_clone($vm_name, $grant_group=0) {
+    delete_request('prepare_base','remove_base');
     my $user = create_user("oper$$","bar");
     ok(!$user->is_operator);
     ok(!$user->is_admin);
@@ -279,6 +324,9 @@ sub test_shutdown_clone($vm_name, $grant_group=0) {
         $usera->grant($user,'shutdown_clones');
     }
     is($user->can_shutdown_clones,1);
+
+    my $front_clone = test_list_clones($user,"shutdown", $domain, $clone);
+    test_list_requests($user);
 
     eval { $clone->shutdown_now($user); };
     is($@,'');

@@ -225,6 +225,8 @@ hook before_routes => sub {
     app->log->info(_remote_ip($c)." $user ["._time()."] ".$c->req->method." ".$url)
     if $CONFIG_FRONT->{log}->{log};
 
+    return access_denied_json($c) if !$USER && $url eq '/user.json';
+
     return if $url =~ m{^/(css|font|img|js)}
         || $url =~ m{^/fallback/.*\.(css|js|map)$}
         || $url =~ m{^/fallback/font}
@@ -289,6 +291,10 @@ my %header;
 any '/index.html' => sub {
     my $c = shift;
     return quick_start($c);
+};
+
+get '/user.json' => sub($c) {
+    return $c->render( json => {id => $USER->id , name => $USER->name});
 };
 
 any '/login' => sub {
@@ -357,6 +363,11 @@ any '/test' => sub {
         #        ."<script>alert(window.screen.availWidth"
         #        ."+\" \"+window.screen.availHeight)</script>"
     );
+};
+
+any '/logout.json' => sub($c) {
+    logout($c);
+    return $c->render(json => {logout => '1'});
 };
 
 any '/logout' => sub {
@@ -522,6 +533,11 @@ sub _admin_host_devices($c) {
     _add_admin_libs($c);
 
     _select_vm_by_type($c);
+
+    my $req = Ravada::Request->list_host_devices(
+        uid => Ravada::Utils::user_daemon->id
+    );
+    $RAVADA->wait_request($req);
 
     $c->stash(tab => ($c->param('tab') or ''));
     $c->stash('id' => $c->stash('id_vm'));
@@ -741,6 +757,10 @@ any '/v2/network/new/#id_vm' => sub($c) {
             $data = decode_json($req->output);
         };
         warn $@ if $@;
+        $data->{_owner} = {
+            id => $USER->id
+            ,name => $USER->name
+        };
     }
     $c->render(json => $data);
 };
@@ -749,6 +769,10 @@ get '/v2/network/info/#id' => sub($c) {
     my $sth = $RAVADA->_dbh->prepare("SELECT * from virtual_networks WHERE id=?");
     $sth->execute($c->stash('id'));
     my $row = $sth->fetchrow_hashref;
+    $row->{_owner}
+        = { id => $row->{id_owner}
+            ,name => Ravada::Utils::search_user_name($RAVADA->_dbh,$row->{id_owner})
+        };
     return $c->render(json => $row);
 };
 
@@ -1640,14 +1664,28 @@ post '/machine/set' => sub($c) {
     my $arg = decode_json($c->req->body);
 
     my $id = delete $arg->{id} or die "Error: missing id";
-    my $field = delete $arg->{field} or die "Error: missing field";
+    my $options = delete $arg->{options};
+    my $field = delete $arg->{field};
 
-    die "Error: missing value" if !exists $arg->{value};
+    die "Error: requires options or field ".join(" ",$arg)
+    unless $options || $field;
 
-    my $value = delete $arg->{value};
-    my $value_text = (delete $arg->{value_text} or $value);
+    die "Error: missing value" if $field && !exists $arg->{value};
+    die "Error: unnecessary value when options" if $options && exists $arg->{value};
 
-    machine_set_value($c, $id, $field, $value, $value_text);
+    if ($field) {
+        my $value = delete $arg->{value};
+        my $value_text = (delete $arg->{value_text} or $value);
+
+        machine_set_value($c, $id, $field, $value, $value_text);
+
+        return $c->render(json => { $field => $value_text });
+    } else {
+        machine_change_hardware($c, $id, $options);
+        machine_set_options($c, $id, $options);
+
+        return $c->render(json => $options );
+    }
 };
 
 get '/machine/set/#id/#field/#value' => sub {
@@ -1699,13 +1737,10 @@ get '/machine/display/(:driver)/(:id).(#extension)' => sub {
 
     my $id = $c->stash('id');
     my $extension = $c->stash('extension');
+    my $driver = $c->stash('driver');
 
     my $domain = $RAVADA->search_domain_by_id($id);
     return $c->render(text => "unknown machine id=$id") if !$domain;
-
-    my $display = $domain->_get_display($c->stash('driver'));
-    return $c->render(text => "unknown display ".$c->stash('driver')." for machine id=$id")
-    if !$display;
 
     return access_denied($c)
         unless $USER->id eq $domain->id_owner
@@ -1713,6 +1748,30 @@ get '/machine/display/(:driver)/(:id).(#extension)' => sub {
         || $USER->can_view_all
     ;
 
+    my $display = $domain->_get_display($c->stash('driver'));
+    return $c->render(text => "unknown display ".$c->stash('driver')." for machine id=$id")
+    if !$display;
+
+    if ($driver =~ /spice/ ) {
+        return _display_file_spice($c, $domain, $extension, $display);
+    } elsif ($driver eq 'rdp' ) {
+        return _display_file_rdp($c, $domain, $extension, $display);
+    } else {
+        return not_found($c);
+    }
+};
+
+sub _display_file_rdp($c, $domain, $extension, $display) {
+    $c->res->headers->content_type('application/x-rdp');
+        $c->res->headers->content_disposition(
+        "inline;filename=".$domain->id.".$extension");
+
+    my $format = $extension;
+    $format =~ s/^(\w+)\.(\w+)/$2/;
+    return $c->render(data => $domain->_display_file_rdp($display), format => $format);
+};
+
+sub _display_file_spice($c, $domain, $extension, $display) {
     $c->res->headers->content_type('application/x-virt-viewer');
         $c->res->headers->content_disposition(
         "inline;filename=".$domain->id.".$extension");
@@ -1723,6 +1782,7 @@ get '/machine/display/(:driver)/(:id).(#extension)' => sub {
     $tls = 1 if $1 && $1 eq 'tls';
     return $c->render(data => $domain->_display_file_spice($display, $tls), format => $format);
 };
+
 
 # Network ##########################################################3
 
@@ -1900,12 +1960,14 @@ sub _upload_users_csv($c, $csv, $type, $create) {
     };
 
     return $c->render(json =>
-        { output => $output
+        {
+        output => $output
         ,error => $error
         ,done => 1
     }) if $c->stash('req') eq 'json';
 
     return $c->render(template => "/main/upload_users"
+        ,output => $output
         ,error => $error
         ,done => 1
     );
@@ -2127,7 +2189,10 @@ get '/list_ldap_attributes/(#cn)' => sub {
             ($user) = Ravada::Auth::LDAP::search_user($cn);
         }
     };
+    my $field = $Ravada::CONFIG->{ldap}->{field};
+    $field = 'cn' if !defined $field;
     my $return;
+
     if ( $@ ) {
         my $error = $@;
         $error =~ s/(.*) at lib\/Ravada.*/$1/;
@@ -2150,8 +2215,6 @@ get '/list_ldap_attributes/(#cn)' => sub {
                 $values->{$attribute} = \@values;
             }
         }
-        my $field = $Ravada::CONFIG->{ldap}->{field};
-        $field = 'cn' if !defined $field;
         my $user_name = $user->get_value($field);
         $return = {
             dn_found => $user->dn
@@ -2160,6 +2223,7 @@ get '/list_ldap_attributes/(#cn)' => sub {
             , values => $values
         };
     }
+    $return->{field} = $field;
 
     $c->session(ldap_attributes_cn => $cn) if $user;
     $LDAP_ATTRIBUTES{$cn} = $return;
@@ -2642,15 +2706,25 @@ get '/search_user/#name'=> sub($c) {
     return _search_user($c, $name);
 };
 
+get '/search_other_user/#name'=> sub($c) {
+    my $name = $c->stash('name');
+    return _search_user($c, $name,1);
+};
+
 get '/search_user/'=> sub($c) {
 
     return _search_user($c);
 };
 
 
-sub _search_user($c,$name='') {
+sub _search_user($c, $name='', $other=0) {
 
-    my $list_found = $RAVADA->list_users_share($name,$USER);
+    my $list_found;
+    if ($other) {
+        $list_found = $RAVADA->list_users_share($name,$USER);
+    } else {
+        $list_found = $RAVADA->list_users_share($name);
+    }
     my $found;
     if (scalar(@$list_found) == 1 ) {
         ($found) = @$list_found ;
@@ -2658,7 +2732,7 @@ sub _search_user($c,$name='') {
         ($found) = grep { $_->{name} eq $name } @$list_found;
     }
     $found = $found->{name} if $found;
-    return $c->render(json => {found => $found , count => scalar(@$list_found) } );
+    return $c->render(json => {found => $found , count => scalar(@$list_found), list => $list_found } );
 };
 
 get '/group/#type/list_members/#name' => sub($c) {
@@ -2995,6 +3069,7 @@ sub _languages() {
         ,id => 'Indonesian'
         ,it => 'Italian'
         ,ja => 'Japanese'
+        ,ko => 'Korean'
         ,my => 'Melayu'
         ,nb_NO => 'Norwegian'
         ,pt => 'Portuguese'
@@ -3131,11 +3206,16 @@ get '/balance_options.json' => sub($c) {
     ]);
 };
 
+websocket '/ws/unsubscribe_all' => sub {
+    my $c = shift;
+    $WS->unsubscribe_all();
+} => 'ws_unsubscribe';
+
 websocket '/ws/subscribe' => sub {
     my $c = shift;
     my $expiration = $SESSION_TIMEOUT;
     $USER = _logged_in($c) if !$USER;
-    return if !$USER;
+    return access_denied_user($c) if !$USER;
     $expiration = $SESSION_TIMEOUT_ADMIN    if $USER->is_operator;
     $c->inactivity_timeout( $expiration );
     $c->on(message => sub {
@@ -3415,6 +3495,8 @@ sub _render_login($c, $error, $status=undef) {
     my $css_snippets = ["\t.intro {\n\t\tbackground:"
                     ." url($CONFIG_FRONT->{login_bg_file})"
                     ." no-repeat bottom center scroll;\n\t}"];
+
+    $c->session(url => $c->req->url->to_abs->path);
     $c->render(
                     template => ($CONFIG_FRONT->{login_custom} or 'main/start')
                         ,css => ['/css/main.css']
@@ -3439,7 +3521,7 @@ sub _login_ok($c, $auth_ok) {
 
     my $login = $auth_ok->name;
 
-    my $url = ($c->param('url') or $c->req->url->to_abs->path);
+    my $url = ($c->param('url') or $c->session('url') or $c->req->url->to_abs->path);
     $url = '/' if $url =~ m{^/login};
 
     $c->session('login' => $login);
@@ -3469,6 +3551,8 @@ sub _login_ok($c, $auth_ok) {
 
 sub logout {
     my $c = shift;
+
+    $WS->unsubscribe_all();
 
     $USER = undef;
     $c->session(expires => 1);
@@ -3613,6 +3697,9 @@ sub admin {
         }
     }
     if ($page eq 'machines') {
+
+        return access_denied($c) if !$USER->can_view_admin_machines;
+
         _count_nodes($c);
         Ravada::Request->refresh_vms();
         $c->stash(n_clones_hide => ($CONFIG_FRONT->{admin}->{hide_clones} or 10) );
@@ -3814,6 +3901,7 @@ sub _show_request {
     if (!$domain) {
         return $c->render(data => "Request ".$request->status." , but I can't find domain $name");
     }
+    $c->stash('id_base' => $domain->_data('id_base'));
     return view_machine($c,$domain);
 }
 
@@ -4002,9 +4090,9 @@ sub _init_user_group {
     my $group = $CONFIG_FRONT->{group};
 
     if (defined $group) {
-        $group = getgrnam($group) or die "CRITICAL: I can't find user $group\n"
-            if $group !~ /^\d+$/;
-
+        my $gname=$group;
+        $group = getgrnam($gname) or die "CRITICAL: I can't find user $gname\n"
+            if $gname!~ /^\d+$/;
     }
     if (defined $user) {
         $user = getpwnam($user) or die "CRITICAL: I can't find user $user\n"
@@ -4650,21 +4738,137 @@ sub resume_machine {
     return $c->render(json => { req => $req->id });
 }
 
-sub machine_set_value($c, $id, $field, $value, $value_text=$value) {
+sub machine_change_hardware($c, $id, $options) {
+
+    my $domain = Ravada::Front::Domain->open($id) or die "Unkown domain $id";
+
+
+    my $max_mem = delete $options->{max_mem};
+    my $memory = delete $options->{memory};
+
+    my $info = $domain->get_info();
+    my %change_mem;
+    if (int($info->{max_mem}/1024) != $max_mem && $USER->is_admin) {
+        $change_mem{max_mem} = $max_mem*1024;
+    }
+
+    if (int($info->{memory}/1024) != $memory) {
+        $change_mem{memory} = $memory*1024;
+    }
+    Ravada::Request->change_hardware(
+        uid => $USER->id
+        ,id_domain => $id
+        ,hardware=> 'memory'
+        ,data => \%change_mem
+    ) if keys %change_mem;
+
+    my $max_virt_cpu = delete $options->{max_virt_cpu};
+    my $n_virt_cpu = delete $options->{n_virt_cpu};
+
+    my %change_cpu;
+
+    if ($info->{max_virt_cpu} != $max_virt_cpu && $USER->is_admin) {
+        $change_cpu{max_virt_cpu} = $max_virt_cpu;
+    }
+
+    if ($info->{n_virt_cpu} != $n_virt_cpu) {
+        $change_cpu{n_virt_cpu} = $n_virt_cpu;
+    }
+    Ravada::Request->change_hardware(
+        uid => $USER->id
+        ,id_domain => $id
+        ,hardware=> 'vcpus'
+        ,data => \%change_cpu
+    ) if keys %change_cpu;
+
+
+}
+
+sub machine_set_options($c, $id, $options) {
+    return access_denied($c)       if !$USER->can_manage_machine($id);
+
+    my $domain = Ravada::Front::Domain->open($id) or die "Unkown domain $id";
+
+    my $owner = delete $options->{owner};
+    $options->{id_owner} = $owner->{id} if $owner;
+
+    my %field_minutes = map { $_ => 1 } ('run_timeout','shutdown_timeout');
+
+    my $change;
+    for my $key (keys %$options) {
+        next if _privileged_machine_field($key) && !$USER->is_admin;
+
+        next if !defined $options->{$key} && !defined $domain->_data($key);
+        next if !$options->{$key} && !$domain->_data($key);
+
+        next unless defined $options->{$key} && !defined $domain->_data($key)
+         || !defined $options->{$key} && defined $domain->_data($key)
+         || $options->{$key} ne $domain->_data($key);
+
+        $change->{$key} = $options->{$key};
+        my $value_text = $options->{$key};
+
+        if ( exists $options->{$key} && defined $options->{$key}
+            && $field_minutes{$key}) {
+                $options->{$key} = $options->{$key}*60;
+
+                if ($value_text =~ /^\d+$/) {
+                    if ( $value_text >1 ) {
+                        $value_text .= " minutes";
+                    } elsif ($value_text == 1 ) {
+                        $value_text .=" minute";
+                    } else {
+                        $value_text = "none";
+                    }
+                }
+        }
+
+        machine_set_value($c, $id, $key => $options->{$key}, $value_text);
+    }
+
+    return $c->render(json => $change);
+}
+
+sub _privileged_machine_field($field) {
 
     my %privileged = map { $_ => 1 } qw(timeout id_owner shutdown_disconnected shutdown_timeout autostart balance_policy);
+    return $privileged{$field};
+}
 
-    return access_denied($c)       if !$USER->can_manage_machine($c->stash('id'));
-    return access_denied($c) if $privileged{$field} && !$USER->is_admin;
+sub machine_set_value($c, $id, $field, $value, $value_text=$value) {
+
+    return access_denied($c)       if !$USER->can_manage_machine($id);
+    return access_denied($c) if _privileged_machine_field($field) && !$USER->is_admin;
 
     my $domain = Ravada::Front::Domain->open($id) or die "Unkown domain $id";
     my $field_text = $field;
     $field_text =~ tr/_/ /;
 
+    return if !defined $domain->_data($field) && !defined $value;
+    return if defined $value && defined $domain->_data($field)
+    && $value eq $domain->_data($field);
+
+    $value_text = 0 if !defined $value_text;
+
+    if ($field eq 'id_owner') {
+        $field_text = 'owner';
+        my $user = Ravada::Auth::SQL->search_by_id($value);
+        $value_text = $user->name;
+
+    }
+
+    if ($field eq "autostart" && defined $value) {
+        my $req = Ravada::Request->domain_autostart(
+            uid => $USER->id
+            ,id_domain => $domain->id
+            ,value => $value
+        );
+    }
     $USER->send_message("Setting $field_text to $value_text in "
         .$domain->name)
         if !defined $domain->_data($field) || $domain->_data($field) ne $value;
-    return $c->render(json => { $field => $domain->_data($field, $value)});
+
+    $domain->_data($field, $value);
 
 }
 

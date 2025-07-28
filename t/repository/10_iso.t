@@ -94,13 +94,16 @@ sub check_entries_added($vm, $dir) {
         my ($id_iso) = $sth->fetchrow;
         ok($id_iso,"Expecting $name in iso_images");
 
-        test_download_iso($vm, $id_iso) if $id_iso;
+        test_download_iso($vm, $id_iso, $name) if $id_iso;
 
     }
 }
 
-sub test_download_iso($vm, $id_iso) {
-    my $iso = $vm->_search_iso($id_iso);
+sub test_download_iso($vm, $id_iso, $name) {
+    my $iso;
+    eval { $iso = $vm->_search_iso($id_iso) };
+    is($@,'',"Error fetching $name");
+    ok($iso) or return;
     #    unlink($iso->{device}) or die "$! $iso->{device}"
     #    if $iso->{device} && -e $iso->{device};
     my $req1 = Ravada::Request->download(

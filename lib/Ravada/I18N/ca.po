@@ -8,8 +8,8 @@ msgstr ""
 "Project-Id-Version: 0.1.0-alpha\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2017-01-03 10:12+0300\n"
-"PO-Revision-Date: 2024-07-24 12:09+0000\n"
-"Last-Translator: Dani Sanchez <dani@fib.upc.edu>\n"
+"PO-Revision-Date: 2024-12-03 08:45+0000\n"
+"Last-Translator: Bernat Rubiol Brusau <bernat.rubiol@estudiantat.upc.edu>\n"
 "Language-Team: Catalan <https://hosted.weblate.org/projects/ravada/"
 "translation/ca/>\n"
 "Language: ca\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 5.8-dev\n"
+"X-Generator: Weblate 5.9-dev\n"
 
 msgid "Ravada broker"
 msgstr "Broker Ravada"
@@ -108,6 +108,9 @@ msgstr "Hindi"
 
 msgid "Indonesian"
 msgstr "Indonès"
+
+msgid "Korean"
+msgstr "Coreà"
 
 msgid "Persian"
 msgstr "Persa"
@@ -1853,7 +1856,13 @@ msgid "Virtual Machine will start on host start."
 msgstr "La màquina virtual s'iniciarà a l'inici de l'amfitrió."
 
 msgid "Shutdown disconnected"
-msgstr "L'apagat s'ha desconnectat"
+msgstr "Atura quan es desconnecti"
+
+msgid "Shutdown grace time"
+msgstr "Temps de gràcia d'aturada"
+
+msgid "Minutes of grace time before shutdown."
+msgstr "Minuts que esperarem abans d'aturar."
 
 msgid "Virtual Machine will be shutdown when user disconnects."
 msgstr "La màquina virtual s'apagarà quan l'usuari es desconnecti."
@@ -2336,3 +2345,18 @@ msgstr "Per a la configuració del client Spice, seguiu aquest "
 
 msgid "Follow these steps for Spice client setup"
 msgstr "Seguiu aquests passos per a la configuració del client Spice"
+
+msgid "Share"
+msgstr "Comparteix"
+
+msgid "Mange Host Devices"
+msgstr "Gestionar dispositius amfitrions"
+
+msgid "Compact data volumes daily."
+msgstr "Volums de dades compactes diaris."
+
+msgid "Auto Compact"
+msgstr "Auto compressió"
+
+msgid "Host Devices"
+msgstr "Dispositiu amfitrió"
