@@ -1442,6 +1442,8 @@ sub add_to_group($self, @group) {
         ." VALUES (?,?)"
     );
     for my $group (@group) {
+        die "Error: ".ref($group)." is not a group"
+        unless ref($group) && ref($group) eq'Ravada::Auth::Group';
         if (!ref($group)) {
             if ($group =~ /^\d+$/) {
                 $group = Ravada::Auth::Group->open($group);
@@ -1449,7 +1451,7 @@ sub add_to_group($self, @group) {
                 $group = Ravada::Auth::Group->new(name => $group);
             }
         }
-        confess "Error: unknown group ".$group->name
+        die "Error: unknown group ".$group->name."\n"
         if !$group->id;
 
         $sth->execute($group->id,$self->id);

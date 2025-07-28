@@ -878,17 +878,29 @@ sub test_grant_grant {
     $usero->remove();
 }
 
-sub test_clone_all($vm_name, $grant_group=0) {
+sub _create_user_group($grant, $grant_group) {
+
     my $user = create_user();
     my $group = create_group();
-    user_admin->add_to_group($user, $group);
+    $user->add_to_group($group);
 
     if ($grant_group) {
-        user_admin->grant_group($group,"clone_all");
+        user_admin->grant_group($group, $grant);
         $user->_reload_grants();
     } else {
         user_admin->grant($user,"clone_all");
     }
+
+    is($user->{_grant}->{$grant},1);
+    is($user->can_do($grant),1,"Expecting user ".$user->name." can $grant") or exit;
+
+    return ($user, $group);
+}
+
+sub test_clone_all($vm_name, $grant_group=0) {
+
+    my ($user, $group) = _create_user_group('clone_all', $grant_group);
+
     my $domain = create_domain($vm_name);
     $domain->prepare_base(user_admin);
 
@@ -899,9 +911,9 @@ sub test_clone_all($vm_name, $grant_group=0) {
         ,id_domain => $domain->id
         ,name => $name
     );
-    wait_request(debug => 1);
-    diag$grant_group;
+    wait_request(debug => 0);
 
+    is($req->error,'');
     my $clone = rvd_back->search_domain($name);
     ok($clone) or die "Expecting clone $name";
     is($clone->_data('id_owner'), $user->id);
@@ -1121,37 +1133,32 @@ for my $vm_name (vm_names()) {
     next if !$vm;
 
     diag("Testing VM $vm_name");
-    test_view_all($vm);
-    test_view_all($vm,1);
+
     test_expose_ports($vm_name);
     test_change_settings($vm_name);
 
-    test_shutdown_clone($vm_name);
-    test_shutdown_clone($vm_name,1);
-    test_shutdown_all($vm_name);
-    test_shutdown_all($vm_name,1);
+    for my $grant_group (0,1) {
 
-    test_remove($vm_name);
-    test_remove($vm_name,1);
-    test_remove_clone($vm_name);
-    test_remove_clone($vm_name,1);
-    #test_remove_all($vm_name);
+        test_view_all($vm, $grant_group);
 
-    test_remove_clone_all($vm_name);
-    test_remove_clone_all($vm_name,1);
+        test_shutdown_clone($vm_name, $grant_group);
+        test_shutdown_all($vm_name, $grant_group);
 
-    test_prepare_base($vm_name);
-    test_prepare_base($vm_name,1);
-    test_frontend($vm_name);
-    test_frontend($vm_name,1);
-    test_create_domain($vm_name);
-    test_create_domain($vm_name,1);
-    test_create_domain2($vm_name);
-    test_create_domain2($vm_name,1);
-    test_view_clones($vm_name);
+        test_remove($vm_name, $grant_group);
+        test_remove_clone($vm_name, $grant_group);
+        #test_remove_all($vm_name);
 
-    test_clone_all($vm_name);
-    test_clone_all($vm_name,1);
+        test_remove_clone_all($vm_name, $grant_group);
+
+        test_prepare_base($vm_name, $grant_group);
+        test_frontend($vm_name, $grant_group);
+        test_create_domain($vm_name, $grant_group);
+        test_create_domain2($vm_name, $grant_group);
+        test_view_clones($vm_name, $grant_group);
+
+        test_clone_all($vm_name, $grant_group);
+
+    }
 
 }
 end();
