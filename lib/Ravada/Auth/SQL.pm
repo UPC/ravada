@@ -27,6 +27,7 @@ use vars qw($AUTOLOAD);
 use Data::Dumper;
 
 with 'Ravada::Auth::User';
+with 'Ravada::Auth::Grants';
 
 
 our $CON;
@@ -662,34 +663,6 @@ sub _remove_networks($self) {
     }
 }
 
-=head2 can_do
-
-Returns if the user is allowed to perform a privileged action
-
-    if ($user->can_do("remove")) { 
-        ...
-
-=cut
-
-sub can_do($self, $grant) {
-    $self->_load_grants();
-
-    confess "Permission '$grant' invalid\n".Dumper($self->{_grant_alias})
-        if $grant !~ /^[a-z_]+$/;
-
-    $grant = $self->_grant_alias($grant);
-
-    confess "Wrong grant '$grant'\n".Dumper($self->{_grant_alias})
-        if $grant !~ /^[a-z_]+$/;
-
-    return $self->{_grant}->{$grant} if defined $self->{_grant}->{$grant};
-    confess "Unknown permission '$grant'. Maybe you are using an old release.\n"
-            ."Try removing the table grant_types and start rvd_back again:\n"
-            ."mysql> drop table grant_types;\n"
-            .Dumper($self->{_grant}, $self->{_grant_alias})
-        if !exists $self->{_grant}->{$grant};
-    return $self->{_grant}->{$grant};
-}
 
 =head2 can_do_domain
 
@@ -824,17 +797,6 @@ sub _grant_alternate_name($self,$name_req) {
         $name{$alias} = 1 if $name_req eq $name;
     }
     return keys %name;
-}
-
-sub _load_aliases($self) {
-    return if exists $self->{_grant_alias};
-
-    my $sth = $$CON->dbh->prepare("SELECT name,alias FROM grant_types_alias");
-    $sth->execute;
-    while (my $row = $sth->fetchrow_hashref) {
-        $self->{_grant_alias}->{$row->{name}} = $row->{alias};
-    }
-
 }
 
 =head2 grant_user_permissions
@@ -1325,37 +1287,6 @@ sub _machine_shared($self, $id_domain) {
     my ($id) = $sth->fetchrow;
     return 1 if $id;
     return 0;
-}
-
-
-=head2 grants
-
-Returns a list of permissions granted to the user in a hash
-
-=cut
-
-sub grants($self) {
-    $self->_load_grants();
-    return () if !$self->{_grant};
-    return %{$self->{_grant}};
-}
-
-=head2 grants_info
-
-Returns a list of the permissions granted to an user as a hash.
-Each entry is a reference to a list where the first value is
-the grant and the second the type
-
-=cut
-
-sub grants_info($self) {
-    my %grants = $self->grants();
-    my %grants_info;
-    for my $key ( keys %grants ) {
-        $grants_info{$key}->[0] = $grants{$key};
-        $grants_info{$key}->[1] = $self->{_grant_type}->{$key};
-    }
-    return %grants_info;
 }
 
 =head2 ldap_entry

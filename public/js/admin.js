@@ -1684,7 +1684,16 @@ ravadaApp.directive("solShowMachine", swMach)
             group_name = group_name0;
             group_id = group_id0;
             $scope.list_group_members();
+            if (group_id) {
+                $scope.load_grants();
+            }
         };
+        $scope.load_grants = function() {
+            $http.get("/group/grants/"+group_id).then(function(response) {
+                $scope.perm = response.data;
+            });
+        };
+
         $scope.list_ldap_groups = function() {
             $http.get('/group/ldap/list/'+$scope.group_filter)
                 .then(function(response) {

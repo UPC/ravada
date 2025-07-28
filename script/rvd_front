@@ -2038,10 +2038,23 @@ any '/admin/user/(#id).(:type)' => sub {
     return $c->render(template => 'main/manage_user');
 };
 
+get '/group/grants/(:id)' => sub($c) {
+    return access_denied($c) unless $USER->can_manage_users() && $USER->can_grant();
+
+    my $group = Ravada::Auth::Group->search_by_id($c->stash('id'));
+
+    die "Error: group not found , id=".$c->stash('id') if !$group;
+    _load_grants($c, $group);
+};
+
 get '/user/grants/(:id)' => sub($c) {
     return access_denied($c) unless $USER->can_manage_users() && $USER->can_grant();
 
     my $user = Ravada::Auth::SQL->search_by_id($c->stash('id'));
+    _load_grants($c, $user);
+};
+
+sub _load_grants($c, $user) {
     my %grants = $user->grants_info;
     for my $key (keys %grants) {
         my ($value, $type) = @{$grants{$key}};

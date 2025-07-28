@@ -15,6 +15,8 @@ use Hash::Util qw(lock_hash);
 
 use Moose;
 
+with 'Ravada::Auth::Grants';
+
 use feature qw(signatures);
 no warnings "experimental::signatures";
 
@@ -78,6 +80,10 @@ sub open($self, $id) {
     confess "Error: unknown group id '$id'" if !$name;
 
     return $self->new(name => $name);
+}
+
+sub search_by_id($self,$id) {
+    return $self->open($id);
 }
 
 sub id {
@@ -194,36 +200,6 @@ sub exists_id($id) {
     return $found;
 }
 
-#common to users
-=head2 can_do
-
-Returns if the group is allowed to perform a privileged action
-
-    if ($group->can_do("remove")) { 
-        ...
-
-=cut
-
-sub can_do($self, $grant) {
-    $self->_load_grants();
-
-    confess "Permission '$grant' invalid\n".Dumper($self->{_grant_alias})
-        if $grant !~ /^[a-z_]+$/;
-
-    $grant = $self->_grant_alias($grant);
-
-    confess "Wrong grant '$grant'\n".Dumper($self->{_grant_alias})
-        if $grant !~ /^[a-z_]+$/;
-
-    return $self->{_grant}->{$grant} if defined $self->{_grant}->{$grant};
-    confess "Unknown permission '$grant'. Maybe you are using an old release.\n"
-            ."Try removing the table grant_types and start rvd_back again:\n"
-            ."mysql> drop table grant_types;\n"
-            .Dumper($self->{_grant}, $self->{_grant_alias})
-        if !exists $self->{_grant}->{$grant};
-    return $self->{_grant}->{$grant};
-}
-
 sub _load_grants($self) {
     $self->_load_aliases();
     return if exists $self->{_grant};
@@ -252,27 +228,5 @@ sub _load_grants($self) {
     }
     $sth->finish;
 }
-
-#common to users
-sub _load_aliases($self) {
-    return if exists $self->{_grant_alias};
-
-    my $sth = $$CON->dbh->prepare("SELECT name,alias FROM grant_types_alias");
-    $sth->execute;
-    while (my $row = $sth->fetchrow_hashref) {
-        $self->{_grant_alias}->{$row->{name}} = $row->{alias};
-    }
-
-}
-
-#common to users
-sub _grant_alias($self, $name) {
-    my $alias = $name;
-    return $self->{_grant_alias}->{$name} if exists $self->{_grant_alias}->{$name};
-    return $name;# if exists $self->{_grant}->{$name};
-
-}
-
-
 
 1;
