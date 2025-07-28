@@ -1689,8 +1689,23 @@ ravadaApp.directive("solShowMachine", swMach)
             }
         };
         $scope.load_grants = function() {
+            console.log("loading grants");
             $http.get("/group/grants/"+group_id).then(function(response) {
                 $scope.perm = response.data;
+            });
+        };
+        $scope.toggle_grant = function(grant) {
+            $scope.perm[grant] = !$scope.perm[grant];
+            $http.get("/group/grant/"+group_id+"/"+grant+"/"+$scope.perm[grant]).then(function(response) {
+                $scope.error = response.data.error;
+                $scope.info = response.data.info;
+            });
+        };
+
+        $scope.update_grant = function(grant) {
+            $http.get("/group/grant/"+group_id+"/"+grant+"/"+$scope.perm[grant]).then(function(response) {
+                $scope.error = response.data.error;
+                $scope.info = response.data.info;
             });
         };
 

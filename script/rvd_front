@@ -2047,6 +2047,21 @@ get '/group/grants/(:id)' => sub($c) {
     _load_grants($c, $group);
 };
 
+get '/group/grant/(:id_group)/(:grant)/(:value)' => sub($c) {
+    return access_denied($c) unless $USER->can_grant();
+    my $group = Ravada::Auth::Group->search_by_id($c->stash('id_group'));
+
+    my $error = '';
+    my $value = $c->stash('value');
+    my $grant = $c->stash('grant');
+    if ($value eq 'false' || !$value) {
+        $value = 0;
+    } elsif ($USER->grant_type($grant) eq 'boolean' ) {
+        $value = 1;
+    }
+    $USER->grant_group($group,$grant);
+};
+
 get '/user/grants/(:id)' => sub($c) {
     return access_denied($c) unless $USER->can_manage_users() && $USER->can_grant();
 
