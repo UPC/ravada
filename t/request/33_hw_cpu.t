@@ -297,17 +297,23 @@ sub test_change_cpu_mode($vm) {
     );
     wait_request(debug => 0);
 
-    $cpu->{mode} = 'host-model';
+    my $domain2 = Ravada::Domain->open($domain->id);
+    my $info2 = $domain2->info(user_admin);
+    my $cpu2 = $info2->{hardware}->{cpu}->[0]->{cpu};
+    ok($cpu2->{migratable});
+
+    $cpu2->{mode} = 'host-model';
     my $req2 = Ravada::Request->change_hardware(
         @args
         ,'data' => {
                       '_can_edit' => 1,
                       'vcpu' => $vcpu
-                      ,'cpu' => $cpu
+                      ,'cpu' => $cpu2
          },
     );
     wait_request(debug => 0);
 
+    remove_domain($domain);
 }
 
 sub test_current_max($vm) {
