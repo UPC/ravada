@@ -707,7 +707,9 @@ sub can_do_domain($self, $grant, $domain) {
     return 1 if ( $grant eq 'shutdown' || $grant eq 'reboot' )
     && $self->can_shutdown_machine($domain);
 
-    return 0 if !$self->can_do($grant) && !$self->_domain_id_base($domain);
+    my $id_base = $self->_domain_id_base($domain);
+
+    return 0 if !$self->can_do($grant) && !$id_base;
 
     return 1 if $self->can_do("${grant}_all");
     return 1 if $self->_domain_id_owner($domain) == $self->id && $self->can_do($grant);
@@ -715,9 +717,8 @@ sub can_do_domain($self, $grant, $domain) {
     return 1 if $grant eq 'change_settings'
     && $self->_machine_shared($domain);
 
-    if ($self->can_do("${grant}_clones") && $self->_domain_id_base($domain)) {
+    if ($self->can_do("${grant}_clones") && $id_base) {
         my $base;
-        my $id_base = $self->_domain_id_base($domain);
         eval { $base = Ravada::Front::Domain->open($id_base) };
         if (!defined $base) {
             warn "Error: base $id_base from $domain not found";
@@ -1168,11 +1169,18 @@ sub can_shutdown_machine($self, $domain) {
 
     return 1 if $self->can_shutdown_all();
 
+    my $id_domain;
+    if (!ref($domain) && $domain =~ /^\d+$/) {
+        $id_domain = $domain;
+    } else {
+        $id_domain = $domain->id;
+    }
+
+    return 1 if $self->_machine_shared($id_domain);
+
     $domain = Ravada::Front::Domain->open($domain)   if !ref $domain;
 
     return 1 if $self->id == $domain->id_owner;
-
-    return 1 if $self->_machine_shared($domain->id);
 
     if ($domain->id_base && $self->can_shutdown_clone()) {
         my $base = Ravada::Front::Domain->open($domain->id_base);
@@ -1428,6 +1436,25 @@ sub can_change_hardware_network($user, $domain, $data) {
     return 0;
 }
 
+=head2 can_view_admin_machines
+
+Returns true if the user can acess admin machines menu
+
+=cut
+
+
+
+sub can_view_admin_machines($user) {
+    return 1
+        if $user->can_list_machines
+            || $user->can_list_own_machines()
+            || $user->can_list_clones()
+            || $user->can_list_clones_from_own_base()
+            || $user->is_admin()
+            ;
+
+    return 0;
+}
 
 sub AUTOLOAD($self, $domain=undef) {
 

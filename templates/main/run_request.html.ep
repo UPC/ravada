@@ -12,9 +12,19 @@
     >
     <div class="jumbotron" ng-cloak="">
 
+             <div class="card-header">
+        <div>
+        <div style="display: inline-block">
         <h2><%=l 'Running' %> {{domain.alias}}
                 <span ng-show="domain.is_volatile"><%=l 'Volatile' %></span>
         </h2>
+        </div>
+        <div class="lgMachActions" style="display:inline-block; float: right">
+            <span style="float:right;" ng-show="domain.networking && domain.networking != 'nat'" class="badge badge-warning" ng-cloak>{{domain.networking}}</span>
+        </div>
+        </div>
+            </div>
+
             <div class="alert alert-warning">
                 <%=l 'A viewer is required to run the virtual machines.' %>
                 <a href="/requirements"><%=l 'Read more.' %></a>
@@ -79,7 +89,9 @@
             <div class="container pl-5"
                 ng-show="request_open_ports"
                 >
-
+            <div class="panel-body" ng-show="domain.networking == 'isolated'">
+                <span class="badge badge-warning">Virtual machine network isolated. No ports exposed.</span>
+            </div>
             <table border="0">
                 <tr ng-repeat="port in domain.ports">
                     <td align="right">

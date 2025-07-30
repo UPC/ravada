@@ -151,11 +151,12 @@ sub test_user($base, $n_start) {
     _remove_enforce_limits();
     _set_clones_client_status($base);
 
+    my $remote_ip = '1.2.3.4';
     my $req = Ravada::Request->clone(
                 uid => $user->id
              ,start => 1
          ,id_domain => $base->id
-         ,remote_ip => '1.2.3.4'
+         ,remote_ip => $remote_ip
     );
     ok($req);
     wait_request(debug => 0,skip => ['enforce_limits','set_time']);
@@ -182,15 +183,25 @@ sub test_user($base, $n_start) {
     is($info->{is_pool},1) or die Dumper($clone_f);
     is($info->{comment},$user->name);
 
+    my $clone_f2 = Ravada::Front::Domain->open($clone->{id});
     # now we should have another active
     my $n_active = 0;
-    for ( 1 .. 3 ) {
+    my $req_start = Ravada::Request->start_domain(
+        uid => $user->id
+        ,id_domain => $clone->{id}
+        ,remote_ip => $remote_ip
+    );
+    for ( 1 .. 11 ) {
+        $req_start->_data('start_time' => time);
+        delete $clone_f2->{_data}->{client_status};
+        $clone_f2->_data('client_status' => $remote_ip);
         wait_request(debug => 0);
         @clones = $base->clones(is_pool => 1 );
         $n_active = grep { $_->is_active}
         map { Ravada::Domain->open($_->{id}) }
         @clones;
         last if $n_active > $n_start;
+        $clone_f2->_data('client_status' => $remote_ip);
         Ravada::Request->manage_pools(uid => user_admin->id, _force => 1);
     }
     ok($n_active >= $n_start+1,"Expecting active > $n_start, got $n_active ") or exit;
@@ -722,6 +733,21 @@ for my $vm_name ( vm_names() ) {
         diag("*** Testing pools in $vm_name ***");
         import_base($vm);
 
+        my $n_clones = 6;
+        my $n_start = 2;
+
+=pod
+
+        my $domain0 = create_domain_v2(vm => $vm);
+        $domain0->prepare_base(user_admin);
+        $domain0->is_public(1);
+        test_pool($domain0);
+        test_clones($domain0, $n_clones);
+        test_active($domain0, $n_start);
+        test_user($domain0, $n_start);
+
+=cut
+
         test_pool_with_volatiles($vm);
 
         for my $volatile_clones ( 0,1) {
@@ -737,9 +763,6 @@ for my $vm_name ( vm_names() ) {
         test_no_pool($vm);
 
         my $domain = create_domain_v2(vm => $vm);
-
-        my $n_clones = 6;
-        my $n_start = 2;
 
         test_pool($domain);
         test_request();

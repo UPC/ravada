@@ -695,6 +695,8 @@ sub login($self) {
 sub _login_bind {
     my $self = shift;
 
+    delete $self->{_ldap_entry};
+
     my ($username, $password) = ($self->name , $self->password);
 
     my $found = 0;
@@ -752,6 +754,8 @@ sub _login_match {
 
     my @entries = search_user($username);
 
+    delete $self->{_ldap_entry};
+
     my @error;
     for my $entry (@entries) {
 
@@ -764,6 +768,9 @@ sub _login_match {
 #       return 1 if $mesg && !$mesg->code;
 
 #       warn "ERROR: ".$mesg->code." : ".$mesg->error. " : Bad credentials for $username";
+        next unless $entry->get_value('userPassword') =~ /^\{.*?_.*?\}/
+                    || $entry->get_value('userPassword') =~ /^\{[a-zA-Z0-9]+\}/;
+
         eval { $user_ok = $self->_match_password($entry, $password) };
         warn $@ if $@;
 
@@ -814,6 +821,8 @@ sub _match_password {
 
     my ($storage) = $password_ldap =~ /^{([a-z0-9]+)[_}]/i;
     my ($password_ldap_hex) = $password_ldap =~ /.*?}(.*)/;
+
+    confess "No storage found in $password_ldap" if !$storage;
     return Authen::Passphrase->from_rfc2307($password_ldap)->match($password)
         if $storage =~ /rfc2307|md5/i;
 

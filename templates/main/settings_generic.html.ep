@@ -15,12 +15,13 @@
         >
             <div class="card-header">
                 <div class="row">
-                    <div class="col">
+                    <div class="col-10">
                         <span class="title">
-                            <%= $item  %> {{<%= $item %>._old_name}}
+                            <%= $item  %>
+                            {{<%= $item %>._old_name}}
                         </span>
                     </div>
-                    <div class="col" align="right">
+                    <div class="col-2" align="right">
                         <a type="button" class="btn btn-outline-secondary" align="right"
                             href="/admin/<%= $item %>s">back</a>
                     </div>

@@ -7,7 +7,7 @@
             ng-true-value="1" ng-false-value="0"
             ng-click="set_value('is_public' , !showmachine.is_public)"
         />
-        <span class="info"><%=l 'Allow users to clone this base' %></span>
+        <span class="info"><%=l 'This base is available for all users' %></span>
     </div>
 </div>
 <div class="row" ng-show="showmachine.is_base && !showmachine.is_public">

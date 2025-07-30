@@ -1292,7 +1292,7 @@ sub _check_no_bookings() {
 
 sub test_config {
     init();
-    my $config = {};
+    my $config = { 'dir_rrd' => '/var/tmp/ravada/rrd'};
     init($config,1,1);
 
     is(rvd_front->feature('ldap'), 0);

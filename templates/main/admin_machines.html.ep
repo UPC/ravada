@@ -17,6 +17,9 @@
 %       if ($USER->is_operator || $USER->is_admin) {
             %= include 'main/check_ws'
 %       }
+
+%=   include 'main/connection_lost'
+
     <div class="row">
       <div style="margin-right: 10px;" data-netdata="system.swap"
           data-dimensions="used"
@@ -153,7 +156,7 @@
                         <b ng-show="show_clones[machine.id]" >-</b>
                         <b ng-show="!show_clones[machine.id]">+</b>
                         </button>
-
+                        <i class="fas fa-sync-alt fa-spin" ng-show="show_clones[machine.id] && !n_clones"></i>
                     </td>
                     <td class="lgMachToggle" >
 %                       if ($_user->can_create_base ) {
@@ -300,6 +303,7 @@
                        </button>
                        <button type="button" class="btn btn-primary btn-sm"
                          ng-click="action('machine','view-new-tab',machine.id)"
+                         ng-show="machine.can_view"
                          title="<%=l 'View' %>">
                           <i class="fa fa-desktop"></i>
                        </button>
@@ -319,8 +323,9 @@
         </table>
 
         <div ng-cloak="1"
-            ng-show="list_machines && list_machines_time > 2 && show_active && !n_show">
-            <%=l 'There are no active virtual machines'%>
+            ng-show="list_machines && list_machines_time > 2 && ( show_active || filter) && !n_show">
+            <span ng-show="show_active"><%=l 'There are no active virtual machines'%></span>
+            <span ng-show="filter"><%=l 'There are no machines that match the selection' %></span>
             <button ng-click="reload_list()"><%=l 'reload list' %></button>
         </div>
     </div>

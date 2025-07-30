@@ -6,6 +6,7 @@ use strict;
 
 use Data::Dumper;
 use Mojo::JSON qw(decode_json);
+use Storable qw(dclone);
 use Test::More;
 
 no warnings "experimental::signatures";
@@ -555,7 +556,18 @@ sub test_cdrom($vm) {
     my $device_iso = _search_iso_alpine($vm);
     my $machine_types = _machine_types($vm);
 
-    my $isos = rvd_front->list_iso_images();
+    my $isos0 = rvd_front->list_iso_images();
+    my $isos = dclone($isos0);
+    if ( !$ENV{TEST_STRESS} ) {
+
+        my ($alpine32) = grep { $_->{name} =~ /alpine.*32/i } @$isos;
+        my ($alpine64) = grep { $_->{name} =~ /alpine.*64/i } @$isos;
+        my ($ubuntu) = grep { $_->{name} =~ /ubuntu/i} @$isos;
+
+        $isos = [$alpine32,$alpine64,$ubuntu];
+
+    }
+
     for my $iso_frontend (@$isos) {
         next if !$iso_frontend->{arch};
         my $iso;

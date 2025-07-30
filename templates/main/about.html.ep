@@ -24,7 +24,7 @@
                         </ul>
                         <span><%=l 'The code is available on ' %> <a href="https://github.com/UPC/Ravada">Github</a>.</span>
                         <h3><%=l 'License' %></h3>
-                        <span><%=l 'The code is ' %>&nbsp;<a href="https://www.gnu.org/licenses/gpl-3.0-standalone.html">GPL</a>&nbsp;<%=l 'licensed.' %></span>
+                        <span><%=l 'The code is ' %>&nbsp;<a href="https://github.com/UPC/ravada?tab=AGPL-3.0-1-ov-file#readme">AGPL</a>&nbsp;<%=l 'licensed.' %></span>
                     </div>
                 </div>
             </div>

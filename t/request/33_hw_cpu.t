@@ -11,7 +11,7 @@ use Test::Ravada;
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
-my $BASE_NAME = "zz-test-base-ubuntu";
+my $BASE_NAME = "zz-test-base-alpine";
 my $BASE;
 
 ###############################################################################
@@ -355,14 +355,22 @@ sub test_current_max($vm) {
                         'cpu'=> $info0->{hardware}->{cpu}->[0]->{cpu}
          },
     );
+    isnt($req3->id, $req2->id);
     wait_request(debug => 0);
+    is($req3->status,'done');
+    is($req3->error,'');
+
+    my $domain4a = Ravada::Domain->open($domain->id);
+    my $info4a = $domain4a->info(user_admin);
+    is($info4a->{hardware}->{cpu}->[0]->{vcpu}->{current},2) or die $domain4a->name;
+    is($info4a->{hardware}->{cpu}->[0]->{vcpu}->{'#text'}, $max_cpu+1) or die $domain4a->name;
 
     my $domain4 = Ravada::Front::Domain->open($domain->id);
     is($domain4->needs_restart,1) or exit;
 
     my $info4 = $domain4->info(user_admin);
-    is($info4->{hardware}->{cpu}->[0]->{vcpu}->{current},2) or die $domain4->name;
     is($info4->{hardware}->{cpu}->[0]->{vcpu}->{'#text'}, $max_cpu+1) or die $domain3->name;
+    is($info4->{hardware}->{cpu}->[0]->{vcpu}->{current},2) or die $domain4->name;
 
     $domain->remove(user_admin);
 }
@@ -471,6 +479,10 @@ sub test_change_vcpu_topo($vm) {
 
     Ravada::Request->change_hardware(%data);
     wait_request(debug => 0);
+
+    my $domain3a = Ravada::Domain->open($domain->id);
+    my $info3a = $domain3a->info(user_admin);
+    is($info3a->{n_virt_cpu},3) or die $domain3a->name;
 
     my $domain3 = Ravada::Front::Domain->open($domain->id);
     my $info3 = $domain3->info(user_admin);

@@ -30,6 +30,7 @@ sub test_remove_n($vm, @nodes ) {
         $clone->migrate($node1);
         $clone->start(user_admin);
         for my $node2 ( @nodes ) {
+            next if $node2->id == $node1->id;
             diag("Migrating ".$clone->name." from ".$node1->name." to ".$node2->name);
             my $req = Ravada::Request->migrate(
                 uid => user_admin->id

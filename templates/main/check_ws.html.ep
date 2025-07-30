@@ -1,4 +1,4 @@
-<div ng-show="ws_fail" class="alert alert-danger" ng-cloak>
+<div ng-show="ws_fail && ! ws_connection_lost" class="alert alert-danger" ng-cloak>
     <strong><%=l 'Error:' %> </strong>
     <%=l 'Web Service connection failed.' %>
     <%=l 'Check' %>

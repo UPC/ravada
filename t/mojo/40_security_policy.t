@@ -82,4 +82,5 @@ $sth->execute($settings->{frontend}->{content_security_policy}->{id});
 $new->{frontend}->{content_security_policy}->{'default-src'}->{value} = '';
 $new->{frontend}->{content_security_policy}->{'all'}->{value} = '';
 $t->post_ok("/settings_global", json => $new );
+end();
 done_testing();

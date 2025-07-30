@@ -1060,6 +1060,7 @@ sub test_port_prerouting_already_open_clones_no_restricted($vm) {
         @port2 = (grep /-A FORWARD -d $ip2.32 -p tcp -m tcp --dport $internal_port -j ACCEPT/, @out);
         last if scalar(@port2);
         diag($n." waiting for $ip2/32 ... -dport $internal_port");
+        $req_s2->status('requested') if $n % 10 == 0;
         wait_request();
     };
     is(scalar(@port2),1,"Expecting -d $ip2 ... --dport $internal_port") or die Dumper([$clone2->name,\@port2,\@out]);

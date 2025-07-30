@@ -58,6 +58,7 @@ our %VALID_ARG = (
            ,data => 2
            ,options => 2
            ,storage => 2
+           ,id_vm => 2
     }
     ,open_iptables => $args_manage_iptables
       ,remove_base => $args_remove_base
@@ -135,6 +136,8 @@ our %VALID_ARG = (
     }
     ,compact => { uid => 1, id_domain => 1 , keep_backup => 2 }
       ,purge => { uid => 1, id_domain => 1 }
+      ,backup => { uid => 1, id_domain => 1, compress => 2}
+      ,restore_backup => { uid => 1, file => 1, id_domain => 2 }
 
     ,list_machine_types => { uid => 1, id_vm => 2, vm_type => 2}
     ,list_cpu_models => { uid => 1, id_domain => 1}
@@ -146,7 +149,7 @@ our %VALID_ARG = (
     ,list_network_interfaces => { uid => 1, vm_type => 1, type => 2 }
 
     #isos
-    ,list_isos => { vm_type => 1 }
+    ,list_isos => { id_vm => 1 }
 
     ,manage_pools => { uid => 2, id_domain => 2 }
     ,ping_backend => {}
@@ -192,7 +195,7 @@ our %CMD_SEND_MESSAGE = map { $_ => 1 }
             expose remove_expose
             rebase rebase_volumes
             shutdown_node reboot_node start_node
-            compact purge
+            compact purge backup
             start_domain
 
             create_network change_network remove_network
@@ -239,7 +242,7 @@ our %COMMAND = (
                     , 'remove_base_vm'
                     , 'screenshot'
                     , 'cleanup'
-                    , 'compact','spinoff'
+                    , 'compact','spinoff','backup'
                 ]
         ,priority => 20
     }
@@ -255,6 +258,7 @@ our %COMMAND = (
         ,commands => ['shutdown','shutdown_now', 'enforce_limits', 'set_time'
             ,'remove_domain', 'remove', 'refresh_machine_ports'
             ,'connect_node','start_node','shutdown_node'
+            ,'post_login'
         ]
     }
 
@@ -285,7 +289,8 @@ our %CMD_VALIDATE = (
     ,move_volume => \&_validate_change_hardware
     ,compact => \&_validate_compact
     ,spinoff => \&_validate_compact
-    ,prepare_base => \&_validate_compact
+    ,prepare_base => \&_validate_prepare_base
+    ,remove_base => \&_validate_remove_base
 );
 
 sub _init_connector {
@@ -390,8 +395,8 @@ sub create_domain {
 
     my $args = _check_args('create_domain', @_ );
 
-    confess "ERROR: Argument vm required without id_base"
-        if !exists $args->{vm} && !exists $args->{id_base};
+    confess "ERROR: Argument vm or id_vm required without id_base"
+        if !exists $args->{vm} && !exists $args->{id_base} && !exists $args->{id_vm};
 
     my $self = {};
     if ($args->{network}) {
@@ -836,7 +841,62 @@ sub _new_request {
     $request->_validate();
     $request->status('requested') if $request->status ne'done';
 
+    $self->lock_domain() if ! $args{at};
+
     return $request;
+}
+
+sub id_domain($self, $value=undef) {
+
+    return $self->_data('id_domain' => $value) if defined $value;
+
+    my $id_domain = $self->{_data}->{id_domain};
+    return $id_domain if defined $id_domain;
+    $id_domain = $self->defined_arg('id_domain');
+    $self->{_data}->{id_domain} = $id_domain;
+    return $id_domain;
+}
+
+=head2 lock_domain
+
+  Checks if that request belongs to a virtual machine and sets it as locked
+
+=cut
+
+sub lock_domain($self) {
+    my $id_domain = $self->id_domain;
+    if (!defined $id_domain) {
+        $id_domain = $self->defined_arg('id_domain');
+    }
+    return if !defined $id_domain;
+
+    my $sth = $self->_dbh->prepare(
+        "UPDATE domains set is_locked=? "
+        ." WHERE id=?"
+    );
+    $sth->execute($self->id, $id_domain);
+}
+
+=head2 unlock_domain
+
+  Checks if that request belongs to a virtual machine and unlocks it
+
+=cut
+
+sub unlock_domain($self) {
+    my $id_domain = $self->id_domain;
+    if (!defined $id_domain) {
+        $id_domain = $self->defined_arg('id_domain');
+    }
+    return if !defined $id_domain;
+
+    my $sth = $self->_dbh->prepare(
+        "UPDATE domains set is_locked=0 "
+        ." WHERE id=?"
+        ."   AND is_locked<>0"
+    );
+    $sth->execute($id_domain);
+
 }
 
 sub _validate($self) {
@@ -844,6 +904,25 @@ sub _validate($self) {
     my $method = $CMD_VALIDATE{$self->command};
     return if !$method;
     $method->($self);
+}
+
+sub _validate_remove_base($self) {
+    my $id_domain = $self->args('id_domain');
+    my $domain = Ravada::Front::Domain->open($id_domain);
+    my @reqs_base = grep { $_->command eq 'prepare_base' || $_->command eq 'remove_base'}
+        $domain->list_requests;
+
+    my $n = scalar(@reqs_base);
+
+    if ($n >= 2
+            && $reqs_base[$n-2]->command eq 'prepare_base'
+            && $reqs_base[$n-2]->status eq 'requested'
+            && $reqs_base[$n-1]->command eq 'remove_base'
+            && $reqs_base[$n-1]->status eq 'requested'
+        ) {
+        $reqs_base[-1]->status('done');
+        $reqs_base[-2]->status('done');
+    }
 }
 
 sub _validate_remove_hardware($self) {
@@ -875,6 +954,17 @@ sub _validate_start_domain($self) {
         next if $req->at_time;
         next if $command eq 'start' && !$req->after_request();
         $self->after_request($req->id) if $req && $req->id < $self->id;
+    }
+}
+
+sub _validate_prepare_base($self) {
+    $self->_validate_compact();
+
+    my $req_create = $self->_search_request('create'
+        , id_base=> $self->args('id_domain'));
+
+    if ($req_create) {
+        $req_create->after_request($self->id);
     }
 }
 
@@ -1055,6 +1145,12 @@ sub _validate_clone($self
         $self->error("Error: user id='$uid' does not exist");
         return;
     }
+
+    my ($req_base) = grep { $_->command eq 'prepare_base' }
+        $base->list_requests;
+
+    $self->after_request($req_base->id) if $req_base;
+
     return if $user->is_admin;
     return if $user->can_clone_all;
     return $self->_status_error('done'
@@ -1887,6 +1983,68 @@ sub remove($status, %args) {
     }
 }
 
+sub _data($self, $field, $value=undef) {
+    if (defined $value
+        && (
+          !exists $self->{_data}->{$field}
+          || !defined $self->{_data}->{$field}
+          || $value ne $self->{_data}->{$field}
+        )
+    ) {
+        confess "ERROR: field $field is read only"
+            if $FIELD_RO{$field};
+
+        $self->{_data}->{$field} = $value;
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "UPDATE requests set $field=?"
+            ." WHERE id=?"
+        );
+        $sth->execute($value, $self->id);
+        $sth->finish;
+
+        return $value;
+    }
+    return $self->{_data}->{$field}
+    if exists $self->{_data}->{$field} && defined $self->{_data}->{$field};
+
+    $self->{_data} = $self->_select_db( );
+
+    return if !$self->{_data};
+    confess "No field $field "          if !exists$self->{_data}->{$field};
+
+    return $self->{_data}->{$field};
+
+}
+
+sub id($self) {
+    return $self->{id};
+}
+
+sub _select_db($self) {
+
+    _init_connector();
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM requests "
+            ." WHERE id=?");
+    $sth->execute($self->{id});
+    my $row = $sth->fetchrow_hashref;
+    $sth->finish;
+
+    return if !$row;
+
+    return $row;
+}
+
+=head2 refresh
+
+Refresh request status and data
+
+=cut
+
+sub refresh($self) {
+    delete $self->{_data};
+}
+
 sub AUTOLOAD {
     my $self = shift;
 
@@ -1900,37 +2058,17 @@ sub AUTOLOAD {
         );
     }
 
+    confess "ERROR: Unknown field $name "
+        if !exists $self->{$name} && !exists $FIELD{$name} && !exists $FIELD_RO{$name};
+
     confess "Can't locate object method $name via package $self"
         if !ref($self);
 
     my $value = shift;
     $name =~ tr/[a-z][A-Z]_/_/c;
 
-    confess "ERROR: Unknown field $name "
-        if !exists $self->{$name} && !exists $FIELD{$name} && !exists $FIELD_RO{$name};
-    if (!defined $value) {
-        my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM requests "
-            ." WHERE id=?");
-        $sth->execute($self->{id});
-        my $row = $sth->fetchrow_hashref;
-        $sth->finish;
-
-        return $row->{$name};
-    }
-
-    confess "ERROR: field $name is read only"
-        if $FIELD_RO{$name};
-
-    confess "Error: $name can't be a ref ".Dumper($value) if ref($value);
-    my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set $name=? "
-            ." WHERE id=?");
-    confess if $name eq 'error' && !defined $value;
-    eval {
-        $sth->execute($value, $self->{id});
-        $sth->finish;
-    };
-    warn "$name=$value\n$@" if $@;
-    return $value;
+    delete $self->{_data}->{$name} if $name eq 'error';
+    return $self->_data($name, $value);
 
 }
 

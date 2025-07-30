@@ -68,15 +68,25 @@ sub test_bridge($vm) {
     _set_bridge($vm, $domain);
     is($domain->has_nat_interfaces,0,"Expecting ".$domain->name." has no nat "
         .$vm->name) or exit;
-    return;
+
     my $internal_port = 22;
     my $name = "foo";
-    $domain->expose(port => $internal_port, restricted => 0, name => 'ssh');
+    $domain->expose(port => $internal_port, restricted => 1, name => 'ssh');
+
     my $remote_ip = '10.0.0.1';
     $domain->start(user => user_admin, remote_ip => $remote_ip);
+    _wait_ip($domain);
+
+    Ravada::Request->start_domain(uid => user_admin->id
+        ,id_domain => $domain->id
+        ,remote_ip => $remote_ip
+    );
+    wait_request(debug => 0);
 
     my $internal_ip = _wait_ip($domain);
-    wait_request(debug => 1);
+
+    my $ip_info = $domain->ip_info();
+    ok($ip_info->{type} eq 'bridge');
 
     my $internal_net = $internal_ip;
     $internal_net =~ s{(.*)\.\d+$}{$1.0/24};
@@ -84,27 +94,63 @@ sub test_bridge($vm) {
     my $local_ip = $vm->ip;
     my $exposed_port = $domain->exposed_port($internal_port);
     my $public_port = $exposed_port->{public_port};
-    is($public_port, $internal_port) or exit;
-    is($exposed_port->{public_port}, $internal_port) or exit;
+
+    ok($public_port) or die $domain->name;
+
+    isnt($exposed_port->{public_port}, $internal_port) or exit;
 
     my ($in, $out, $err);
     run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
     die $err if $err;
     my @out = split /\n/,$out;
-    is(grep(/^DNAT.*$local_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out),0);
+    is(grep(/^DNAT.*$local_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out),1)
+        or die Dumper(\@out);
+
+    run3(['iptables','-t','nat','-L','POSTROUTING','-n'],\($in, $out, $err));
+    die $err if $err;
+    @out = split /\n/,$out;
+    is(grep(/^SNAT.* 0.0.0.0\/0\s+$internal_ip\s+tcp dpt\:$internal_port to\:$local_ip$/,@out),1);
 
     run3(['iptables','-L','FORWARD','-n'],\($in, $out, $err));
     die $err if $err;
     @out = split /\n/,$out;
-    is(grep(m{^ACCEPT.*$internal_net\s+state NEW},@out),0) or die $out;
+    is(grep(m{^ACCEPT.*$internal_net\s+state NEW},@out),1) or die $out;
 
     run3(['iptables','-L','FORWARD','-n'],\($in, $out, $err));
     die $err if $err;
     @out = split /\n/,$out;
-    is(grep(m{^ACCEPT.*$remote_ip\s+$internal_ip.*dpt:$internal_port},@out),0) or die $out;
-    is(grep(m{^DROP.*0.0.0.0.+$internal_ip.*dpt:$internal_port},@out),0) or die $out;
+    is(grep(m{^ACCEPT.*$remote_ip\s+$internal_ip.*dpt:$internal_port},@out),1) or die $out;
+    is(grep(m{^DROP.*0.0.0.0.+$internal_ip.*dpt:$internal_port},@out),1) or die $out;
 
-    $domain->remove(user_admin);
+    Ravada::Request->shutdown_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,timeout => 2
+    );
+    wait_request();
+    for ( 1.. 10 ) {
+        run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
+        die $err if $err;
+        @out = split /\n/,$out;
+
+        last if(!grep(/^DNAT.*$local_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out));
+
+        wait_request();
+    }
+
+    run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
+    die $err if $err;
+    @out = split /\n/,$out;
+
+    is(grep(/^DNAT.*$local_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out),0)
+        or die Dumper(\@out);
+
+    run3(['iptables','-t','nat','-L','POSTROUTING','-n'],\($in, $out, $err));
+    die $err if $err;
+    @out = split /\n/,$out;
+    is(grep(/^SNAT.* 0.0.0.0\/0\s+$internal_ip\s+tcp dpt\:$internal_port to\:$local_ip$/,@out),0)
+        or die Dumper([ grep /^SNAT/, @out]);
+
 }
 
 ######################################################################

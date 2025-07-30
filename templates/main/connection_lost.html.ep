@@ -1,0 +1,9 @@
+<div class="alert alert-danger" ng-show="ws_connection_lost" ng-cloak="1">
+    <div class="panel-heading">
+       <%=l 'Session disconnected' %>
+       <input type="button" ng-click="subscribe_all('<%= url_for('ws_subscribe')->to_abs %>')"
+                                 value="<%=l 'connect again'%>"/>
+
+    </div>
+</div>
+

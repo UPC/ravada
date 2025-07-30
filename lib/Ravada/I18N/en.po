@@ -107,6 +107,9 @@ msgstr "Hindi"
 msgid "Indonesian"
 msgstr "Indonesian"
 
+msgid "Korean"
+msgstr "Korean"
+
 msgid "Persian"
 msgstr "Persian"
 
@@ -2191,6 +2194,9 @@ msgstr "This must be enabled in global settings too."
 
 msgid "Allow users to clone this base"
 msgstr "Allow users to clone this base"
+
+msgid "This base is available for all users"
+msgstr "This base is available for all users"
 
 msgid "Show the base when the user already created a clone"
 msgstr "Show the base when the user already created a clone"

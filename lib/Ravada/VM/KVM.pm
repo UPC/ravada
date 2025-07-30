@@ -81,9 +81,6 @@ our ($DOWNLOAD_FH, $DOWNLOAD_TOTAL);
 
 our $CONNECTOR = \$Ravada::CONNECTOR;
 
-our $WGET = `which wget`;
-chomp $WGET;
-
 our $CACHE_DOWNLOAD = 1;
 our $VERIFY_ISO = 1;
 
@@ -303,6 +300,8 @@ sub search_volume($self,$file,$refresh=0) {
         die $@ if $@ && $@ !~ /^libvirt error code: 50,/;
     }
 
+    return $vol if $vol;
+
     return $self->search_volume_re(qr(^$name$),$refresh);
 }
 
@@ -388,11 +387,6 @@ sub search_volume_re($self,$pattern,$refresh=0) {
 
 sub remove_file($self,@files) {
     for my $file (@files) {
-        if ($self->is_local) {
-            next if ! -e $file;
-            unlink $file or die "$! $file";
-            next;
-        }
         my $vol = $self->search_volume($file);
         if (!$vol) {
             $self->_refresh_storage_pools();
@@ -615,6 +609,9 @@ sub file_exists($self, $file) {
 }
 
 sub _file_exists_remote($self, $file) {
+    my $found = $self->search_volume($file);
+    return 1 if $found;
+
     $file = $self->_follow_link($file) unless $file =~ /which$/;
     return if !$self->vm;
     for my $pool ($self->vm->list_all_storage_pools ) {
@@ -1052,22 +1049,28 @@ sub _domain_create_from_iso {
     confess "Template ".$iso->{name}." has no URL, iso_file argument required."
         if $iso->{has_cd} && !$iso->{url} && !$iso_file && !$iso->{device};
 
-    if (defined $iso_file) {
+    if (defined $iso_file && $iso_file) {
         if ( $iso_file ne "<NONE>" || $iso_file ) {
             $device_cdrom = $iso_file;
         }
+    } elsif ($iso->{has_cd}) {
+        $device_cdrom = $self->search_volume_path_re(qr($iso->{file_re}));
+        if (!$device_cdrom) {
+            my $req_download = Ravada::Request->download(
+                uid => Ravada::Utils::user_daemon->id
+                ,id_iso => $iso->{id}
+                ,id_vm => $self->id
+                ,retry => 2
+            );
+            my $request = $args{request};
+            if ($request) {
+                $request->retry(2);
+                $request->after_request_ok($req_download->id);
+            }
+            die "ISO file not found. Downloading. retry.\n";
+        }
     }
 
-    $device_cdrom  =$self->_iso_name($iso, $args{request})
-    if !$device_cdrom && $iso->{has_cd};
-    
-    #if ((not exists $args{iso_file}) || ((exists $args{iso_file}) && ($args{iso_file} eq "<NONE>"))) {
-    #    $device_cdrom = $self->_iso_name($iso, $args{request});
-    #}
-    #else {
-    #    $device_cdrom = $args{iso_file};
-    #}
-    
     my $disk_size;
     $disk_size = $args{disk} if $args{disk};
 
@@ -1363,14 +1366,12 @@ sub _iso_name($self, $iso, $req=undef, $verbose=1) {
     my $iso_name;
     if ($iso->{rename_file}) {
         $iso_name = $iso->{rename_file};
-    } else {
-        ($iso_name) = $iso->{url} =~ m{.*/(.*)} if $iso->{url};
-        ($iso_name) = $iso->{device} if !$iso_name;
+    } elsif ($iso->{device}) {
+        $iso_name = $iso->{device};
     }
 
-    confess "Unknown iso_name for ".Dumper($iso)    if !$iso_name;
-
-    my $device = ($iso->{device} or $self->dir_img."/$iso_name");
+    my $device = $iso->{device};
+    $device = $self->dir_img."/$iso_name" if !$device && $iso_name;
 
     warn "Missing MD5 and SHA256 field on table iso_images FOR $iso->{url}"
         if $VERIFY_ISO && $iso->{url} && !$iso->{md5} && !$iso->{sha256};
@@ -1379,20 +1380,28 @@ sub _iso_name($self, $iso, $req=undef, $verbose=1) {
     my $test = 0;
     $test = 1 if $req && $req->defined_arg('test');
 
-    if ($test || ! -e $device || ! -s $device) {
-        $req->status("downloading $iso_name file"
-                ,"Downloading ISO file for $iso_name "
+    if ($test || !$device || ! $self->file_exists($device) ) {
+        $req->status("downloading ".$iso->{file_re}." file"
+                ,"Downloading ISO file for ".$iso->{file_re}
                  ." from $iso->{url}. It may take several minutes"
         )   if $req;
         _fill_url($iso);
 
         $self->_set_iso_downloading($iso,1);
+        if ( !$device ) {
+            $self->_fetch_filename($iso);
+            $device = $self->dir_img()."/".$iso->{filename};
+            my $sth = $self->_dbh->prepare("UPDATE iso_images set device=?"
+                ." WHERE id=?"
+            );
+            $sth->execute($device, $iso->{id});
+        }
         my $url = $self->_download_file_external($iso->{url}, $device, $verbose, $test);
         $self->_set_iso_downloading($iso,0);
         $req->output($url) if $req;
         $self->_refresh_storage_pools();
         die "Download failed, file $device missing.\n"
-            if !$test && ! -e $device;
+            if !$test && ! -$self->file_exists($device);
 
         my $verified = 0;
         for my $check ( qw(md5 sha256)) {
@@ -1410,14 +1419,14 @@ sub _iso_name($self, $iso, $req=undef, $verbose=1) {
             next if !$iso->{$check};
             next if $test;
 
-            die "Download failed, $check id=$iso->{id} missmatched for $device."
+            $req->status("working","Download failed, $check id=$iso->{id} missmatched for $device."
             ." Please read ISO "
-            ." verification missmatch at operation docs.\n"
+            ." verification missmatch at operation docs.\n")
             if (! _check_signature($device, $check, $iso->{$check}));
             $verified++;
         }
         return if $test;
-        die "WARNING: $device signature not verified ".Dumper($iso)    if !$verified;
+        warn "WARNING: $device signature not verified ".Dumper($iso)    if !$verified;
 
         $req->status("done","File $iso->{filename} downloaded") if $req;
         $downloaded = 1;
@@ -1492,7 +1501,7 @@ sub _check_signature($file, $type, $expected) {
 }
 
 sub _download_file_external_headers($self,$url) {
-    my @cmd = ($WGET,"-S","--spider",$url);
+    my @cmd = ('wget',"-S","--spider",$url);
 
     my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);
@@ -1507,41 +1516,56 @@ sub _download_file_external_headers($self,$url) {
 
 sub _download_file_external($self, $url, $device, $verbose=1, $test=0) {
     $url .= "/" if $url !~ m{/$} && $url !~ m{.*/([^/]+\.[^/]+)$};
+
+    my ($filename) = $device =~ m{.*/(.*)};
+
     if ($url =~ m{[^*]}) {
-        my @found = $self->_search_url_file($url);
+        my @found = $self->_search_url_file($url, $filename);
         die "Error: URL not found '$url'" if !scalar @found;
         $url = $found[-1];
     }
     if ( $url =~ m{/$} ) {
-        my ($filename) = $device =~ m{.*/(.*)};
         $url = "$url$filename";
     }
-    confess "ERROR: wget missing"   if !$WGET;
 
     $url =~ s{/./}{/}g;
-    return $self->_download_file_external_headers($url)    if $test;
-    return $url if -e $device;
+    if ( $test ) {
+        unless($device) {
+            ($device) = $url =~ m{.*/(.*)};
+            $device = $self->dir_img()."/".$device;
+        }
+        confess "I can't find filename in '$url'" unless $device;
+        $self->write_file($device,"mock") unless $self->file_exists($device);
+        return $self->_download_file_external_headers($url);
+    }
+    return $url if $self->file_exists($device);
 
-    my @cmd = ($WGET,'-nv',$url,'-O',$device);
-    my ($in,$out,$err);
+    my @cmd = ('wget','-nv',$url,'-O',$device);
+    #    $self->write_file($device,"mock @cmd") unless $self->file_exists($device);
+    # return $url;
+
+
+    warn join(" ",@cmd)."\n";
     warn join(" ",@cmd)."\n"    if $verbose;
-    run3(\@cmd,\$in,\$out,\$err);
+    my ($out, $err) = $self->run_command(@cmd);
     warn "out=$out" if $out && $verbose;
     warn "err=$err" if $err && $verbose;
     print $out if $out;
-    chmod 0755,$device or die "$! chmod 0755 $device"
-        if -e $device;
 
     return $url if !$err;
 
     if ($err && $err =~ m{\[(\d+)/(\d+)\]}) {
         if ( $1 != $2 ) {
-            unlink $device or die "$! $device" if -e $device;
+            $self->remove_file($device) or die "$! $device"
+            if $self->file_exists($device);
+
             die "ERROR: Expecting $1 , got $2.\n$err"
         }
         return $url;
     }
-    unlink $device or die "$! $device" if -e $device;
+    $self->remove_file($device) or die "$! $device"
+            if $self->file_exists($device);
+
     die $err;
 }
 
@@ -1553,11 +1577,19 @@ sub _search_iso($self, $id_iso, $file_iso=undef) {
     if $row->{options} && !ref($row->{options});
     die "Missing iso_image id=$id_iso" if !keys %$row;
 
-    return $row if $file_iso && -e $file_iso;
+    return $row if $file_iso &&  $self->file_exists($file_iso);
 
-    if ( $row->{device} && -e $row->{device} ) {
-        ($row->{filename}) = $row->{device} =~ m{.*/(.*)};
+    Ravada::Front::_fix_iso_file_re($row);
+
+    if ( !$row->{device} || ! $self->file_exists($row->{device}) ) {
+        my $device_cdrom = $self->search_volume_path_re(qr($row->{file_re}));
+        $row->{device} = $device_cdrom
+            if ($device_cdrom);
     }
+
+    ($row->{filename}) = $row->{device} =~ m{.*/(.*)}
+    if $row->{device} && $self->file_exists($row->{device});
+
     $self->_fetch_filename($row);#    if $row->{file_re};
     if ($VERIFY_ISO) {
         $self->_fetch_md5($row)         if !$row->{md5} && $row->{md5_url};
@@ -1573,7 +1605,6 @@ sub _search_iso($self, $id_iso, $file_iso=undef) {
             $sth->execute($volume->get_path, $row->{id});
         }
     }
-    my $rename_file = $row->{rename_file};
 
     return $row;
 }
@@ -1597,8 +1628,9 @@ sub _download($self, $url) {
         last if $res;
     }
     die $@ if $@;
-    confess "ERROR ".$res->code." ".$res->message." : $url"
-        unless $res->code == 200 || $res->code == 301 || $res->code == 302;
+    confess "ERROR ".($res->code or '<UNDEF>')." ".$res->message." : $url"
+        unless defined $res->code
+        && ( $res->code == 200 || $res->code == 301 || $res->code == 302 );
 
     return $self->_cache_store($url,$res->body);
 }
@@ -1726,6 +1758,7 @@ sub _fetch_filename {
         $sth->execute($row->{device}, $row->{id});
         return;
     } else {
+        warn Dumper([$row->{url}, $row->{file_re}]);
         @found = $self->_search_url_file($row->{url}, $row->{file_re}) if !@found;
         die "No ".qr($row->{file_re})." found on $row->{url}" if !@found;
     }
@@ -1750,6 +1783,8 @@ sub _search_url_file($self, $url_re, $file_re=undef) {
         if ($url_re =~ /\.\.$/) {
             $url_re =~ s{(.*)/.*/\.\.$}{$1};
         }
+    } else {
+        $url_re =~ s{(.*)/.*$}{$1};
     }
 
     $file_re .= '$' if $file_re !~ m{\$$};
@@ -2951,7 +2986,7 @@ sub list_machine_types($self) {
 
 sub _is_ip_nat($self, $ip0) {
     my $ip = NetAddr::IP->new($ip0);
-    for my $net ( $self->vm->list_networks ) {
+    for my $net ( $self->vm->list_all_networks ) {
         my $xml = XML::LibXML->load_xml(string
             => $net->get_xml_description());
         my ($xml_ip) = $xml->findnodes("/network/ip");
@@ -3027,6 +3062,9 @@ sub list_virtual_networks($self) {
             $ip = $ip_doc->getAttribute('address');
             $netmask = $ip_doc->getAttribute('netmask');
         }
+        my ($forward) = $doc->findnodes("/network/forward");
+        my $forward_mode = 'none';
+        $forward_mode = $forward->getAttribute('mode') if $forward;
         my $data= {
             is_active => $net->is_active()
             ,autostart => $net->get_autostart()
@@ -3036,6 +3074,7 @@ sub list_virtual_networks($self) {
             ,ip_address => $ip
             ,ip_netmask => $netmask
             ,internal_id => ''.$net->get_uuid_string
+            ,forward_mode => $forward_mode
         };
         if ($ip_doc) {
             my ($dhcp_range) = $ip_doc->findnodes("dhcp/range");
@@ -3072,9 +3111,24 @@ sub new_network($self, $name='net') {
             }
 
         }
+        if ( $field eq 'name' && $name ne 'net' ) {
+            my $value = $base{$field};
+            $value =~ s/(.*-.).*(\..*)/$1$2/;
+            if (exists $old{$value}) {
+                $value = $base{$field};
+            }
+            if (!exists $old{$value}) {
+                $new->{$field}=$value;
+                next;
+            }
+        }
+
         my ($last) = reverse sort keys %old;
         my ($z,$n) = $last =~ /.*?(0*)(\d+)/;
-        $z=$last if !defined $z;
+        if (!defined $z) {
+            ($z) = $last =~ /.*?(\d+$)/;
+            $z='' if !defined $z;
+        }
         $n=0 if !defined $n;
         $n++;
         $n = "$z$n";
@@ -3100,6 +3154,7 @@ sub new_network($self, $name='net') {
         }
         $new->{$field} = $value;
     }
+    $new->{forward_mode} = "nat";
     return $new;
 }
 
@@ -3113,7 +3168,11 @@ sub create_network($self, $data) {
     my ($xml_net) = $xml->findnodes("/network");
 
     my $forward = $xml_net->addNewChild(undef,'forward');
-    $forward->setAttribute('mode' => 'nat');
+    if (exists $data->{forward_mode}) {
+        $forward->setAttribute('mode' => $data->{forward_mode});
+    } else {
+        $forward->setAttribute('mode' => 'nat');
+    }
 
     my $ip = $xml_net->addNewChild(undef,'ip');
     $ip->setAttribute('address' => $data->{ip_address});
@@ -3226,10 +3285,33 @@ sub change_network($self, $data) {
         }
     }
 
+    my $forward_mode = delete $data->{forward_mode};
+
+    if (defined $forward_mode) {
+        my $curr_fw_mode='none';
+        my ($xml_forward) = $doc->findnodes("/network/forward");
+        $curr_fw_mode = $xml_forward->getAttribute('mode') if $xml_forward;
+        if ( $curr_fw_mode ne $forward_mode) {
+            $changed++;
+            my $is_active = $network->is_active;
+            $network->destroy() if $network->is_active;
+            if (!$xml_forward) {
+                my ($xml_network) = $doc->findnodes("network");
+                $xml_forward = $xml_network->addNewChild(undef,"forward");
+            }
+            $xml_forward->setAttribute('mode' => $forward_mode);
+            my ($xml_nat) = $xml_forward->findnodes("nat");
+            $xml_forward->removeChild($xml_nat) if $forward_mode ne 'nat' && $xml_nat;
+            $network= $self->vm->define_network($doc->toString);
+            $network->create() if $is_active;
+        }
+    }
+
+
     for ('id_vm','internal_id','id' ,'_old_name', 'date_changed') {
         delete $data->{$_};
     }
-    die "Error: unexpected args ".Dumper($data) if keys %$data;
+    warn "Warning: unexpected args ".Dumper($data) if keys %$data;
 
     return $changed;
 }

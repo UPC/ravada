@@ -217,6 +217,7 @@ sub _get_controller_display($self) {
     my %file_extension = (
         'spice' => 'vv'
         ,'spice-tls' => 'tls.vv'
+        ,'rdp' => 'rdp'
     );
 
     my $sth = $$CONNECTOR->dbh->prepare(
