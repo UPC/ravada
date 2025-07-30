@@ -509,15 +509,20 @@
               return string;
             };
 
-            $scope.action = function(target,action,machineId,params){
+            $scope.action = function(target,action,machine,params){
               if (action === 'view-new-tab') {
-                  window.open('/machine/view/' + machineId + '.html');
+                  window.open('/machine/view/' + machine.id + '.html');
               }
               else if (action === 'view') {
-                  window.location.assign('/machine/view/' + machineId + '.html');
+                  window.location.assign('/machine/view/' + machine.id + '.html');
               }
+                else if ((action === 'shutdown' || action === 'force_shutdown') && machine.autostart == 1 && !params.confirmed) {
+                    $('#shutdownModal').modal({show:true})
+                    $scope.tmp_action = action;
+                    $scope.force = params.force;
+                }
               else {
-                  $http.get('/'+target+'/'+action+'/'+machineId+'.json'+'?'+this.getQueryStringFromObject(params))
+                  $http.get('/'+target+'/'+action+'/'+machine.id+'.json'+'?'+this.getQueryStringFromObject(params))
                     .then(function() {
                     }, function(data,status) {
                           console.error('Repos error', status, data);
@@ -525,6 +530,8 @@
                     });
               }
             };
+            $scope.tmp_action = null;
+            $scope.force = null;
 
             var subscribe_requests = function(url) {
                 var ws = new WebSocket(url);

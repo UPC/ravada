@@ -311,7 +311,8 @@
                                         <button type="button" class="close" data-dismiss="modal">&times;</button>
                                     </div>
                                     <div class="modal-body">
-                                        <p><%=l 'Are you sure you want to shutdown the machine ' %> {{machine.name}} <%=l '?' %> </p>
+                                        <p><%=l 'Attention this machine has the autostart option activated !' %> </p>
+                                        <p><%=l 'Are you sure you want to shutdown the machine ?' %> </p>
                                     </div>
                                     <div class="modal-footer">
                                         <button type="button" ng-click="action('machine', 'shutdown', machine, true)" class="btn btn-danger" data-dismiss="modal"><%=l 'Yes' %></button>
