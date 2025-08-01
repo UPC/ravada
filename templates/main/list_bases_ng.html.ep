@@ -74,7 +74,7 @@
                         </button>
                         <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
                             <a ng-show="machine.clone.is_active || machine.is_active" class="dropdown-item"
-                                ng-click="machine.action=false;action(machine,'shutdown', false)" 
+                                ng-click="machine.action=false;action(machine,'shutdown', false)">
                                 <i class="fa fa-angle-double-down" aria-hidden="true"></i>&nbsp;<%=l 'Shutdown'%></a>
                             <a ng-show="machine.clone.is_active || machine.is_active" class="dropdown-item"
                                 ng-click="machine.action=false;action(machine,'reboot')">
@@ -100,8 +100,8 @@
                                 <button type="button" class="close" data-dismiss="modal">&times;</button>
                             </div>
                             <div class="modal-body">
-                                <p><%=l 'Attention this machine has the autostart option activated !' %> </p>
-                                <p><%=l 'Are you sure you want to shutdown the machine ?' %> </p>
+                                <p><%=l 'Warning: this machine has the autostart option activated !' %> </p>
+                                <p><%=l 'Are you sure you want to shutdown ?' %> </p>
                             </div>
                             <div class="modal-footer">
                                 <button type="button" ng-click="action(machine, 'shutdown', true)" class="btn btn-danger" data-dismiss="modal"><%=l 'Yes' %></button>

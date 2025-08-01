@@ -1682,9 +1682,9 @@ post '/machine/set' => sub($c) {
         return $c->render(json => { $field => $value_text });
     } else {
         machine_change_hardware($c, $id, $options);
-        machine_set_options($c, $id, $options);
+        my $change = machine_set_options($c, $id, $options);
 
-        return $c->render(json => $options );
+        return $c->render(json => $change);
     }
 };
 
@@ -4407,10 +4407,11 @@ sub shutdown_machine {
     my $id_req;
     if ($domain) {
         my $req;
-        $req = Ravada::Request->force_shutdown_domain(id_domain => $domain->id, uid => $USER->id)
-            if ($c->param('force') eq 'true');
-        $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id)
-            unless ($c->param('force') eq 'true');
+        if  ($c->param('force') && $c->param('force') eq 'true') {
+            $req = Ravada::Request->force_shutdown_domain(id_domain => $domain->id, uid => $USER->id)
+        } else {
+            $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id)
+        }
         $id_req = $req->id if $req;
     }
     return $c->redirect_to('/machines') if $type eq 'html';
@@ -4826,7 +4827,7 @@ sub machine_set_options($c, $id, $options) {
         machine_set_value($c, $id, $key => $options->{$key}, $value_text);
     }
 
-    return $c->render(json => $change);
+    return $change;
 }
 
 sub _privileged_machine_field($field) {
