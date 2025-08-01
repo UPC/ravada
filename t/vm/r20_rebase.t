@@ -248,8 +248,59 @@ sub test_prepare_remove($vm) {
 
 }
 
-######################################################################
+sub test_rebase_clone($vm) {
+    my $base0 = create_domain($vm);
+    $base0->add_volume( format => 'qcow2' );
 
+    Ravada::Request->prepare_base(
+        id_domain => $base0->id
+        ,uid => Ravada::Utils->user_daemon->id
+    );
+    wait_request();
+
+    my $base1 = $base0->clone(name => new_domain_name()
+        ,user => user_admin
+    );
+    my $clone = $base0->clone(name => new_domain_name()
+        ,user => user_admin
+    );
+    Ravada::Request->prepare_base(
+        id_domain => $base1->id
+        ,uid => Ravada::Utils->user_daemon->id
+    );
+    wait_request();
+
+    Ravada::Request->rebase(
+        uid => user_admin->id
+        ,id_domain => $clone->id
+        ,id_base => $base1->id
+    );
+    wait_request(debug => 1);
+    $clone->start(user_admin);
+    $clone->shutdown_now(user_admin);
+
+    Ravada::Request->spinoff(
+        uid => user_admin->id
+        ,id_domain => $base1->id
+    );
+
+    wait_request();
+
+    Ravada::Request->remove_base(
+        uid => user_admin->id
+        ,id_domain => $base0->id
+    );
+    wait_request();
+
+    Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $clone->id
+    );
+    wait_request();
+
+}
+
+######################################################################
 
 clean();
 $ENV{LANG}='C';
@@ -266,6 +317,8 @@ for my $vm_name (vm_names() ) {
 
         skip($msg,10)   if !$vm;
         diag("Testing rebase for $vm_name");
+
+        test_rebase_clone($vm);
 
         test_prepare_remove($vm);
 
