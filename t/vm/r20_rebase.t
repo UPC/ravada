@@ -275,22 +275,23 @@ sub test_rebase_clone($vm) {
         ,id_domain => $clone->id
         ,id_base => $base1->id
     );
-    wait_request(debug => 1);
-    $clone->start(user_admin);
-    $clone->shutdown_now(user_admin);
+    wait_request(debug => 0);
 
-    Ravada::Request->spinoff(
+    my $req = Ravada::Request->spinoff(
         uid => user_admin->id
         ,id_domain => $base1->id
     );
 
-    wait_request();
+    wait_request( check_error => 0 );
+    like($req->error,qr/has .* clones/);
 
-    Ravada::Request->remove_base(
+    my $re2 = Ravada::Request->remove_base(
         uid => user_admin->id
         ,id_domain => $base0->id
     );
-    wait_request();
+    wait_request(check_error => 0);
+
+    like($req->error,qr/has .* clones/);
 
     Ravada::Request->start_domain(
         uid => user_admin->id
@@ -298,6 +299,7 @@ sub test_rebase_clone($vm) {
     );
     wait_request();
 
+    remove_domain($base0);
 }
 
 ######################################################################
