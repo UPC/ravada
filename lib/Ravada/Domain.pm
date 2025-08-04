@@ -6804,9 +6804,10 @@ sub _allow_group_access($self, %args) {
     confess "Error: unknown args ".Dumper(\%args) if keys %args;
 
     if ($type eq 'local') {
-        $group = Ravada::Auth::Group::_search_name_by_id($id_group);
+        $group = Ravada::Auth::Group::_search_name_by_id($id_group)
+        if !$group;
         my %groups = map { $_ => 1 } $self->list_access_groups($type);
-        return if $groups{$group};
+        return if defined $group && $groups{$group};
     }
 
     my $sth = $$CONNECTOR->dbh->prepare(
