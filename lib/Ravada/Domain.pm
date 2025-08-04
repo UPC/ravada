@@ -6802,6 +6802,13 @@ sub _allow_group_access($self, %args) {
     $type = 'ldap' if !$type || $type eq 'group';
 
     confess "Error: unknown args ".Dumper(\%args) if keys %args;
+
+    if ($type eq 'local') {
+        $group = Ravada::Auth::Group::_search_name_by_id($id_group);
+        my %groups = map { $_ => 1 } $self->list_access_groups($type);
+        return if $groups{$group};
+    }
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO group_access "
         ."( id_domain, id_group, name, type)"
@@ -6822,15 +6829,16 @@ sub list_access_groups($self, $type) {
         ."   AND type=?"
     );
     $sth->execute($self->id, $type);
-    my @groups;
+    my %groups;
     my $sth_gname = $$CONNECTOR->dbh->prepare("SELECT name FROM groups_local WHERE id=?");
     while ( my $row = $sth->fetchrow_hashref ) {
         if (!$row->{name} && $row->{id_group}) {
             $sth_gname->execute($row->{id_group});
             ($row->{name}) = $sth_gname->fetchrow;
         }
-        push @groups,($row->{name});
+        $groups{$row->{name}}++;
     }
+    my @groups = sort keys %groups;
     return @groups;
 }
 
