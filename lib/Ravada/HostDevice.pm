@@ -129,14 +129,14 @@ sub list_devices($self, $id_vm=$self->id_vm) {
     my @command = split /\s+/, $self->list_command;
 
     if ($command[0] !~ m{^/} && $command[0] =~ /^plugins/) {
-        my ($dir) = $0 =~ m{(\.)/};
-        $dir = getcwd() if $dir eq '.';
-        $dir = "/usr/share/ravada" if !$dir;
+        my $dir = "/usr/share/ravada";
+        $dir = getcwd() if $0 !~ m{^/} || $0 =~ m{^\.};
         $command[0] = "$dir/".$command[0];
     }
 
     my ($out, $err) = $vm->run_command(@command);
-    die $err if $err;
+    chomp $err;
+    die "$err\n" if $err;
     my $filter = $self->list_filter();
 
     my @device;

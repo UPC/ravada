@@ -868,7 +868,7 @@ sub _get_frontend_devices($vm, $id_hd) {
         next unless $curr_hd->{id} == $id_hd;
         for my $node ( keys %{$curr_hd->{devices_node}} ) {
             my $dn = $curr_hd->{devices_node}->{$node};
-            for my $dev (@$dn) {
+            for my $dev (@{$dn->{list}}) {
                 push @devices, ($dev->{name})
             }
         }

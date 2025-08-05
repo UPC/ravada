@@ -81,7 +81,7 @@ our @TEMPLATES_KVM  = (
         ]
     }
     ,{
-        name => 'NVIDIA GRID'
+        name => 'vGPU VFIO'
         ,list_command => 'plugins/list_vgpus.sh'
         ,list_filter => ''
         ,template_args => encode_json({
@@ -256,7 +256,7 @@ our @TEMPLATES_VOID = (
         ]
     }
      ,{
-        name => 'NVIDIA GRID'
+        name => 'vGPU VFIO'
         ,list_command => 'plugins/list_vgpus.sh'
         ,list_filter => ''
         ,template_args => encode_json({
