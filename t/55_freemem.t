@@ -9,37 +9,31 @@ use XML::LibXML;
 
 use lib 't/lib';
 use Test::Ravada;
-use Sys::Statistics::Linux;
 
-use_ok('Ravada');
+no warnings "experimental::signatures";
+use feature qw(signatures);
 
 my $RVD_BACK = rvd_back( );
 
 my $USER = create_user('foo','bar', 1);
+
+my $RAM = 4 * 1000 * 1000;
 
 sub test_new_domain {
     my $vm = shift;
 
     my $name = new_domain_name();
 
-    my $freemem = _check_free_memory();
-    my $domain;
-    eval { $domain = $vm->create_domain(name => $name
+    my $freemem = _check_free_memory($vm);
+    my $domain = $vm->create_domain(name => $name
                                         , id_iso => search_id_iso('Alpine')
                                         ,vm => $vm->type
                                         ,id_owner => $USER->id
-                                        ,memory => 4*1024*1024
+                                        ,memory => $RAM
                                         ,disk => 1 * 1024*1024
-            ) 
-    };
-    if ($freemem < 1 ) {
-        ok($@,"Expecting failed because we ran out of free RAM");
-        return;
-    }
-    ok(!$@,"Domain $name not created: $@");
+    );
 
-    ok($domain,"Domain not created") or return;
-    eval { $domain->start($USER); sleep 1; };
+    eval { $domain->start($USER); };
 
     if ($freemem < 1 || $@ =~ /free memory/) {
         ok($@,"Expecting failed start because we ran out of free RAM ($freemem MB Free)");
@@ -64,7 +58,7 @@ sub test_new_domain_req {
                                         , id_iso => search_id_iso('Alpine')
                                         ,vm => $vm->type
                                         ,id_owner => $USER->id
-                                        ,memory => (_check_free_memory() * 2) * 1024 * 1024
+                                        ,memory => (_check_free_memory($vm) * 2) * 1024 * 1024
                                         ,disk => 1 * 1024*1024
             )
     };
@@ -98,10 +92,8 @@ sub test_new_domain_req {
 
 }
 
-sub _check_free_memory{
-    my $lxs  = Sys::Statistics::Linux->new( memstats => 1 );
-    my $stat = $lxs->get;
-    my $freemem = $stat->memstats->{realfree};
+sub _check_free_memory($vm) {
+    my $freemem = $vm->free_memory;
     #die "No free memory" if ( $stat->memstats->{realfree} < 500000 );
     my $free = int( $freemem / 1024 );
     $free = $free / 1024;
@@ -133,8 +125,9 @@ SKIP: {
 
     use_ok("Ravada::Domain::$vm_name");
 
-    my $freemem = _check_free_memory();
+    my $freemem = _check_free_memory($vm);
     my $n_domains = int($freemem)*2+2;
+    $RAM = int($freemem *0.9*1024*1024);
 
     if ($n_domains > 50 ) {
         my $msg = "Skipped freemem check, too many memory in this host";
@@ -149,12 +142,11 @@ SKIP: {
 
     my @domains;
     for ( 0 .. $n_domains ) {
-#        diag("Creating domain $_");
         my $domain = test_new_domain($vm) or last;
         push @domains,($domain) if $domain;
     }
 
-    test_new_domain_req($vm) if $vm_name ne 'Void';
+    test_new_domain_req($vm);
     for (@domains) {
         $_->shutdown_now($USER);
     }
