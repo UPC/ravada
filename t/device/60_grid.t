@@ -28,7 +28,6 @@ $Ravada::Domain::TTL_REMOVE_VOLATILE=3;
 sub _create_grid($vm) {
     my $templates = Ravada::HostDevice::Templates::list_templates($vm->id);
     my ($mdev) = grep { $_->{name} =~ /vGPU VFIO/ } @$templates;
-    warn Dumper([ map { $_->{name} } @$templates]);
     ok($mdev,"Expecting Nvidia Grid template in ".$vm->name) or return;
 
     my $id = $vm->add_host_device(template => $mdev->{name});
@@ -41,7 +40,24 @@ sub test_grid($vm) {
 
     my $hd = _create_grid($vm);
 
-    warn Dumper([$hd->list_available_devices()]);
+    $hd->_data('list_command'=> "plugins/fail.sh");
+    my $req = Ravada::Request->list_host_devices(
+        uid => user_admin->id
+        ,id_host_device => $hd->id
+    );
+    wait_request();
+    is($req->error,'');
+    is($req->output,undef);
+    like($hd->_data('devices_node'),qr/^\{.*\}$/);
+
+    my $dn;
+    eval{ $dn = decode_json($hd->_data('devices_node')) };
+
+    is($@,'');
+    like($dn->{$vm->id}->{error},qr/./);
+    is_deeply($dn->{$vm->id}->{list},[]);
+
+    $hd->remove();
 }
 
 #########################################################################################

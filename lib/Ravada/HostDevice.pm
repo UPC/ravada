@@ -134,6 +134,14 @@ sub list_devices($self, $id_vm=$self->id_vm) {
         $command[0] = "$dir/".$command[0];
     }
 
+    my $exec = $command[0];
+    $exec = $vm->_which($command[0]) if $command[0] !~ m{^/};
+
+    die "Error: missing file ".$exec."\n"
+    if !$exec || !$vm->file_exists($exec);
+
+    $command[0] = $exec if $exec;
+
     my ($out, $err) = $vm->run_command(@command);
     chomp $err;
     die "$err\n" if $err;
@@ -295,7 +303,8 @@ sub _data($self, $field, $value=undef) {
         die "Error: invalid value '$value' in $field"
         if $field eq 'list_command' &&(
             $value =~ m{["'`$()\[\];]}
-            || $value !~ /^(ls|find)/);
+            || $value !~ m{^(ls|find|plugins/)}
+            );
 
         $value = encode_json($value) if ref($value);
 
