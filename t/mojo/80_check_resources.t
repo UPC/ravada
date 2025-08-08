@@ -24,7 +24,7 @@ my $URL_LOGOUT = '/logout';
 $Test::Ravada::BACKGROUND=1;
 my $t;
 
-my $BASE_NAME="zz-test-base-ubuntu";
+my $BASE_NAME="zz-test-base-alpine";
 my $BASE;
 #########################################################
 
