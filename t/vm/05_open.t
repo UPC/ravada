@@ -59,8 +59,9 @@ sub test_which($vm) {
 clean();
 my $id = 10;
 
+my $vm_name = new_domain_name();
+
 for my $vm_type( vm_names() ) {
-    diag($vm_type);
 
     my $vm = rvd_back->search_vm($vm_type);
     my $exp_class = "Ravada::VM::$vm_type";
@@ -82,6 +83,18 @@ for my $vm_type( vm_names() ) {
 
     my $vm = Ravada::VM->open($id);
     is(ref($vm),$exp_class);
+
+    my $vm2 = Ravada::VM->open(name => $vm->name, vm_type => $vm_type);
+    is($vm2->id,$vm->id);
+
+    $vm->_data('name' => $vm_name);
+
+    my $vm3 = Ravada::VM->open(name => $vm_name, vm_type => $vm_type);
+    is($vm3->id,$vm->id);
+
+    my $vm4 = $vm3->open(name => $vm_name);
+    is($vm4->id,$vm->id);
+
 
     if (!$< || $vm_type ne 'KVM') {
         init_vm($vm);

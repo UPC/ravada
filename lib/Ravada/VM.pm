@@ -200,10 +200,27 @@ sub open {
             if $args{id} && $args{type};
         return _open_type($proto,@_) if $args{type};
 
-        $args{id} = _search_id($args{name}) if $args{name};
+        if ($args{name} && ( !exists $args{id} || !defined $args{id}) ) {
+            if (!exists $args{vm_type} || !$args{vm_type}) {
+                my $type;
+                if (ref($proto)) {
+                    ($type) = ref($proto) =~ m{Ravada::VM::(.*)};
+                } else {
+                    ($type) = $proto =~ m{Ravada::VM::(.*)};
+                }
+                confess "Error: I can't find type from proto '$proto'" if !$type;
+
+                $args{vm_type}=$type;
+            }
+
+            my $id = _search_id($args{name}, $args{vm_type});
+
+            confess "VM not found".Dumper(\%args) if !$id;
+            $args{id} = $id;
+        }
 
         confess "I don't know how to open ".Dumper(\%args)
-        if !$args{id};
+        if !exists $args{id} || !defined $args{id};
     } else {
         $args{id} = shift;
     }
@@ -254,11 +271,11 @@ sub open {
 
 }
 
-sub _search_id($name) {
+sub _search_id($name, $type) {
     my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT id FROM vms WHERE name=?"
+        "SELECT id FROM vms WHERE name=? AND vm_type=?"
     );
-    $sth->execute($name);
+    $sth->execute($name, $type);
     my ($id) = $sth->fetchrow;
     return $id;
 }
@@ -1163,6 +1180,11 @@ sub _do_select_vm_db {
         if ($id) {
             %args =( id => $id );
         }
+    }
+
+    if  ( exists $args{name} && keys %args == 1 ) {
+        my ($type) = ref($self) =~ m{.*::(.*)};
+        $args{vm_type} = $type;
     }
 
     confess Dumper(\%args) if !keys %args;
