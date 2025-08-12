@@ -457,19 +457,6 @@ sub _update_isos {
 
         }
 
-        ,bionic=> {
-                    name => 'Ubuntu 18.04 Bionic Beaver'
-            ,description => 'Ubuntu 18.04 Bionic Beaver 64 bits'
-                   ,arch => 'x86_64'
-                    ,xml => 'bionic-amd64.xml'
-             ,xml_volume => 'bionic64-volume.xml'
-                    ,url => 'http://releases.ubuntu.com/18.04/'
-                ,file_re => '^ubuntu-18.04.*desktop-amd64.iso'
-                ,sha256_url => '$url/SHA256SUMS'
-          ,min_disk_size => '9'
-                ,min_ram => 1
-            ,arch => 'x86_64'
-        }
         ,ubuntu_noble => {
                     name => 'Ubuntu 24.04 Noble Nombat'
             ,description => 'Ubuntu 24.04 Noble Nombat 64 bits'
@@ -705,7 +692,7 @@ sub _update_isos {
             name =>'Debian 12 Bookworm 64 bits'
             ,arch => 'x86_64'
             ,description => 'Debian 12 Bookworm 64 bits (netinst)'
-            ,url => 'https://cdimage.debian.org/debian-cd/12[\.\d]+/amd64/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/12[\.\d]+/amd64/iso-cd/'
             ,file_re => 'debian-12.[\d\.]+-amd64-netinst.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,xml => 'jessie-amd64.xml'
@@ -718,7 +705,7 @@ sub _update_isos {
             name =>'Debian 12 Bookworm 32 bits'
             ,arch => 'i686'
             ,description => 'Debian 12 Bookworm 32 bits (netinst)'
-            ,url => 'https://cdimage.debian.org/debian-cd/12[\.\d]+/i386/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/12[\.\d]+/i386/iso-cd/'
             ,file_re => 'debian-12.[\d\.]+-i386-netinst.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,xml => 'jessie-amd64.xml'
@@ -727,7 +714,19 @@ sub _update_isos {
             ,min_ram => 3
             ,options => { machine => 'pc-i440fx'}
         }
-
+        ,debian_trixie_64 => {
+            name =>'Debian 13 Trixie 64 bits'
+            ,arch => 'x86_64'
+            ,description => 'Debian 13 Trixie 64 bits (netinst)'
+            ,url => 'https://cdimage.debian.org/debian-cd/13[\.\d]+/amd64/iso-cd/'
+            ,file_re => 'debian-13.[\d\.]+-amd64-netinst.iso'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '11'
+            ,min_ram => 3
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+        }
         ,devuan_beowulf_amd64=> {
             name =>'Devuan 10 Beowulf 64 bits'
             ,description => 'Devuan Beowulf Desktop Live (amd64)'
