@@ -1495,7 +1495,31 @@ sub _update_data {
     $self->_add_domain_drivers_cpu();
     $self->_add_domain_drivers_usb_controller();
 
+    $self->_remove_duplicated_group_access();
     $self->_add_indexes();
+}
+
+sub _remove_duplicated_group_access($self) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT * FROM group_access "
+    );
+    my $sth_del = $CONNECTOR->dbh->prepare(
+        "DELETE FROM group_access WHERE id=?"
+    );
+    $sth->execute();
+    my %found;
+    while (my $row = $sth->fetchrow_hashref ) {
+        my $key = ( $row->{id_domain} or '')
+                    .":".($row->{id_group} or '')
+                    .":".($row->{group} or '')
+                    .":".($row->{type} or '')
+                ;
+        if ($found{$key}++) {
+            warn "INFO: removing duplicated group_access ".Dumper($row);
+            $sth_del->execute($row->{id});
+        }
+    }
+
 }
 
 sub _install_grants($self) {
