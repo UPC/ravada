@@ -1,0 +1,20 @@
+<div id="shutdownModal" class="modal fade">
+    <div class="modal-dialog">
+        <!-- Modal content-->
+        <div class="modal-content">
+            <div class="modal-header">
+                <h4 class="modal-title"><%=l 'Shutdown confirmation' %></h4>
+                <button type="button" class="close" data-dismiss="modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p><%=l 'Attention this machine has the autostart option activated !' %> </p>
+                <p><%=l 'Are you sure you want to shutdown the machine ?' %> </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" ng-click="action('machine', tmp_action, showmachine, {force, confirmed:true})" class="btn btn-danger" data-dismiss="modal"><%=l 'Yes' %></button>
+                <button type="button" class="btn btn-secondary" data-dismiss="modal" 
+                    ><%=l 'No' %></button>
+            </div>
+        </div>
+    </div>
+</div>
