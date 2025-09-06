@@ -24,7 +24,8 @@ RUN echo "listen_tls = 0" >> /etc/libvirt/libvirtd.conf \
 #  && echo "Host ravada-kvm StrictHostKeyChecking no" >/root/.ssh/config \
 #  && chmod 600 /root/.ssh/config \
  && mkdir -p /var/log/supervisor \
- && mkdir -p /run/sshd
+ && mkdir -p /run/sshd \
+ && mkdir -p /var/log/ravada
 
 COPY network.sh default.xml /
 

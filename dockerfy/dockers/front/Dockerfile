@@ -18,7 +18,8 @@ RUN apt-get update \
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN mkdir -p /var/log/supervisor \
- && mkdir -p /run/sshd
+ && mkdir -p /run/sshd \
+ && mkdir -p /var/log/ravada
 
 EXPOSE 3000
 
@@ -27,6 +28,7 @@ ENV PERL5LIB /root/local/lib/perl5:/root/lib/:/ravada
 COPY supervisord.conf /etc/supervisord.conf
 
 COPY ravada.conf /etc/ravada.conf
+COPY rvd_front.conf /etc/rvd_front.conf
 WORKDIR /ravada
 
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
