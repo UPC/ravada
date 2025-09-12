@@ -135,7 +135,7 @@ Run the frontend in another terminal:
 
 .. prompt:: bash $
 
-    PERL5LIB=./lib morbo -m development -v ./script/rvd_front
+    PERL5LIB=./lib MOJO_REVERSE_PROXY=1 morbo -m development -v ./script/rvd_front
     Server available at http://127.0.0.1:3000
 
 Now you must be able to reach ravada at the location http://your.ip:3000/

@@ -14,6 +14,7 @@ then
 else
 	SHOW_MESSAGES=$1
     export PERL5LIB="./lib"
+    export MOJO_REVERSE_PROXY=1
 	if [ "$SHOW_MESSAGES" == "1" ]
 	then
 	   morbo -m development -v ./script/rvd_front > /dev/null 2>&1 &
