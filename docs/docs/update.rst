@@ -83,8 +83,8 @@ upgraded too. If you reboot the server and Ravada is not running, do this:
 
 .. prompt:: bash
 
-    # systemctl enable rvd_back
-    # systemctl enable rvd_front
+    sudo systemctl enable rvd_back
+    sudo systemctl enable rvd_front
 
 
 Problems upgrading
@@ -112,8 +112,8 @@ Then enable both services again:
 
 .. prompt:: bash
 
-    # systemctl enable rvd_back
-    # systemctl enable rvd_front
+    sudo systemctl enable rvd_back
+    sudo systemctl enable rvd_front
 
 Other problems upgrading
 ~~~~~~~~~~~~~~~~~~~~~~~~
