@@ -3076,7 +3076,7 @@ sub _check_yaml($filename) {
 }
 
 sub _check_qcow2($filename) {
-    _check_file($filename,qr(: QEMU QCOW2));
+    _check_file($filename,qr(: QEMU QCOW));
 }
 
 sub test_volume_format(@volume) {

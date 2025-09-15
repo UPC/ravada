@@ -1131,6 +1131,8 @@ Makes volumes indpendent from base
 sub spinoff {
     my $self = shift;
 
+    $self->_check_has_clones();
+
     $self->_do_force_shutdown() if $self->is_active;
     confess "Error: spinoff from remote nodes not available. Node: ".$self->_vm->name
         if !$self->is_local;
@@ -1180,7 +1182,7 @@ sub _check_has_clones {
     return if !$self->is_known();
 
     my @clones = $self->clones;
-    confess "Domain ".$self->name." has ".scalar @clones." clones : ".Dumper(\@clones)
+    die "Domain ".$self->name." has ".scalar @clones." clones.\n"
         if $#clones>=0;
 }
 
