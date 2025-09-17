@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '2.4.0';
+our $VERSION = '2.4.1';
 
 use utf8;
 
@@ -457,19 +457,6 @@ sub _update_isos {
 
         }
 
-        ,bionic=> {
-                    name => 'Ubuntu 18.04 Bionic Beaver'
-            ,description => 'Ubuntu 18.04 Bionic Beaver 64 bits'
-                   ,arch => 'x86_64'
-                    ,xml => 'bionic-amd64.xml'
-             ,xml_volume => 'bionic64-volume.xml'
-                    ,url => 'http://releases.ubuntu.com/18.04/'
-                ,file_re => '^ubuntu-18.04.*desktop-amd64.iso'
-                ,sha256_url => '$url/SHA256SUMS'
-          ,min_disk_size => '9'
-                ,min_ram => 1
-            ,arch => 'x86_64'
-        }
         ,ubuntu_noble => {
                     name => 'Ubuntu 24.04 Noble Nombat'
             ,description => 'Ubuntu 24.04 Noble Nombat 64 bits'
@@ -705,7 +692,7 @@ sub _update_isos {
             name =>'Debian 12 Bookworm 64 bits'
             ,arch => 'x86_64'
             ,description => 'Debian 12 Bookworm 64 bits (netinst)'
-            ,url => 'https://cdimage.debian.org/debian-cd/12[\.\d]+/amd64/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/12[\.\d]+/amd64/iso-cd/'
             ,file_re => 'debian-12.[\d\.]+-amd64-netinst.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,xml => 'jessie-amd64.xml'
@@ -718,7 +705,7 @@ sub _update_isos {
             name =>'Debian 12 Bookworm 32 bits'
             ,arch => 'i686'
             ,description => 'Debian 12 Bookworm 32 bits (netinst)'
-            ,url => 'https://cdimage.debian.org/debian-cd/12[\.\d]+/i386/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/12[\.\d]+/i386/iso-cd/'
             ,file_re => 'debian-12.[\d\.]+-i386-netinst.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,xml => 'jessie-amd64.xml'
@@ -727,7 +714,19 @@ sub _update_isos {
             ,min_ram => 3
             ,options => { machine => 'pc-i440fx'}
         }
-
+        ,debian_trixie_64 => {
+            name =>'Debian 13 Trixie 64 bits'
+            ,arch => 'x86_64'
+            ,description => 'Debian 13 Trixie 64 bits (netinst)'
+            ,url => 'https://cdimage.debian.org/debian-cd/13[\.\d]+/amd64/iso-cd/'
+            ,file_re => 'debian-13.[\d\.]+-amd64-netinst.iso'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '11'
+            ,min_ram => 3
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+        }
         ,devuan_beowulf_amd64=> {
             name =>'Devuan 10 Beowulf 64 bits'
             ,description => 'Devuan Beowulf Desktop Live (amd64)'
@@ -1496,7 +1495,31 @@ sub _update_data {
     $self->_add_domain_drivers_cpu();
     $self->_add_domain_drivers_usb_controller();
 
+    $self->_remove_duplicated_group_access();
     $self->_add_indexes();
+}
+
+sub _remove_duplicated_group_access($self) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT * FROM group_access "
+    );
+    my $sth_del = $CONNECTOR->dbh->prepare(
+        "DELETE FROM group_access WHERE id=?"
+    );
+    $sth->execute();
+    my %found;
+    while (my $row = $sth->fetchrow_hashref ) {
+        my $key = ( $row->{id_domain} or '')
+                    .":".($row->{id_group} or '')
+                    .":".($row->{group} or '')
+                    .":".($row->{type} or '')
+                ;
+        if ($found{$key}++) {
+            warn "INFO: removing duplicated group_access ".Dumper($row);
+            $sth_del->execute($row->{id});
+        }
+    }
+
 }
 
 sub _install_grants($self) {
@@ -2287,6 +2310,7 @@ sub _sql_create_tables($self) {
             log_active_domains => {
             'id' => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,'active','integer not null default 0'
+            ,'id_base' => 'integer DEFAULT NULL references `domains`(`id`) ON DELETE CASCADE'
             ,'date_changed'
                     => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
 
@@ -5884,16 +5908,32 @@ sub _cmd_refresh_vms($self, $request=undef) {
 
 sub _log_active_domains($self, $list) {
     my $active = 0;
+
+    my %active;
     for my $key (keys %$list) {
-            $active++ if $list->{$key}==1;
+            next unless exists $list->{$key}->{active}
+            && $list->{$key}->{active} && $list->{$key}->{active}==1;
+
+            $active++;
+            next if !defined $list->{$key}->{id_base};
+
+            $active{$list->{$key}->{id_base}} = 0
+            if !exists $active{$list->{$key}->{id_base}};
+
+            $active{$list->{$key}->{id_base}}++;
     }
 
     my $sth2 = $CONNECTOR->dbh->prepare(
         "INSERT INTO log_active_domains "
-        ." (active,date_changed) "
-        ." values(?,?)"
+        ." (active, id_base, date_changed) "
+        ." values(?,?,?)"
     );
-    $sth2->execute(scalar($active),Ravada::Utils::date_now());
+    my $now = Ravada::Utils::date_now();
+    $sth2->execute($active,undef, $now );
+
+    for my $id_base ( keys %active ) {
+        $sth2->execute($active{$id_base}, $id_base, $now);
+    }
 }
 
 sub _cmd_shutdown_node($self, $request) {
@@ -6212,7 +6252,7 @@ sub _refresh_active_domains($self, $request=undef) {
             for my $domain_data (sort { $b->{date_changed} cmp $a->{date_changed} }
                                 @domains) {
                 $request->output("checking $domain_data->{name}") if $request;
-                next if $active_domain{$domain_data->{id}};
+                next if $active_domain{$domain_data->{id}}->{active};
                 my $domain;
                 eval { $domain = Ravada::Domain->open($domain_data->{id}) };
                 if ( $@ ) {
@@ -6391,7 +6431,9 @@ sub _refresh_active_domain($self, $domain, $active_domain) {
     }
     $domain->_set_data(status => $status);
     $domain->info(Ravada::Utils::user_daemon)             if $is_active;
-    $active_domain->{$domain->id} = $is_active;
+    my %data = ( active => $is_active , id_base => $domain->_data('id_base') );
+    lock_hash(%data);
+    $active_domain->{$domain->id} = \%data;
 
     $domain->_post_shutdown()
     if $domain->_data('status') eq 'shutdown' && !$domain->_data('post_shutdown')
@@ -7222,6 +7264,9 @@ sub _cmd_create_network($self, $request) {
 
     my $id = $request->args('id_vm') or die "Error: missing id_vm";
     my $vm = Ravada::VM->open($id);
+
+    die "Error: node $id not avaiable.\n" if !$vm || !$vm->vm;
+
     $request->output(encode_json({}));
     my $id_net = $vm->create_network($request->args('data'),$request->args('uid')
                     , $request);

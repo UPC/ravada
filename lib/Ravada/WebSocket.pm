@@ -34,6 +34,7 @@ my %SUB = (
                   ,list_iso_images  => \&_list_iso_images
                   ,list_nodes => \&_list_nodes
            ,list_host_devices => \&_list_host_devices
+               ,list_machines => \&_list_machines
           ,list_machines_tree => \&_list_machines_tree
           ,list_machines_user => \&_list_machines_user
           ,list_machines_user_including_privates => \&_list_machines_user_including_privates
@@ -585,9 +586,10 @@ sub _list_next_bookings_today($rvd, $args) {
 
 sub _log_active_domains($rvd, $args) {
 
-    my ($unit, $time) = $args->{channel} =~ m{/(\w+)/(\d+)};
+    my ($unit, $time, $id_base) = $args->{channel} =~ m{/(\w+)/(\d+)/(.*)};
+    ($unit, $time) = $args->{channel} =~ m{/(\w+)/(\d+)} if !defined $unit;
 
-    return Ravada::Front::Log::list_active_recent($unit,$time);
+    return Ravada::Front::Log::list_active_recent($unit,$time, $id_base);
 }
 
 sub _list_networks($rvd, $args) {
@@ -791,7 +793,7 @@ sub manage_action($self, $ws, $channel, $action, $args) {
             return;
         }
     }
-    warn "Warning: unknown action for $channel / $action";
+    $self->clients->{$ws}->{channel} = "$channel/$action/$args";
 }
 
 sub subscribe($self, %args) {
