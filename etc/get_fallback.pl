@@ -6,11 +6,9 @@ use strict;
 use Cwd;
 use File::Path qw(make_path);
 use Mojo::UserAgent;
+use IPC::Run3 qw(run3);
 
-use lib './lib';
-use Ravada;
-
-my $VERSION = Ravada::version();
+my $VERSION = find_version();
 no warnings "experimental::signatures";
 use feature qw(signatures);
 
@@ -32,6 +30,15 @@ mkdir $DIR_FALLBACK or die "Error: $! $DIR_FALLBACK"
     if ! -e $DIR_FALLBACK;
 
 chdir $DIR_FALLBACK;
+
+sub find_version {
+    my @cmd=("perldoc","-m","lib/Ravada.pm");
+    my ($in, $out, $err);
+    run3(\@cmd, \$in, \$out, \$err);
+
+    my ($version) = $out =~ /VERSION\s*=\s*'(.*)'/m;
+    return $version;
+}
 
 sub download($url, $dst = $DIR_FALLBACK) {
 
