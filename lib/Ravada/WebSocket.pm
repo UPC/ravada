@@ -797,7 +797,7 @@ sub subscribe($self, %args) {
             , ret => undef
         };
     } else {
-        return $self->unsubscribe_all()
+        return $self->unsubscribe()
            if $args{login} ne $self->clients->{$ws}->{login};
 
         my $channel0 = $args{channel};
@@ -820,13 +820,6 @@ sub subscribe($self, %args) {
 
 sub unsubscribe($self, $ws) {
     delete $self->clients->{$ws};
-}
-
-sub unsubscribe_all($self) {
-    for my $ws ( keys %{$self->clients()} ) {
-        warn $ws;
-        delete $self->clients->{$ws};
-    }
 }
 
 1;
