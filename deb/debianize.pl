@@ -7,19 +7,32 @@ use Carp qw(confess);
 use Cwd qw(getcwd);
 use Data::Dumper;
 use File::Path qw(remove_tree make_path);
+use Getopt::Long;
 use IPC::Run3;
 use lib './lib';
-use Ravada;
 use File::Copy;
 
-my $VERSION = Ravada::version();
+my $VERSION = find_version();
 my $DIR_SRC = getcwd;
 my $DIR_DST;
 my $DEBIAN = "DEBIAN";
+my $FORCE;
+my $help;
+my $usage = "$0 [--help] [--force]\n";
+
+GetOptions(
+    force => \$FORCE
+    ,help => \$help
+) or die $usage;
+
+if ($help) {
+    print $usage;
+    exit;
+}
 
 my %COPY_RELEASES = (
     'ubuntu-20.04'=> ['ubuntu-22.04','ubuntu-24.04']
-    ,'debian-10' => ['debian-11']
+    ,'debian-10' => ['debian-11','debian-12','debian-13']
 );
 my %DIR = (
     templates => '/usr/share/ravada'
@@ -57,6 +70,15 @@ my @REMOVE= qw(
 );
 
 ########################################################################
+
+sub find_version {
+    my @cmd=("perldoc","-m","lib/Ravada.pm");
+    my ($in, $out, $err);
+    run3(\@cmd, \$in, \$out, \$err);
+
+    my ($version) = $out =~ /VERSION\s*=\s*'(.*)'/m;
+    return $version;
+}
 
 sub clean {
     remove_tree($DIR_DST);
@@ -153,6 +175,10 @@ sub create_deb {
 
     mkdir "ravada_release" if !-e "ravada_release";
     my $deb = "ravada_release/ravada_${VERSION}_${dist}_all.deb";
+    if ( -e $deb && -s $deb && !$FORCE ) {
+        warn "$deb already created.\n";
+        return;
+    }
     my @cmd = ('dpkg-deb','-b','-Zgzip',"$DIR_DST/",$deb);
     my ($in, $out, $err);
     run3(\@cmd, \$in, \$out, \$err);
@@ -296,6 +322,7 @@ sub make_pl {
     my @cmd = ('perl','Makefile.PL');
     my ($in, $out, $err);
     run3(\@cmd, \$in, \$out, \$err);
+    $err =~ s/^Warning.*//ms;
     die $err if $err;
 
     @cmd = ('make');
@@ -370,15 +397,21 @@ sub get_fallback {
 }
 
 sub copy_identical_releases {
+    my $cur = getcwd();
+    my $dst = "$DIR_SRC/../ravada_release";
+    chdir $dst or die "$! $dst";
+    print "Creating copied releases:\n";
     for my $source (sort keys %COPY_RELEASES ) {
+        print "  $source : ".join(" , ", @{$COPY_RELEASES{$source}})."\n";
         for my $copy (@{$COPY_RELEASES{$source}}) {
-            my $file_source = "$DIR_SRC/../ravada_release/ravada_${VERSION}_${source}_all.deb";
+            my $file_source = "ravada_${VERSION}_${source}_all.deb";
             die "Error: No $file_source" if !-e $file_source;
-            my $file_copy = "$DIR_SRC/../ravada_release/ravada_${VERSION}_${copy}_all.deb";
-            copy($file_source, $file_copy) or die "Error: $!\n$file_source -> $file_copy";
+            my $file_copy = "ravada_${VERSION}_${copy}_all.deb";
+            unlink $file_copy;
+            symlink($file_source, $file_copy) or die "Error: $!\n$file_source -> $file_copy";
         }
     }
-    exit;
+    chdir $cur;
 }
 
 #########################################################################
