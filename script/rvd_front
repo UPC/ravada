@@ -3208,7 +3208,7 @@ get '/balance_options.json' => sub($c) {
 
 websocket '/ws/unsubscribe_all' => sub {
     my $c = shift;
-    $WS->unsubscribe_all();
+    $WS->unsubscribe();
 } => 'ws_unsubscribe';
 
 websocket '/ws/subscribe' => sub {
@@ -3551,8 +3551,6 @@ sub _login_ok($c, $auth_ok) {
 
 sub logout {
     my $c = shift;
-
-    $WS->unsubscribe_all();
 
     $USER = undef;
     $c->session(expires => 1);

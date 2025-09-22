@@ -797,8 +797,10 @@ sub subscribe($self, %args) {
             , ret => undef
         };
     } else {
-        return $self->unsubscribe()
-           if $args{login} ne $self->clients->{$ws}->{login};
+        if ( $args{login} ne $self->clients->{$ws}->{login} ) {
+            warn Dumper([$args{channel}, $args{login}, $self->clients->{$ws}->{login}]);
+            $self->clients->{$ws}->{login} = $args{login};
+        }
 
         my $channel0 = $args{channel};
         my ($channel,$action,$args)= $channel0 =~ m{(.*?)/(.*?)/(.*)};
