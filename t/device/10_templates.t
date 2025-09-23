@@ -3,6 +3,7 @@ use strict;
 
 use Carp qw(confess);
 use Data::Dumper;
+use File::Path qw(make_path);
 use IPC::Run3 qw(run3);
 use Mojo::JSON qw(decode_json);
 use Ravada::Request;
@@ -720,7 +721,7 @@ sub test_frontend_list($vm) {
         $fd_found = $fd;
         my $dn = $fd->{devices_node};
         for my $node (keys %$dn) {
-            for my $dev ( @{$dn->{$node}} ) {
+            for my $dev ( @{$dn->{$node}->{list}} ) {
                 next if !$dev->{domain};
                 is($dev->{domain}->{id}, $domain->id,"Expecting ".$domain->name." attached in ".$dev->{name});
                 is($dev->{domain}->{device},$dev_attached->{name});
