@@ -3477,7 +3477,7 @@ sub login($c, $status=200) {
     }
 
 
-    sleep 5 if scalar(@error) && !$ENV{mode} && !$ENV{mode} eq 'development';
+    sleep 5 if scalar(@error) && ( !$ENV{MOJO_MODE} || $ENV{MOJO_MODE} ne 'development');
     $status = 403 if @error;
 
     $c->stash('login' => $login);

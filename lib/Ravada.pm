@@ -21,7 +21,6 @@ use Time::HiRes qw(gettimeofday tv_interval);
 use YAML;
 use MIME::Base64;
 use Socket qw( inet_aton inet_ntoa );
-use Image::Magick::Q16;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -2984,11 +2983,8 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
     $self->_upgrade_table('domains','balance_policy','int default 0');
 
-    if ($self->_upgrade_table('domains','screenshot','MEDIUMBLOB')) {
+    $self->_upgrade_table('domains','screenshot','MEDIUMBLOB');
 
-    $self->_upgrade_screenshots();
-
-    }
     $self->_upgrade_table('domains','shared_storage','varchar(254)');
     $self->_upgrade_table('domains','post_shutdown','int not null default 0');
     $self->_upgrade_table('domains','post_hibernated','int not null default 0');
@@ -4595,29 +4591,6 @@ sub _cmd_copy_screenshot {
         die "I don't have the screenshot of the domain ".$domain->name;
     } else {
         $base->_data(screenshot => $domain->_data('screenshot'));
-    }
-}
-
-sub _upgrade_screenshots($self) {
-
-    my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id, name, file_screenshot FROM domains WHERE file_screenshot like '%' "
-    );
-    $sth->execute();
-
-    my $sth_update = $CONNECTOR->dbh->prepare(
-        "UPDATE domains set screenshot = ? WHERE id=?"
-    );
-    while ( my ($id, $name, $file_path)= $sth->fetchrow ) {
-        next if ! -e $file_path;
-        warn "INFO: converting screenshot from $name";
-        my $file= new Image::Magick::Q16;
-        $file->Read($file_path);
-        my @blobs = $file->ImageToBlob(magick => 'png');
-        eval {
-            $sth_update->execute(encode_base64($blobs[0]), $id);
-        };
-        warn $@;
     }
 }
 
