@@ -43,6 +43,7 @@ my %DIR = (
     ,'blib/man3' => 'usr/share/man'
     ,"debian/" => "./DEBIAN"
     ,'etc/systemd/' => 'lib/systemd/system/'
+    ,'plugins' => '/usr/share/ravada'
 );
 
 for ( qw(css fallback fonts img js favicon.ico )) {
@@ -225,6 +226,13 @@ sub change_mod {
     for my $file ( 'rvd_front.service', 'rvd_back.service') {
         my $path = "$DIR_DST/lib/systemd/system/$file";
         chmod 0644,$path or die "$! $path";
+    }
+    my $dir = "$DIR_DST/usr/share/ravada/plugins";
+    opendir my $ls,$dir or die "$! $dir";
+    while (my $file = readdir $ls) {
+        next if $file =~ /^\./;
+        my $path = "$dir/$file";
+        chmod 0755,$path or die "$! $path";
     }
 }
 
@@ -422,7 +430,6 @@ set_version();
 remove_not_needed();
 remove_use_lib();
 change_version();
-change_mod();
 gzip_docs();
 gzip_man();
 chown_files($DEBIAN,0644);
@@ -444,6 +451,7 @@ chown_files('lib');
 chown_files('var/lib/ravada');
 chown_files('usr/share/perl5');
 #chown_files('usr/share/man');
+change_mod();
 create_md5sums();
 tar($dist);
 #chown_pms();

@@ -80,6 +80,39 @@ our @TEMPLATES_KVM  = (
             }
         ]
     }
+    ,{
+        name => 'vGPU VFIO'
+        ,list_command => 'plugins/list_vgpus.sh'
+        ,list_filter => ''
+        ,template_args => encode_json({
+                pci => '([0-9a-f:\.]+) '
+                ,domain =>'(^[0-9a-f]{4})'
+                ,bus => '....:([0-9a-f]+):'
+                ,slot => '^....:..:([0-9a-f]+)\.'
+                ,function => '^....:..:[0-9a-f]+\.([0-9a-f])'
+
+            })
+        ,templates => [
+            {
+            path => '/domain/features/kvm'
+            ,type => 'unique_node'
+            ,template => "<kvm>
+                <hidden state='on'/>
+                </kvm>"
+            },
+            {
+            path => '/domain/devices/hostdev'
+            ,template => "<hostdev mode='subsystem' type='pci' managed='no'>
+                <driver name='vfio'/>
+                <source>
+                <address domain='0x<%= \$domain %>' bus='0x<%= \$bus %>' slot='0x<%= \$slot %>' function='0x<%= \$function %>'/>
+                </source>
+                <rom bar='on'/>
+                <address type='pci' domain='0x0000' bus='0x01' slot='0x01' function='0x<%= \$function %>'/>
+            </hostdev>"
+            }
+        ]
+    }
 
 #    ,{
 #        name => "GPU dri"
@@ -131,7 +164,6 @@ our @TEMPLATES_KVM  = (
 #        ]
 #    }
 #
- 
     ,
     { name => "GPU Mediated Device (display)"
         ,list_command => "mdevctl list"
@@ -223,6 +255,34 @@ our @TEMPLATES_VOID = (
 
         ]
     }
+     ,{
+        name => 'vGPU VFIO'
+        ,list_command => 'plugins/list_vgpus.sh'
+        ,list_filter => ''
+        ,template_args => encode_json({
+                pci => '([0-9a-f:\.]+) '
+                ,domain =>'(^[0-9a-f]{4})'
+                ,bus => '....:([0-9a-f]+):'
+                ,slot => '^....:..:([0-9a-f]+)\.'
+                ,function => '^....:..:[0-9a-f]+\.([0-9a-f])'
+
+            })
+        ,templates => [
+            {path => "/hardware/host_devices"
+                ,type => 'node'
+                ,template => Dump( device => {
+                        pci => '<%= $pci%>'
+                        ,domain => '<%= $domain %>'
+                        ,bus => '<%= $bus %>'
+                        ,slot => '<%= $slot %>'
+                        ,function => '<%= $function %>'
+                    })
+            }
+
+        ]
+
+    }
+
 );
 
 my %TEMPLATES = (
