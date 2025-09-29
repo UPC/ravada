@@ -4748,11 +4748,11 @@ sub machine_change_hardware($c, $id, $options) {
 
     my $info = $domain->get_info();
     my %change_mem;
-    if (int($info->{max_mem}/1024) != $max_mem && $USER->is_admin) {
+    if (defined $max_mem && int($info->{max_mem}/1024) != $max_mem && $USER->is_admin) {
         $change_mem{max_mem} = $max_mem*1024;
     }
 
-    if (int($info->{memory}/1024) != $memory) {
+    if (defined $memory && int($info->{memory}/1024) != $memory) {
         $change_mem{memory} = $memory*1024;
     }
     Ravada::Request->change_hardware(
@@ -4767,11 +4767,12 @@ sub machine_change_hardware($c, $id, $options) {
 
     my %change_cpu;
 
-    if ($info->{max_virt_cpu} != $max_virt_cpu && $USER->is_admin) {
+    if (defined $max_virt_cpu 
+            && $info->{max_virt_cpu} != $max_virt_cpu && $USER->is_admin) {
         $change_cpu{max_virt_cpu} = $max_virt_cpu;
     }
 
-    if ($info->{n_virt_cpu} != $n_virt_cpu) {
+    if (defined $n_virt_cpu && $info->{n_virt_cpu} != $n_virt_cpu) {
         $change_cpu{n_virt_cpu} = $n_virt_cpu;
     }
     Ravada::Request->change_hardware(
@@ -4826,7 +4827,6 @@ sub machine_set_options($c, $id, $options) {
         machine_set_value($c, $id, $key => $options->{$key}, $value_text);
     }
 
-    return $c->render(json => $change);
 }
 
 sub _privileged_machine_field($field) {

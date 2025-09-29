@@ -434,7 +434,10 @@ sub create_domain($vm_name, $user=$USER_ADMIN, $id_iso='Alpine%64', $swap=undef)
 
     my $domain;
     eval { $domain = $vm->import_domain($name, $user) };
-    die $@ if $@ && $@ !~ /Domain.* not found/i;
+    die $@ if $@
+        && ( $@ !~ /Domain.* not found/i
+            && ( ref($@) eq 'Sys::Virt::Error' && $@->code != 42 )
+        );
 
     return $domain if $domain;
 
