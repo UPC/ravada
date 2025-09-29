@@ -83,6 +83,7 @@ sub test_change_settings($domain) {
     );
     my %old;
     for my $field (sort keys %new) {
+        next if !exists $info->{$field};
         die "Error: domain ".$domain->name." already $field = ".$new{$field}
             if $info->{$field} eq $new{$field};
     
