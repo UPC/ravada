@@ -798,7 +798,6 @@ sub subscribe($self, %args) {
         };
     } else {
         if ( $args{login} ne $self->clients->{$ws}->{login} ) {
-            warn Dumper([$args{channel}, $args{login}, $self->clients->{$ws}->{login}]);
             $self->clients->{$ws}->{login} = $args{login};
         }
 
