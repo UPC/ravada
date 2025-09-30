@@ -6594,6 +6594,7 @@ sub _domain_just_started($self, $domain) {
 sub _shutdown_disconnected($self) {
     for my $dom ( $self->list_domains_data(status => 'active') ) {
         next if !$dom->{shutdown_disconnected};
+        next if $dom->{is_pool} && $dom->{comment} eq 'daemon';
         my $domain = Ravada::Domain->open($dom->{id}) or next;
         my $is_active = $domain->is_active;
         my ($req_shutdown) = grep { $_->command eq 'shutdown'
