@@ -15,5 +15,4 @@
 
 **Refactors**
 
-* Insecure content WS [\#2216]
 * Spot missing group name when uploading JSON [\#2147]
