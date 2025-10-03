@@ -178,7 +178,7 @@
                 </label>
                 </div>
                 <div class="col-lg-2">
-                    <input class="form-control" ng-model="swap.value" type="number" min ="id_iso.min_swap_size" name="swap"  id="swap" ng-disabled="!swap.enabled || !_advanced_options"/>
+                    <input class="form-control" ng-model="swap.value" type="number" min ="{{id_iso.min_swap_size}}" name="swap"  id="swap" ng-disabled="!swap.enabled || !_advanced_options"/>
                 </div>
                 <div class="col-lg-1">
                    <a ng-show="!swap.enabled"

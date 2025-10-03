@@ -67,7 +67,49 @@ sub test_volatile_clone_req {
 
     $clone2->remove(user_admin);
     $clone->remove(user_admin);
-    $domain->remove(user_admin);
+
+    test_base_not_bases_vm($domain);
+    remove_domain($domain);
+
+}
+
+sub test_base_not_bases_vm($domain) {
+    # coming from old releases, base_vm may be 0
+    my $sth = connector->dbh->prepare(
+        "UPDATE bases_vm SET enabled=0 WHERE id_domain=?"
+    );
+    $sth->execute($domain->id);
+
+    my $remote_ip = '127.0.0.1';
+
+    my @args = (
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,remote_ip => $remote_ip
+    );
+    my $clone_name = new_domain_name();
+    my $req = Ravada::Request->clone(
+        name => $clone_name
+        ,@args
+    );
+    rvd_back->_process_requests_dont_fork();
+    is($req->error,'');
+
+    my $clone = rvd_back->search_domain($clone_name);
+    ok($clone);
+
+    my $clone_name2 = new_domain_name();
+    my $req2 = Ravada::Request->clone(
+        name => $clone_name2
+        ,volatile => 1
+        ,@args
+    );
+    rvd_back->_process_requests_dont_fork();
+    is($req2->error,'');
+
+    my $clone2 = rvd_back->search_domain($clone_name2);
+    ok($clone2);
+    is($clone2->is_volatile(),1);
 
 }
 

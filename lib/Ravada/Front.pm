@@ -782,6 +782,7 @@ sub list_iso_images {
         lock_keys(%$row);
         _fix_iso_file_re($row);
 
+        $row->{min_swap_size} = 0 if !$row->{min_swap_size};
         push @iso,($row);
     }
     $sth->finish;
@@ -2022,6 +2023,10 @@ sub upload_users_json($self, $data_json, $type='openid') {
         my $g = $g0;
         if (!ref($g)) {
             $g = { name => $g0 };
+        }
+        if (!exists $g->{name} or !defined $g->{name} || !length($g->{name})) {
+                push @error, ("Missing group name in ".Dumper($g));
+                next;
         }
         $found++;
         my $group = Ravada::Auth::Group->new(name => $g->{name});

@@ -440,10 +440,11 @@
                         return;
                     }
                     $scope.$apply(function () {
+                        $scope.showmachine.requests = data.requests;
                         if ($scope.lock_info) {
-                            if(data.requests) {
-                                $scope.showmachine.requests = data.requests;
-                            }
+                            $scope.showmachine.is_active=data.is_active;
+                            $scope.showmachine.is_hibernated=data.is_hibernated;
+                            $scope.showmachine.is_paused=data.is_paused;
                             return;
                         }
                         $scope.hardware = Object.keys(data.hardware);
@@ -620,7 +621,6 @@
                                     $scope.new_option[field] = $scope.showmachine[field];
             }
             $scope.new_balance_policy=$scope.showmachine.balance_policy;
-
           };
 
           $scope.reset_options = function() {
@@ -958,10 +958,12 @@
               $scope.ldap_entries = 0;
               $scope.ldap_verified = 0;
               $scope.searching_ldap_attributes = true;
+              $scope.cn_changed=false;
               if ($scope.cn) {
                   $http.get('/list_ldap_attributes/'+$scope.cn).then(function(response) {
                       $scope.ldap_error = response.data.error;
                       $scope.ldap_attributes = response.data.attributes;
+                      $scope.ldap_field = response.data.field;
                       $scope.dn_found = response.data.dn_found;
                       $scope.values = response.data.values;
                       $scope.searching_ldap_attributes = false;
@@ -1375,6 +1377,7 @@
 
             $scope.new_base = undefined;
             $scope.cn ='';
+            $scope.cn_changed=false;
             $scope.list_ldap_attributes();
             $scope.list_caches = ['default','none','writethrough'
                 ,'writeback','directsync','unsafe'];
