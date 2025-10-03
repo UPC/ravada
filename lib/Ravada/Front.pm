@@ -1780,9 +1780,13 @@ sub list_storage_pools($self, $uid, $id_vm, $active=undef) {
 
     my $key="list_storage_pools_$id_vm";
 
-    my $req_active_sp = Ravada::Request::done_recently(
-        undef,60,'active_storage_pool'
-    );
+    my $req_active_sp;
+    for my $command ( 'active_storage_pool','create_storage_pool') {
+        $req_active_sp = Ravada::Request::done_recently(
+            undef,60, $command
+        );
+        last if $req_active_sp;
+    }
     my $cache = [];
     my $force = 0;
     if ($req_active_sp) {

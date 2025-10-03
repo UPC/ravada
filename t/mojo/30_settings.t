@@ -471,8 +471,9 @@ sub _create_storage_pool($id_vm , $vm_name) {
 
 sub test_storage_pools($vm_name) {
 
+    delete_request('refresh_storage', 'list_storage_pools','create_storage_pool'
+                    ,'active_storage_pool');
     my $id_vm = _id_vm($vm_name);
-    my $sp_name = _create_storage_pool($id_vm, $vm_name);
 
     $t->get_ok("/list_storage_pools/$vm_name");
 
@@ -480,6 +481,15 @@ sub test_storage_pools($vm_name) {
 
     my $sp = decode_json($t->tx->res->body);
     ok(scalar(@$sp));
+
+    my $sp_name = _create_storage_pool($id_vm, $vm_name);
+
+    $t->get_ok("/list_storage_pools/$id_vm");
+
+    is($t->tx->res->code(),200) or die $t->tx->res->body;
+
+    my $sp2 = decode_json($t->tx->res->body);
+    is(scalar(@$sp2),scalar(@$sp)+1) or exit;
 
     $t->get_ok("/list_storage_pools/$id_vm");
 
@@ -549,6 +559,7 @@ $t->ua->connect_timeout(60);
 mojo_login($t, $USERNAME, $PASSWORD);
 
 remove_old_domains_req(0); # 0=do not wait for them
+remove_old_storage_pools_req();
 clean_clones();
 remove_networks_req();
 

@@ -7331,6 +7331,10 @@ sub _cmd_create_storage_pool($self, $request) {
     my $vm = Ravada::VM->open($request->args('id_vm'));
     $vm->create_storage_pool($request->arg('name'), $request->arg('directory'));
 
+    Ravada::Request->refresh_storage(id_vm => $vm->id
+        ,uid => Ravada::Utils::user_daemon->id
+        ,_force => 1
+    );
 }
 
 sub _cmd_move_volume($self, $request) {
