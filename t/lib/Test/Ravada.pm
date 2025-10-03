@@ -1781,6 +1781,7 @@ sub remove_old_storage_pools_req() {
         );
         wait_request();
         my $out = $req->output;
+        next if !$out;
         my $sp_list = decode_json($out);
         my $name = base_pool_name();
         for my $sp (@$sp_list) {

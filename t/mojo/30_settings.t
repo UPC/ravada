@@ -497,6 +497,11 @@ sub test_storage_pools($vm_name) {
 
     my $sp_id = decode_json($t->tx->res->body);
     ok(scalar(@$sp_id));
+
+    $t->get_ok("/list_storage_pools/$vm_name");
+    is($t->tx->res->code(),200) or die $t->tx->res->body;
+    $sp = decode_json($t->tx->res->body);
+
     is_deeply($sp_id, $sp);
 
     my ($sp_inactive) = grep { $_->{name} eq $sp_name } @$sp_id;
