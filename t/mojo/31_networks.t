@@ -150,7 +150,7 @@ sub test_networks_access_grant($vm_name) {
     is($new->{_can_change},1) or exit;
 
     for ( 1 .. 2 ) {
-        $new->{is_active} = (!$new->{is_active} or 0);
+        $new->{is_active} = 0+(!$new->{is_active} or 0);
         $t->post_ok("/v2/network/set/" => json => $new)->status_is(200);
         wait_request();
 
@@ -162,7 +162,7 @@ sub test_networks_access_grant($vm_name) {
     }
 
     for ( 1 .. 2 ) {
-        $new->{is_public} = (!$new->{is_public} or 0);
+        $new->{is_public} = 0+(!$new->{is_public} or 0);
         $t->post_ok("/v2/network/set/" => json => $new)->status_is(200);
         wait_request();
 

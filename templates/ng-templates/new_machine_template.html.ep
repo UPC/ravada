@@ -13,12 +13,22 @@
                 <div class="col-lg-9">
                     <label for="backend" class="col-xl-3 col-form-label" ng-show="backends.length === 1">{{backends[0]}}</label>
                     <select class= "form-control" ng-show="backends.length > 1"
-                        ng-change="loadTemplates()"
+                        ng-change="change_backend()"
                         name="backend"
                         ng-model="backend"
                         ng-options="item for item in backends track by item "
                         required=""
                     ></select>
+                </div>
+            </div>
+            <div class="form-group row" ng-hide="nodes[backend].length < 2">
+                <label for="node" class="col-xl-3 col-form-label"><%=l 'Node' %></label>
+                <div class="col-lg-9">
+                    <select ng-model="node" name="id_vm"
+                        ng-options="item.name for item in nodes[backend] track by item.id"
+                        ng-change="change_list_isos()"
+                        ></select>
+                        <span class="error" ng-show="nodes && node && !node.is_active"><%=l 'This node is down' %></span>
                 </div>
             </div>
             <div ng-show="backend == 'KVM' || backend == 'Void'" class="form-group">
@@ -168,7 +178,7 @@
                 </label>
                 </div>
                 <div class="col-lg-2">
-                    <input class="form-control" ng-model="swap.value" type="number" min ="id_iso.min_swap_size" name="swap"  id="swap" ng-disabled="!swap.enabled || !_advanced_options"/>
+                    <input class="form-control" ng-model="swap.value" type="number" min ="{{id_iso.min_swap_size}}" name="swap"  id="swap" ng-disabled="!swap.enabled || !_advanced_options"/>
                 </div>
                 <div class="col-lg-1">
                    <a ng-show="!swap.enabled"
@@ -293,6 +303,7 @@
                 <button type="reset" class="btn btn-outline-secondary mr-2" onclick = "location='/admin/machines'"><%=l 'Cancel' %></button>
                 <input type="submit" class="btn btn-primary" name="submit" value="<%=l 'Create' %>"
                      ng-disabled="new_machineForm.$invalid || name_duplicated || (id_iso && !id_iso.id)
+                     || !node
                     || (id_iso && id_iso.has_cd && !id_iso.url
                         && (!iso_file || iso_file == '' || iso_file == '<NONE')
                     )

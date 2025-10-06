@@ -1131,6 +1131,8 @@ Makes volumes indpendent from base
 sub spinoff {
     my $self = shift;
 
+    $self->_check_has_clones();
+
     $self->_do_force_shutdown() if $self->is_active;
     confess "Error: spinoff from remote nodes not available. Node: ".$self->_vm->name
         if !$self->is_local;
@@ -1180,7 +1182,7 @@ sub _check_has_clones {
     return if !$self->is_known();
 
     my @clones = $self->clones;
-    confess "Domain ".$self->name." has ".scalar @clones." clones : ".Dumper(\@clones)
+    die "Domain ".$self->name." has ".scalar @clones." clones.\n"
         if $#clones>=0;
 }
 
@@ -1757,17 +1759,28 @@ sub _execute_request($self, $field, $value) {
 
 sub _log_active_domains($self) {
     my $sth = $self->_dbh->prepare(
-        "SELECT count(*) FROM domains "
+        "SELECT id_base FROM domains "
         ." WHERE status='active'"
     );
     $sth->execute();
-    my ($active) = $sth->fetchrow;
+    my $active=0;
+    my %active_base;
+
+    while ( my ($id_base) = $sth->fetchrow ) {
+        $active++;
+        $active_base{$id_base}++ if $id_base;
+
+    }
     my $sth2 = $self->_dbh->prepare(
         "INSERT INTO log_active_domains "
-        ." ( active) "
-        ." values(?)"
+        ." ( id_base, active) "
+        ." values(?,?)"
     );
-    $sth2->execute(scalar($active));
+    $sth2->execute(undef, $active);
+
+    for my $id_base ( keys %active_base ) {
+        $sth2->execute($id_base, $active_base{$id_base});
+    }
 
 }
 
@@ -3463,18 +3476,31 @@ sub _post_shutdown {
     my $request;
     $request = $arg{request} if exists $arg{request};
     if ( !$self->is_local && !$self->is_volatile && $self->has_non_shared_storage()) {
-        my $req = Ravada::Request->rsync_back(
+        my @instances = $self->list_instances();
+        my ($instance_local) = grep { $_->{id_vm} == $self->_id_vm_local() } @instances;
+        my $req;
+        $req = Ravada::Request->rsync_back(
             uid => Ravada::Utils::user_daemon->id
             ,id_domain => $self->id
             ,id_node => $self->_vm->id
             ,at => time + Ravada::setting(undef,"/backend/delay_migrate_back")
-        );
+        ) if $instance_local;
     }
 
     $self->_schedule_compact();
     $self->needs_restart(0) if $self->is_known()
                                 && $self->needs_restart()
                                 && !$is_active;
+}
+
+sub _id_vm_local($self) {
+    my $sth = $self->_dbh->prepare(
+        "SELECT id FROM vms "
+        ." WHERE vm_type=?"
+        ."  AND ( hostname='127.0.0.1'"
+        ."      OR hostname='localhost') "
+    );
+    $sth->execute($self->_vm->type);
 }
 
 sub _schedule_compact($self) {
@@ -5738,6 +5764,7 @@ sub list_vms($self, $check_host_devices=0, $only_available=0) {
         warn "id_domain: ".$self->id."\n".$@ if $@;
         push @vms,($vm) if $vm;
     }
+    return $self->_vm if !@vms && !@host_devices && $self->is_base();
     return @vms;
 
 }
@@ -6577,7 +6604,7 @@ sub _around_add_hardware($orig, $self, $hardware, $index, $data=undef) {
             $self->_add_info_filesystem($data_orig);
         }
     }
-    if (!$hardware eq 'disk' && $self->is_known() && !$self->is_base ) {
+    if ($hardware ne 'disk' && $self->is_known() && !$self->is_base ) {
         # disk is changed in main node, then redefined already
         $self->_redefine_instances();
     }
@@ -6787,6 +6814,14 @@ sub _allow_group_access($self, %args) {
     $type = 'ldap' if !$type || $type eq 'group';
 
     confess "Error: unknown args ".Dumper(\%args) if keys %args;
+
+    if ($type eq 'local') {
+        $group = Ravada::Auth::Group::_search_name_by_id($id_group)
+        if !$group;
+        my %groups = map { $_ => 1 } $self->list_access_groups($type);
+        return if defined $group && $groups{$group};
+    }
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO group_access "
         ."( id_domain, id_group, name, type)"
@@ -6807,15 +6842,16 @@ sub list_access_groups($self, $type) {
         ."   AND type=?"
     );
     $sth->execute($self->id, $type);
-    my @groups;
+    my %groups;
     my $sth_gname = $$CONNECTOR->dbh->prepare("SELECT name FROM groups_local WHERE id=?");
     while ( my $row = $sth->fetchrow_hashref ) {
         if (!$row->{name} && $row->{id_group}) {
             $sth_gname->execute($row->{id_group});
             ($row->{name}) = $sth_gname->fetchrow;
         }
-        push @groups,($row->{name});
+        $groups{$row->{name}}++;
     }
+    my @groups = sort keys %groups;
     return @groups;
 }
 
@@ -7745,6 +7781,10 @@ sub _search_free_device($self, $host_device) {
        if (!$device) {
            $self->_data(status => 'down');
            $self->_unlock_host_devices();
+           my $req = Ravada::Request->list_host_devices(
+               uid => Ravada::Utils::user_daemon->id
+               ,id_host_device => $host_device->id
+           );
            die "Error: No available devices in ".$self->_vm->name." for ".$host_device->name."\n";
        }
     }

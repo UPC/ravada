@@ -81,9 +81,6 @@ our ($DOWNLOAD_FH, $DOWNLOAD_TOTAL);
 
 our $CONNECTOR = \$Ravada::CONNECTOR;
 
-our $WGET = `which wget`;
-chomp $WGET;
-
 our $CACHE_DOWNLOAD = 1;
 our $VERIFY_ISO = 1;
 
@@ -161,6 +158,8 @@ sub _check_default_storage($self) {
 }
 
 sub _check_networks($self, $vm=$self->vm) {
+
+    return if !defined $vm;
 
     my @found;
     for my $net ($vm->list_all_networks) {
@@ -303,6 +302,8 @@ sub search_volume($self,$file,$refresh=0) {
         die $@ if $@ && $@ !~ /^libvirt error code: 50,/;
     }
 
+    return $vol if $vol;
+
     return $self->search_volume_re(qr(^$name$),$refresh);
 }
 
@@ -388,11 +389,6 @@ sub search_volume_re($self,$pattern,$refresh=0) {
 
 sub remove_file($self,@files) {
     for my $file (@files) {
-        if ($self->is_local) {
-            next if ! -e $file;
-            unlink $file or die "$! $file";
-            next;
-        }
         my $vol = $self->search_volume($file);
         if (!$vol) {
             $self->_refresh_storage_pools();
@@ -615,7 +611,9 @@ sub file_exists($self, $file) {
 }
 
 sub _file_exists_remote($self, $file) {
-    return 1 if $self->search_volume($file);
+    my $found = $self->search_volume($file);
+    return 1 if $found;
+
     $file = $self->_follow_link($file) unless $file =~ /which$/;
     return if !$self->vm;
     for my $pool ($self->vm->list_all_storage_pools ) {
@@ -665,8 +663,12 @@ Returns the directory where disk images are stored in this Virtual Manager
 sub dir_img {
     my $self = shift;
 
-    my $pool = $self->_load_storage_pool();
+    my $pool;
+    eval { $pool = $self->_load_storage_pool() };
+    warn $@ if $@;
+
     $pool = $self->_create_default_pool() if !$pool;
+
     my $xml = XML::LibXML->load_xml(string => $pool->get_xml_description());
 
     my $dir = $xml->findnodes('/pool/target/path/text()');
@@ -730,7 +732,7 @@ sub create_storage_pool($self, $name, $dir, $vm=$self->vm) {
         die $@ if $@;
         die "$error\n" if $error;
     }
-
+    return $pool;
 }
 
 sub remove_storage_pool($self, $name) {
@@ -743,12 +745,17 @@ sub remove_storage_pool($self, $name) {
 
 sub _create_default_pool($self, $vm=$self->vm) {
     my $dir = "/var/lib/libvirt/images";
+
+    if ($>) {
+        $dir = "/run/user/$</images";
+    }
     mkdir $dir if ! -e $dir;
 
     my $name = 'default';
 
+    my $pool;
     eval {
-    $self->create_storage_pool($name, $dir, $vm);
+    $pool=$self->create_storage_pool($name, $dir, $vm);
     };
     warn $@ if $@;
 }
@@ -1053,22 +1060,28 @@ sub _domain_create_from_iso {
     confess "Template ".$iso->{name}." has no URL, iso_file argument required."
         if $iso->{has_cd} && !$iso->{url} && !$iso_file && !$iso->{device};
 
-    if (defined $iso_file) {
+    if (defined $iso_file && $iso_file) {
         if ( $iso_file ne "<NONE>" || $iso_file ) {
             $device_cdrom = $iso_file;
         }
+    } elsif ($iso->{has_cd}) {
+        $device_cdrom = $self->search_volume_path_re(qr($iso->{file_re}));
+        if (!$device_cdrom) {
+            my $req_download = Ravada::Request->download(
+                uid => Ravada::Utils::user_daemon->id
+                ,id_iso => $iso->{id}
+                ,id_vm => $self->id
+                ,retry => 2
+            );
+            my $request = $args{request};
+            if ($request) {
+                $request->retry(2);
+                $request->after_request_ok($req_download->id);
+            }
+            die "ISO file not found. Downloading. retry.\n";
+        }
     }
 
-    $device_cdrom  =$self->_iso_name($iso, $args{request})
-    if !$device_cdrom && $iso->{has_cd};
-    
-    #if ((not exists $args{iso_file}) || ((exists $args{iso_file}) && ($args{iso_file} eq "<NONE>"))) {
-    #    $device_cdrom = $self->_iso_name($iso, $args{request});
-    #}
-    #else {
-    #    $device_cdrom = $args{iso_file};
-    #}
-    
     my $disk_size;
     $disk_size = $args{disk} if $args{disk};
 
@@ -1364,14 +1377,12 @@ sub _iso_name($self, $iso, $req=undef, $verbose=1) {
     my $iso_name;
     if ($iso->{rename_file}) {
         $iso_name = $iso->{rename_file};
-    } else {
-        ($iso_name) = $iso->{url} =~ m{.*/(.*)} if $iso->{url};
-        ($iso_name) = $iso->{device} if !$iso_name;
+    } elsif ($iso->{device}) {
+        $iso_name = $iso->{device};
     }
 
-    confess "Unknown iso_name for ".Dumper($iso)    if !$iso_name;
-
-    my $device = ($iso->{device} or $self->dir_img."/$iso_name");
+    my $device = $iso->{device};
+    $device = $self->dir_img."/$iso_name" if !$device && $iso_name;
 
     warn "Missing MD5 and SHA256 field on table iso_images FOR $iso->{url}"
         if $VERIFY_ISO && $iso->{url} && !$iso->{md5} && !$iso->{sha256};
@@ -1380,20 +1391,28 @@ sub _iso_name($self, $iso, $req=undef, $verbose=1) {
     my $test = 0;
     $test = 1 if $req && $req->defined_arg('test');
 
-    if ($test || ! -e $device || ! -s $device) {
-        $req->status("downloading $iso_name file"
-                ,"Downloading ISO file for $iso_name "
+    if ($test || !$device || ! $self->file_exists($device) ) {
+        $req->status("downloading ".$iso->{file_re}." file"
+                ,"Downloading ISO file for ".$iso->{file_re}
                  ." from $iso->{url}. It may take several minutes"
         )   if $req;
         _fill_url($iso);
 
         $self->_set_iso_downloading($iso,1);
+        if ( !$device ) {
+            $self->_fetch_filename($iso);
+            $device = $self->dir_img()."/".$iso->{filename};
+            my $sth = $self->_dbh->prepare("UPDATE iso_images set device=?"
+                ." WHERE id=?"
+            );
+            $sth->execute($device, $iso->{id});
+        }
         my $url = $self->_download_file_external($iso->{url}, $device, $verbose, $test);
         $self->_set_iso_downloading($iso,0);
         $req->output($url) if $req;
         $self->_refresh_storage_pools();
         die "Download failed, file $device missing.\n"
-            if !$test && ! -e $device;
+            if !$test && ! -$self->file_exists($device);
 
         my $verified = 0;
         for my $check ( qw(md5 sha256)) {
@@ -1411,9 +1430,9 @@ sub _iso_name($self, $iso, $req=undef, $verbose=1) {
             next if !$iso->{$check};
             next if $test;
 
-            die "Download failed, $check id=$iso->{id} missmatched for $device."
+            $req->status("working","Download failed, $check id=$iso->{id} missmatched for $device."
             ." Please read ISO "
-            ." verification missmatch at operation docs.\n"
+            ." verification missmatch at operation docs.\n")
             if (! _check_signature($device, $check, $iso->{$check}));
             $verified++;
         }
@@ -1493,7 +1512,7 @@ sub _check_signature($file, $type, $expected) {
 }
 
 sub _download_file_external_headers($self,$url) {
-    my @cmd = ($WGET,"-S","--spider",$url);
+    my @cmd = ('wget',"-S","--spider",$url);
 
     my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);
@@ -1508,41 +1527,56 @@ sub _download_file_external_headers($self,$url) {
 
 sub _download_file_external($self, $url, $device, $verbose=1, $test=0) {
     $url .= "/" if $url !~ m{/$} && $url !~ m{.*/([^/]+\.[^/]+)$};
+
+    my ($filename) = $device =~ m{.*/(.*)};
+
     if ($url =~ m{[^*]}) {
-        my @found = $self->_search_url_file($url);
+        my @found = $self->_search_url_file($url, $filename);
         die "Error: URL not found '$url'" if !scalar @found;
         $url = $found[-1];
     }
     if ( $url =~ m{/$} ) {
-        my ($filename) = $device =~ m{.*/(.*)};
         $url = "$url$filename";
     }
-    confess "ERROR: wget missing"   if !$WGET;
 
     $url =~ s{/./}{/}g;
-    return $self->_download_file_external_headers($url)    if $test;
-    return $url if -e $device;
+    if ( $test ) {
+        unless($device) {
+            ($device) = $url =~ m{.*/(.*)};
+            $device = $self->dir_img()."/".$device;
+        }
+        confess "I can't find filename in '$url'" unless $device;
+        $self->write_file($device,"mock") unless $self->file_exists($device);
+        return $self->_download_file_external_headers($url);
+    }
+    return $url if $self->file_exists($device);
 
-    my @cmd = ($WGET,'-nv',$url,'-O',$device);
-    my ($in,$out,$err);
+    my @cmd = ('wget','-nv',$url,'-O',$device);
+    #    $self->write_file($device,"mock @cmd") unless $self->file_exists($device);
+    # return $url;
+
+
+    warn join(" ",@cmd)."\n";
     warn join(" ",@cmd)."\n"    if $verbose;
-    run3(\@cmd,\$in,\$out,\$err);
+    my ($out, $err) = $self->run_command(@cmd);
     warn "out=$out" if $out && $verbose;
     warn "err=$err" if $err && $verbose;
     print $out if $out;
-    chmod 0755,$device or die "$! chmod 0755 $device"
-        if -e $device;
 
     return $url if !$err;
 
     if ($err && $err =~ m{\[(\d+)/(\d+)\]}) {
         if ( $1 != $2 ) {
-            unlink $device or die "$! $device" if -e $device;
+            $self->remove_file($device) or die "$! $device"
+            if $self->file_exists($device);
+
             die "ERROR: Expecting $1 , got $2.\n$err"
         }
         return $url;
     }
-    unlink $device or die "$! $device" if -e $device;
+    $self->remove_file($device) or die "$! $device"
+            if $self->file_exists($device);
+
     die $err;
 }
 
@@ -1554,11 +1588,19 @@ sub _search_iso($self, $id_iso, $file_iso=undef) {
     if $row->{options} && !ref($row->{options});
     die "Missing iso_image id=$id_iso" if !keys %$row;
 
-    return $row if $file_iso && -e $file_iso;
+    return $row if $file_iso &&  $self->file_exists($file_iso);
 
-    if ( $row->{device} && -e $row->{device} ) {
-        ($row->{filename}) = $row->{device} =~ m{.*/(.*)};
+    Ravada::Front::_fix_iso_file_re($row);
+
+    if ( !$row->{device} || ! $self->file_exists($row->{device}) ) {
+        my $device_cdrom = $self->search_volume_path_re(qr($row->{file_re}));
+        $row->{device} = $device_cdrom
+            if ($device_cdrom);
     }
+
+    ($row->{filename}) = $row->{device} =~ m{.*/(.*)}
+    if $row->{device} && $self->file_exists($row->{device});
+
     $self->_fetch_filename($row);#    if $row->{file_re};
     if ($VERIFY_ISO) {
         $self->_fetch_md5($row)         if !$row->{md5} && $row->{md5_url};
@@ -1574,7 +1616,6 @@ sub _search_iso($self, $id_iso, $file_iso=undef) {
             $sth->execute($volume->get_path, $row->{id});
         }
     }
-    my $rename_file = $row->{rename_file};
 
     return $row;
 }
@@ -1728,6 +1769,7 @@ sub _fetch_filename {
         $sth->execute($row->{device}, $row->{id});
         return;
     } else {
+        warn Dumper([$row->{url}, $row->{file_re}]);
         @found = $self->_search_url_file($row->{url}, $row->{file_re}) if !@found;
         die "No ".qr($row->{file_re})." found on $row->{url}" if !@found;
     }
@@ -1752,6 +1794,8 @@ sub _search_url_file($self, $url_re, $file_re=undef) {
         if ($url_re =~ /\.\.$/) {
             $url_re =~ s{(.*)/.*/\.\.$}{$1};
         }
+    } else {
+        $url_re =~ s{(.*)/.*$}{$1};
     }
 
     $file_re .= '$' if $file_re !~ m{\$$};

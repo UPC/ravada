@@ -429,14 +429,24 @@ sub add_group_ldap {
 sub remove_group_ldap {
     my $login = shift;
 
+    die "Error: I will not remove all the groups"
+    if $login eq '*';
+
     my $ravada = Ravada->new( %CONFIG);
     my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
-    my $group = Ravada::Auth::LDAP::search_group( name => $login )
+    my @group = Ravada::Auth::LDAP::search_group( name => $login )
         or die "Error: LDAP group '$login' not found\n";
 
-    $group->delete()->update($ldap);
+    for my $group ( @group ) {
+        if ($ENV{TERM} && scalar(@group)>1) {
+            print "Remove LDAP group ".$group->dn." ? (y/N)";
+            my $ok = <stdin>;
+            next unless $ok =~ /y/i;
+        }
+        $group->delete()->update($ldap);
 
-    print "LDAP group ".$group->dn." removed.\n";
+        print "LDAP group ".$group->dn." removed.\n";
+    }
     exit 0;
 }
 

@@ -534,6 +534,11 @@ sub _admin_host_devices($c) {
 
     _select_vm_by_type($c);
 
+    my $req = Ravada::Request->list_host_devices(
+        uid => Ravada::Utils::user_daemon->id
+    );
+    $RAVADA->wait_request($req);
+
     $c->stash(tab => ($c->param('tab') or ''));
     $c->stash('id' => $c->stash('id_vm'));
 
@@ -3173,14 +3178,15 @@ get '/img/screenshots/:file' => sub {
     );
 };
 
-get '/iso/download/(#id).json' => sub {
+get '/iso/download/(#id_node)/(#id_iso).json' => sub {
     my $c = shift;
 
     return access_denied($c)    if !$USER->is_admin;
     my $id = $c->stash('id');
 
     my $req = Ravada::Request->download(
-        id_iso => $id
+        id_iso => $c->stash('id_iso')
+        ,id_vm => $c->stash('id_node')
         ,uid => $USER->id
     );
 
@@ -3472,7 +3478,7 @@ sub login($c, $status=200) {
     }
 
 
-    sleep 5 if scalar(@error) && !$ENV{mode} && !$ENV{mode} eq 'development';
+    sleep 5 if scalar(@error) && ( !$ENV{MOJO_MODE} || $ENV{MOJO_MODE} ne 'development');
     $status = 403 if @error;
 
     $c->stash('login' => $login);
@@ -3855,6 +3861,7 @@ sub req_new_domain {
     $args{id_template} = $c->param('id_template')   if $vm =~ /^LX/;
     $args{id_iso} = $c->param('id_iso')             if $vm eq 'KVM';
     $args{storage} = $c->param('storage');
+    $args{id_vm} = $c->param('id_vm');
 
     return $RAVADA->create_domain(%args);
 }
@@ -4743,11 +4750,11 @@ sub machine_change_hardware($c, $id, $options) {
 
     my $info = $domain->get_info();
     my %change_mem;
-    if (int($info->{max_mem}/1024) != $max_mem && $USER->is_admin) {
+    if (defined $max_mem && int($info->{max_mem}/1024) != $max_mem && $USER->is_admin) {
         $change_mem{max_mem} = $max_mem*1024;
     }
 
-    if (int($info->{memory}/1024) != $memory) {
+    if (defined $memory && int($info->{memory}/1024) != $memory) {
         $change_mem{memory} = $memory*1024;
     }
     Ravada::Request->change_hardware(
@@ -4762,11 +4769,12 @@ sub machine_change_hardware($c, $id, $options) {
 
     my %change_cpu;
 
-    if ($info->{max_virt_cpu} != $max_virt_cpu && $USER->is_admin) {
+    if (defined $max_virt_cpu 
+            && $info->{max_virt_cpu} != $max_virt_cpu && $USER->is_admin) {
         $change_cpu{max_virt_cpu} = $max_virt_cpu;
     }
 
-    if ($info->{n_virt_cpu} != $n_virt_cpu) {
+    if (defined $n_virt_cpu && $info->{n_virt_cpu} != $n_virt_cpu) {
         $change_cpu{n_virt_cpu} = $n_virt_cpu;
     }
     Ravada::Request->change_hardware(
@@ -4821,7 +4829,6 @@ sub machine_set_options($c, $id, $options) {
         machine_set_value($c, $id, $key => $options->{$key}, $value_text);
     }
 
-    return $c->render(json => $change);
 }
 
 sub _privileged_machine_field($field) {
@@ -5014,6 +5021,7 @@ sub _insert_fields($c, $table, $arg) {
 
 sub _update_fields($c, $table, $arg) {
     my $id = delete $arg->{id};
+    delete $arg->{bases};
     return _insert_fields($c, $table, $arg) if !$id;
 
     my $sth = $RAVADA->_dbh->prepare("SELECT * FROM $table WHERE id=?");

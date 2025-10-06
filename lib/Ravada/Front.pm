@@ -12,7 +12,7 @@ Ravada::Front - Web Frontend library for Ravada
 use Carp qw(carp);
 use DateTime;
 use DateTime::Format::DateParse;
-use Hash::Util qw(lock_hash);
+use Hash::Util qw(lock_hash lock_keys);
 use IPC::Run3 qw(run3);
 use JSON::XS;
 use Moose;
@@ -778,11 +778,32 @@ sub list_iso_images {
         $row->{options} = decode_json($row->{options})
             if $row->{options};
         $row->{min_ram} = 0.2 if !$row->{min_ram};
+
+        lock_keys(%$row);
+        _fix_iso_file_re($row);
+
+        $row->{min_swap_size} = 0 if !$row->{min_swap_size};
         push @iso,($row);
     }
     $sth->finish;
     return \@iso;
 }
+
+sub _fix_iso_file_re($row) {
+    if ($row->{rename_file}) {
+        $row->{file_re} = $row->{rename_file};
+    } elsif ($row->{url} ) {
+        my ($file_re) = $row->{url} =~ m{.*/([^/]+)$};
+        $row->{file_re}= $file_re if $file_re;
+    }
+
+    if ($row->{file_re}) {
+        $row->{file_re} = '^'.$row->{file_re} unless $row->{file_re} =~ /\^/;
+        $row->{file_re} .= '$' unless $row->{file_re} =~ /\$/;
+    }
+
+}
+
 
 =head2 iso_file
 
@@ -790,13 +811,19 @@ Returns a reference to a list of the ISOs known by the system
 
 =cut
 
-sub iso_file ($self, $vm_type) {
+sub iso_file ($self, $id_vm, $uid) {
 
-    my $cache = $self->_cache_get("list_isos");
+    my $key = "list_isos_$id_vm";
+    my $cache = $self->_cache_get($key);
     return $cache if $cache;
 
+    Ravada::Request->refresh_storage(
+        id_vm=> $id_vm
+    );
+
     my $req = Ravada::Request->list_isos(
-        vm_type => $vm_type
+        id_vm => $id_vm
+        ,uid => $uid
     );
     return [] if !$req;
     $self->wait_request($req);
@@ -805,7 +832,7 @@ sub iso_file ($self, $vm_type) {
     my $isos = [];
     $isos = decode_json($req->output()) if $req->output;
 
-    $self->_cache_store("list_isos",$isos);
+    $self->_cache_store($key, $isos);
 
     return $isos;
 }
@@ -1996,6 +2023,10 @@ sub upload_users_json($self, $data_json, $type='openid') {
         my $g = $g0;
         if (!ref($g)) {
             $g = { name => $g0 };
+        }
+        if (!exists $g->{name} or !defined $g->{name} || !length($g->{name})) {
+                push @error, ("Missing group name in ".Dumper($g));
+                next;
         }
         $found++;
         my $group = Ravada::Auth::Group->new(name => $g->{name});

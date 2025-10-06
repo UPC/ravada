@@ -998,17 +998,23 @@ sub test_view_all($vm) {
         uid => user_admin->id
         ,id_domain => $domain->id
     );
-    my $req_remove_base = Ravada::Request->remove_base(
-        uid => $user->id
-        ,id_domain => $domain->id
-    );
 
     wait_request( check_error => 0, debug => 0);
-    for my $req ($req_prepare, $req_remove_base, $req_shutdown) {
+    for my $req ($req_prepare, $req_shutdown) {
         is($req->status,'done');
         like($req->error,qr'User.* (can.t |not allowed)', $req->command)
             or exit;
     }
+
+    my $req_remove_base = Ravada::Request->remove_base(
+        uid => $user->id
+        ,id_domain => $domain->id
+    );
+    wait_request(check_error => 0);
+    is($req_remove_base->status,'done');
+    like($req_remove_base->error,qr'User.* (can.t |not allowed)', $req_remove_base->command)
+            or exit;
+
     for my $req ( $req_start_admin, $req_prepare_admin, $req_start
     ,$req_refresh, $req_refresh_ports) {
         is($req->status,'done');

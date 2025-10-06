@@ -489,7 +489,7 @@ sub test_storage_pools($vm_name) {
     ok(scalar(@$sp_id));
     is_deeply($sp_id, $sp);
 
-    my ($sp_inactive) = grep { $_->{name} ne 'default' } @$sp_id;
+    my ($sp_inactive) = grep { $_->{name} eq $sp_name } @$sp_id;
 
     my $name_inactive= $sp_inactive->{name};
     die "Error, no name in ".Dumper($sp_inactive) if !$name_inactive;

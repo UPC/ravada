@@ -34,6 +34,7 @@ my %SUB = (
                   ,list_iso_images  => \&_list_iso_images
                   ,list_nodes => \&_list_nodes
            ,list_host_devices => \&_list_host_devices
+               ,list_machines => \&_list_machines
           ,list_machines_tree => \&_list_machines_tree
           ,list_machines_user => \&_list_machines_user
           ,list_machines_user_including_privates => \&_list_machines_user_including_privates
@@ -100,10 +101,11 @@ sub _list_bases($rvd, $args) {
 }
 
 sub _list_isos($rvd, $args) {
-    my ($type) = $args->{channel} =~ m{/(.*)};
-    $type = 'KVM' if !defined $type;
+    my ($id_vm) = $args->{channel} =~ m{/(.*)};
+    my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
+    my $user = Ravada::Auth::SQL->new(name => $login) or die "Error: uknown user $login";
 
-    return $rvd->iso_file($type);
+    return $rvd->iso_file($id_vm, $user->id);
 }
 
 sub _list_iso_images($rvd, $args) {
@@ -331,12 +333,23 @@ sub _list_devices_node($rvd, $row) {
     if (%$devices) {
         $row->{_nodes} = [sort keys %{$devices}];
         for (@{$row->{_nodes}}) {
-            $row->{_n_devices} += scalar(@{$devices->{$_}});
+            my $current = $devices->{$_};
+            if (ref($current) eq 'ARRAY') {
+                $row->{_n_devices} += scalar(@{$devices->{$_}});
+            } elsif (ref($current) eq 'HASH') {
+                $row->{_n_devices} += scalar(@{$devices->{$_}->{list}});
+            }
         }
         $row->{_loading} = 0;
         for my $id_node ( keys %$devices ) {
             my @devs;
-            for my $name ( @{$devices->{$id_node}} ) {
+            my $current = $devices->{$id_node};
+            my $error =  '';
+            if (ref($current) eq 'HASH') {
+                $current = $devices->{$id_node}->{list};
+                $error = ($devices->{$id_node}->{error} or '');
+            }
+            for my $name ( @$current ) {
                 my $dev = { name => $name };
 
                 $dev->{domain} = $attached{"$id_node.$name"}
@@ -344,7 +357,7 @@ sub _list_devices_node($rvd, $row) {
 
                 push @devs,($dev);
             }
-            $ret{$id_node} = \@devs;
+            $ret{$id_node} = {error => $error , list => \@devs};
         }
     } else {
         $row->{_nodes} = [];
@@ -574,9 +587,10 @@ sub _list_next_bookings_today($rvd, $args) {
 
 sub _log_active_domains($rvd, $args) {
 
-    my ($unit, $time) = $args->{channel} =~ m{/(\w+)/(\d+)};
+    my ($unit, $time, $id_base) = $args->{channel} =~ m{/(\w+)/(\d+)/(.*)};
+    ($unit, $time) = $args->{channel} =~ m{/(\w+)/(\d+)} if !defined $unit;
 
-    return Ravada::Front::Log::list_active_recent($unit,$time);
+    return Ravada::Front::Log::list_active_recent($unit,$time, $id_base);
 }
 
 sub _list_networks($rvd, $args) {
@@ -780,7 +794,7 @@ sub manage_action($self, $ws, $channel, $action, $args) {
             return;
         }
     }
-    warn "Warning: unknown action for $channel / $action";
+    $self->clients->{$ws}->{channel} = "$channel/$action/$args";
 }
 
 sub subscribe($self, %args) {
@@ -802,7 +816,7 @@ sub subscribe($self, %args) {
         my ($channel,$action,$args)= $channel0 =~ m{(.*?)/(.*?)/(.*)};
         if ($channel) {
             $args{channel} = $channel;
-            $self->manage_action($ws, $channel, $action, $args);
+            $self->manage_action($ws, $channel, $action, $args)
         }
         for my $key (keys %{$self->clients->{$ws}}) {
             $self->clients->{$ws}->{$key} = 1
