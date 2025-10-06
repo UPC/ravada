@@ -52,7 +52,8 @@ sub _chmod($self, $mode, $file=$self->file) {
     my $vm = $self->vm;
 
     if ($vm && !$vm->is_local) {
-        my ($out,$err) = $vm->run_command("chmod",$mode,$file);
+        my $mode_o = sprintf("%o",$mode);
+        my ($out,$err) = $vm->run_command("chmod",$mode_o,$file);
         die $err if $err;
     } else {
         chmod $mode,$file or die "$! chmod $mode $file";
