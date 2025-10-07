@@ -967,10 +967,6 @@ sub _around_prepare_base($orig, $self, @args) {
     }
     $self->_pre_prepare_base($user, $request);
 
-    if (!$self->is_local) {
-        my $vm_local = $self->_vm->new( host => 'localhost' );
-        $self->_vm($vm_local);
-    }
     $self->pre_prepare_base();
     my @base_img = $self->$orig($with_cd);
 
@@ -1080,10 +1076,6 @@ sub _pre_prepare_base($self, $user, $request = undef ) {
         }
     }
     #    $self->_post_remove_base();
-    if (!$self->is_local) {
-        my $vm_local = Ravada::VM->open( type => $self->vm );
-        $self->migrate($vm_local, $request);
-    }
     $self->_check_free_space_prepare_base();
 }
 
