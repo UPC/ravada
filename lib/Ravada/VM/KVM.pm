@@ -1530,7 +1530,7 @@ sub _download_file_external($self, $url, $device, $verbose=1, $test=0) {
 
     my ($filename) = $device =~ m{.*/(.*)};
 
-    if ($url =~ m{[^*]}) {
+    if ($url =~ m{[^*]} && $url !~ m{.*/.+\..+$}) {
         my @found = $self->_search_url_file($url, $filename);
         die "Error: URL not found '$url'" if !scalar @found;
         $url = $found[-1];
@@ -1546,7 +1546,10 @@ sub _download_file_external($self, $url, $device, $verbose=1, $test=0) {
             $device = $self->dir_img()."/".$device;
         }
         confess "I can't find filename in '$url'" unless $device;
-        $self->write_file($device,"mock") unless $self->file_exists($device);
+
+        $self->write_file($device,"mock")
+        if !$self->file_exists($device) && !$<;
+
         return $self->_download_file_external_headers($url);
     }
     return $url if $self->file_exists($device);
@@ -1750,7 +1753,6 @@ sub _fetch_filename {
         $row->{url} = $new_url;
         $row->{file_re} = "^$file";
     }
-    confess "No file_re" if !$row->{file_re};
     $row->{file_re} .= '$'  if $row->{file_re} !~ m{\$$};
 
     my @found;
@@ -1769,7 +1771,7 @@ sub _fetch_filename {
         $sth->execute($row->{device}, $row->{id});
         return;
     } else {
-        warn Dumper([$row->{url}, $row->{file_re}]);
+        $row->{file_re} = $row->{file_re_orig} if exists $row->{file_re_orig};
         @found = $self->_search_url_file($row->{url}, $row->{file_re}) if !@found;
         die "No ".qr($row->{file_re})." found on $row->{url}" if !@found;
     }
@@ -1827,6 +1829,7 @@ sub _match_file($self, $url, $file_re) {
 
     my $links = $dom->find('a')->map( attr => 'href');
     for my $link (@$links) {
+        $link =~ s/^\.\/// if $link;
         next if !defined $link || $link !~ qr($file_re);
         push @found, ($url.$link);
     }
