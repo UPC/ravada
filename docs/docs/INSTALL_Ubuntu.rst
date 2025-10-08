@@ -10,7 +10,7 @@ if you are only upgrading Ravada from a previous version already installed.
 Ubuntu
 ------
 
-.. note:: We only provide support for Ubuntu 20.04, 22.04 and 24.04.
+.. note:: We only provide support for Ubuntu 22.04 and 24.04.
 
 We provide *deb* Ubuntu packages on the `UPC ETSETB
 repository <http://infoteleco.upc.edu/img/debian/>`__.
@@ -18,18 +18,19 @@ repository <http://infoteleco.upc.edu/img/debian/>`__.
 
 Install the ravada package. Choose the one that matches your OS release:
 
-- ravada_2.4.1_ubuntu-18.04_all.deb
-- ravada_2.4.1_ubuntu-20.04_all.deb for Ubuntu 20.04, 22.04 and 24.04
+- ravada_2.4.2_ubuntu-20.04_all.deb
+- ravada_2.4.2_ubuntu-22.04_all.deb
+- ravada_2.4.2_ubuntu-24.04_all.deb
 
-When you run dpkg now it may show some errors, it is ok, keep reading.
+In this example we download for Ubuntu 24.
 
 .. prompt:: bash $
 
-     wget http://infoteleco.upc.edu/img/debian/ravada_2.4.1_ubuntu-20.04_all.deb
+     wget http://infoteleco.upc.edu/img/debian/ravada_2.4.2_ubuntu-24.04_all.deb
      sudo apt-get update
-     sudo apt install ./ravada_2.4.1_ubuntu-20.04_all.deb
+     sudo apt install ./ravada_2.4.2_ubuntu-24.04_all.deb
 
-The last command will show a warning about missing dependencies. Install
+The last command may show a warning about missing dependencies. Install
 them running:
 
 .. prompt:: bash $

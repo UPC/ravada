@@ -10,22 +10,23 @@ if you are only upgrading Ravada from a previous version already installed.
 Debian
 ------
 
-This is the guide to install Ravada in Debian 10 (Bullseye), Debian 11 (Buster) and Debian 12 (Bookworm).
+This is the guide to install Ravada in Debian 10 (Bullseye), Debian 11 (Buster), Debian 12 (Bookworm)
+and Debian 13 ( Trixie ).
 
 We provide *deb* packages on the `UPC ETSETB
 repository <http://infoteleco.upc.edu/img/debian/>`__.
 
-Install the ravada package. It is called *debian-11* but works fine in *debian-12* also.
+Install the ravada package.
 
-- ravada_2.4.1_debian-11_all.deb
+- ravada_2.4.2_debian-13_all.deb
 
 When you run dpkg now it may show some errors, it is ok, keep reading.
 
 .. prompt:: bash $
 
-     wget http://infoteleco.upc.edu/img/debian/ravada_2.4.1_debian-11_all.deb
+     wget http://infoteleco.upc.edu/img/debian/ravada_2.4.2_debian-13_all.deb
      sudo apt update
-     sudo apt install ./ravada_2.4.1_debian-11_all.deb
+     sudo apt install ./ravada_2.4.2_debian-13_all.deb
 
 Debian KVM
 ~~~~~~~~~~
