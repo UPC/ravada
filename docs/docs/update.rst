@@ -75,8 +75,48 @@ Check the apache configuration
 If you upgrade from older releases you may have to add some lines to the apache
 proxy configuration. Check the `Apache proxy guide <http://ravada.readthedocs.io/en/latest/docs/apache.html>`__.
 
+Step 6
+~~~~~~
+
+Enable the services may be necessary when the host Operative System has been
+upgraded too. If you reboot the server and Ravada is not running, do this:
+
+.. prompt:: bash
+
+    sudo systemctl enable rvd_back
+    sudo systemctl enable rvd_front
+
+
 Problems upgrading
-~~~~~~~~~~~~~~~~~~
+----------------
+
+Systemd services
+~~~~~~~~~~~~~~~~
+
+When upgrading from older Ubuntu or Debian versions, the services may not
+be allowed to configure:
+
+..
+
+    # systemctl enable rvd_front
+    Failed to enable unit: Refusing to operate on alias name or linked unit file: rvd_front.service
+
+This may be caused by a linked file in /etc/systemd. Fix it this way:
+
+.. prompt:: bash
+
+    cd /etc/systemd/system
+    rm  rvd_front.service rvd_back.service
+
+Then enable both services again:
+
+.. prompt:: bash
+
+    sudo systemctl enable rvd_back
+    sudo systemctl enable rvd_front
+
+Other problems upgrading
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 Problems may arise please take a look at our `troubleshooting
 <http://ravada.readthedocs.io/en/latest/docs/troubleshooting.html>`_ guide. If everything

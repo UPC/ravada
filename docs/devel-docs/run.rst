@@ -24,7 +24,7 @@ source code:
 
 .. prompt:: bash ~/src/ravada$
 
-     PERL5LIB=./lib morbo -m development -v ./script/rvd_front
+     PERL5LIB=./lib MOJO_REVERSE_PROXY=1 morbo -m development -v ./script/rvd_front
 
 Stop system Ravada
 ==================
