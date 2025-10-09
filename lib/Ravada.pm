@@ -5125,6 +5125,8 @@ sub _cmd_start {
     $domain = $self->search_domain($name)               if $name && !$id_domain;
     $domain = $self->search_domain_by_id($id_domain)    if $id_domain;
 
+    die "Error: Unknown ".($name or $id_domain) if !$domain;
+
     $domain->status('starting');
 
     my $uid = $request->args('uid');
