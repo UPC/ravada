@@ -15,10 +15,10 @@
             <li ng-repeat="node in hdev._nodes">
                 <span><b>{{nodes_by_id[node]}}</b></span>
                 <ul>
-                    <li ng-show="hdev.devices_node[node].length==0">
+                    <li ng-show="hdev.devices_node[node].list.length==0">
                         <%=l 'No devices found'%>
                     </li>
-                    <li ng-repeat="device in hdev.devices_node[node]">
+                    <li ng-repeat="device in hdev.devices_node[node].list">
                         {{device.name}}
                         <span class="badge badge-primary"
                             ng-show="showmachine.is_active && device.domain && device.domain.is_locked">
