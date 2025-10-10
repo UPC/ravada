@@ -214,6 +214,7 @@ qw(
     refresh_machine
     refresh_machine_ports
     refresh_vms
+    refresh_storage
     set_time
     open_exposed_ports
     manage_pools

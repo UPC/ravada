@@ -948,7 +948,8 @@ sub _update_table_isos_url($self, $data) {
 sub _scheduled_fedora_releases($self,$data) {
 
     return if !exists $VALID_VM{KVM} ||!$VALID_VM{KVM} || $>;
-    my $vm = $self->search_vm('KVM') or return; # TODO move ISO downloads off KVM
+
+    my $vm = Ravada::VM::KVM->new(host => 'localhost');
 
     my @now = localtime(time);
     my $year = $now[5]+1900;
@@ -3746,6 +3747,7 @@ sub list_domains {
     my @domains;
 
     for my $row (@$domains_data) {
+        next if !$self->_vm_active($row->{id_vm});
         my $domain =  Ravada::Domain->open($row->{id});
         next if !$domain;
         my $is_active;
@@ -5792,9 +5794,10 @@ sub _cmd_refresh_storage($self, $request=undef) {
         push @id_vm,$self->_list_vms_id();
     }
     for my $id (@id_vm) {
+        next if !$self->_vm_active($id);
         my $vm;
         $vm = Ravada::VM->open($id);
-        next if !$vm || !$vm->vm;
+        next if !$vm || !$vm->vm || !$vm->enabled || !$vm->is_active;
         $vm->refresh_storage();
     }
 }
@@ -5832,10 +5835,29 @@ sub _check_mounted($path, $fstab, $mtab) {
     die "Error: partition $partition not mounted. Retry.\n";
 }
 
+sub _vm_active($self, $id_vm) {
+    my $sth = $self->connector->dbh->prepare(
+        "SELECT id FROM vms "
+        ." WHERE is_active=1 AND enabled=1"
+        ."   AND id = ? "
+    );
+    $sth->execute($id_vm);
+    my ($found) = $sth->fetchrow;
+    return $found;
+}
+
 sub _cmd_check_storage($self, $request) {
     my $contents = "a" x 160;
-    for my $vm ( $self->list_vms ) {
+    for my $id_vm ( $self->_list_vms_id ) {
+        next if !$self->_vm_active($id_vm);
+        my $vm;
+        eval { $vm = Ravada::VM->open($id_vm) };
+        if ($@) {
+            warn $@;
+            next;
+        }
         next if !$vm || !$vm->is_local;
+        next if !$vm->enabled || !$vm->is_active;
         my %fstab = _list_mnt($vm,"s");
         my %mtab = _list_mnt($vm,"m");
 
@@ -6325,15 +6347,49 @@ sub _refresh_active_domains($self, $request=undef) {
     return \%active_domain;
 }
 
+sub _check_vm_ssh($hostname) {
+    my $ssh;
+    for ( 1 .. 3 ) {
+        $ssh = Net::OpenSSH->new($hostname
+            ,timeout => 2
+            ,batch_mode => 1
+            ,forward_X11 => 0
+            ,forward_agent => 0
+            ,kill_ssh_on_timeout => 1
+        );
+        last if !$ssh->error;
+        # warn "RETRYING ssh ".$self->host." ".join(" ",$ssh->error);
+        sleep 1;
+    }
+    return $ssh;
+}
+
 sub _refresh_down_nodes($self, $request = undef ) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id FROM vms "
+        "SELECT id, is_active, hostname FROM vms "
     );
     $sth->execute();
-    while ( my ($id) = $sth->fetchrow()) {
+    while ( my ($id, $is_active, $hostname) = $sth->fetchrow()) {
+        if ($hostname ne 'localhost' && $hostname ne '127.0.0.1') {
+            my $ssh = _check_vm_ssh($hostname);
+            if (!$ssh || $ssh->error) {
+                if ($is_active) {
+                    my $sth = $CONNECTOR->dbh->prepare(
+                        "UPDATE vms set is_active=0 "
+                        ." WHERE id=?"
+                    );
+                    $sth->execute($id);
+                }
+                next;
+            }
+        }
+
         my $vm;
         eval { $vm = Ravada::VM->open($id) };
         warn $@ if $@;
+        if (!$vm || !$vm->vm) {
+            $vm->_data('is_active' => 0 );
+        }
         $vm->is_active(1) if $vm;
     }
 }
