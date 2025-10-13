@@ -7,6 +7,9 @@ use JSON::XS;
 use YAML qw(LoadFile);
 use Test::More;
 
+no warnings "experimental::signatures";
+use feature qw(signatures);
+
 use lib 't/lib';
 use Test::Ravada;
 
@@ -119,10 +122,18 @@ sub test_req_create_domain{
     return $domain;
 }
 
-sub test_req_create_fail {
-    my $vm_name = shift;
-    my ($mem, $disk, $fork) = @_;
+sub test_req_create_fail( $vm_name, $mem, $disk, $fork, $vm) {
+    my $id_iso = search_id_iso('Alpine%64');
+    my $iso = $vm->_search_iso($id_iso);
 
+    Ravada::Request->download(
+        uid => user_admin->id
+        ,id_vm => $vm->id
+        ,id_iso => $id_iso
+    ) if !$vm->search_volume_path_re(qr($iso->{file_re}));
+
+    wait_request( debug => 0);
+    my $device_cdrom = $vm->search_volume_path_re(qr($iso->{file_re}));
     my $name = new_domain_name();
 
     my $req;
@@ -134,6 +145,7 @@ sub test_req_create_fail {
                     , memory => $mem
                     , disk => $disk
                     , vm => $vm_name
+                    , iso_file => $device_cdrom
         );
    
         ok($req,"Expecting request to create_domain");
@@ -145,7 +157,7 @@ sub test_req_create_fail {
     }
     delete_request('refresh_storage');
 
-    wait_request( background => $fork, check_error => 0 );
+    wait_request( background => $fork, check_error => 0 ) unless $req->status eq 'done';
     ok($req->status('done'),"Expecting status='done' , got ".$req->status);
     ok($req->error,"Expecting error creating $name , got '".($req->error or '')."'"
         ." with memory: $mem ,  disk: $disk , fork: ".($fork or 0)) or exit;
@@ -209,8 +221,7 @@ sub test_disk_kvm {
 
 }
 
-sub test_args {
-    my $vm_name = shift;
+sub test_args($vm_name) {
 
     my ($memory , $disk ) = (512 * 1024 , 3*1024*1024);
 
@@ -229,13 +240,13 @@ sub test_args {
     }
 }
 
-sub test_small {
-    my $vm_name = shift;
+sub test_small($vm_name, $vm) {
 
     my ($memory, $disk) = ( 2 , 1*1024*1024+1 );
 
     $Ravada::VM::MIN_DISK_MB = 1024 * 1024;
 
+    test_req_create_fail($vm_name, 1 , 1024 ,"fork", $vm);
     # fail memory
     test_create_fail($vm_name, 1 , 24 ,"Direct");
 
@@ -243,12 +254,12 @@ sub test_small {
     test_create_fail($vm_name, 512 * 1024, 1,"Direct");
 
     # fail memory req
-    test_req_create_fail($vm_name, 1 , 1024 );
-    test_req_create_fail($vm_name, 1 , 1024 ,"fork");
+    test_req_create_fail($vm_name, 1 , 1024, '',$vm );
+    test_req_create_fail($vm_name, 1 , 1024 ,"fork", $vm);
 
     # fails disk req
-    test_req_create_fail($vm_name, 1024, 1);
-    test_req_create_fail($vm_name, 1024, 1,"fork");
+    test_req_create_fail($vm_name, 1024, 1,'', $vm);
+    test_req_create_fail($vm_name, 1024, 1,"fork", $vm);
 
 }
 
@@ -262,11 +273,12 @@ for my $vm_name ( vm_names() ) {
     diag("Testing $vm_name VM");
 
     my $vm_ok;
+    my $vm;
     eval {
         my $ravada = Ravada->new(@ARG_RVD);
         $USER = create_user("foo","bar", 1)    if !$USER;
 
-        my $vm = $ravada->search_vm($vm_name)  if $ravada;
+        $vm = $ravada->search_vm($vm_name)  if $ravada;
 
         $vm_ok = 1 if $vm;
     };
@@ -282,7 +294,7 @@ for my $vm_name ( vm_names() ) {
 
         use_ok("Ravada::VM::$vm_name");
         test_args($vm_name);
-        test_small($vm_name);
+        test_small($vm_name, $vm);
     };
 }
 
