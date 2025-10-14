@@ -24,28 +24,21 @@
         <span class="badge badge-warning" ng-show="show_requests"><%=l 'hide' %></span>
     </button>
     <button type="button" class="btn btn-outline-primary btn-sm"
-        ng-disabled="!n_active || (!n_active_hidden && !show_active)"
+        ng-disabled="!n_active"
+            ng-click="toggle_show_active();"
     >
         <span ng-show="!show_active"
             ng-enabled="n_active"
-            ng-click="do_show_active();"
         ><%=l 'Show active' %></span>
 
         <span ng-show="show_active"
-            ng-click="reload_list()"
-        ><%=l 'Hide active' %></span>
-        <span class="badge badge-warning">{{n_active}}</span>
-    </button>
-
-    <button type="button" class="btn btn-outline-primary btn-sm">
-        <a ng-show="hide_clones" ng-click="showClones(true)"
-            align="right"><%=l 'Show clones' %></a>
-        <a ng-show="!hide_clones" ng-click="showClones(false)"
-            align="right"><%=l 'Hide clones' %></a>
+        ><%=l 'Show all' %></span>
+        <i class="fas fa-sync-alt fa-spin" ng-show="list_machines_time<2 && !n_active"></i>
+        <span ng-show="list_machines_time>=2 && !show_active" class="badge badge-warning">{{n_active}}</span>
     </button>
 
     <input type="text" ng-model="filter" placeholder="<%=l 'filter' %>"
-        ng-change="show_filter()"
+        ng-change="list_machines_name()"
     />
 
     <button class="btn btn-outline-warning btn-sm"
@@ -64,12 +57,14 @@
     >
     <div ng-repeat="request in requests">
         <span class="badge-pill badge-light">{{request.date}}</span>
+        {{request.id}} - 
         <span class="request">
             <b>{{request.command}}</b>
             {{request.domain}}
             <i>{{request.status}}</i>
         </span>
         <span class="error">{{request.error}}</span>
+        <span class="output">{{request.output}}</span>
     </div>
     </div>
 </div>

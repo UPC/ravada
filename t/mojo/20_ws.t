@@ -56,21 +56,20 @@ sub list_machines_user($t, $headers={}){
 }
 
 sub _clean_machines_info($machines) {
-    for (@$machines) {
-        for my $key (keys %$_ ) {
-            delete $_->{$key} unless $key =~ /id|name|base|clone/;
+    for my $m (@$machines) {
+        for my $key (keys %$m ) {
+            delete $m->{$key} unless $key =~ /id|name|base|clone/;
         }
     }
 }
 
 sub list_machines($t) {
-    mojo_check_login($t);
-    $t->websocket_ok("/ws/subscribe")->send_ok("list_machines")->message_ok->finish_ok;
-
+    $t->websocket_ok("/ws/subscribe")->send_ok("list_machines_tree")->message_ok->finish_ok;
     return if !$t->message || !$t->message->[1];
 
     my $name = base_domain_name();
-    my @machines = grep { $_->{name} =~ /^$name/ } @{decode_json($t->message->[1])};
+    my $message = decode_json($t->message->[1]);
+    my @machines = grep { $_->{name} =~ /^$name/ } @{$message->{data}};
     _clean_machines_info(\@machines);
     return @machines;
 }
@@ -113,16 +112,18 @@ sub test_bases($t, $bases) {
         $n_machines += $n_clones;
 
         my @machines = list_machines($t);
-        is( scalar(@machines), scalar(@$bases), Dumper(\@machines)) or exit;
+        is( scalar(@machines), scalar(@$bases)
+            , Dumper([[ map { $_->{name} } @machines]
+                    , [ map { $_->name } @$bases  ]
+                    ])) or exit;
     }
 }
 
 sub _login_non_admin($t) {
-    my $user_name = base_domain_name().".doe";
-    if (! $USER ) {
-        remove_old_user($user_name);
-        $USER = create_user($user_name, $$);
-    }
+    mojo_logout($t);
+    my $user_name = new_domain_name().".doe";
+    remove_old_user($user_name);
+    $USER = create_user($user_name, $$);
     mojo_login($t, $user_name,$$);
 }
 
@@ -143,11 +144,25 @@ sub test_bases_non_admin($t,$bases) {
     }
 }
 
+sub _prepare_base($base) {
+
+    $base->is_public(1) unless $base->is_public();
+
+    return if $base->is_base();
+    Ravada::Request->prepare_base( uid => user_admin->id
+        ,id_domain => $base->id
+    );
+    wait_request();
+}
+
 sub test_list_machines_non_admin($t, $bases) {
+    mojo_logout($t);
     _login_non_admin($t);
+    _prepare_base($bases->[0]);
+
     my $url = "/machine/clone/".$bases->[0]->id.".html";
-    $t->get_ok($url)->status_is(200);
-    wait_request(background => 1);
+    $t->get_ok($url)->status_is(200) or die $url;
+    wait_request(background => 1, debug => 1);
     my @list_bases = list_machines_user($t);
     my $clone;
     for my $base (@list_bases) {
@@ -158,6 +173,7 @@ sub test_list_machines_non_admin($t, $bases) {
         }
         last if $clone;
     }
+    $clone = _clone($bases->[0], $USER) if !$clone;
 
     my @list_machines = list_machines($t);
     is(scalar(@list_machines),0) or die Dumper([map {[$_->{id_base},$_->{name}]} @list_machines]);
@@ -172,6 +188,8 @@ sub test_list_machines_non_admin($t, $bases) {
     );
     wait_request(background => 1);
     user_admin->grant($USER,'shutdown_clones');
+    is($USER->is_operator,1);
+    is($USER->can_list_clones_from_own_base(),1);
 
     for ( 1 .. 5 ) {
         @list_machines = list_machines($t);
@@ -180,7 +198,57 @@ sub test_list_machines_non_admin($t, $bases) {
         wait_request($req->id);
     }
     is(scalar(@list_machines),1,$USER->name." / $$ should see one machine") or exit;
+    my ($base) = $list_machines[0];
+
+    my $user2 = create_user();
+    _clone($base, $user2);
+    @list_machines = list_machines($t);
+    is(scalar(@list_machines),2,$USER->name." / $$ should see 2 machines") or exit;
+
+    my ($clone2) = grep { $_->{id_owner} == $user2->id } @list_machines;
+    ok($clone2);
+
+    test_shutdown($USER, $clone2);
     user_admin->revoke($USER,'shutdown_clones');
+    remove_domain_and_clones_req($base);
+}
+
+sub test_shutdown($user, $clone) {
+    if ($clone->{status} eq 'active') {
+        my $req = Ravada::Request->shutdown(
+            uid => $user->id
+            ,id_domain => $clone->{id}
+        );
+        wait_request();
+    }
+    my $req = Ravada::Request->shutdown(
+        uid => $user->id
+        ,id_domain => $clone->{id}
+    );
+    wait_request();
+    is($req->error,'');
+    my $clone2 = Ravada::Front::Domain->open($clone->{id});
+    is($clone2->_data('status'),'shutdown');
+}
+
+sub _clone($base0, $user) {
+    my $base = $base0;
+    $base = Ravada::Front::Domain->open($base0->{id})
+    if ref($base) !~ /^Ravada/;
+    
+    _prepare_base($base);
+    
+    my $clone;
+    my $req = Ravada::Request->clone(
+        uid => $user->id
+        ,id_domain => $base->id
+    );
+    wait_request(debug => 1);
+    is($req->error,'') or exit;
+    is($req->status,'done') or exit;
+    ($clone) = $base->clones();
+    die "Error: no clone found for base ".$base->name if !$clone;
+    return $clone;
 }
 
 sub test_bases_access($t,$bases) {
@@ -346,6 +414,36 @@ sub test_remove_booking_entry_non_admin($t, $id) {
 
 }
 
+sub test_node_info($vm_name) {
+    my $sth = connector->dbh->prepare("SELECT * FROM vms WHERE vm_type=?");
+    $sth->execute($vm_name);
+
+    my $user = create_user(new_domain_name(), $$);
+
+    while ( my $node = $sth->fetchrow_hashref) {
+        my $ws_args = {
+            channel => '/'.$node->{id}
+            ,login => user_admin->name
+        };
+
+        my $node_info = Ravada::WebSocket::_get_node_info
+                            (rvd_front(), $ws_args);
+        if ($node->{hostname} =~ /localhost|127.0.0.1/) {
+            is($node_info->{is_local},1);
+        } else {
+            is($node_info->{is_local},0);
+        }
+
+        $ws_args->{login} = $user->name;
+
+        $node_info = Ravada::WebSocket::_get_node_info
+                            (rvd_front(), $ws_args);
+
+        is_deeply($node_info,{});
+    }
+
+}
+
 ########################################################################################
 
 init('/etc/ravada.conf',0);
@@ -379,6 +477,8 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
 
     diag("Testing Web Services in $vm_name");
 
+    test_node_info($vm_name);
+
     mojo_login($t, $USERNAME, $PASSWORD);
     test_bookings($t);
     my @bases = _create_bases($t, $vm_name);
@@ -391,6 +491,7 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
 
     mojo_login($t, $USERNAME, $PASSWORD);
     test_bases($t,\@bases);
+    test_list_machines_non_admin($t,\@bases);
 
     _login_non_admin($t);
     test_bases_access($t,\@bases);

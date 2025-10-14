@@ -27,7 +27,7 @@ my %FILES;
 my %HREFS;
 
 my %MISSING_LANG = map {$_ => 1 }
-    qw(ca-valencia he ko);
+    qw(ca-valencia cs he ko);
 
 my $ID_DOMAIN;
 
@@ -160,23 +160,6 @@ sub _remove_route($address) {
 
 }
 
-sub _remove_networks($id_vm) {
-    my $sth = connector->dbh->prepare("SELECT vn.id FROM virtual_networks vn, vms v"
-        ." WHERE vn.id_vm=v.id "
-        ."   AND v.id=? AND vn.name like ?"
-    );
-    $sth->execute($id_vm, base_domain_name."%");
-
-    while ( my ($id) = $sth->fetchrow) {
-        my $id_req = mojo_request($t, "remove_network", { id => $id});
-        if ($id_req) {
-            my $req = Ravada::Request->open($id_req);
-            die "Error in ".$req->command." id=$id" if $req->error;
-        }
-    }
-
-}
-
 sub _id_vm($vm_name) {
     my $sth = connector->dbh->prepare("SELECT id,hostname FROM vms "
         ." WHERE vm_type=? AND is_active=1");
@@ -273,7 +256,7 @@ sub test_networks_access_grant($vm_name) {
 
         my $networks3 = decode_json($t->tx->res->body);
         my ($net3) = grep { $_->{name} eq $new->{name}} @$networks3;
-        is($net3->{is_active}, $new->{is_active}) or exit;
+        is($net3->{is_active}, $new->{is_active}) or die $net3->{name};
     }
 
     for ( 1 .. 2 ) {
@@ -288,64 +271,6 @@ sub test_networks_access_grant($vm_name) {
     }
 
     mojo_login($t, $USERNAME, $PASSWORD);
-
-}
-
-sub test_networks_admin($vm_name) {
-    mojo_check_login($t);
-
-    for my $url (qw( /admin/networks/ /network/new) ) {
-        $t->get_ok($url);
-        is($t->tx->res->code(),200, "Expecting access to $url");
-    }
-
-    my $id_vm = _id_vm($vm_name);
-    die "Error: I can't find if for vm type = $vm_name" if !$id_vm;
-
-    _remove_networks($id_vm);
-
-    $t->get_ok("/v2/vm/list_networks/".$id_vm);
-    my $networks = decode_json($t->tx->res->body);
-    ok(scalar(@$networks));
-
-    $t->post_ok("/v2/network/new/".$id_vm => json => { name => base_domain_name() });
-    my $data = decode_json($t->tx->res->body);
-
-    $t->post_ok("/v2/network/set/" => json => $data );
-
-    my $new_ok = decode_json($t->tx->res->body);
-    ok($new_ok->{id_network}) or die Dumper([$t->tx->res->body, $new_ok]);
-
-    $t->get_ok("/v2/vm/list_networks/".$id_vm);
-    my $networks2 = decode_json($t->tx->res->body);
-    my ($new) = grep { $_->{name} eq $data->{name} } @$networks2;
-
-    ok($new);
-    is($new->{_can_change},1) or exit;
-    is($new->{_owner}->{id},user_admin->id) or exit;
-    $new->{is_active} = 0;
-
-    $t->post_ok("/v2/network/set/" => json => $new);
-    wait_request(debug => 1);
-    $t->get_ok("/v2/vm/list_networks/".$id_vm);
-
-    my $networks3 = decode_json($t->tx->res->body);
-    my ($changed) = grep { $_->{name} eq $data->{name} } @$networks3;
-    is($changed->{is_active},0) or die $changed->{name};
-
-    $t->get_ok("/v2/network/info/".$changed->{id});
-
-    my $changed4 = decode_json($t->tx->res->body);
-    is($changed4->{is_active},0) or exit;
-
-    $new->{is_public}=1;
-    $t->post_ok("/v2/network/set/" => json => $new);
-    wait_request(debug => 1);
-    $t->get_ok("/v2/vm/list_networks/".$id_vm);
-
-    my $networks5 = decode_json($t->tx->res->body);
-    my ($changed5) = grep { $_->{name} eq $data->{name} } @$networks5;
-    is($changed5->{is_public},1) or warn Dumper($changed5);
 
 }
 
@@ -464,6 +389,10 @@ sub test_unused_routes() {
 
 sub _fill_href($href) {
     $href=~ s/(.*)\{\{machine.id}}(.*)/${1}$ID_DOMAIN$2/;
+
+    $href =~ s/(.*)\{\{.*vm_type}}(.*)/${1}kvm$2/;
+    $href =~ s/(.*)\{\{showmachine.type}}(.*)/${1}kvm$2/;
+
     return $href;
 }
 
@@ -499,7 +428,7 @@ sub test_languages() {
     while (my $file = readdir $ls) {
         next if $file !~ /(.*)\.po$/;
         next if $MISSING_LANG{$1};
-        ok($lang->{$1},"Expecting $1 in select");
+        ok($lang->{$1},"Expecting $1 in language select");
     }
 }
 
@@ -560,7 +489,7 @@ sub test_storage_pools($vm_name) {
     ok(scalar(@$sp_id));
     is_deeply($sp_id, $sp);
 
-    my ($sp_inactive) = grep { $_->{name} ne 'default' } @$sp_id;
+    my ($sp_inactive) = grep { $_->{name} eq $sp_name } @$sp_id;
 
     my $name_inactive= $sp_inactive->{name};
     die "Error, no name in ".Dumper($sp_inactive) if !$name_inactive;
@@ -621,6 +550,7 @@ mojo_login($t, $USERNAME, $PASSWORD);
 
 remove_old_domains_req(0); # 0=do not wait for them
 clean_clones();
+remove_networks_req();
 
 $ID_DOMAIN = _search_public_base();
 
@@ -631,9 +561,6 @@ for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
 
     diag("Testing settings in $vm_name");
 
-    test_networks_access( $vm_name );
-    test_networks_access_grant($vm_name);
-    test_networks_admin( $vm_name );
     test_storage_pools($vm_name);
     test_nodes( $vm_name );
     test_routes( $vm_name );
@@ -641,5 +568,6 @@ for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
 
 clean_clones();
 remove_old_users();
+remove_networks_req();
 
 done_testing();

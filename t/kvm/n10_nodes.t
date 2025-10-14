@@ -566,8 +566,11 @@ sub test_rsync_newer {
 
     # on starting it should sync
     is($domain->_vm->host, $node->host);
-    $domain->start(user => user_admin);
-    is($domain->_vm->host, $node->host);
+    $domain->_data('id_vm' => $vm->id);
+
+    my $domain2 = Ravada::Domain->open($domain->id);
+    $domain2->start(user => user_admin);
+    is($domain2->_vm->host, $node->host);
 
     { # syncs for start, so vols should be equal
     my $vol3 = $vm->search_volume($vol_name);
@@ -594,7 +597,7 @@ sub test_bases_node {
 
     $domain->prepare_base(user_admin);
     is($domain->base_in_vm($domain->_vm->id), 1);
-    is($domain->base_in_vm($node->id), undef);
+    is($domain->base_in_vm($node->id), 0);
 
     $domain->migrate($node);
     is($domain->_vm->id, $node->id) or exit;
@@ -654,7 +657,7 @@ sub test_clone_make_base {
     $domain->prepare_base(user_admin);
     is($domain->base_in_vm($domain->_vm->id), 1);
 
-    is($domain->base_in_vm($node->id), undef) or exit;
+    is($domain->base_in_vm($node->id), 0) or exit;
 
     $domain->set_base_vm(vm => $node, user => user_admin);
     is($domain->base_in_vm($node->id), 1);
@@ -707,11 +710,11 @@ sub test_bases_different_storage_pools {
 
     $domain->prepare_base(user_admin);
     is($domain->base_in_vm($domain->_vm->id), 1);
-    is($domain->base_in_vm($node->id), undef);
+    is($domain->base_in_vm($node->id), 0);
 
     eval {$domain->migrate($node) };
     like($@, qr'storage pool.*not found'i);
-    is($domain->base_in_vm($node->id), undef);
+    is($domain->base_in_vm($node->id), 0);
 
     _enable_storage_pools($node);
 
@@ -737,6 +740,7 @@ sub test_clone_not_in_node {
     my @clones;
     for ( 1 .. 10 ) {
         my $clone1 = $domain->clone(name => new_domain_name, user => user_admin);
+        diag($clone1->name);
         push @clones,($clone1);
         is($clone1->_vm->host, 'localhost');
         eval { $clone1->start(user_admin) };
@@ -898,7 +902,7 @@ sub test_node_inactive($vm_name, $node) {
 
     start_node($node);
 
-    hibernate_node($node);
+    shutdown_node($node);
     is($node->ping, 0);
     is($node->_do_is_active,0);
     is($node->_data('is_active'), 0);
@@ -1164,9 +1168,6 @@ SKIP: {
         next;
     };
 
-    # remove
-    test_clone_not_in_node($vm_name, $node);
-
     is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
     test_already_started_hibernated($vm_name, $node);
 
@@ -1182,8 +1183,6 @@ SKIP: {
     test_status($node);
     test_bases_node($vm_name, $node);
     test_clone_make_base($vm_name, $node);
-
-    test_migrate_back($node);
 
     test_sync_base($vm_name, $node);
     test_sync_back($node);

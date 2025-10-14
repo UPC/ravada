@@ -9,6 +9,7 @@ use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use Moose;
 use Socket qw( inet_aton inet_ntoa );
+use Storable qw(dclone);
 use Sys::Hostname;
 use URI;
 use YAML qw(Dump Load);
@@ -92,7 +93,6 @@ sub create_domain {
     my $active = ( delete $args{active} or $volatile or $user->is_temporary or 0);
     my $listen_ip = delete $args{listen_ip};
     my $description = delete $args{description};
-    confess if $args{name} eq 'tst_vm_v20_volatile_clones_02' && !$listen_ip;
     my $remote_ip = delete $args{remote_ip};
     my $id = delete $args{id};
     my $storage = delete $args{storage};
@@ -107,25 +107,26 @@ sub create_domain {
                                            , _vm => $self
                                            ,storage => $storage
     );
-    my ($out, $err) = $self->run_command("/usr/bin/test",
-         "-e ".$domain->_config_file." && echo 1" );
-    chomp $out;
 
-    return $domain if $out && exists $args{config};
-
-    die "Error: Domain $args{name} already exists " if $out;
-
-    $domain->_set_default_info($listen_ip, $network);
-    $domain->_store( autostart => 0 );
-    $domain->_store( is_active => $active );
-    $domain->set_memory($args{memory}) if $args{memory};
+    my $file_exists = $self->file_exists($domain->_config_file);
 
     $domain->_insert_db(name => $args{name} , id_owner => $user->id
         , id => $id
         , id_vm => $self->id
         , id_base => $args{id_base} 
         , description => $description
-    );
+    ) unless $domain->is_known();
+
+    return $domain if $file_exists && exists $args{config};
+
+    die "Error: Domain $args{name} already exists in ".$self->name
+    ." ".$domain->_config_file if $file_exists;
+
+    $domain->_set_default_info($listen_ip, $network);
+    $domain->_store( autostart => 0 );
+    $domain->_store( is_active => $active );
+    $domain->_store( is_volatile => ($volatile or 0 ));
+    $domain->set_memory($args{memory}) if $args{memory};
 
     if ($args{id_base}) {
         my $owner = $user;
@@ -177,6 +178,7 @@ sub create_domain {
                 $domain->change_hardware('network', $index ,{name => $network})
             }
         }
+        $active = 0 if $domain_base->list_host_devices();
     } elsif (!exists $args{config}) {
         $storage = $self->default_storage_pool_name() if !$storage;
         my ($vda_name) = "$args{name}-vda-".Ravada::Utils::random_name(4).".void";
@@ -189,12 +191,12 @@ sub create_domain {
 
         $self->_add_cdrom($domain, %args);
         $domain->_set_default_drivers();
-        $domain->_set_default_info($listen_ip);
+        $domain->_set_default_info($listen_ip, $network);
         $domain->_store( is_active => $active );
 
     }
     $domain->set_memory($args{memory}) if $args{memory};
-    if ( $volatile || $user->is_temporary ) {
+    if ( $active ) {
         $domain->_store( is_active => 1 );
     }
 #    $domain->start();
@@ -358,9 +360,9 @@ sub list_routes {
 
 sub list_virtual_networks($self) {
 
-    my $dir_net = $self->dir_img."/networks/";
+    my $dir_net = $self->dir_img."/networks";
     if (!$self->file_exists($dir_net)) {
-        my ($out, $err) = $self->run_command("mkdir", $dir_net);
+        my ($out, $err) = $self->run_command("mkdir","-p", $dir_net);
         die $err if $err;
     }
     my @files = $self->list_files($dir_net,qr/.yml$/);
@@ -372,6 +374,7 @@ sub list_virtual_networks($self) {
 
         $net->{id_vm} = $self->id if !$net->{id_vm};
         $net->{is_active}=0 if !defined $net->{is_active};
+        $net->{forward_mode}='nat' if !$net->{forward_mode};
         push @list,($net);
     }
     if (!@list) {
@@ -381,6 +384,7 @@ sub list_virtual_networks($self) {
             , bridge => 'voidbr0'
             ,ip_address => '192.51.100.1'
             ,is_active => 1
+            ,forward_mode => 'nat'
         };
 
         my $file_out = $self->dir_img."/networks/".$net->{name}.".yml";
@@ -444,15 +448,20 @@ sub new_network($self, $name='net') {
     return $new;
 }
 
-sub create_network($self, $data, $id_owner=undef, $request=undef) {
+sub create_network($self, $data0, $id_owner=undef, $request=undef) {
 
-    $data->{internal_id} = $self->_new_net_id();
+    $data0->{internal_id} = $self->_new_net_id();
+
+    my $data = dclone($data0);
+
     my $file_out = $self->dir_img."/networks/".$data->{name}.".yml";
     die "Error: network $data->{name} already created"
     if $self->file_exists($file_out);
 
     $data->{bridge} = $self->_new_net_bridge()
     if !exists $data->{bridge} || ! defined $data->{bridge};
+
+    $data->{forward_mode} = 'nat' if !exists $data->{forward_mode};
 
     delete $data->{is_public};
 
@@ -463,6 +472,8 @@ sub create_network($self, $data, $id_owner=undef, $request=undef) {
     delete $data->{is_public};
     delete $data->{id};
     delete $data->{id_vm};
+    delete $data->{isolated};
+    delete $data->{id_owner};
 
     $self->write_file($file_out,Dump($data));
 
@@ -471,7 +482,8 @@ sub create_network($self, $data, $id_owner=undef, $request=undef) {
 
 sub remove_network($self, $name) {
     my $file_out = $self->dir_img."/networks/$name.yml";
-    unlink $file_out or die "$! $file_out" if $self->file_exists($file_out);
+    return if !$self->file_exists($file_out);
+    $self->remove_file($file_out);
 }
 
 
@@ -801,6 +813,9 @@ sub active_storage_pool($self, $name, $value) {
     }
 
     $self->write_file($file_sp, Dump( \@list));
+}
+sub get_cpu_model_names($self,$arch='x86_64') {
+    return qw(486 qemu32 qemu64);
 }
 
 sub has_networking { return 1 };

@@ -20,6 +20,8 @@ use_ok('Ravada::HostDevice');
 use_ok('Ravada::HostDevice::Templates');
 
 my $N_DEVICE = 0;
+$Ravada::Domain::TTL_REMOVE_VOLATILE=3;
+
 #########################################################
 
 sub _search_unused_device {
@@ -306,18 +308,20 @@ sub test_host_device_usb($vm) {
     );
     my @list_hostdev_c = $clone->list_host_devices();
     is(scalar @list_hostdev_c, 1) or exit;
-    my $device = $list_hostdev_c[0]->{devices};
+    my ($device) = $list_hostdev_c[0]->list_devices;
 
     test_kvm_usb_template_args($device, $list_hostdev_c[0]);
 
     _check_hostdev($clone);
-    $clone->start(user_admin);
+    eval { $clone->start(user_admin) };
+    is(''.$@,'') or die $@;
     _check_hostdev($clone, 1);
 
     shutdown_domain_internal($clone);
-    eval { $clone->start(user_admin) };
-    is(''.$@, '') or exit;
     _check_hostdev($clone, 1) or exit;
+    eval { $clone->start(user_admin) };
+    is(''.$@, '') or die;
+    _check_hostdev($clone, 1) or die;
 
     #### it will fail in another clone
 
@@ -328,7 +332,7 @@ sub test_host_device_usb($vm) {
         eval { $clone2->start(user_admin) };
         last if $@;
     }
-    like ($@ , qr(No available devices));
+    like ($@ , qr(No available devices)) or exit;
 
     $list_hostdev[0]->remove();
     my @list_hostdev2 = $vm->list_host_devices();
@@ -341,6 +345,8 @@ sub test_host_device_usb($vm) {
 }
 
 sub test_kvm_usb_template_args($device_usb, $hostdev) {
+
+    confess "Error: undefined device_usb " if !defined $device_usb;
     my ($bus, $device, $vendor_id, $product_id)
     = $device_usb =~ /Bus 0*([0-9a-f]+) Device 0*([0-9a-f]+).*ID 0*([0-9a-f]+):0*([0-9a-f]+) /;
     my $args = $hostdev->_fetch_template_args($device_usb);
@@ -417,15 +423,29 @@ sub test_host_device_usb_mock($vm, $n_hd=1) {
             like( ''.$@,qr(Did not find USB device)) if $vm->type eq 'KVM';
             is( ''.$@, '' ) if $vm->type eq 'Void';
             _check_hostdev($clone, $n_hd);
+            is(scalar($clone->list_host_devices_attached()), $n_hd, $clone->name);
         }
-        is(scalar($clone->list_host_devices_attached()), $n_hd, $clone->name);
         push @clones,($clone);
     }
+    sleep 2;
     $clones[0]->shutdown_now(user_admin);
-    _check_hostdev($clones[0], $n_hd);
-    my @devs_attached = $clones[0]->list_host_devices_attached();
+    sleep 1;
+    $clones[0]->shutdown_now(user_admin);
+    _check_hostdev($clones[0], 0);
+    my @devs_attached;
+    my $locked=0;
+    for ( 1 .. 3 ) {
+        @devs_attached = $clones[0]->list_host_devices_attached();
+        for (@devs_attached) {
+            $locked++ if $_->{is_locked};
+        }
+        last if !$locked;
+
+        sleep 1;
+        $clones[0]->shutdown_now(user_admin);
+    }
     is(scalar(@devs_attached), $n_hd);
-    is($devs_attached[0]->{is_locked},0);
+    is($locked,0) or die Dumper(\@devs_attached);
 
     for (@list_hostdev) {
         $_->_data('enabled' => 0 );
@@ -472,7 +492,7 @@ sub test_domain_path_kvm($domain, $path) {
     confess if !$path;
 
     my @nodes = $doc->findnodes($path);
-    is(scalar @nodes, 1, "Expecting $path in ".$domain->name) or exit;
+    is(scalar @nodes, 1, "Expecting $path in ".$domain->name) or confess;
 
 }
 
@@ -550,6 +570,7 @@ sub test_host_device_gpu($vm) {
     }
     like ($@,qr{^($|.*Unable to stat|.*device not found.*mediated)} , $base->name) or exit;
 
+    $base->_attach_host_devices();
     test_hostdev_gpu($base);
 
     diag("Remove host device ".$list_hostdev[0]->name);
@@ -570,12 +591,13 @@ sub test_xmlns($vm) {
     eval { $base->start(user_admin) };
     like ($@,qr{^($|.*Unable to stat|.*device not found.*mediated|.*there is no device "hostdev)}m , $base->name) or exit;
 
+    $base->_attach_host_devices();
     my $doc = XML::LibXML->load_xml( string => $base->domain->get_xml_description);
     my ($domain_xml) = $doc->findnodes("/domain");
 
     my ($xmlns) = $domain_xml =~ m{xmlns:qemu=["'](.*?)["']}m;
     my ($line1) = $domain_xml =~ m{(<domain.*)}m;
-    ok($xmlns,"Expecting xmlns:qemu namespace in ".$line1) or exit;
+    ok($xmlns,"Expecting xmlns:qemu namespace in ".$line1) or die $base->name;
     is($xmlns, "http://libvirt.org/schemas/domain/qemu/1.0") or exit;
 
     $list_hostdev[0]->remove();
@@ -600,11 +622,12 @@ sub test_check_list_command($vm) {
         }
     }
 
-    for my $something ('lssomething' , 'findsomething') {
+    for my $something ('ls' , 'find') {
         $hdev->_data('list_command' => $something);
         is($hdev->list_command, $something);
         is($hdev->_data('list_command'), $something);
     }
+    wait_request();
 
     $hdev->remove();
 }

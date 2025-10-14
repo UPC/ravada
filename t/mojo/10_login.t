@@ -60,6 +60,82 @@ sub login( $user=$USERNAME, $pass=$PASSWORD ) {
     mojo_check_login($t, $user, $pass);
 }
 
+sub test_view_tls($base) {
+
+    return if $base->type ne 'KVM';
+
+    mojo_check_login($t);
+
+    my $name = new_domain_name();
+    Ravada::Request->clone(
+        uid => user_admin->id
+        ,name => $name
+        ,id_domain => $base->id
+    );
+    wait_request();
+    my $clone;
+    for ( 1 .. 10 ) {
+        ($clone) = grep { $_->{name} eq $name } $base->clones;
+        last if $clone;
+        wait_request();
+    }
+
+    my $clone_f = Ravada::Front::Domain->open($clone->{id});
+    my $info = $clone_f->info(user_admin);
+    my $display = $info->{hardware}->{display};
+    for my $driver ('spice','rdp') {
+        my ($found) = grep { $_->{driver} eq $driver } @$display;
+        if (!$found) {
+            Ravada::Request->add_hardware(
+                uid => user_admin->id
+                ,id_domain => $clone->{id}
+                ,name => 'display'
+                ,data => { driver => $driver }
+            );
+        }
+    }
+    Ravada::Request->start_domain(uid => user_admin->id
+        ,id_domain => $clone->{id}
+    );
+    wait_request();
+
+    for ( 1 .. 10 ) {
+        $info = $clone_f->info(user_admin);
+        $display = $info->{hardware}->{display};
+        my ($found_spice) = grep { $_->{driver} eq 'spice' } @$display;
+        my ($found_rdp) = grep { $_->{driver} eq 'rdp' } @$display;
+        last if $found_spice && $found_rdp;
+
+        wait_request();
+    }
+
+    $t->get_ok("/machine/display/spice/".$clone->{id}.".vv")
+    ->status_is(200);
+
+    die $t->tx->res->body unless $t->tx->res->code == 200;
+
+    my @text = split(/\n/,$t->tx->res->body);
+    like($text[0], qr/\[virt-viewer/);
+
+    $t->get_ok("/machine/display/rdp/".$clone->{id}.".rdp")
+    ->status_is(200);
+
+    @text = split(/\n/,$t->tx->res->body);
+    like($text[0] ,qr/screen mode/);
+
+        $t->get_ok("/machine/display/spice-tls/".$clone->{id}.".tls.vv")
+        ->status_is(200);
+
+    @text = split(/\n/,$t->tx->res->body);
+    like($text[0] ,qr/\[virt-viewer/);
+
+    Ravada::Request->remove_domain(
+        name => $name
+        ,uid => user_admin->id
+    );
+    wait_request();
+}
+
 sub test_many_clones($base) {
     login();
 
@@ -382,7 +458,7 @@ sub test_login_fail {
     $t->post_ok('/login' => form => {login => "fail", password => 'bigtime'});
     is($t->tx->res->code(),403);
     $t->get_ok("/admin/machines")->status_is(401);
-    like($t->tx->res->dom->at("button#submit")->text,qr'Login') or exit;
+    like($t->tx->res->dom->at("input#submit")->attr('value'),qr'Login') or exit;
 
     login( user_admin->name, "$$ $$");
 
@@ -390,10 +466,10 @@ sub test_login_fail {
     is($t->tx->res->code(),403);
 
     $t->get_ok("/admin/machines")->status_is(401);
-    like($t->tx->res->dom->at("button#submit")->text,qr'Login') or exit;
+    like($t->tx->res->dom->at("input#submit")->attr('value'),qr'Login') or exit;
 
     $t->get_ok("/admin/users")->status_is(401);
-    like($t->tx->res->dom->at("button#submit")->text,qr'Login') or exit;
+    like($t->tx->res->dom->at("input#submit")->attr('value'),qr'Login') or exit;
 
 }
 
@@ -496,7 +572,7 @@ sub _check_html_lint($url, $content, $option = {}) {
     for my $error ( $lint->errors() ) {
         next if $error->errtext =~ /Entity .*is unknown/;
         next if $option->{internal} && $error->errtext =~ /(body|head|html|title).*required/;
-        if ( $error->errtext =~ /Unknown element <(footer|header|nav|ldap-groups)/
+        if ( $error->errtext =~ /Unknown element <(footer|header|nav|ldap-groups|local-groups)/
             || $error->errtext =~ /Entity && is unknown/
             || $error->errtext =~ /should be written as/
             || $error->errtext =~ /Unknown attribute.*%/
@@ -1109,7 +1185,7 @@ test_frontend_admin($t);
 test_username_case($t);
 test_network_case($t);
 
-for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
+for my $vm_name (@{rvd_front->list_vm_types} ) {
 
     diag("Testing new machine in $vm_name");
 
@@ -1123,6 +1199,8 @@ for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
     test_new_machine($t);
     my $base0 = test_create_base($t, $vm_name, $name);
     push @bases,($base0->name);
+
+    test_view_tls($base0);
 
     test_clone_same_name($t, $base0);
 

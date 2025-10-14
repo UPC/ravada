@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html ng-app="ravada.app">
+%= include '/bootstrap/header'
+<body id="page-top">
+    <div id="wrapper">
+        %= include '/bootstrap/navigation'
+        <div id="page-wrapper">
+            <div class="page-header">
+              <div class="card" id="admin-content">
+                <div class="card-header">
+                    <h2 class="display-5"><%=l 'Upload Users' %></h2>
+                </div>
+                <div class="card-body" ng-controler="upload_users">
+%                   if (!$done) {
+
+                    <div class="alert alert-warning" ng-cloak>
+                        <span ng-show="!type || type=='sql' || (type=='ldap' && create)">
+                            <%=l 'Upload a text file with the user names and passwords separated by a colon :' %>
+                        </span>
+                        <span ng-show="type=='openid' || type=='sso' || type=='ldap' && !create">
+                            <%=l 'Upload a text file with the user names' %>
+                        </span>
+
+                    </div>
+                    <form method="post" enctype="multipart/form-data" name="form_upload"
+                        role="form"
+                        action="/admin/users/upload.html"
+                        novalidate
+                    >
+                        <div class="form-group">
+                            <label for="type" required>Type</label>
+                            <select name="type" ng-model="type" required>
+                                <option value="sql" selected>plain</option>
+                                <option value="ldap">LDAP</option>
+                                <option value="sso">CAS</option>
+                                <option value="openid">OpenID</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="users"><%=l 'Users' %></label>
+                            <input type="file" accept="text/csv, text/plain" name="users"
+                                ng-model="users"
+                                onchange="users_changed=true"
+                            >
+                        </div>
+
+                        <div class="form-group" ng-show="type=='ldap'">
+                            <label for="create">Create</label>
+                            <input type="checkbox" name="create" ng-model="create"/>
+                        </div>
+
+                        <div class="form-group">
+                            <input type="submit"
+                                value="<%=l 'Upload' %>"
+                                ng-disabled="!type || !form_upload.users.$touched"
+                            >
+                            <a type="button" class="btn btn-outline-secondary"
+                                href="/users/register">Cancel</a>
+                        </div>
+                    </form>
+%                   } else {
+                        <%= $found %> <%=l 'users found in uploaded file' %>,
+                        <%= $count %> <%=l 'created' %>.
+                        <div ng-show="<%= scalar(@$error) %>">
+                            <%=l 'Errors found' %>: <%= scalar(@$error) %>
+                            <ul>
+%                           for my $line (sort @$error ) {
+                                <li><%= $line %></li>
+%                           }
+                            </ul>
+                        </div>
+                        <a type="button" class="btn btn-outline-secondary"
+                           href="/users/register"><%=l 'Add more users' %></a>
+
+%                   }
+
+                </div>
+              </div>
+            </div>
+
+        </div><!# -- page-wrapper -->
+    </div><!# -- wrapper -->
+%= include $footer
+%= include '/bootstrap/scripts'
+</body>
+</html>
+

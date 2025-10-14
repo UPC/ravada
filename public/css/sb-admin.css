@@ -454,6 +454,10 @@ span.info {
     font-style: italic;
 }
 
+span.output {
+    color: lightgray;
+}
+
 .title {
     padding-top: 4px;
     padding-bottom: 0px;
@@ -502,4 +506,15 @@ td.box{
 
 .error {
     color: orange
+}
+
+label.small_row {
+    font-size: 80%;
+    font-weight: 600;
+    display: inline-block;
+    margin-bottom: .5rem;
+}
+
+ul.no-bullets {
+  list-style-type: none; /* Remove bullets */
 }

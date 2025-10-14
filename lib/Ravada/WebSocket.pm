@@ -55,7 +55,6 @@ my %SUB = (
 our %TABLE_CHANNEL = (
     list_alerts => 'messages'
     ,list_machines => 'domains'
-    ,list_machines_tree => 'domains'
     ,list_machines_user_including_privates => ['domains','bookings','booking_entries'
         ,'booking_entry_ldap_groups', 'booking_entry_users','booking_entry_bases']
     ,list_requests => 'requests'
@@ -64,11 +63,9 @@ our %TABLE_CHANNEL = (
     ,list_networks => 'virtual_networks'
 );
 
-my $A_WHILE;
-my %A_WHILE;
-my $LIST_MACHINES_FIRST_TIME = 1;
+lock_hash(%TABLE_CHANNEL);
+
 my $TZ;
-my %TIME0;
 ######################################################################
 
 
@@ -154,22 +151,46 @@ sub _list_machines($rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
     my $user = Ravada::Auth::SQL->new(name => $login)
         or die "Error: uknown user $login";
-    return []
-        unless (
-            $user->can_list_machines
-            || $user->can_list_own_machines()
-            || $user->can_list_clones()
-            || $user->can_list_clones_from_own_base()
-            || $user->is_admin()
-        );
 
-    if ($LIST_MACHINES_FIRST_TIME) {
-        $LIST_MACHINES_FIRST_TIME = 0;
-        return $rvd->list_machines($user, id_base => undef);
+    return (0,[])
+        if !$user->can_view_admin_machines;
+
+    return if exists $args->{_list_machines_last}
+            && time -  $args->{_list_machines_last} < 2;
+
+    $args->{_list_machines_time} = 0 if !$args->{_list_machines_time};
+    $args->{_list_machines_last} = 0 if !$args->{_list_machines_last};
+
+    $args->{_list_machines_time}++;
+
+    my @id_base = (undef);
+
+    push @id_base,(keys(%{$args->{show_clones}}))
+    if exists $args->{show_clones};
+
+    my @filter = ( id_base => \@id_base );
+    push @filter,("status" => "active") if $args->{show_active};
+
+    push @filter,("name" => $args->{show_name}) if $args->{show_name};
+
+    if ($args->{_list_machines_time} == 1 ) {
+        return (0, $rvd->list_machines($user, @filter));
+    } elsif( $args->{_list_machines_time} <= 2 || $args->{_list_machines_time} > 60
+        || _count_different($rvd, $args, 'domains')) {
+        $args->{_list_machines_time}=2;
+        return (0,$rvd->list_machines($user, @filter));
     }
 
-    return $rvd->list_machines($user);
+    my $seconds = time - $args->{_list_machines_last} + 60;
+    my $list_changed = $rvd->list_machines($user
+        , date_changed => Ravada::Utils::now($seconds)
+        , @filter
+    );
+
+    return (1,$list_changed);
+
 }
+
 sub _list_children($list_orig, $list, $level=0) {
     my @list2;
     for my $item (sort {$a->{name} cmp $b->{name} } @$list) {
@@ -181,21 +202,69 @@ sub _list_children($list_orig, $list, $level=0) {
         if ( scalar(@children) ) {
             my @children2 = _list_children($list_orig,\@children, $level+1);
             push @list2,(@children2);
-            $item->{has_clones} = scalar @children2;
-        } else {
-            $item->{has_clones} = 0;
         }
         lock_hash(%$item);
     }
     return @list2;
 }
 
+sub _add_show_clones_parent($rvd, $args, $id) {
+    my $sth = $rvd->_dbh->prepare(
+        "SELECT id_base FROM domains where id=?"
+    );
+    $sth->execute($id);
+    my ($id_base) = $sth->fetchrow;
+    if ($id_base && ! exists $args->{show_clones}->{$id_base}) {
+            if (!$args->{show_clones}->{$id_base}) {
+                $args->{show_clones}->{$id_base}=1;
+                _add_show_clones_parent($rvd, $args, $id_base);
+                delete $args->{_list_machines_time};
+            }
+    }
+
+}
+
+sub _show_clones_parents($rvd, $args, $list) {
+
+    for my $item (@$list) {
+        my $id_base = $item->{id_base};
+        if ($id_base && ! exists $args->{show_clones}->{$id_base}) {
+            if (!$args->{show_clones}->{$id_base}) {
+                $args->{show_clones}->{$id_base}=1;
+                _add_show_clones_parent($rvd, $args, $id_base);
+                delete $args->{_list_machines_time};
+            }
+        }
+    }
+
+    return 1 if !exists $args->{_list_machines_time};
+    return 0;
+}
+
 sub _list_machines_tree($rvd, $args) {
-    my $list_orig = _list_machines($rvd, $args);
+    my ($refresh,$list_orig) = _list_machines($rvd, $args);
+
+    return if $refresh && !scalar(@$list_orig);
+
+    if ( _show_clones_parents($rvd, $args, $list_orig)) {
+        ($refresh,$list_orig) = _list_machines($rvd, $args);
+    }
+
+    $args->{_list_machines_last} = time;
+
+    return {action => 'refresh'
+        , data => $list_orig
+        , n_active => _count_domains_active($rvd)
+    } if $refresh;
+
     my @list = sort { lc($a->{name}) cmp lc($b->{name}) }
                 grep {!exists($_->{id_base}) || !$_->{id_base} }
                 @$list_orig;
-    return [_list_children($list_orig, \@list)];
+    my @ordered = _list_children($list_orig, \@list);
+    return { 'action' => 'new'
+        , data => \@ordered
+        , n_active => _count_domains_active($rvd)
+    };
 }
 
 sub _list_machines_user($rvd, $args) {
@@ -231,7 +300,7 @@ sub _list_host_devices($rvd, $args) {
     my $user = Ravada::Auth::SQL->new(name => $login)
         or die "Error: uknown user $login";
 
-    my $sth = $rvd->_dbh->prepare( "SELECT id,name,list_command,list_filter,devices,date_changed "
+    my $sth = $rvd->_dbh->prepare( "SELECT id,name,list_command,list_filter,devices_node,date_changed "
         ." FROM host_devices WHERE id_vm=?");
 
     $sth->execute($id_vm);
@@ -239,14 +308,85 @@ sub _list_host_devices($rvd, $args) {
     my @found;
     while (my $row = $sth->fetchrow_hashref) {
         _list_domains_with_device($rvd, $row);
+        _list_devices_node($rvd, $row);
         push @found, $row;
-        next unless _its_been_a_while_channel($args->{channel});
+        next unless _its_been_a_while_channel($args);
         my $req = Ravada::Request->list_host_devices(
             uid => $user->id
             ,id_host_device => $row->{id}
         );
     }
     return \@found;
+}
+
+sub _list_devices_node($rvd, $row) {
+    my $devices = {};
+    eval {
+    $devices = decode_json($row->{devices_node}) if $row->{devices_node};
+    };
+    warn "Warning: $@ $row->{devices_node}" if $@;
+    $row->{_n_devices}=0;
+
+    my %ret;
+    my %attached = _list_devices_attached($rvd);
+    if (%$devices) {
+        $row->{_nodes} = [sort keys %{$devices}];
+        for (@{$row->{_nodes}}) {
+            my $current = $devices->{$_};
+            if (ref($current) eq 'ARRAY') {
+                $row->{_n_devices} += scalar(@{$devices->{$_}});
+            } elsif (ref($current) eq 'HASH') {
+                $row->{_n_devices} += scalar(@{$devices->{$_}->{list}});
+            }
+        }
+        $row->{_loading} = 0;
+        for my $id_node ( keys %$devices ) {
+            my @devs;
+            my $current = $devices->{$id_node};
+            my $error =  '';
+            if (ref($current) eq 'HASH') {
+                $current = $devices->{$id_node}->{list};
+                $error = ($devices->{$id_node}->{error} or '');
+            }
+            for my $name ( @$current ) {
+                my $dev = { name => $name };
+
+                $dev->{domain} = $attached{"$id_node.$name"}
+                if exists $attached{"$id_node.$name"};
+
+                push @devs,($dev);
+            }
+            $ret{$id_node} = {error => $error , list => \@devs};
+        }
+    } else {
+        $row->{_nodes} = [];
+    }
+
+    $row->{devices_node} = \%ret;
+}
+
+sub _list_devices_attached($rvd) {
+    my $sth=$rvd->_dbh->prepare(
+        "SELECT d.id,d.name,d.is_base, d.status, l.id, l.name "
+        ."     ,l.id_vm "
+        ." FROM host_devices_domain hdd, domains d"
+        ." LEFT JOIN host_devices_domain_locked l"
+        ."    ON d.id=l.id_domain "
+        ." WHERE  d.id= hdd.id_domain "
+        ."  ORDER BY d.name"
+    );
+    $sth->execute();
+    my %devices;
+    while ( my ($id,$name,$is_base, $status, $is_locked, $device, $id_vm) = $sth->fetchrow ) {
+        next if !$device;
+        $is_locked = 0 if !$is_locked || $status ne 'active';
+        my $domain = {     id => $id       ,name => $name, is_locked => $is_locked
+                      ,is_base => $is_base ,device => $device
+        };
+        $devices{"$id_vm.$device"} = $domain;
+    }
+    return %devices;
+
 }
 
 sub _list_domains_with_device($rvd,$row) {
@@ -286,7 +426,6 @@ sub _list_domains_with_device($rvd,$row) {
 
     $row->{_domains} = \@domains;
     $row->{_bases} = \@bases;
-    $row->{devices} = [values %devices];
 }
 
 sub _get_domain_with_device($rvd, $dev) {
@@ -345,12 +484,34 @@ sub _get_node_info($rvd, $args) {
 
     return {} if!$user->is_admin;
 
-    my $node = Ravada::VM->open(id => $id_node, readonly => 1);
-    $node->_data('hostname');
-    $node->{_data}->{is_local} = $node->is_local;
-    $node->{_data}->{has_bases} = scalar($node->list_bases);
-    return $node->{_data};
+    my $sth = $rvd->_dbh->prepare("SELECT * FROM vms WHERE id=?");
+    $sth->execute($id_node);
+    my $data = $sth->fetchrow_hashref;
+    $data->{is_local}=0;
+    $data->{is_local}=1 if $data->{hostname} eq 'localhost'
+        || $data->{hostname} eq '127.0.0,1'
+        || !$data->{hostname};
 
+    $data->{bases}=_list_bases_node($rvd, $data->{id});
+
+    return $data;
+}
+
+sub _list_bases_node($rvd, $id_node) {
+    my $sth = $rvd->_dbh->prepare(
+        "SELECT d.id FROM domains d,bases_vm bv"
+        ." WHERE d.is_base=1"
+        ."  AND d.id = bv.id_domain "
+        ."  AND bv.id_vm=?"
+        ."  AND bv.enabled=1"
+    );
+    my @bases;
+    $sth->execute($id_node);
+    while ( my ($id_domain) = $sth->fetchrow ) {
+        push @bases,($id_domain);
+    }
+    $sth->finish;
+    return \@bases;
 }
 
 sub _list_recent_requests($rvd, $seconds) {
@@ -383,7 +544,7 @@ sub _ping_backend($rvd, $args) {
 
     # If there are requests in state different that requested it's ok
     if ( scalar(@reqs) > $requested ) {
-        _its_been_a_while(1);
+        _its_been_a_while($args, 1);
         return 2;
     }
 
@@ -393,7 +554,7 @@ sub _ping_backend($rvd, $args) {
     } @reqs ;
 
     if (!$ping_backend) {
-        return 0 if $requested && _its_been_a_while();
+        return 0 if $requested && _its_been_a_while($args);
         my @now = localtime(time);
         my $seconds = $now[0];
         Ravada::Request->ping_backend() if $seconds < 5;
@@ -401,11 +562,11 @@ sub _ping_backend($rvd, $args) {
     }
 
     if ($ping_backend->{status} eq 'requested') {
-        return 0 if _its_been_a_while();
+        return 0 if _its_been_a_while($args);
         return 1;
     }
 
-    _its_been_a_while(1);
+    _its_been_a_while($args, 1);
     return 1;
 }
 
@@ -425,9 +586,10 @@ sub _list_next_bookings_today($rvd, $args) {
 
 sub _log_active_domains($rvd, $args) {
 
-    my ($unit, $time) = $args->{channel} =~ m{/(\w+)/(\d+)};
+    my ($unit, $time, $id_base) = $args->{channel} =~ m{/(\w+)/(\d+)/(.*)};
+    ($unit, $time) = $args->{channel} =~ m{/(\w+)/(\d+)} if !defined $unit;
 
-    return Ravada::Front::Log::list_active_recent($unit,$time);
+    return Ravada::Front::Log::list_active_recent($unit,$time, $id_base);
 }
 
 sub _list_networks($rvd, $args) {
@@ -442,60 +604,27 @@ sub _list_networks($rvd, $args) {
     return \@networks;
 }
 
-sub _its_been_a_while_channel($channel) {
-    if (!$A_WHILE{$channel} || time -$A_WHILE{$channel} > 5) {
-        $A_WHILE{$channel} = time;
+sub _its_been_a_while_channel($args) {
+    if (!$args->{a_while} || time -$args->{a_while} > 5) {
+        $args->{a_while} = time;
         return 1;
     }
     return 0;
 }
 
-sub _its_been_a_while($reset=0) {
+sub _its_been_a_while($args, $reset=0) {
     if ($reset) {
-        $A_WHILE = 0;
+        $args->{a_while}->{_global} = 0;
     }
-    if (!$A_WHILE) {
-        $A_WHILE = time;
+    if (!$args->{a_while}->{_global}) {
+        $args->{a_while}->{_global} = time;
         return 0;
     }
-    return time - $A_WHILE > 5;
+    return time - $args->{a_while}->{_global} > 5;
 }
 
-sub _different_list($list1, $list2) {
-    return 1 if scalar(@$list1) != scalar (@$list2);
-    for my $i (0 .. scalar(@$list1)-1) {
-        my $h1 = $list1->[$i];
-        my $h2 = $list2->[$i];
-        return 1 if _different($h1, $h2);
-   }
-    return 0;
-}
-
-sub _different_hash($h1,$h2) {
-    for my $key (keys %$h1) {
-        next if exists $h1->{$key} && exists $h2->{$key}
-        && !defined $h1->{$key} && !defined $h2->{$key};
-        if (!exists $h2->{$key}
-            || !defined $h1->{$key} && defined $h2->{$key}
-            || defined $h1->{$key} && !defined $h2->{$key}
-            || _different($h1->{$key}, $h2->{$key})) {
-            unlock_hash(%$h1);
-            lock_hash(%$h1);
-            return 1;
-        }
-    }
-    return 0;
-}
 sub _different($var1, $var2) {
-    return 1 if !defined $var1 &&  defined $var2;
-    return 1 if  defined $var1 && !defined $var2;
-    return 1 if ref($var1) ne ref($var2);
-    return _different_list($var1, $var2) if ref($var1) eq 'ARRAY';
-    return _different_hash($var1, $var2) if ref($var1) eq 'HASH';
-    return 1 if !defined $var1 && defined $var2
-                || defined $var1 && !defined $var2;
-    return 0 if !defined $var1 && !defined $var2;
-    return $var1 ne $var2;
+    return Ravada::Utils::_different($var1, $var2);
 }
 
 sub BUILD {
@@ -509,10 +638,22 @@ sub BUILD {
             for my $key ( keys %{$self->clients} ) {
                 my $ws_client = $self->clients->{$key}->{ws};
                 my $channel = $self->clients->{$key}->{channel};
-                _send_answer($self, $ws_client, $channel, $key);
+                $self->_send_answer($ws_client, $channel, $key);
             }
         });
 
+}
+
+sub _count_different($rvd, $args, $table) {
+    my $count = _count_table($rvd, $table);
+    my $key = "_count_".$table;
+    if (!defined $args->{$key}
+        || $args->{$key} != $count ) {
+
+        $args->{$key} = $count;
+        return 1;
+    }
+    return 0;
 }
 
 sub _old_info($self, $key, $new_count=undef, $new_changed=undef) {
@@ -546,14 +687,20 @@ sub _date_changed_table($self, $table, $id) {
     return ($date or '');
 }
 
-sub _count_table($self, $table) {
-    my $rvd = $self->ravada;
+sub _count_table($rvd, $table) {
     my $sth = $rvd->_dbh->prepare("SELECT count(*) FROM $table");
     $sth->execute;
     my ($count) = $sth->fetchrow;
     return $count;
 }
 
+sub _count_domains_active($rvd) {
+    my $sth = $rvd->_dbh->prepare("SELECT count(*) FROM domains "
+        ." WHERE status='active'");
+    $sth->execute;
+    my ($count) = $sth->fetchrow;
+    return $count;
+}
 
 sub _new_info($self, $key) {
     my $channel = $self->clients->{$key}->{channel};
@@ -571,7 +718,7 @@ sub _new_info($self, $key) {
 
     for my $table (@$table0) {
         $count .= ":" if $count;
-        $count .= $self->_count_table($table);
+        $count .= _count_table($self->ravada, $table);
 
         $date .= ":" if $date;
         $date .= $self->_date_changed_table($table, $id);
@@ -585,7 +732,9 @@ sub _send_answer($self, $ws_client, $channel, $key = $ws_client) {
     my $exec = $SUB{$channel} or die "Error: unknown channel $channel";
 
     my $old_ret;
-    if (defined $TIME0{$channel} && time < $TIME0{$channel}+60) {
+    if (exists $TABLE_CHANNEL{$channel} && $TABLE_CHANNEL{$channel}
+            && defined $self->clients->{$key}->{TIME0}->{$channel}
+            && time < $self->clients->{$key}->{TIME0}->{$channel}+60) {
         my ($old_count, $old_changed) = $self->_old_info($key);
         my ($new_count, $new_changed) = $self->_new_info($key);
 
@@ -598,22 +747,53 @@ sub _send_answer($self, $ws_client, $channel, $key = $ws_client) {
 
     }
 
-    $TIME0{$channel} = time;
+    $self->clients->{$key}->{TIME0}->{$channel} = time;
 
     my $ret;
     eval { $ret = $exec->($self->ravada, $self->clients->{$key}) };
     warn $@ if $@;
 
-    if ( defined $ret && _different($ret, $old_ret )) {
+    if ( defined $ret && (!defined $old_ret || _different($ret, $old_ret ))) {
 
-        warn localtime(time)." WS: send $channel " if $DEBUG;
+        my $short_key = $key;
+        $short_key =~ s/.*HASH\((.*)\)/$1/;
+        warn time." $short_key WS: send $channel " if $DEBUG;
         $ws_client->send( {json => $ret} );
         $self->clients->{$key}->{ret} = $ret;
     }
     $self->unsubscribe($key) if $channel eq 'ping_backend' && $ret eq 2;
-    if (!$ret) {
-        $self->unsubscribe($key);
+}
+
+sub manage_action($self, $ws, $channel, $action, $args) {
+    if ($channel eq 'list_machines_tree') {
+
+        $self->clients->{$ws}->{_list_machines_time}=0;
+        if ($action eq 'show_clones') {
+            my ($id, $value) = $args =~/(\d+)=(.+)/;
+            if ($value eq 'true') {
+                $self->clients->{$ws}->{$action}->{$id}=1;
+            } else {
+                delete $self->clients->{$ws}->{$action}->{$id};
+            }
+            return;
+        } elsif ($action eq 'show_active') {
+            if ($args eq 'true') {
+                delete $self->clients->{$ws}->{show_clones};
+                $self->clients->{$ws}->{$action}=1;
+            } else {
+                delete $self->clients->{$ws}->{$action};
+            }
+            return;
+        } elsif ( $action eq 'show_name') {
+            if ($args) {
+                $self->clients->{$ws}->{$action}=$args;
+            } else {
+                delete $self->clients->{$ws}->{$action};
+            }
+            return;
+        }
     }
+    $self->clients->{$ws}->{channel} = "$channel/$action/$args";
 }
 
 sub subscribe($self, %args) {
@@ -621,23 +801,43 @@ sub subscribe($self, %args) {
     my %args2 = %args;
     delete $args2{ws};
     warn "Subscribe ".Dumper(\%args2) if $DEBUG;
-    $self->clients->{$ws} = {
-        ws => $ws
-        , %args
-        , ret => undef
-    };
-    if ($args{channel} =~ /list_machines/) {
-        $LIST_MACHINES_FIRST_TIME = 1 ;
+    if (!exists $self->clients->{$ws}) {
+        $self->clients->{$ws} = {
+            ws => $ws
+            , %args
+            , ret => undef
+        };
+    } else {
+        return $self->unsubscribe_all()
+           if $args{login} ne $self->clients->{$ws}->{login};
+
+        my $channel0 = $args{channel};
+        my ($channel,$action,$args)= $channel0 =~ m{(.*?)/(.*?)/(.*)};
+        if ($channel) {
+            $args{channel} = $channel;
+            $self->manage_action($ws, $channel, $action, $args);
+        }
+        for my $key (keys %{$self->clients->{$ws}}) {
+            $self->clients->{$ws}->{$key} = 1
+            if $key =~ /_(time|last)$/i;
+        }
     }
     $self->_clean_info($ws);
     $self->_send_answer($ws,$args{channel});
     my $channel = $args{channel};
     $channel =~ s{/.*}{};
-    $TIME0{$channel} = 0 if $channel =~ /list_machines/i;
+    $self->clients->{$ws}->{TIME0}->{$channel} = 0 if $channel =~ /list_machines/i;
 }
 
 sub unsubscribe($self, $ws) {
     delete $self->clients->{$ws};
+}
+
+sub unsubscribe_all($self) {
+    for my $ws ( keys %{$self->clients()} ) {
+        warn $ws;
+        delete $self->clients->{$ws};
+    }
 }
 
 1;

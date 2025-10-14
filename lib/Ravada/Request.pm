@@ -9,7 +9,7 @@ Ravada::Request - Requests library for Ravada
 
 =cut
 
-use Carp qw(confess);
+use Carp qw(confess cluck);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
 use JSON::XS;
@@ -107,6 +107,7 @@ our %VALID_ARG = (
                 ,with_cd => 2
                 ,storage => 2
                 ,options => 2
+                ,enable_host_devices => 2
     }
     ,change_owner => {uid => 1, id_domain => 1}
     ,add_hardware => {uid => 1, id_domain => 1, name => 1, number => 2, data => 2 }
@@ -134,6 +135,8 @@ our %VALID_ARG = (
     }
     ,compact => { uid => 1, id_domain => 1 , keep_backup => 2 }
       ,purge => { uid => 1, id_domain => 1 }
+      ,backup => { uid => 1, id_domain => 1, compress => 2}
+      ,restore_backup => { uid => 1, file => 1, id_domain => 2 }
 
     ,list_machine_types => { uid => 1, id_vm => 2, vm_type => 2}
     ,list_cpu_models => { uid => 1, id_domain => 1}
@@ -152,7 +155,8 @@ our %VALID_ARG = (
 
     ,list_host_devices => {
         uid => 1
-        ,id_host_device => 1
+        ,id_host_device => 2
+        ,id_node => 2
         ,_force => 2
     }
     ,remove_host_device => {
@@ -191,7 +195,7 @@ our %CMD_SEND_MESSAGE = map { $_ => 1 }
             expose remove_expose
             rebase rebase_volumes
             shutdown_node reboot_node start_node
-            compact purge
+            compact purge backup
             start_domain
 
             create_network change_network remove_network
@@ -205,6 +209,7 @@ qw(
     rsync_back
     cleanup
     list_host_devices
+    list_storage_pools
     refresh_machine
     refresh_machine_ports
     refresh_vms
@@ -238,7 +243,7 @@ our %COMMAND = (
                     , 'remove_base_vm'
                     , 'screenshot'
                     , 'cleanup'
-                    , 'compact','spinoff'
+                    , 'compact','spinoff','backup'
                 ]
         ,priority => 20
     }
@@ -253,6 +258,8 @@ our %COMMAND = (
         ,priority => 4
         ,commands => ['shutdown','shutdown_now', 'enforce_limits', 'set_time'
             ,'remove_domain', 'remove', 'refresh_machine_ports'
+            ,'connect_node','start_node','shutdown_node'
+            ,'post_login'
         ]
     }
 
@@ -711,6 +718,7 @@ sub _duplicated_request($self=undef, $command=undef, $args=undef) {
     confess "Error: missing command " if !$command;
     #    delete $args_d->{uid} unless $command eq 'clone';
     delete $args_d->{uid} if $command =~ /(cleanup|refresh_vms|set_base_vm)/;
+    delete $args_d->{uid} if exists $args_d->{uid} && !defined $args_d->{uid};
     delete $args_d->{at};
     delete $args_d->{status};
     delete $args_d->{timeout};
@@ -718,7 +726,7 @@ sub _duplicated_request($self=undef, $command=undef, $args=undef) {
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT id,args FROM requests WHERE (status <> 'done')"
         ." AND command=?"
-        ." AND ( error = '' OR error is NULL)"
+        ." AND ( error = '' OR error is NULL OR error like '% waiting for process%')"
     );
     $sth->execute($command);
     while (my ($id,$args_found) = $sth->fetchrow) {
@@ -833,7 +841,62 @@ sub _new_request {
     $request->_validate();
     $request->status('requested') if $request->status ne'done';
 
+    $self->lock_domain() if ! $args{at};
+
     return $request;
+}
+
+sub id_domain($self, $value=undef) {
+
+    return $self->_data('id_domain' => $value) if defined $value;
+
+    my $id_domain = $self->{_data}->{id_domain};
+    return $id_domain if defined $id_domain;
+    $id_domain = $self->defined_arg('id_domain');
+    $self->{_data}->{id_domain} = $id_domain;
+    return $id_domain;
+}
+
+=head2 lock_domain
+
+  Checks if that request belongs to a virtual machine and sets it as locked
+
+=cut
+
+sub lock_domain($self) {
+    my $id_domain = $self->id_domain;
+    if (!defined $id_domain) {
+        $id_domain = $self->defined_arg('id_domain');
+    }
+    return if !defined $id_domain;
+
+    my $sth = $self->_dbh->prepare(
+        "UPDATE domains set is_locked=? "
+        ." WHERE id=?"
+    );
+    $sth->execute($self->id, $id_domain);
+}
+
+=head2 unlock_domain
+
+  Checks if that request belongs to a virtual machine and unlocks it
+
+=cut
+
+sub unlock_domain($self) {
+    my $id_domain = $self->id_domain;
+    if (!defined $id_domain) {
+        $id_domain = $self->defined_arg('id_domain');
+    }
+    return if !defined $id_domain;
+
+    my $sth = $self->_dbh->prepare(
+        "UPDATE domains set is_locked=0 "
+        ." WHERE id=?"
+        ."   AND is_locked<>0"
+    );
+    $sth->execute($id_domain);
+
 }
 
 sub _validate($self) {
@@ -1427,11 +1490,19 @@ sub set_base_vm {
     my $self = {};
     bless ($self, $class);
 
-    return $self->_new_request(
+    my $req = $self->_new_request(
             command => 'set_base_vm'
              , args => $args
     );
 
+    my $id_domain = $args->{id_domain};
+    my $domain = Ravada::Front::Domain->open($id_domain);
+    my $id_vm = $args->{id_vm};
+    $id_vm = $args->{id_node} if exists $args->{id_node} && $args->{id_node};
+
+    $domain->_set_base_vm_db($id_vm, $args->{value}, $req->id);
+
+    return $req;
 }
 
 =head2 remove_base_vm
@@ -1702,7 +1773,9 @@ sub done_recently($self, $seconds=60,$command=undef, $args=undef) {
 
         return Ravada::Request->open($id) if !keys %$args_d;
 
-        my $args_found_d = decode_json($args_found);
+        my $args_found_d = {};
+        eval { $args_found_d = decode_json($args_found)};
+        warn "Warning: request $id $@" if $@;
         delete $args_found_d->{uid};
         delete $args_found_d->{at};
 
@@ -1821,6 +1894,121 @@ sub redo($self) {
     $sth->execute($self->id);
 }
 
+=head2 remove
+
+Remove all requests that comply with the conditions
+
+=cut
+
+sub remove($status, %args) {
+    my $sth = _dbh->prepare(
+        "SELECT * FROM requests where status = ? "
+    );
+    $sth->execute($status);
+
+    my $sth_del = _dbh->prepare("DELETE FROM requests where id=?");
+
+    while ( my $row = $sth->fetchrow_hashref ) {
+        my $req_args = {};
+
+        eval {
+        $req_args = decode_json($row->{args}) if $row->{args};
+        };
+        warn "Warning: $@ ".$row->{args}
+        ."\n".Dumper($row) if $@;
+
+        next if $row->{status} ne $status;
+        delete $req_args->{uid};
+        next if scalar(keys%args) != scalar(keys(%$req_args));
+
+        my $found = 1;
+        for my $key (keys %$req_args) {
+
+            next if exists $args{$key}
+            && !defined $args{$key} && !defined $req_args->{$key};
+
+            $found=0 if
+            !exists $args{$key} ||
+            $args{$key} ne $req_args->{$key};
+        }
+        next if !$found;
+
+        for my $key (keys %args) {
+            next if exists $req_args->{$key}
+            && !defined $args{$key} && !defined $req_args->{$key};
+
+            $found=0 if
+            !exists $req_args->{$key} ||
+            $args{$key} ne $req_args->{$key};
+        }
+        next if !$found;
+
+        $sth_del->execute($row->{id});
+    }
+}
+
+sub _data($self, $field, $value=undef) {
+    if (defined $value
+        && (
+          !exists $self->{_data}->{$field}
+          || !defined $self->{_data}->{$field}
+          || $value ne $self->{_data}->{$field}
+        )
+    ) {
+        confess "ERROR: field $field is read only"
+            if $FIELD_RO{$field};
+
+        $self->{_data}->{$field} = $value;
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "UPDATE requests set $field=?"
+            ." WHERE id=?"
+        );
+        $sth->execute($value, $self->id);
+        $sth->finish;
+
+        return $value;
+    }
+    return $self->{_data}->{$field}
+    if exists $self->{_data}->{$field} && defined $self->{_data}->{$field};
+
+    $self->{_data} = $self->_select_db( );
+
+    return if !$self->{_data};
+    confess "No field $field "          if !exists$self->{_data}->{$field};
+
+    return $self->{_data}->{$field};
+
+}
+
+sub id($self) {
+    return $self->{id};
+}
+
+sub _select_db($self) {
+
+    _init_connector();
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM requests "
+            ." WHERE id=?");
+    $sth->execute($self->{id});
+    my $row = $sth->fetchrow_hashref;
+    $sth->finish;
+
+    return if !$row;
+
+    return $row;
+}
+
+=head2 refresh
+
+Refresh request status and data
+
+=cut
+
+sub refresh($self) {
+    delete $self->{_data};
+}
+
 sub AUTOLOAD {
     my $self = shift;
 
@@ -1834,37 +2022,17 @@ sub AUTOLOAD {
         );
     }
 
+    confess "ERROR: Unknown field $name "
+        if !exists $self->{$name} && !exists $FIELD{$name} && !exists $FIELD_RO{$name};
+
     confess "Can't locate object method $name via package $self"
         if !ref($self);
 
     my $value = shift;
     $name =~ tr/[a-z][A-Z]_/_/c;
 
-    confess "ERROR: Unknown field $name "
-        if !exists $self->{$name} && !exists $FIELD{$name} && !exists $FIELD_RO{$name};
-    if (!defined $value) {
-        my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM requests "
-            ." WHERE id=?");
-        $sth->execute($self->{id});
-        my $row = $sth->fetchrow_hashref;
-        $sth->finish;
-
-        return $row->{$name};
-    }
-
-    confess "ERROR: field $name is read only"
-        if $FIELD_RO{$name};
-
-    confess "Error: $name can't be a ref ".Dumper($value) if ref($value);
-    my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set $name=? "
-            ." WHERE id=?");
-    confess if $name eq 'error' && !defined $value;
-    eval {
-        $sth->execute($value, $self->{id});
-        $sth->finish;
-    };
-    warn "$name=$value\n$@" if $@;
-    return $value;
+    delete $self->{_data}->{$name} if $name eq 'error';
+    return $self->_data($name, $value);
 
 }
 

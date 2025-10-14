@@ -13,6 +13,7 @@ use Hash::Util qw(lock_keys lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
 use Mojo::JSON qw(decode_json);
 use Moose;
+use Storable qw(dclone);
 use YAML qw(Load Dump  LoadFile DumpFile);
 use Image::Magick;
 use MIME::Base64;
@@ -155,7 +156,7 @@ sub _set_display($self, $listen_ip=$self->_vm->listen_ip) {
     #    my $ip = ($self->_vm->nat_ip or $self->_vm->ip());
     my $port = 'auto';
     $port = $self->_new_free_port() if $self->is_active();
-    my $display_data = { driver => 'void', ip => $listen_ip, port =>$port
+    my $display_data = { driver => 'void', listen_ip => $listen_ip, port =>$port
         , is_builtin => 1
         , xistorra => 1
     };
@@ -393,6 +394,7 @@ sub start($self, @args) {
     my $set_password = delete $args{set_password}; # unused
     my $user = delete $args{user};
     delete $args{'id_vm'};
+    delete $args{'is_volatile'};
     confess "Error: unknown args ".Dumper(\%args) if keys %args;
 
     $listen_ip = $self->_vm->listen_ip($remote_ip) if !$listen_ip;
@@ -414,7 +416,7 @@ sub _set_ip_address($self) {
     for my $net (@{$hardware->{network}}) {
         next if !ref($net);
         next if exists $net->{address} && $net->{address};
-        next if $net->{type} ne 'nat';
+        next if $net->{type} ne 'nat' && $net->{type} ne 'bridge';
         $net->{address} = '198.51.100.'.int(rand(253)+2);
         $changed++;
     }
@@ -771,7 +773,7 @@ sub _set_default_info($self, $listen_ip=undef, $network=undef) {
         ,address => $info->{ip}
         ,type => 'nat'
         ,driver => 'virtio'
-        ,name => $net->{name}
+        ,network => $net->{name}
     };
     $self->_store(hardware => $hardware );
 
@@ -876,6 +878,23 @@ sub ip {
     return;
 }
 
+sub ip_info($self) {
+    my $hardware = $self->_value('hardware');
+    return if !exists $hardware->{network};
+        for my $network(@{$hardware->{network}}) {
+            $network->{addr} = delete $network->{address};
+            if ( ref($network) && exists $network->{addr} && $network->{addr} ) {
+                lock_hash(%$network);
+                return $network;
+            }
+
+        $self->_set_ip_address();
+    }
+
+    return;
+
+}
+
 sub clean_disk($self, $file) {
     open my $out,'>',$file or die "$! $file";
     close $out;
@@ -943,7 +962,7 @@ sub _new_network($self) {
         ,address => ''
         ,type => 'nat'
         ,driver => 'virtio'
-        ,name => "net".(scalar(@$list)+1)
+        ,network => "net".(scalar(@$list)+1)
     };
 }
 
@@ -1157,17 +1176,37 @@ sub add_config_node($self, $path, $content, $data) {
     for my $item (split m{/}, $path ) {
         next if !$item;
 
-        confess "Error, no $item in ".Dumper($found)
-        if !exists $found->{$item};
-
         $found = $found->{$item};
+        $found = [] if !$found;
     }
+    my $old;
     if (ref($found) eq 'ARRAY') {
+        $old = dclone($found);
         push @$found, ( $content_hash );
     } else {
         my ($item) = keys %$content_hash;
+        $old = dclone($found->{$item});
         $found->{$item} = $content_hash->{$item};
     }
+    return $old;
+}
+
+sub set_config_node($self, $path, $content, $data) {
+    my $found = $data;
+    my ($pre,$last) = $path =~ m{(.+)/(.*)};
+    if ($pre) {
+        for my $item (split m{/}, $pre) {
+            next if !$item;
+
+            confess "Error, no $item in ".Dumper($found)
+            if !exists $found->{$item};
+
+            $found = $found->{$item};
+        }
+    } else {
+        ($last) = $path =~ m{.*/(.*)};
+    }
+    $found->{$last} = $content;
 }
 
 sub remove_config_node($self, $path, $content, $data) {
@@ -1211,28 +1250,38 @@ sub _equal_hash($a,$b) {
 }
 
 sub add_config_unique_node($self, $path, $content, $data) {
-    my $content_hash;
-    eval { $content_hash = Load($content) };
+    my $content_hash = $content;
+    eval { $content_hash = Load($content) if !ref($content) };
     confess $@."\n$content" if $@;
 
     $data->{hardware}->{host_devices} = []
     if $path eq "/hardware/host_devices" && !exists $data->{hardware}->{host_devices};
 
     my $found = $data;
+    my $parent;
     for my $item (split m{/}, $path ) {
         next if !$item;
 
-        confess "Error, no $item in ".Dumper($found)
-        if !exists $found->{$item};
-
+        if ( !exists $found->{$item} ) {
+            $found->{$item} ={};
+        }
+        $parent = $found;
         $found = $found->{$item};
     }
+    my $old;
     if (ref($found) eq 'ARRAY') {
         push @$found, ( $content_hash );
     } else {
         my ($item) = keys %$content_hash;
-        $found->{$item} = $content_hash->{$item};
+        if ($item) {
+            $old = dclone($found);
+            $found->{$item} = $content_hash->{$item};
+        } else {
+            my ($last) = $path =~ m{.*/(.*)};
+            $parent->{$last} = $content_hash;
+        }
     }
+    return $old;
 }
 
 
@@ -1252,9 +1301,15 @@ sub get_config($self) {
     return $self->_load();
 }
 
+sub get_config_txt($self) {
+    return $self->_vm->read_file($self->_config_file);
+}
+
 sub reload_config($self, $data) {
-    eval { DumpFile($self->_config_file(), $data) };
-    confess $@ if $@;
+    if (!ref($data)) {
+        $data = Load($data);
+    }
+    $self->_vm->write_file($self->_config_file(), Dump($data));
 }
 
 sub has_nat_interfaces($self) {

@@ -694,7 +694,8 @@ sub post_resume_aux($self, %args) {
     # 55: domain is not running
     # 74: not configured
     # 86: no agent
-    die "$@\n" if $@ && $@ !~ /libvirt error code: (55|74|86),/;
+    # 84: qemu doesn't support rtc-reset-reinjection command
+    die "$@\n" if $@ && $@ !~ /libvirt error code: (55|74|84|86),/;
 }
 
 sub set_time($self) {
@@ -1726,27 +1727,49 @@ sub get_info {
     return $info;
 }
 
-sub _ip_agent($self) {
+sub _ip_info_get($self) {
     my @ip;
     eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_AGENT) };
-    return if $@ && $@ =~ /^libvirt error code: (74|86),/;
-    warn $@ if $@;
+    warn $@ if $@ && $@ !~ /^libvirt error code: (74|86),/;
 
-    my $found;
+    if (!@ip) {
+        eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_LEASE) };
+        warn $@ if $@;
+    }
+
+    my $found={};
+
+    my $doc = XML::LibXML->load_xml(string => $self->domain->get_xml_description);
+    my @interfaces =  $doc->findnodes('/domain/devices/interface');
+
     for my $if (@ip) {
         next if $if->{name} =~ /^lo/;
         for my $addr ( @{$if->{addrs}} ) {
 
             next unless $addr->{type} == 0 && $addr->{addr} !~ /^127\./;
+            next if $addr->{addr} =~ /^169\.254/; # ignore rfc5735
+            $found = {
+                'hwaddr' => $if->{hwaddr}
+                ,'addr' => $addr->{addr}
+            };
 
-            $found = $addr->{addr} if !$found;
+            for my $dev (@interfaces) {
+                my ($mac) = $dev->findnodes("mac");
+                next unless $mac
+                    && lc($mac->getAttribute('address')) eq lc($if->{hwaddr});
 
-            return $addr->{addr}
-            if $self->_vm->_is_ip_nat($addr->{addr});
+                my $type = 'NAT';
+                $type = 'bridge' if $dev->getAttribute('type') eq 'bridge';
+
+                $found->{'type'} = $type;
+                last;
+            }
+            return $found if $found->{hwaddr} && $found->{type};
         }
     }
     return $found;
 }
+
 
 #sub _ip_arp($self) {
 #    my @sys_virt_version = split('\.', $Sys::Virt::VERSION);
@@ -1757,18 +1780,14 @@ sub _ip_agent($self) {
 #}
 
 sub ip($self) {
-    my ($ip) = $self->_ip_agent();
-    return $ip if $ip;
+    my $ip_info = $self->ip_info();
+    return $ip_info->{addr} if exists $ip_info->{addr};
+}
 
-    my @ip;
-    eval { @ip = $self->domain->get_interface_addresses(Sys::Virt::Domain::INTERFACE_ADDRESSES_SRC_LEASE) };
-    warn $@ if $@;
-    return $ip[0]->{addrs}->[0]->{addr} if $ip[0];
-
-#    @ip = $self->_ip_arp();
-#    return $ip[0]->{addrs}->[0]->{addr} if $ip[0];
-
-    return;
+sub ip_info($self) {
+    my $ip = $self->_ip_info_get();
+    lock_hash(%$ip);
+    return $ip;
 }
 
 =head2 set_max_mem
@@ -1813,8 +1832,9 @@ sub set_memory {
     my $value = shift;
 
     my $max_mem = $self->get_max_mem();
-    confess "ERROR: invalid argument '$value': cannot set memory higher than max memory"
+    die "ERROR: invalid argument '$value': cannot set memory higher than max memory"
             ." ($max_mem)"
+            ."\n"
         if $value > $max_mem;
 
     $self->_set_memory_xml($value);
@@ -2442,13 +2462,21 @@ sub _set_controller_filesystem($self, $number, $data) {
 sub _set_controller_video($self, $number, $data={type => 'qxl'}) {
     $data->{type} = 'qxl' if !exists $data->{type};
     $data->{type} = lc(delete $data->{driver}) if exists $data->{driver};
-    my $pci_slot = $self->_new_pci_slot();
 
     my $doc = XML::LibXML->load_xml(string => $self->xml_description_inactive);
     my ($devices) = $doc->findnodes("/domain/devices");
+
     if (exists $data->{primary} && $data->{primary} =~ /yes/) {
         _remove_all_video_primary($devices);
     }
+
+    if ($data->{type} eq 'none') {
+        _remove_all_video($devices);
+    } else {
+        _remove_all_video($devices,'type'=>'none');
+    }
+    my $pci_slot = $self->_new_pci_slot();
+
     my $video = $devices->addNewChild(undef,'video');
     my $model = $video->addNewChild(undef,'model');
     for my $field (keys %$data) {
@@ -2473,6 +2501,19 @@ sub _remove_all_video_primary($devices) {
     }
 }
 
+sub _remove_all_video($devices, $attribute=undef, $value=undef) {
+    confess "Error: attribute '$attribute' value search must be defined"
+    if defined $attribute && !defined $value;
+
+    for my $video ($devices->findnodes("video")) {
+        my ($model) = $video->findnodes('model');
+        next if defined $attribute
+        && (!$model->getAttribute($attribute)
+            || $model->getAttribute($attribute) ne $value);
+
+        $devices->removeChild($video);
+    }
+}
 sub _set_controller_network($self, $number, $data) {
 
     my $driver = (delete $data->{driver} or 'virtio');
@@ -2515,8 +2556,8 @@ sub _set_controller_display_spice($self, $number, $data) {
             $graphic = $g0;
         }
     }
+    my ($devices) = $doc->findnodes("/domain/devices");
     if (!$graphic) {
-        my ($devices) = $doc->findnodes("/domain/devices");
         $graphic = $devices->addNewChild(undef,'graphics');
     }
 
@@ -2547,6 +2588,8 @@ sub _set_controller_display_spice($self, $number, $data) {
         my $item = $graphic->addNewChild(undef, $name);
         $item->setAttribute($attrib => $value);
     }
+    _add_spice_related($devices);
+
     $self->reload_config($doc);
 }
 
@@ -2669,6 +2712,13 @@ sub _remove_device($self, $index, $device, $attribute_name0=undef, $attribute_va
             $file = $source->getAttribute('file') if $source;
 
             $devices->removeChild($controller);
+
+            if ($device eq 'graphics' && $controller->getAttribute('type') eq 'spice') {
+                $self->_remove_spice_related($devices);
+            } elsif ($device eq 'video') {
+                $self->_set_minimal_video($devices);
+            }
+
             $self->_vm->connect if !$self->_vm->vm;
             $self->reload_config($doc);
 
@@ -2682,6 +2732,65 @@ sub _remove_device($self, $index, $device, $attribute_name0=undef, $attribute_va
 
     confess "ERROR: $device $msg ".($index or '<UNDEF>')
         ." not removed, only ".($ind)." found in ".$self->name."\n";
+}
+
+sub _set_minimal_video($self, $devices) {
+    my $string = 'video';
+    my @current = $devices->findnodes($string);
+    if (!@current) {
+        my $video = $devices->addNewChild(undef,'video');
+        my $model = $video->addNewChild(undef,'model');
+        $model->setAttribute('type' => 'none');
+    }
+
+}
+
+sub _remove_spice_related($self, $devices) {
+    for my $redir ($devices->findnodes("redirdev[\@type=\'spicevmc\']")) {
+        $devices->removeChild($redir);
+    }
+    my ($audio) = $devices->findnodes("audio[\@type='spice']");
+    $devices->removeChild($audio) if $audio;
+
+    my ($channel) = $devices->findnodes("channel[\@type='spicevmc']");
+    $devices->removeChild($channel) if $channel;
+}
+
+sub _add_spice_related($devices) {
+
+    if (!$devices->findnodes("redirdev[\@type=\'spicevmc\']")) {
+        for ( 1 .. 3 ) {
+            my $redir = $devices->addNewChild(undef,'redirdev');
+            $redir->setAttribute('type' => 'spicevmc');
+            $redir->setAttribute('bus' => 'usb');
+        }
+    }
+    my @audio = $devices->findnodes("audio");
+    my ($none) = grep { $_->getAttribute('type') eq 'none' } @audio;
+
+    if (!@audio || $none) {
+        $devices->removeChild($none) if $none;
+
+        my $audio= $devices->addNewChild(undef,'audio');
+        $audio->setAttribute(type =>'spice');
+        $audio->setAttribute(id => 1);
+    }
+
+    if (!$devices->findnodes("channel[\@type=\'spicevmc\']")) {
+        my $channel = $devices->addNewChild(undef,'channel');
+        $channel->setAttribute('type' => 'spicevmc');
+
+        my $target = $channel->addNewChild(undef,'target');
+        $target->setAttribute('type' => 'virtio');
+        $target->setAttribute('name' => 'com.redhat.spice.0');
+
+        my $address = $channel->addNewChild(undef,'address');
+        $address->setAttribute('type' => 'virtio-serial');
+        $address->setAttribute('controller' => 0);
+        $address->setAttribute('bus' => 0);
+        $address->setAttribute('port' => 1);
+
+    }
 }
 
 sub _remove_controller_display($self, $index, $attribute_name=undef, $attribute_value=undef) {
@@ -3058,7 +3167,7 @@ sub _change_hardware_vcpus($self, $index, $data) {
 
         };
         if ($@) {
-            warn $@;
+            warn "Error on set current ".$@;
             $self->_data('needs_restart' => 1) if $self->is_active;
         }
         my ($vcpus) = $doc->findnodes('/domain/vcpu');
@@ -3265,7 +3374,10 @@ sub _fix_vcpu_from_topology($self, $data) {
 
     delete $data->{cpu}->{topology}->{dies} if $self->_vm->_data('version') < 8000000;
 
-    $data->{vcpu}->{'#text'} = $dies * $sockets * $cores * $threads ;
+    my $total = $dies * $sockets * $cores * $threads ;
+
+    $data->{vcpu}->{'#text'} = $total;
+    $data->{vcpu}->{'current'} = $total;
 }
 
 sub _change_hardware_cpu($self, $index, $data) {
@@ -3281,6 +3393,7 @@ sub _change_hardware_cpu($self, $index, $data) {
     my $doc = XML::LibXML->load_xml( string => $self->domain->get_xml_description( @flags ));
     my $count = 0;
     my $changed = 0;
+    my $changed_current= 0;
 
     my ($n_vcpu) = $doc->findnodes('/domain/vcpu/text()');
     my ($cpu0) = $doc->findnodes('/domain/cpu');
@@ -3292,7 +3405,7 @@ sub _change_hardware_cpu($self, $index, $data) {
     my ($data_n_cpus, $data_current_cpus);
     $data_n_cpus = delete $data->{vcpu}->{'#text'} if exists $data->{vcpu}->{'#text'};
 
-    $data_current_cpus = delete $data->{vcpu}->{'current'} if exists $data->{vcpu}->{'current'};
+    $data_current_cpus = $data->{vcpu}->{'current'} if exists $data->{vcpu}->{'current'};
     $data_n_cpus = $data_current_cpus if !defined $data_n_cpus && defined $data_current_cpus;
 
     my ($vcpu) = $doc->findnodes('/domain/vcpu');
@@ -3308,7 +3421,11 @@ sub _change_hardware_cpu($self, $index, $data) {
         && $vcpu->getAttribute($key) eq $data->{vcpu}->{$key};
 
         $vcpu->setAttribute($key => $data->{vcpu}->{$key});
-        $changed++ if $key ne 'current';
+        if ( $key ne 'current') {
+            $changed++;
+        } else {
+            $changed_current++;
+        }
     }
     for my $attrib ($vcpu->attributes) {
         next if exists $data->{vcpu}->{$attrib->name};
@@ -3328,6 +3445,9 @@ sub _change_hardware_cpu($self, $index, $data) {
 
     _change_xml($domain, 'cpu', $data->{cpu});
 
+    if ($data->{cpu}->{mode} && $data->{cpu}->{mode} ne 'host-passthrough') {
+        $cpu->removeAttribute('migratable');
+    }
     if ( $feature ) {
         _change_xml_list($cpu, 'feature', $feature, 'name');
     }
@@ -3335,8 +3455,10 @@ sub _change_hardware_cpu($self, $index, $data) {
     my $cpu_string2 = join("",grep(/./,split(/\n/,$cpu->toString)));
     $cpu_string2 =~ s/\s\s+/ /g;
 
-    if ( $cpu_string ne $cpu_string2 || $changed ) {
-        $self->needs_restart(1) if $self->is_active;
+    if ( $cpu_string ne $cpu_string2 || $changed || $changed_current ) {
+        if ($self->is_active && ($changed || $cpu_string ne $cpu_string2)) {
+            $self->needs_restart(1);
+        }
         $self->reload_config($doc);
     }
     if ($self->is_active && $data_current_cpus) {
@@ -3650,8 +3772,21 @@ sub _validate_xml($self, $doc) {
     }
 }
 
+sub _fix_uuid($self, $doc) {
+    my ($uuid) = $doc->findnodes("/domain/uuid/text()");
+    confess "I cant'find /domain/uuid in ".$self->name if !$uuid;
+
+    $uuid->setData($self->domain->get_uuid_string);
+
+}
+
 sub reload_config($self, $doc) {
+    if (!ref($doc)) {
+        $doc = XML::LibXML->load_xml(string => $doc);
+    }
     $self->_validate_xml($doc) if $self->_vm->vm->get_major_version >= 4;
+
+    $self->_fix_uuid($doc);
 
     my $new_domain;
 
@@ -3659,11 +3794,11 @@ sub reload_config($self, $doc) {
         $new_domain = $self->_vm->vm->define_domain($doc->toString);
     };
 
-    cluck ''.$@ if $@;
+    die ''.$@."\n" if$@;
 
     $self->domain($new_domain);
 
-    $self->_data_extra('xml', $doc->toString) if $self->is_known && $self->is_local;
+    $self->_data_extra('xml', $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE)) if $self->is_known && $self->is_local;
 
 }
 
@@ -3691,6 +3826,10 @@ sub copy_config($self, $domain) {
 
 sub get_config($self) {
     return XML::LibXML->load_xml( string => $self->xml_description());
+}
+
+sub get_config_txt($self) {
+    return $self->xml_description();
 }
 
 sub _change_xml_address($self, $doc, $address, $bus) {
@@ -3905,6 +4044,8 @@ sub remove_config_node($self, $path, $content, $doc) {
             if ( _xml_equal_hostdev($content, $element_s) ) {
                 $parent->removeChild($element);
             } else {
+=pod
+
                 my @lines_c = split /\n/,$content;
                 my @lines_e = split /\n/,$element_s;
                 warn $element->getName." ".(scalar(@lines_c)." ".scalar(@lines_e));
@@ -3914,6 +4055,7 @@ sub remove_config_node($self, $path, $content, $doc) {
                 }
                 warn $content;
                 die $self->name if $element->getName eq 'hostdev';
+=cut
             }
         }
     }
@@ -3921,6 +4063,12 @@ sub remove_config_node($self, $path, $content, $doc) {
 
 sub _xml_equal_hostdev($doc1, $doc2) {
     return 1 if $doc1 eq $doc2;
+
+    $doc1 =~ s/\n//g;
+    $doc2 =~ s/\n//g;
+
+    return 1 if $doc1 eq $doc2;
+
     my $parser = XML::LibXML->new() or die $!;
     $doc1 =~ s{(</?)\w+:(\w+)}{$1$2}mg;
     my $xml1 = $parser->parse_string($doc1);
@@ -3966,18 +4114,44 @@ sub add_config_node($self, $path, $content, $doc) {
     die "Error: I found ".scalar(@parent)." nodes for $dir, expecting 1"
     unless scalar(@parent)==1;
 
-    my $element;
+    my @element;
     eval {
-    ($element) = $parent[0]->findnodes($entry);
+    (@element) = $parent[0]->findnodes($entry);
     };
     die $@ if $@ && $@ !~ /Undefined namespace prefix/;
-    return if $element && $element->toString eq $content;
+    for my $element (@element) {
+        return if $element && $element->toString eq $content;
+    }
 
     if ($content =~ /<qemu:commandline/) {
         _add_xml_parse($parent[0], $content);
     } else {
         $self->_fix_pci_slot(\$content);
         $parent[0]->appendWellBalancedChunk($content);
+    }
+}
+
+sub set_config_node($self, $path, $content, $doc) {
+
+    my ($dir,$entry) = $path =~ m{(.*)/(.*)};
+    confess "Error: missing entry in '$path'" if !$entry;
+
+    my @parent = $doc->findnodes($dir);
+    if (scalar(@parent)==0) {
+        @parent = $self->_xml_create_path($doc, $dir);
+    }
+
+    die "Error: I found ".scalar(@parent)." nodes for $dir, expecting 1"
+    unless scalar(@parent)==1;
+
+    my $parent = $parent[0];
+
+    for my $child ($parent->findnodes($entry)) {
+        $parent->removeChild($child);
+    }
+
+    for my $curr_entry (@$content) {
+        $parent->appendWellBalancedChunk($curr_entry);
     }
 
 }
@@ -4096,7 +4270,6 @@ sub remove_host_devices($self) {
     my ($dev) = $doc->findnodes("/domain/devices");
     for my $hostdev ( $dev->findnodes("hostdev") ) {
         $dev->removeChild($hostdev);
-        warn $hostdev->toString();
     }
     $self->reload_config($doc);
 }
@@ -4111,6 +4284,20 @@ sub has_nat_interfaces($self) {
         return 1 if $if->getAttribute('network');
     }
     return 0;
+}
+
+sub get_stats($self) {
+    return unless $self->domain && $self->domain->is_active;
+
+    my $mem;
+    my $cpu_time;
+    my $mem_stats = $self->domain->memory_stats();
+    if (exists $mem_stats->{rss} && exists $mem_stats->{actual_balloon}) {
+        $mem = int(($mem_stats->{rss}/$mem_stats->{actual_balloon})*100);
+    }
+    my @cpu_stats = $self->domain->get_cpu_stats(-1,1);
+    $cpu_time = int($cpu_stats[0]->{cpu_time}/1024/1024);
+    return ($cpu_time, $mem);
 }
 
 1;

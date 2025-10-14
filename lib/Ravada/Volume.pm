@@ -95,7 +95,7 @@ sub _type_from_extension($file) {
 }
 
 sub _type($file,$vm = undef) {
-    return _type_from_file($file,$vm)   if $vm;
+    return _type_from_file($file,$vm)   if $vm && $vm->is_local;
     return (_type_from_extension($file) or 'QCOW2');
 }
 
@@ -278,6 +278,7 @@ sub _cache_volume_info($self) {
         );
         };
         return if $@ && $@ =~ /foreign key constraint fails/i;
+        return if $@ && $@ =~ /Duplicate entry/i;
         confess "$name / $n_order \n".$@ if $@;
         return;
     }

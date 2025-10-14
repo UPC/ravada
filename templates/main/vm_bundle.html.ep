@@ -4,14 +4,31 @@
 
 <div ng-hide="showmachine.bundle">
     <div class="row">
+        <ul class="no-bullets">
+            <li><input type="radio" ng-model="bundle_option" name="bundle_option"
+                id="bundle_option_join" value="join"/>
+                <label for="bundle_option_join"><%=l 'join bundle' %></label>
+            </li>
+            <li><input type="radio" ng-model="bundle_option" name="bundle_option"
+                id="bundle_option_create" value="create"/>
+                <label for="bundle_option_create"><%=l 'create bundle' %></label>
+            </li>
+        </ul>
+    </div>
+    <div class="row mt-2" ng-show="bundle_option=='join'">
+        <div class="col-md-2">
+        <button ng-click="join_bundle(join_bundle_id)"><%=l 'join bundle' %></button>
+        </div>
+        <div class="col-md-2">
+        <select ng-model="join_bundle_id" ng-options="bundle.id as bundle.name for bundle in bundles">
+        </select>
+        </div>
+    </div>
+    <div class="row" ng-show="bundle_option=='create'">
         <input type="text" placeholder="new bundle" ng-model="new_bundle"/>
         <button ng-click="create_bundle()">create</button>
     </div>
-    <div class="row" ng-hide="bundles.length<1">
-        <select ng-model="join_bundle_id" ng-options="bundle.id as bundle.name for bundle in bundles">
-        </select>
-        <button ng-click="join_bundle(join_bundle_id)"><%=l 'join bundle' %></button>
-    </div>
+
 </div>
 
 

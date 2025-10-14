@@ -19,6 +19,7 @@ my $BASE_NAME = "zz-test-base-alpine";
 use_ok('Ravada');
 init();
 
+$Ravada::Domain::TTL_REMOVE_VOLATILE=3;
 
 ##################################################################################
 
@@ -440,7 +441,8 @@ sub test_removed_base_file_and_swap_remote($vm, $node) {
     }
     ok(grep { $_->command eq 'set_base_vm' } $base->list_requests)
         or die $vm->type." ".Dumper([$base->list_requests]);
-    is(scalar($base->list_vms),1) or exit;
+    is(scalar($base->list_vms(0,1)),1) #hostdev=0 , only_avail=1
+        or exit;
     wait_request(debug => 0);
     is($base->base_in_vm($node->id),1);
     my $node2 = Ravada::VM->open($node->id);
@@ -453,6 +455,30 @@ sub test_removed_base_file_and_swap_remote($vm, $node) {
         $req->stop;
     }
     $base->remove(user_admin);
+}
+
+sub _check_base_in_vm_db($base, $id_node, $id_req, $value) {
+    my $sth = connector->dbh->prepare(
+        "SELECT * FROM bases_vm "
+        ." WHERE id_domain=? AND id_vm=?"
+    );
+    $sth->execute($base->id, $id_node);
+    my $found = $sth->fetchrow_hashref;
+    ok($found) or exit;
+    is($found->{enabled}, $value);
+    is($found->{id_request}, $id_req) or confess;
+
+    my @vms = $base->list_vms();
+    my @vms_avail = $base->list_vms(undef, 1);
+
+    if ($id_req && $value) {
+        my ($found_vms) = grep { $_->id == $id_node } @vms;
+        my ($found_vms_avail) = grep { $_->id == $id_node } @vms_avail;
+        ok($found_vms,"Expecting ".$base->id." in $id_node ")
+            or die Dumper([[map {$_->id } @vms ],[map {$_->id } @vms_avail]]);
+        ok(!$found_vms_avail);
+    }
+
 }
 
 sub test_set_vm_fail($vm, $node) {
@@ -636,18 +662,33 @@ sub test_volatile_req($vm, $node) {
         $clone = rvd_back->search_domain($clone_name);
         is($clone->is_active(),1,"[".$vm->type."] expecting clone ".$clone->name
             ." active on node ".$clone->_vm->name);
+        is($clone->is_volatile,1);
         push @clones,($clone);
         last if $clone->_vm->id == $node->id;
     }
     is($clone->_vm->id, $node->id) or exit;
 
     shutdown_domain_internal($clone);
-    rvd_back->_cmd_refresh_vms();
+    _wait_machine_removed($clone);
     for my $vol ( $clone->list_volumes ) {
         ok(!$vm->file_exists($vol),$vol) or exit;
-        ok(!$node->file_exists($vol),$vol) or exit;
+        ok(!$node->file_exists($vol),$vol." in ".$node->name) or exit;
     }
     _remove_domain($base);
+}
+
+sub _wait_machine_removed($clone) {
+    rvd_back->_cmd_refresh_vms();
+    for ( 1 .. 10 ) {
+        my $clone2;
+        eval { $clone2 = Ravada::Front::Domain->open($clone->id) };
+        last if !$clone2;
+
+        rvd_back->_cmd_refresh_vms();
+        wait_request();
+
+    }
+    wait_request();
 }
 
 sub test_domain_gone($vm, $node) {
@@ -669,6 +710,7 @@ sub test_domain_gone($vm, $node) {
 }
 
 sub test_volatile_req_clone($vm, $node, $machine='pc-i440fx') {
+    start_node($node);
     if ($vm->type eq 'KVM') {
         my $id_iso = search_id_iso('Alpine%64');
         my $iso = $vm->_search_iso($id_iso);
@@ -677,9 +719,18 @@ sub test_volatile_req_clone($vm, $node, $machine='pc-i440fx') {
 
     my $base = create_domain_v2(vm => $vm, options => { machine => $machine });
     $base->prepare_base(user_admin);
-    $base->set_base_vm(user => user_admin, node => $node);
+    my $req = Ravada::Request->set_base_vm(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,id_vm => $node->id
+        ,value => 1
+    );
+    _check_base_in_vm_db($base, $node->id,$req->id, 1);
     $base->volatile_clones(1);
     ok($base->base_in_vm($node->id));
+    _check_base_in_vm_db($base, $node->id,$req->id, 1);
+    wait_request(debug => 1);
+    _check_base_in_vm_db($base, $node->id,undef, 1);
 
     my $clone;
     for ( 1 .. 20 ) {
@@ -706,7 +757,7 @@ sub test_volatile_req_clone($vm, $node, $machine='pc-i440fx') {
         push @vols,($clone2->list_volumes);
         shutdown_domain_internal($clone2);
     }
-    rvd_back->_cmd_refresh_vms();
+     _wait_machine_removed($clone);
     for my $vol ( @vols ) {
         ok(!$vm->file_exists($vol),$vol) or exit;
         ok(!$node->file_exists($vol),$vol) or exit;
@@ -1191,6 +1242,8 @@ sub test_fill_memory($vm, $node, $migrate) {
 
 sub test_migrate($vm, $node) {
     diag("Test migrate");
+
+    start_node($node);
     my $domain = create_domain($vm);
 
     $domain->migrate($node);
@@ -1501,6 +1554,7 @@ sub test_display_ip($vm, $node, $set_localhost_dp=0) {
 }
 
 sub test_nat($vm, $node, $set_localhost_natip=0) {
+    start_node($node);
     my $nat_ip_1 = "5.6.7.8";
     $node->nat_ip($nat_ip_1);
 
@@ -1681,6 +1735,8 @@ for my $vm_name (reverse vm_names() ) {
 
         start_node($node);
 
+        test_volatile_req($vm, $node);
+
         test_domain_gone($vm, $node);
 
         if ($vm_name eq 'KVM') {
@@ -1747,7 +1803,6 @@ for my $vm_name (reverse vm_names() ) {
         }
 
         test_clone_remote($vm, $node);
-        test_volatile_req($vm, $node);
         test_volatile_tmp_owner($vm, $node);
 
         test_reuse_vm($node);

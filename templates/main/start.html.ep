@@ -1,21 +1,54 @@
 <!DOCTYPE html>
-<html>
+<html ng-app="ravada.app">
 %= include 'bootstrap/header'
 <body role="document">
     %= include 'bootstrap/navigation'
      <header id="page-top" class="intro">
-        <div class="intro-body">
-            <div class="container" ng-controller="">
-                <form class="form-singin" method="post">
+        <div class="intro-body" ng-controller="login"
+                                ng-init="hide_local_login='<%= ($openid_available or 0) %>'"
+            >
+            <div class="container" ng-cloak="1">
+
                 <h2 class="form-signin-heading"><%=l($login_header) %></h2>
                 <p><%= $login_message %></p>
 
-                <input class="form-control" id="user" name="login" value ="<%= $login %>" type="text" placeholder="<%=l 'User' %>" required autofocus>
-                <input class="form-control" id="pssw" type="password" name="password" value="" placeholder="<%=l 'Password' %>" required>
+                % if ($openid_available) {
+                <div>
+                    <a type="button" class="btn btn-success" href="/login_openid"><b><%=l 'Login Single Sign On' %></b></a>
+
+                <hr class="my-4">
+					<a data-toggle="collapse"
+                        ng-click="hide_local_login=!hide_local_login"
+                        >
+                        <%= "Other Authentication methods" %>
+                    </a>
+                    <small>
+                        <a
+                        ng-click="hide_local_login=!hide_local_login"
+                            type="button" class="badge btn btn-secondary btn-outline-dark btn-sm">
+                            <i ng-show="hide_local_login" class="fa fa-caret-right" aria-hidden="true"></i>
+                            <i ng-hide="hide_local_login" class="fa fa-caret-up" aria-hidden="true"></i>
+                        </a>
+                    </small>
+
+                </div>
+                % }
+
+                <div ng-hide="<%= ($openid_available or 0 ) %> && hide_local_login"
+                        class="border mb-4">
+                    <form method="post" action="/" class="form-singin">
+
+                <input class="form-control mb-4" id="user" name="login" value ="<%= $login %>" type="text" placeholder="<%=l 'User' %>" required autofocus>
+                <input class="form-control mb-4" id="pssw" type="password" name="password" value="" placeholder="<%=l 'Password' %>" required>
 
                <input type="hidden" name="url" value="<%= $url %>">
                <!-- <input type="submit" name="submit" value="launch"> -->
-               <button id="submit" class="btn btn-success btn-lg btn-block" href="/" type="submit" name="submit" value="launch"><%=l 'Login' %></button>
+               <input id="submit"
+               class="btn btn-success btn-lg btn-block" type="submit" name="submit" value="<%=l 'Login' %>"/>
+                </form>
+
+                </div>
+
                 % if (scalar @$error) {
                 %       for my $i (@$error) {
                             <div class="alert alert-danger">
@@ -23,14 +56,17 @@
                             </div>
                 %       }
                 % }
-                </form>
+
+
+
+                % if ($sso_available) {
                 <form class="form-singin" method="post">
                 <input type="hidden" name="url" value="<%= $url %>">
-                % if ($sso_available) {
                 <button id="submit" class="btn btn-success btn-lg btn-block" href="/" type="submit" name="submit" value="sso" style="margin-top: 0"><%=l 'SSO/CAS Login' %></button>
-                % }
                 </form>
-                <div class="alert alert-warning">
+                % }
+
+                <div class="alert alert-warning mt-4" ng-hide="<%= scalar(@$error)  %>">
                     <%=l 'A viewer is required to run the virtual machines.' %>
                     <a href="/requirements"><%=l 'Read more.' %></a>
                 </div> 

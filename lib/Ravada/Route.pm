@@ -109,6 +109,10 @@ sub requires_password {
 
     for my $network ( $self->list_networks ) {
         my ($ip,$mask) = $network->{address} =~ m{(.*)/(.*)};
+        if ($ip !~ /^\d+\.\d+\.\d+\.\d+$/) {
+            warn "Wrong network $ip / $mask";
+            next;
+        }
         if (!$ip ) {
             $ip = $network->{address};
             $mask = 24;
@@ -116,7 +120,7 @@ sub requires_password {
         my $netaddr;
         eval { $netaddr = NetAddr::IP->new($ip,$mask) };
         if ($@ ) {
-            warn "Error with newtork $network->{address} [ $ip / $mask ] $@";
+            warn "Error with network $network->{address} [ $ip / $mask ] $@";
             return;
         }
         next if !$self->address->within($netaddr);

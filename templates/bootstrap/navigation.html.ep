@@ -24,19 +24,19 @@ navbar-dark bg-dark fixed-top navbar-expand-lg navbar-inverse">
                         <a class="nav-link" href="/"><i class="fa fa-fw fa-desktop"></i><%=l 'Available Machines' %></a>
                     </li>
 % }
-% if ($bookings && defined $_user && $FEATURE->{ldap} ) {
+% if ($bookings && defined $_user) {
     <li class="nav-item dropdown">
         <a class="nav-link" href="/booking/">
             <i class="fa fa-wrench"></i>&nbsp;<%=l 'Schedule' %></a>
     </li>
 % }
-
 % if (defined $_user && $_user->is_operator ) {
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="navbarDropdownMenuLink" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <i class="fa fa-wrench"></i>&nbsp;<%=l 'Admin tools' %></a>
                         <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdownMenuLink">
-                            <a class="dropdown-item" href="/admin/machines"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp;<%=l 'Machines' %></a>
+                            <a ng-show="<%= ( $_user->can_view_admin_machines or 0 ) %>"
+                            class="dropdown-item" href="/admin/machines"><i class="fa fa-desktop" aria-hidden="true"></i>&nbsp;<%=l 'Machines' %></a>
 % if ($_user->is_admin || $_user->can_grant || $_user->can_manage_users) {
                             <a class="dropdown-item" href="/admin/users"><i class="fa fa-user" aria-hidden="true"></i>&nbsp;<%=l 'Users' %></a>
 % }
@@ -47,6 +47,7 @@ navbar-dark bg-dark fixed-top navbar-expand-lg navbar-inverse">
                             <a class="dropdown-item" href="/admin/nodes"><i class="fa fa-server" aria-hidden="true"></i>&nbsp;<%=l 'Nodes' %></a>
                             <a class="dropdown-item" href="/admin/routes"><i class="fa fa-globe" aria-hidden="true"></i>&nbsp;<%=l 'Routes' %></a>
                             <a class="dropdown-item" href="/admin/storage"><i class="fa fa-hdd" aria-hidden="true"></i>&nbsp;<%=l 'Storage' %></a>
+                            <a class="dropdown-item" href="/admin/hostdev"><i class="fa fa-rocket" aria-hidden="true"></i>&nbsp;<%=l 'Host Devices' %></a>
 % }
 
 % if ($_user->can_create_networks) {
