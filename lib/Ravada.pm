@@ -6089,6 +6089,10 @@ sub _cmd_list_storage_pools($self, $request) {
 
     my $data = $request->defined_arg('data');
 
+    $request->output(encode_json([]));
+
+    return if !$vm->vm;
+
     $request->output(encode_json([ $vm->list_storage_pools($data) ]));
 }
 
@@ -6828,6 +6832,7 @@ sub _req_method {
 ,list_storage_pools => \&_cmd_list_storage_pools
 ,active_storage_pool => \&_cmd_active_storage_pool
 ,create_storage_pool => \&_cmd_create_storage_pool
+,remove_storage_pool => \&_cmd_remove_storage_pool
 
 # Domain ports
 ,expose => \&_cmd_expose
@@ -7490,7 +7495,26 @@ sub _cmd_create_storage_pool($self, $request) {
     my $vm = Ravada::VM->open($request->args('id_vm'));
     $vm->create_storage_pool($request->arg('name'), $request->arg('directory'));
 
+    Ravada::Request->refresh_storage(id_vm => $vm->id
+        ,uid => Ravada::Utils::user_daemon->id
+        ,_force => 1
+    );
 }
+
+sub _cmd_remove_storage_pool($self, $request) {
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized to manage storage pools"
+        if !$user->is_admin;
+
+    my $vm = Ravada::VM->open($request->args('id_vm'));
+    $vm->remove_storage_pool($request->arg('name'));
+
+    Ravada::Request->refresh_storage(id_vm => $vm->id
+        ,uid => Ravada::Utils::user_daemon->id
+        ,_force => 1
+    );
+}
+
 
 sub _cmd_move_volume($self, $request) {
 
