@@ -92,6 +92,7 @@ our %VALID_ARG = (
     ,refresh_storage => { id_vm => 2, uid => 2 }
     ,list_storage_pools => { id_vm => 1 , uid => 1, data => 2 }
     ,active_storage_pool => { uid => 1, id_vm => 1, name => 1, value => 1}
+    ,remove_storage_pool => { uid => 1, id_vm => 1, name => 1}
     ,check_storage => { uid => 1 }
     ,create_storage_pool => { uid => 1, id_vm => 1, name => 1, directory => 1 }
     ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2 }
@@ -214,6 +215,7 @@ qw(
     refresh_machine
     refresh_machine_ports
     refresh_vms
+    refresh_storage
     set_time
     open_exposed_ports
     manage_pools

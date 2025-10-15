@@ -72,6 +72,7 @@ create_domain
     delete_request_not_done
     fast_forward_requests
 
+    remove_old_storage_pools_req
     remove_old_domains_req
     remove_domain_and_clones_req
     remove_domain
@@ -1765,6 +1766,34 @@ sub _remove_old_entries($table) {
     );
     $sth->execute(base_domain_name.'%');
 
+}
+
+sub remove_old_storage_pools_req() {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms "
+    );
+    $sth->execute();
+    while ( my ($id_vm) = $sth->fetchrow ) {
+        my $req = Ravada::Request->list_storage_pools(
+            uid => user_admin->id
+            ,id_vm => $id_vm
+            ,data => 1
+        );
+        wait_request();
+        my $out = $req->output;
+        next if !$out;
+        my $sp_list = decode_json($out);
+        my $name = base_pool_name();
+        for my $sp (@$sp_list) {
+            next if $sp->{name} !~ /^$name/;
+            Ravada::Request->remove_storage_pool(
+                uid => user_admin->id
+                ,id_vm => $id_vm
+                ,name => $sp->{name}
+            );
+        }
+
+    }
 }
 
 sub remove_old_storage_pools_void() {
