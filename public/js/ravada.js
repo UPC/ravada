@@ -527,9 +527,9 @@
                 }
             };
 
-            var subscribe_isos = function(url) {
+            var subscribe_isos = function(url, id_vm) {
                 var ws = new WebSocket(url);
-                ws.onopen = function(event) { ws.send('list_isos') };
+                ws.onopen = function(event) { ws.send('list_isos/'+id_vm) };
                 ws.onmessage = function(event) {
                     var data = JSON.parse(event.data);
                     $scope.$apply(function () {
@@ -599,7 +599,6 @@
                 subscribe_machine_info(url);
                 subscribe_bases(url);
                 subscribe_requests(url);
-                subscribe_isos(url);
                 // other data will be subscribed on loading machine info
             };
 
@@ -687,6 +686,7 @@
                                 });
 
                                 $scope.list_shares();
+                                subscribe_isos(url,$scope.showmachine.id_vm);
                             }
                             list_interfaces();
                             if (is_admin) {
