@@ -1053,7 +1053,7 @@ sub _check_downloading($self) {
         ." FROM iso_images "
         ." WHERE id=? "
     );
-    $sth->execute($id_iso,$iso_file);
+    $sth->execute($id_iso);
     my ($id_iso2,$downloading, $has_cd, $iso_name, $iso_url)
         = $sth->fetchrow;
 
