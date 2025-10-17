@@ -2888,7 +2888,7 @@ sub active_storage_pool($self, $name, $value=1) {
         or die "Error: no storage pool '$name'\n";
 
     if ( $value ) {
-        $pool->create();
+        $pool->create() unless $pool->is_active();
     } else {
         $pool->destroy();
     }
@@ -3028,24 +3028,26 @@ sub copy_file_storage($self, $file, $storage) {
     die "Error: '$file' too big to fit in $storage ".Ravada::Utils::number_to_size($vol_capacity)." > ".Ravada::Utils::number_to_size($pool_capacity)."\n"
     if $vol_capacity>$pool_capacity;
 
-    my ($format) = $doc->findnodes("/volume/target/format");
-    if ($format ne 'qcow2') {
+=pod
+    my ($format_node) = $doc->findnodes("/volume/target/format");
+    my $format;
+    $format = $format_node->getAttribute('type');
+    if (0 && defined $format && $format ne 'qcow2') {
         die "Error: I can't copy $format on remote nodes"
         unless $self->is_local;
 
         my $dst_file = $self->_storage_path($storage)."/".$name;
         copy($file,$dst_file);
-        $self->refresh_storage();
         return $dst_file;
     }
+
+=cut
 
     my $vol_dst;
     eval { $vol_dst= $sp->get_volume_by_name($name) };
     die $@ if $@ && !(ref($@) && $@->code == 50);
 
-    warn 1;
-    $vol_dst= $sp->clone_volume($vol->get_xml_description);
-    warn 2;
+    $vol_dst= $sp->clone_volume($vol->get_xml_description, $vol);
 
     return $vol_dst->get_path();
 }

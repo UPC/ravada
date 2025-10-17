@@ -7553,6 +7553,7 @@ sub _cmd_move_volume($self, $request) {
     if ($volume !~ /\.iso$/) {
         $vm->remove_file($volume);
     }
+    $vm->refresh_storage();
 }
 
 sub _cmd_backup($self, $request) {
