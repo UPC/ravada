@@ -7,6 +7,16 @@ It is required to install Windows 11 virtual machines.
 Ubuntu
 ------
 
+Ubuntu 22.04 and 24.04
+~~~~~~~~~~~~~~~~~~~~~~
+
+Software TPM is an official package since Ubuntu 22.04.
+
+.. prompt:: bash $
+
+    sudo apt update
+    sudo apt install swtpm-tools
+
 Ubuntu 20.04 - Focal Fossa
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -29,15 +39,6 @@ If you get the following message "the public key is not available: NO_PUBKEY xxx
     sudo apt update
     sudo apt install swtpm-tools
 
-Ubuntu 22.04
-~~~~~~~~~~~~
-
-Software TPM is expected to ship with Ubuntu 22.04.
-
-.. prompt:: bash $
-
-    sudo apt update
-    sudo apt install swtpm-tools
 
 Debian
 ------
