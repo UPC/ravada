@@ -530,8 +530,10 @@ Refreshes all the storage pools
 sub refresh_storage($self) {
     $self->_check_default_storage();
     $self->_refresh_storage_pools();
-    $self->_refresh_isos();
+    #    $self->_refresh_isos();
 }
+
+=pod
 
 sub _refresh_isos($self) {
     $self->_init_connector();
@@ -573,6 +575,8 @@ sub _refresh_isos($self) {
     }
     $sth->finish;
 }
+
+=cut
 
 =head2 search_volume_path_re
 
@@ -1764,11 +1768,6 @@ sub _fetch_filename {
     if (@found) {
         $row->{device} = $found[0]->get_path;
         ($row->{filename}) = $found[0]->get_path =~ m{.*/(.*)};
-        my $sth = $$CONNECTOR->dbh->prepare(
-            "UPDATE iso_images SET device=?"
-            ." WHERE id=?"
-        );
-        $sth->execute($row->{device}, $row->{id});
         return;
     } else {
         $row->{file_re} = $row->{file_re_orig} if exists $row->{file_re_orig};
