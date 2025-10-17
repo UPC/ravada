@@ -5999,7 +5999,10 @@ sub _cmd_list_storage_pools($self, $request) {
 sub _cmd_list_isos($self, $request){
     my $vm_type = $request->args('vm_type');
 
-    my $vm = Ravada::VM->open( type => $vm_type );
+    my @args = ( vm_type => $vm_type );
+    @args = ( $vm_type) if $vm_type =~ /^\d+$/;
+
+    my $vm = Ravada::VM->open( @args );
     $vm->refresh_storage();
     my @isos = sort { "\L$a" cmp "\L$b" } $vm->search_volume_path_re(qr(.*\.iso$));
 
