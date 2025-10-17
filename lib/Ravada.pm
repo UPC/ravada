@@ -5999,7 +5999,7 @@ sub _cmd_list_storage_pools($self, $request) {
 sub _cmd_list_isos($self, $request){
     my $vm_type = $request->args('vm_type');
 
-    my @args = ( vm_type => $vm_type );
+    my @args = ( type => $vm_type );
     @args = ( $vm_type) if $vm_type =~ /^\d+$/;
 
     my $vm = Ravada::VM->open( @args );
