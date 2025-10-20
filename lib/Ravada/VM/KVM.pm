@@ -1592,6 +1592,7 @@ sub _search_iso($self, $id_iso, $file_iso=undef) {
     if $row->{options} && !ref($row->{options});
     die "Missing iso_image id=$id_iso" if !keys %$row;
 
+    $row->{filename} = undef;
     return $row if $file_iso &&  $self->file_exists($file_iso);
 
     Ravada::Front::_fix_iso_file_re($row);
@@ -1626,6 +1627,7 @@ sub _search_iso($self, $id_iso, $file_iso=undef) {
 
 sub _download($self, $url) {
     $url =~ s{(http://.*)//(.*)}{$1/$2};
+    $url =~ s{(.*/)[^/]+/\.\.\/(.*)}{$1$2};
     if ($url =~ m{[^*]}) {
         my @found = $self->_search_url_file($url);
         die "Error: URL not found '$url'" if !scalar @found;

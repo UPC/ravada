@@ -5387,8 +5387,9 @@ sub _cmd_download {
         return;
     }
 
-    delete $iso->{device};
     if ($vm->is_local) {
+        $iso->{filename} = undef if !exists $iso->{filename};
+        delete $iso->{device} if $test;
         $vm->_iso_name($iso, $request, $verbose);
     } else {
         $self->_download_local_and_rsync($request, $vm, $iso);
