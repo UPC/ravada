@@ -1400,12 +1400,13 @@ sub _iso_name($self, $iso, $req=undef, $verbose=1) {
 
         $self->_set_iso_downloading($iso,1);
         if ( !$device ) {
-            $self->_fetch_filename($iso);
+            $self->_fetch_filename($iso, $test);
             $device = $self->dir_img()."/".$iso->{filename};
             my $sth = $self->_dbh->prepare("UPDATE iso_images set device=?"
                 ." WHERE id=?"
             );
             $sth->execute($device, $iso->{id});
+            return $device if $device && !$test;
         }
         my $url = $self->_download_file_external($iso->{url}, $device, $verbose, $test);
         $self->_set_iso_downloading($iso,0);
@@ -1733,9 +1734,7 @@ sub _cache_filename($url) {
     return "$dir/$file";
 }
 
-sub _fetch_filename {
-    my $self = shift;
-    my $row = shift;
+sub _fetch_filename($self, $row, $test=0) {
 
     if (!$row->{file_re} && !$row->{url} && $row->{device}) {
          my ($file) = $row->{device} =~ m{.*/(.*)};
@@ -1761,7 +1760,7 @@ sub _fetch_filename {
     } else {
         @found = $self->search_volume_re(qr($row->{file_re}));
     }
-    if (@found) {
+    if (@found && !$test) {
         $row->{device} = $found[0]->get_path;
         ($row->{filename}) = $found[0]->get_path =~ m{.*/(.*)};
         my $sth = $$CONNECTOR->dbh->prepare(
@@ -1772,7 +1771,7 @@ sub _fetch_filename {
         return;
     } else {
         $row->{file_re} = $row->{file_re_orig} if exists $row->{file_re_orig};
-        @found = $self->_search_url_file($row->{url}, $row->{file_re}) if !@found;
+        @found = $self->_search_url_file($row->{url}, $row->{file_re});
         die "No ".qr($row->{file_re})." found on $row->{url}" if !@found;
     }
 
@@ -1790,7 +1789,7 @@ sub _search_url_file($self, $url_re, $file_re=undef) {
 
     if (!$file_re) {
         my $old_url_re = $url_re;
-        ($url_re, $file_re) = $old_url_re =~ m{(.*)/(.*)};
+        ($url_re, $file_re) = $old_url_re =~ m{(.*/)(.*)};
         confess "ERROR: Missing file part in $old_url_re"
             if !$file_re;
         if ($url_re =~ /\.\.$/) {

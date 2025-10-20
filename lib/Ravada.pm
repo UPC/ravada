@@ -505,7 +505,7 @@ sub _update_isos {
             ,xml => 'alpine-amd64.xml'
      ,xml_volume => 'alpine381_64-volume.xml'
             #,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.16/releases/x86_64/'
-            ,url => 'http://localhost/isos/'
+            ,url => 'http://localhost/isos/alpine/v\d+\.\d+/releases/x86_64/'
         ,file_re => 'alpine-standard-3.16.*-x86_64.iso'
         ,sha256_url => '$url/alpine-standard-3.16.*.iso.sha256'
             ,min_disk_size => '2'
@@ -519,7 +519,7 @@ sub _update_isos {
             ,xml => 'alpine-i386.xml'
      ,xml_volume => 'alpine381_32-volume.xml'
             #,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.16/releases/x86/'
-            ,url => 'http://localhost/isos/'
+            ,url => 'http://localhost/isos/alpine/v\d+\.\d+/releases/x86/'
             ,options => { machine => 'pc-i440fx' }
         ,file_re => 'alpine-standard-3.16.*-x86.iso'
         ,sha256_url => '$url/alpine-standard-3.16.*.iso.sha256'
@@ -5382,11 +5382,12 @@ sub _cmd_download {
     my $iso = $vm->_search_iso($id_iso);
     my $device_cdrom = $vm->search_volume_path_re(qr($iso->{file_re}));
 
-    if ($device_cdrom) {
+    if ($device_cdrom && !$test) {
         $request->status('done',"$iso->{name} already downloaded");
         return;
     }
 
+    delete $iso->{device};
     if ($vm->is_local) {
         $vm->_iso_name($iso, $request, $verbose);
     } else {

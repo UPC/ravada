@@ -32,8 +32,8 @@ sub test_download($vm, $iso0, $test=0) {
 
     rvd_back->_process_all_requests_dont_fork();
     is($req1->status, 'done');
-    is($req1->error,'',$iso->{name});
-    like($req1->output,qr/^http.*/);
+    is($req1->error,'',$iso->{name}) or exit;
+    like($req1->output,qr/^http.*/,$iso->{name}." ".$iso->{url}) or exit;
 
 }
 
