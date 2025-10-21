@@ -1660,6 +1660,7 @@ sub _match_url($self,$url) {
 
     confess "No url1 from $url" if !defined $url1;
     my $dom = $self->_ua_get($url1);
+    return if !$dom;
     my @found;
     my $links = $dom->find('a')->map( attr => 'href');
     for my $link (@$links) {
