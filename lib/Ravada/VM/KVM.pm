@@ -1594,6 +1594,7 @@ sub _search_iso($self, $id_iso, $file_iso=undef) {
 
     $row->{filename} = undef;
     return $row if $file_iso &&  $self->file_exists($file_iso);
+    return $row if !$row->{url};
 
     Ravada::Front::_fix_iso_file_re($row);
 

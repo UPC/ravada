@@ -2912,7 +2912,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms','connection_args',"text DEFAULT NULL");
     $self->_upgrade_table('vms','cached_active_time',"int DEFAULT 0");
     $self->_upgrade_table('vms','public_ip',"varchar(128) DEFAULT NULL");
-    $self->_upgrade_table('vms','is_active',"int DEFAULT 0");
+    $self->_upgrade_table('vms','is_active',"int DEFAULT 1");
     $self->_upgrade_table('vms','enabled',"int DEFAULT 1");
     $self->_upgrade_table('vms','display_ip',"varchar(128) DEFAULT NULL");
     $self->_upgrade_table('vms','nat_ip',"varchar(128) DEFAULT NULL");
@@ -3534,6 +3534,7 @@ sub _add_extra_iso($domain, $request, $previous_request) {
     if $previous_request;
 
     my $req = Ravada::Request->refresh_storage(id_vm => $domain->_vm->id
+                                        ,uid => Ravada::Utils::user_daemon->id
                                         ,@after_request);
 
     @after_request = ( after_request => $req->id ) if $req;
@@ -5393,7 +5394,7 @@ sub _cmd_download {
         $self->_download_local_and_rsync($request, $vm, $iso);
     }
 
-    Ravada::Request->refresh_storage(id_vm => $vm->id);
+    Ravada::Request->refresh_storage(id_vm => $vm->id, uid => Ravada::Utils::user_daemon->id);
 }
 
 sub _download_local_and_rsync($self, $request, $vm, $iso) {
