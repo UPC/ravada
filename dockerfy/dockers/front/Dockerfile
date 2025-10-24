@@ -12,7 +12,7 @@ RUN apt-get update \
     libmojolicious-plugin-i18n-perl libdbd-sqlite3-perl debconf adduser libdigest-sha-perl libnet-ssh2-perl libpbkdf2-tiny-perl \
     libfile-rsync-perl libdate-calc-perl libparallel-forkmanager-perl libdatetime-perl libencode-locale-perl netcat-openbsd \
     libio-stringy-perl libvirt-clients liblwp-useragent-determined-perl supervisor net-tools apt-utils lsof mysql-client \
-	curl bash vim wget libnet-openssh-perl libdatetime-format-dateparse-perl tzdata libfile-tee-perl \
+	curl bash vim wget libnet-openssh-perl libdatetime-format-dateparse-perl tzdata libfile-tee-perl librrds-perl\
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone

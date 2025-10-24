@@ -83,6 +83,7 @@ for my $vm_name ('KVM') {
         }
 
         skip($msg,10)   if !$vm;
+        $vm->_check_default_storage();
 
         test_debians();
         ################################################

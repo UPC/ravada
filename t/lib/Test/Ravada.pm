@@ -72,6 +72,7 @@ create_domain
     delete_request_not_done
     fast_forward_requests
 
+    remove_old_storage_pools_req
     remove_old_domains_req
     remove_domain_and_clones_req
     remove_domain
@@ -434,7 +435,10 @@ sub create_domain($vm_name, $user=$USER_ADMIN, $id_iso='Alpine%64', $swap=undef)
 
     my $domain;
     eval { $domain = $vm->import_domain($name, $user) };
-    die $@ if $@ && $@ !~ /Domain.* not found/i;
+    die $@ if $@
+        && ( $@ !~ /Domain.* not found/i
+            && ( ref($@) eq 'Sys::Virt::Error' && $@->code != 42 )
+        );
 
     return $domain if $domain;
 
@@ -1764,6 +1768,34 @@ sub _remove_old_entries($table) {
 
 }
 
+sub remove_old_storage_pools_req() {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms "
+    );
+    $sth->execute();
+    while ( my ($id_vm) = $sth->fetchrow ) {
+        my $req = Ravada::Request->list_storage_pools(
+            uid => user_admin->id
+            ,id_vm => $id_vm
+            ,data => 1
+        );
+        wait_request();
+        my $out = $req->output;
+        next if !$out;
+        my $sp_list = decode_json($out);
+        my $name = base_pool_name();
+        for my $sp (@$sp_list) {
+            next if $sp->{name} !~ /^$name/;
+            Ravada::Request->remove_storage_pool(
+                uid => user_admin->id
+                ,id_vm => $id_vm
+                ,name => $sp->{name}
+            );
+        }
+
+    }
+}
+
 sub remove_old_storage_pools_void() {
     my $dir = Ravada::VM::Void->dir_img();
     my $file_sp = $dir."/.storage_pools.yml";
@@ -3076,7 +3108,7 @@ sub _check_yaml($filename) {
 }
 
 sub _check_qcow2($filename) {
-    _check_file($filename,qr(: QEMU QCOW2));
+    _check_file($filename,qr(: QEMU QCOW));
 }
 
 sub test_volume_format(@volume) {

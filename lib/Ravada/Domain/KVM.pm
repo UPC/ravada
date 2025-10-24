@@ -3445,6 +3445,9 @@ sub _change_hardware_cpu($self, $index, $data) {
 
     _change_xml($domain, 'cpu', $data->{cpu});
 
+    if ($data->{cpu}->{mode} && $data->{cpu}->{mode} ne 'host-passthrough') {
+        $cpu->removeAttribute('migratable');
+    }
     if ( $feature ) {
         _change_xml_list($cpu, 'feature', $feature, 'name');
     }

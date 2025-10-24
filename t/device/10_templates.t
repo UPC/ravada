@@ -3,6 +3,7 @@ use strict;
 
 use Carp qw(confess);
 use Data::Dumper;
+use File::Path qw(make_path);
 use IPC::Run3 qw(run3);
 use Mojo::JSON qw(decode_json);
 use Ravada::Request;
@@ -720,7 +721,7 @@ sub test_frontend_list($vm) {
         $fd_found = $fd;
         my $dn = $fd->{devices_node};
         for my $node (keys %$dn) {
-            for my $dev ( @{$dn->{$node}} ) {
+            for my $dev ( @{$dn->{$node}->{list}} ) {
                 next if !$dev->{domain};
                 is($dev->{domain}->{id}, $domain->id,"Expecting ".$domain->name." attached in ".$dev->{name});
                 is($dev->{domain}->{device},$dev_attached->{name});
@@ -868,7 +869,7 @@ sub _get_frontend_devices($vm, $id_hd) {
         next unless $curr_hd->{id} == $id_hd;
         for my $node ( keys %{$curr_hd->{devices_node}} ) {
             my $dn = $curr_hd->{devices_node}->{$node};
-            for my $dev (@$dn) {
+            for my $dev (@{$dn->{list}}) {
                 push @devices, ($dev->{name})
             }
         }
@@ -885,7 +886,7 @@ sub test_templates($vm) {
 
     for my $first  (@$templates) {
 
-        next if $first->{name } =~ /^GPU dri/ && $vm->type eq 'KVM';
+        next if $first->{name } =~ /^vGPU VFIO/;
 
         my $n=scalar($vm->list_host_devices);
         $vm->add_host_device(template => $first->{name});
@@ -931,7 +932,7 @@ sub test_templates($vm) {
                 }
             }
         }
-        ok(!$equal) or die Dumper($devices, $devices2);
+        ok(!$equal) or die $host_device->name." ".Dumper($devices, $devices2);
         $host_device->_data('list_filter' => $list_filter);
     }
 

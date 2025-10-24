@@ -1109,6 +1109,11 @@ sub _data($self, $field, $value=undef) {
         $sth->execute($value, $self->id);
         $sth->finish;
 
+        Ravada::Request->list_host_devices(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_node => $self->id
+        ) if ($field eq 'is_active' || $field eq 'enabled') && $value;
+
         return $value;
     }
 
@@ -1771,7 +1776,7 @@ sub _around_list_networks($orig, $self) {
         $sth_delete->execute($id);
     }
 
-    $self->_check_networks() if $first_time;
+    $self->_check_networks() if $first_time && $self->vm;
 
     return @list;
 }
@@ -1914,7 +1919,7 @@ sub run_command($self, @command) {
         my ($exec_command,$args) = $exec =~ /(.*?) (.*)/;
         $exec_command = $exec if !defined $exec_command;
         $exec = $self->_which($exec_command);
-        confess "Error: $exec_command not found" if !$exec;
+        die "Error: $exec_command not found\n" if !$exec;
         $command[0] = $exec;
         $command[0] .= " $args" if $args;
     }
@@ -2260,8 +2265,15 @@ sub _filter_host_devices($self, $id_domain, @vms_all) {
         push @vms, ($vm);
     }
 
-    die "Error: No available devices in ".join(" , ",map { $_->name } @host_devices)."\n"
-    if !scalar(@vms);
+    if ( !scalar(@vms) ) {
+        for my $hd (@host_devices) {
+            Ravada::Request->list_host_devices(
+                uid => Ravada::Utils::user_daemon->id
+                ,id_host_device => $hd->id
+            );
+        }
+        die "Error: No available devices in ".join(" , ",map { $_->name } @host_devices)."\n";
+    }
 
     return @vms;
 }

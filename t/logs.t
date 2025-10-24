@@ -42,6 +42,7 @@ sub test_log_active($vm, $dom) {
     wait_request($req);
 
     my $sth = connector->dbh->prepare("SELECT * FROM log_active_domains"
+        ." WHERE id_base IS NULL"
     ." ORDER BY date_changed DESC");
     $sth->execute;
     my $row = $sth->fetchrow_hashref;
@@ -98,8 +99,8 @@ sub test_add_missing($vm) {
     is($data->[0],3);
     is($data->[1],6);
     is($data->[2],15);
-    is($data->[3],undef);
-    is($data->[4],undef);
+    is($data->[3],0);
+    is($data->[4],0);
     is($data->[6],2);
 
     # last one just changed
@@ -175,10 +176,36 @@ sub test_1week() {
 
 sub test_1month() {
     my $log = Ravada::Front::Log::list_active_recent('months'=>'1');
+    ok($log);
+    my @labels = @{$log->{labels}};
+    ok(scalar(@labels)>=28 && scalar(@labels)<=32,"Got ".scalar(@labels)." labels");
+    my $ok = 1;
+    for my $label (@labels) {
+        if ($label !~ /^\d\d-\d\d$/) {
+            diag("Wrong label $label, expecting MM-DD");
+            $ok=0;
+            last;
+        }
+    }
+    ok($ok);
+
 }
 
 sub test_1year() {
     my $log = Ravada::Front::Log::list_active_recent('years'=>1);
+    ok($log);
+    my @labels = @{$log->{labels}};
+    my $ok = 1;
+    for my $label (@labels) {
+        if ($label !~ /^\d\d\d\d-\d\d?-\d\d$/) {
+            diag("Wrong label $label, expecting YYYY-MM-DD");
+            $ok=0;
+            last;
+        }
+    }
+    ok($ok);
+
+    ok(scalar(@labels)>= 364 && scalar(@labels)<=366,"Got ".scalar(@labels)." labels");
 }
 
 ########################################################################

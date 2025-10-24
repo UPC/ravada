@@ -23,7 +23,7 @@ sub _init_connector {
     $CONNECTOR = \$Ravada::Front::CONNECTOR   if !$$CONNECTOR;
 }
 
-sub list_active_recent($unit='hours',$time=1) {
+sub list_active_recent($unit='hours',$time=1, $id_base=undef) {
 
     _init_connector();
     my $t = DateTime->from_epoch( epoch => time() , time_zone => $LOCAL_TZ);
@@ -62,7 +62,14 @@ sub list_active_recent($unit='hours',$time=1) {
     my $row;
     my $last_active;
     my $n = 0;
+    my %bases;
     while ($row=$sth->fetchrow_hashref) {
+        $bases{$row->{id_base}}++ if $row->{id_base};
+
+        next if !$id_base && defined $row->{id_base};
+        next if $id_base && !$row->{id_base};
+        next if $id_base && $row->{id_base} != $id_base;
+
         $n++;
         $last_active = $row->{active};
         my ($curr_time) = $row->{date_changed};
@@ -95,9 +102,19 @@ sub list_active_recent($unit='hours',$time=1) {
 
     $data{$last_time} = $last_active;
 
+    $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT name FROM domains where id=?"
+    );
+    my @bases = ({ id => 0 , name => 'All'});
+    for my $id (keys %bases) {
+        $sth->execute($id);
+        my ($name) = $sth->fetchrow;
+        push @bases,{ id => $id , name => $name };
+    }
     return {
         labels => [ sort keys %data ]
-        , data => [map { $data{$_} } sort keys %data]
+        , data => [map { $data{$_} or 0 } sort keys %data]
+        , bases =>\@bases 
     };
 }
 

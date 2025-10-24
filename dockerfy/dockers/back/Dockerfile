@@ -13,7 +13,7 @@ RUN apt-get update \
     libfile-rsync-perl libdate-calc-perl libparallel-forkmanager-perl libdatetime-perl libencode-locale-perl netcat-openbsd \
     liblwp-useragent-determined-perl libvirt-clients supervisor net-tools openssh-client apt-utils curl libpbkdf2-tiny-perl \
     libio-stringy-perl libvirt-daemon-system libvirt-clients netcat-openbsd qemu-kvm qemu-utils iproute2 wget bridge-utils firewalld dnsmasq iptables ebtables iptstate \
-    libnet-openssh-perl libdatetime-format-dateparse-perl file tzdata libxml2-utils libfile-tee-perl ovmf\
+    libnet-openssh-perl libdatetime-format-dateparse-perl file tzdata libxml2-utils libfile-tee-perl ovmf librrds-perl\
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone

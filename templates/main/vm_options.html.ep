@@ -248,9 +248,10 @@
                      <label class="small_row" for="new_owner"><%=l 'Owner' %></label>
                 </div>
                 <div class="col-lg-4">
-                    <select class="form-control" ng-model="network._owner" name="id_owner"
+                    <i ng-show="!list_users" class="fas fa-sync-alt fa-spin"></i>
+                    <select class="form-control" ng-model="new_option.owner" name="id_owner"
                         ng-options="user.name for user in list_users track by user.id"
-                        ng-disabled="!list_users || list_users.length==0"
+                        ng-hide="!list_users || list_users.length==0"
                     >
                     </select>
                 </div>

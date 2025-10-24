@@ -80,6 +80,16 @@
             >
             </select>
         </li>
+        <li class="list-group-item list-group-item-primary"
+            ng-show="item.cpu.mode=='host-passthrough'"
+        ><%=l 'migratable' %></li>
+        <li class="list-group-item" ng-show="item.cpu.mode=='host-passthrough'">
+            <select ng-model="item.cpu.migratable"
+                    ng-options="check for check in ['on','off']"
+            >
+            </select>
+
+        </li>
         <li ng-show="item.cpu.mode=='custom'"
             class="list-group-item list-group-item-primary"><%=l 'match' %></li>
         <li ng-show="item.cpu.mode=='custom'"

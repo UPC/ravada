@@ -159,6 +159,8 @@ sub _check_default_storage($self) {
 
 sub _check_networks($self, $vm=$self->vm) {
 
+    return if !defined $vm;
+
     my @found;
     for my $net ($vm->list_all_networks) {
         return if $net->is_active;
@@ -661,8 +663,12 @@ Returns the directory where disk images are stored in this Virtual Manager
 sub dir_img {
     my $self = shift;
 
-    my $pool = $self->_load_storage_pool();
+    my $pool;
+    eval { $pool = $self->_load_storage_pool() };
+    warn $@ if $@;
+
     $pool = $self->_create_default_pool() if !$pool;
+
     my $xml = XML::LibXML->load_xml(string => $pool->get_xml_description());
 
     my $dir = $xml->findnodes('/pool/target/path/text()');
@@ -726,7 +732,7 @@ sub create_storage_pool($self, $name, $dir, $vm=$self->vm) {
         die $@ if $@;
         die "$error\n" if $error;
     }
-
+    return $pool;
 }
 
 sub remove_storage_pool($self, $name) {
@@ -739,12 +745,17 @@ sub remove_storage_pool($self, $name) {
 
 sub _create_default_pool($self, $vm=$self->vm) {
     my $dir = "/var/lib/libvirt/images";
+
+    if ($>) {
+        $dir = "/run/user/$</images";
+    }
     mkdir $dir if ! -e $dir;
 
     my $name = 'default';
 
+    my $pool;
     eval {
-    $self->create_storage_pool($name, $dir, $vm);
+    $pool=$self->create_storage_pool($name, $dir, $vm);
     };
     warn $@ if $@;
 }
@@ -2877,7 +2888,7 @@ sub active_storage_pool($self, $name, $value=1) {
         or die "Error: no storage pool '$name'\n";
 
     if ( $value ) {
-        $pool->create();
+        $pool->create() unless $pool->is_active();
     } else {
         $pool->destroy();
     }
@@ -3017,24 +3028,26 @@ sub copy_file_storage($self, $file, $storage) {
     die "Error: '$file' too big to fit in $storage ".Ravada::Utils::number_to_size($vol_capacity)." > ".Ravada::Utils::number_to_size($pool_capacity)."\n"
     if $vol_capacity>$pool_capacity;
 
-    my ($format) = $doc->findnodes("/volume/target/format");
-    if ($format ne 'qcow2') {
+=pod
+    my ($format_node) = $doc->findnodes("/volume/target/format");
+    my $format;
+    $format = $format_node->getAttribute('type');
+    if (0 && defined $format && $format ne 'qcow2') {
         die "Error: I can't copy $format on remote nodes"
         unless $self->is_local;
 
         my $dst_file = $self->_storage_path($storage)."/".$name;
         copy($file,$dst_file);
-        $self->refresh_storage();
         return $dst_file;
     }
+
+=cut
 
     my $vol_dst;
     eval { $vol_dst= $sp->get_volume_by_name($name) };
     die $@ if $@ && !(ref($@) && $@->code == 50);
 
-    warn 1;
-    $vol_dst= $sp->clone_volume($vol->get_xml_description);
-    warn 2;
+    $vol_dst= $sp->clone_volume($vol->get_xml_description, $vol);
 
     return $vol_dst->get_path();
 }

@@ -58,7 +58,7 @@
         </span>
     </a>
     <span ng-show="!hdev._edit">
-    <b>{{hdev.name}}</b>
+    <span ng-class='{"enabled": hdev._ndevices, "disabled": !hdev._n_devices }'>{{hdev.name}}</span>
     <i ng-show="show_hdev[hdev.id]" ng-click="hdev._confirm_remove=true" class="far fa-trash-alt"></i>
     <i ng-show="show_hdev[hdev.id]" ng-click="hdev._edit=true; hdev._name=hdev.name" class="far fa-edit"></i>
     </span>
@@ -90,10 +90,13 @@
             <li ng-repeat="node in hdev._nodes" >
                 <span>{{nodes[node]}}</span>
                 <ul>
-                    <li ng-show="hdev.devices_node[node].length==0">
+                    <li ng-show="hdev.devices_node[node].list.length==0">
                         <span class="error"><%=l 'No devices found'%></span>
                     </li>
-                    <li ng-repeat="dev in hdev.devices_node[node]">
+                    <li ng-show="hdev.devices_node[node].error">
+                        <span class="error">{{hdev.devices_node[node].error}}</span>
+                    </li>
+                    <li ng-repeat="dev in hdev.devices_node[node].list">
                     <a ng-class='{
                         "badge badge-success border": dev.domain.is_locked
                         ,"badge badge-light border": !dev.domain.is_locked
