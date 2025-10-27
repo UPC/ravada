@@ -6421,6 +6421,9 @@ sub _load_info_filesystem($self, $list) {
 sub _create_filesystem($self, $source, $uid, $gid=0) {
     return if !defined $source;
 
+    confess "Error: unsupported in remote nodes"
+    if !$self->_vm->is_local();
+
     my @stat = stat($source);
     if (!@stat) {
         mkdir($source) or confess "$! mkdir $source";
@@ -6430,7 +6433,10 @@ sub _create_filesystem($self, $source, $uid, $gid=0) {
         if !S_ISDIR($mode) && !S_ISLNK($mode);
     }
     if (defined $uid &&( !@stat || $stat[4] != $uid)) {
-        chown $uid,undef,$source or die "$! chown $uid, $gid, $source";
+        confess Dumper([$uid,$source, $gid])
+        if !defined $uid || !defined$source || !defined $gid;
+
+        chown $uid,$gid,$source or die "$! chown $uid, $gid, $source";
     }
 
 }
