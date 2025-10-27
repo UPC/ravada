@@ -828,6 +828,7 @@ sub grant_user_permissions($self,$user) {
     $self->grant($user, 'shutdown');
     $self->grant($user, 'screenshot');
     $self->grant($user, 'reboot');
+    $self->grant($user, 'hibernate');
 }
 
 =head2 grant_operator_permissions

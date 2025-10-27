@@ -59,7 +59,7 @@ sub test_defaults {
 
     for my $perm (user_admin->list_permissions) {
         $perm = $perm->[0];
-        if ( $perm =~ m{^(clone|change_settings|screenshot|remove|shutdown|reboot)$}) {
+        if ( $perm =~ m{^(clone|change_settings|screenshot|remove|shutdown|reboot|hibernate)$}) {
             is($user->can_do($perm),1,$perm);
         } else {
             is($user->can_do($perm),undef,$perm);
