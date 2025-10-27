@@ -18,6 +18,8 @@ use_ok('Ravada');
 my @VMS = vm_names();
 init();
 
+my $BASE;
+
 #########################################################3
 
 sub test_defaults {
@@ -858,8 +860,20 @@ sub test_grant_grant {
     $usero->remove();
 }
 
-sub test_clone_all {
-    diag("TODO test clone all");
+sub test_clone_all($vm) {
+
+    my ($user, $base) = _create_base($vm);
+
+    $base->_data('id_owner', user_admin->id);
+    $base->_data('is_public',0);
+    my $req = Ravada::Request->clone(
+        uid => $user->id
+        ,id_domain => $base->id
+    );
+    wait_request(check_error=>0);
+    like($req->error,qr/not public/i) or exit;
+    remove_domain($base);
+    $user->remove();
 }
 
 sub test_start_many{
@@ -945,14 +959,17 @@ sub test_start_many_upgrade{
     $usera->remove();
 }
 
-sub test_view_all($vm) {
-    my $domain;
+sub _import_base($vm){
+    return if $BASE && $BASE->type eq $vm->type;
     if ($vm->type eq 'KVM') {
-        my $base = import_domain($vm);
-        $domain = $base->clone(name => new_domain_name, user => user_admin);
+        $BASE = import_domain($vm);
     } else {
-        $domain = create_domain($vm);
+        $BASE = create_domain($vm);
     }
+
+}
+sub test_view_all($vm) {
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
     $domain->expose(22);
     my $user = create_user();
     user_admin->grant($user,'view_all');
@@ -1019,6 +1036,109 @@ sub test_view_all($vm) {
     $domain->remove(user_admin);
 }
 
+sub _create_base($vm) {
+    my $user = create_user();
+    my $base = $BASE->clone(
+        name => new_domain_name
+        , user => user_admin()
+    );
+    $base->is_public(1);
+    $base->_data(id_owner => $user->id);
+    $base->prepare_base(user_admin);
+    my $user2 = create_user();
+    my $clone = $base->clone(
+        name => new_domain_name
+        , user => $user2
+    );
+    $clone->start($user2);
+    return ($user, $base, $clone);
+}
+
+sub test_generic_clone($vm, $command, $status_fail, $status_ok) {
+    my ($user, $base, $clone) = _create_base($vm);
+    my $req = Ravada::Request->_new_request(
+        command => $command
+        ,args => {
+            uid => $user->id
+            ,id_domain => $clone->id
+        }
+    );
+    wait_request(check_error => 0);
+    like($req->error,qr/not allowed/);
+    is($clone->status,$status_fail);
+
+    user_admin->grant($user,$command.'_clones');
+    $req->status('requested');
+    wait_request(check_error => 0);
+    is($req->status, 'done');
+    is($req->error,'');
+    delete $clone->{_data};
+    is($clone->status,$status_ok) or die $clone->name;
+
+    remove_domain($base);
+    $user->remove();
+}
+
+sub test_generic_all($vm, $command, $status_fail, $status_ok) {
+    my $domain = create_domain($vm);
+    $domain->start(user_admin);
+
+    my $user = create_user();
+    my $req = Ravada::Request->_new_request(
+        command => $command
+        ,args => {
+            uid => $user->id
+            ,id_domain => $domain->id
+        }
+    );
+    wait_request(check_error => 0);
+    like($req->error,qr/not allowed/,"Expecting $command not allowed")
+        or exit;
+    is($domain->status,$status_fail);
+
+    user_admin->grant($user,$command.'_all');
+    $req->status('requested');
+    wait_request(check_error => 0);
+    is($req->status, 'done');
+    is($req->error,'');
+    delete $domain->{_data};
+    is($domain->status,$status_ok);
+
+    remove_domain($domain);
+    $user->remove();
+}
+
+sub test_generic_clone_all($vm, $command, $status_fail, $status_ok) {
+    my ($user, $base, $clone) = _create_base($vm);
+    $clone->_data('id_owner'=> user_admin->id);
+    my $req = Ravada::Request->_new_request(
+        command => $command
+        ,args => {
+            uid => $user->id
+            ,id_domain => $clone->id
+        }
+    );
+    wait_request(check_error => 0);
+    like($req->error,qr/not allowed/);
+    is($clone->status,$status_fail);
+
+    user_admin->grant($user,$command.'_clone_all');
+    $req->status('requested');
+    wait_request(check_error => 0);
+    is($req->status, 'done');
+    is($req->error,'');
+    delete $clone->{_data};
+    is($clone->status,$status_ok) or die $clone->name;
+
+    remove_domain($base);
+    $user->remove();
+}
+
+sub test_can_screenshot_all($vm) {
+
+}
+
+
 ##########################################################
 
 test_start_many();
@@ -1048,6 +1168,18 @@ for my $vm_name (vm_names()) {
     next if !$vm;
 
     diag("Testing VM $vm_name");
+
+    _import_base($vm);
+
+    test_clone_all($vm_name);
+    test_can_screenshot_all($vm);
+
+    test_generic_clone($vm,'hibernate','active','hibernated');
+    test_generic_all($vm,'hibernate','active','hibernated');
+    test_generic_clone_all($vm,'hibernate','active','hibernated');
+
+    test_generic_all($vm,'screenshot','active','active');
+
     test_view_all($vm);
     test_expose_ports($vm_name);
     test_change_settings($vm_name);
@@ -1072,7 +1204,6 @@ for my $vm_name (vm_names()) {
     test_create_domain($vm_name);
     test_create_domain2($vm_name);
     test_view_clones($vm_name);
-    test_clone_all($vm_name);
 
 }
 end();

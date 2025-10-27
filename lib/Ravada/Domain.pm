@@ -178,15 +178,14 @@ around 'start' => \&_around_start;
 before 'pause' => \&_allow_shutdown;
  after 'pause' => \&_post_pause;
 
-before 'hybernate' => \&_allow_shutdown;
+before 'hybernate' => \&_allow_hibernate;
  after 'hybernate' => \&_post_hibernate;
 
-before 'hibernate' => \&_allow_shutdown;
+before 'hibernate' => \&_allow_hibernate;
  after 'hibernate' => \&_post_hibernate;
 
 before 'resume' => \&_allow_manage;
  after 'resume' => \&_post_resume;
-
 before 'shutdown' => \&_pre_shutdown;
 after 'shutdown' => \&_post_shutdown;
 
@@ -831,6 +830,31 @@ sub _allow_remove($self, $user) {
         unless ($user->can_remove_clone_all() || ($base->id_owner == $user->id));
     }
 
+}
+
+sub _allow_hibernate($self, @args){
+
+    my %args;
+    if (scalar(@args) == 1 ) {
+        $args{user} = shift @args;
+    } else {
+        %args = @args;
+    }
+    my $user = $args{user} || confess "ERROR: Missing user arg";
+
+    return if $self->id_base && $user->can_hibernate_clone_all();
+
+    if ( $self->id_base() && $user->can_hibernate_clone()) {
+        my $base = Ravada::Domain->open($self->id_base)
+            or die "ERROR: Base domain id: ".$self->id_base." not found";
+        return if $base->id_owner == $user->id;
+    } elsif($user->can_hibernate_all) {
+        return;
+    }
+
+    confess "User ".$user->name." [".$user->id."] not allowed to hibernate ".$self->name
+        ." owned by ".($self->id_owner or '<UNDEF>')
+            if !$user->can_hibernate($self->id);
 }
 
 sub _allow_shutdown {

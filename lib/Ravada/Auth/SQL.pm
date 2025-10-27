@@ -677,12 +677,14 @@ sub can_do($self, $grant) {
     confess "Permission '$grant' invalid\n".Dumper($self->{_grant_alias})
         if $grant !~ /^[a-z_]+$/;
 
-    $grant = $self->_grant_alias($grant);
+    my $grant_alias = $self->_grant_alias($grant);
 
     confess "Wrong grant '$grant'\n".Dumper($self->{_grant_alias})
         if $grant !~ /^[a-z_]+$/;
 
-    return $self->{_grant}->{$grant} if defined $self->{_grant}->{$grant};
+    return $self->{_grant}->{$grant} if exists $self->{_grant}->{$grant};
+    return $self->{_grant}->{$grant_alias} if exists $self->{_grant}->{$grant_alias};
+
     confess "Unknown permission '$grant'. Maybe you are using an old release.\n"
             ."Try removing the table grant_types and start rvd_back again:\n"
             ."mysql> drop table grant_types;\n"
@@ -701,7 +703,11 @@ Returns if the user is allowed to perform a privileged action in a virtual machi
 =cut
 
 sub can_do_domain($self, $grant, $domain) {
-    my %valid_grant = map { $_ => 1 } qw(change_settings shutdown reboot rename expose_ports);
+    # list of grants that can be applied to a virtual machine:warn
+    my %valid_grant = map { $_ => 1 }
+    qw(change_settings shutdown reboot rename expose_ports
+        hibernate screenshot
+    );
     confess "Invalid grant here '$grant'"   if !$valid_grant{$grant};
 
     return 1 if ( $grant eq 'shutdown' || $grant eq 'reboot' )
