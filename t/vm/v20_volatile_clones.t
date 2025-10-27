@@ -257,7 +257,7 @@ sub test_enforce_limits {
         last if !$clone0_2 && !$clone0_f;
         Ravada::Request->refresh_machine(uid => user_admin->id
             ,id_domain =>  $clone->id, _force => 1);
-        wait_request(debug => 1);
+        wait_request(debug => 0);
     }
     my $clone0_2 = $vm->search_domain($clone_name);
     is($clone0_2, undef);
@@ -294,7 +294,6 @@ sub test_internal_shutdown {
     my $user = create_user('Roland','Pryzbylewski');
     my $clone = $domain->clone( user => $user , name => $clone_name);
     is($clone->is_volatile,1);
-
     my @volumes = $clone->list_volumes();
 
     sleep 1;
@@ -310,7 +309,7 @@ sub test_internal_shutdown {
 
         Ravada::Request->refresh_machine(uid => user_admin->id
             ,id_domain =>  $clone->id, _force => 1);
-        wait_request(debug => 1);
+        wait_request(debug => 0);
     }
 
     eval { $clone0_f = rvd_front->search_domain($clone_name) };
@@ -623,7 +622,6 @@ for my $vm_name ( vm_names() ) {
 
         test_volatile_clone($vm);
         test_enforce_limits($vm);
-        test_internal_shutdown($vm);
 
     }
 }

@@ -3608,9 +3608,9 @@ sub remove_domain {
     warn "Warning: $@" if $@;
 
     if (!$domain0) {
-            warn "Warning: I can't find domain [$id ] '$name' , maybe already removed.\n";
-            Ravada::Domain::_remove_domain_data_db($id);
-            return;
+        warn "Warning: I can't find domain [$id ] '$name' , maybe already removed.\n"
+        if $ENV{TERM};
+        $domain0 = Ravada::Domain->open(id => $id, _force => 1);
     };
 
     $domain0->remove( $user);
