@@ -5,7 +5,7 @@ Windows Registry Editor Version 5.00
 "URL Protocol"=""
 
 [HKEY_CLASSES_ROOT\spice\DefaultIcon]
-@="C:\\Program Files\\VirtViewer v9.0-256\\bin\\remote-viewer.exe,1"
+@="C:\\Program Files\\VirtViewer v11.0-256\\bin\\remote-viewer.exe,1"
 
 [HKEY_CLASSES_ROOT\spice\Extensions]
 [HKEY_CLASSES_ROOT\spice\shell]
@@ -13,4 +13,4 @@ Windows Registry Editor Version 5.00
 
 [HKEY_CLASSES_ROOT\spice\shell\open]
 [HKEY_CLASSES_ROOT\spice\shell\open\command]
-@="\"C:\\Program Files\\VirtViewer v9.0-256\\bin\\remote-viewer.exe\" \"%1\""
+@="\"C:\\Program Files\\VirtViewer v11.0-256\\bin\\remote-viewer.exe\" \"%1\""
