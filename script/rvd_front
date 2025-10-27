@@ -330,7 +330,7 @@ any '/login_openid' => sub($c) {
             app->log->error("Access denied with openid from "._remote_ip($c));
             app->log->error("Access denied error: ".($error or 'unknown')._remote_ip($c));
         }
-        return access_denied($c);
+        return access_denied($c,"Access denied: user not found or insufficient permissions.");
     }
     $c->session('logoutURL' => $RAVADA->setting('/frontend/openid/logout_url'));
     $c->session('OIDC_CLAIM_at_hash' => $header{'OIDC_CLAIM_at_hash'});

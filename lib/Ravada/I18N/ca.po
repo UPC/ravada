@@ -2360,3 +2360,6 @@ msgstr "Auto compressió"
 
 msgid "Host Devices"
 msgstr "Dispositiu amfitrió"
+
+msgid "Access denied: user not found or insufficient permissions."
+msgstr "Accés denegat: usuari no trobat o permissos insuficients."
