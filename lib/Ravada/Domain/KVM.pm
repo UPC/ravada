@@ -3328,7 +3328,7 @@ sub _change_hardware_filesystem($self, $index, $data) {
     }
 
     if ($changed) {
-        $self->reload_config($doc) if $changed;
+        $self->reload_config($doc);
     } else {
         $self->_set_controller_filesystem($index, $data0);
     }
