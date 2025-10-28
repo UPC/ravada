@@ -440,10 +440,11 @@
                         return;
                     }
                     $scope.$apply(function () {
+                        $scope.showmachine.requests = data.requests;
                         if ($scope.lock_info) {
-                            if(data.requests) {
-                                $scope.showmachine.requests = data.requests;
-                            }
+                            $scope.showmachine.is_active=data.is_active;
+                            $scope.showmachine.is_hibernated=data.is_hibernated;
+                            $scope.showmachine.is_paused=data.is_paused;
                             return;
                         }
                         $scope.hardware = Object.keys(data.hardware);
@@ -620,7 +621,6 @@
                                     $scope.new_option[field] = $scope.showmachine[field];
             }
             $scope.new_balance_policy=$scope.showmachine.balance_policy;
-
           };
 
           $scope.reset_options = function() {

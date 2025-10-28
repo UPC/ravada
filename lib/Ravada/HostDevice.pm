@@ -10,6 +10,7 @@ Ravada::HostDevice - Host Device basic library for Ravada
 =cut
 
 use Carp qw(croak cluck);
+use Cwd qw(getcwd);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
@@ -108,9 +109,11 @@ sub list_devices_nodes($self) {
             @current_devs = $self->list_devices($node->id)
                 if $node && $node->is_active;
         };
+        my $error = ($@ or '');
         warn $@ if $@;
         #        push @devices, @current_devs;
-        $devices{$ndata->[0]}=\@current_devs;
+        $devices{$ndata->[0]}={ list => \@current_devs , error => $error};
+
     }
 
     $self->_data( devices_node => \%devices );
@@ -125,8 +128,23 @@ sub list_devices($self, $id_vm=$self->id_vm) {
 
     my @command = split /\s+/, $self->list_command;
 
+    if ($command[0] !~ m{^/} && $command[0] =~ /^plugins/) {
+        my $dir = "/usr/share/ravada";
+        $dir = getcwd() if $0 !~ m{^/} || $0 =~ m{^\.};
+        $command[0] = "$dir/".$command[0];
+    }
+
+    my $exec = $command[0];
+    $exec = $vm->_which($command[0]) if $command[0] !~ m{^/};
+
+    die "Error: missing file ".$exec."\n"
+    if !$exec || !$vm->file_exists($exec);
+
+    $command[0] = $exec if $exec;
+
     my ($out, $err) = $vm->run_command(@command);
-    die $err if $err;
+    chomp $err;
+    die "$err\n" if $err;
     my $filter = $self->list_filter();
 
     my @device;
@@ -198,6 +216,9 @@ sub list_available_devices_cached($self, $id_vm=$self->id_vm) {
         }
     }
     my $dnn = $dn->{$id_vm};
+    if (ref($dnn) eq 'HASH') {
+        $dnn = $dnn->{list};
+    }
     for my $dev_entry ( @$dnn ) {
         next if $self->_device_locked($dev_entry, $id_vm);
         push @device, ($dev_entry);
@@ -282,7 +303,8 @@ sub _data($self, $field, $value=undef) {
         die "Error: invalid value '$value' in $field"
         if $field eq 'list_command' &&(
             $value =~ m{["'`$()\[\];]}
-            || $value !~ /^(ls|find)/);
+            || $value !~ m{^(ls|find|plugins/)}
+            );
 
         $value = encode_json($value) if ref($value);
 
