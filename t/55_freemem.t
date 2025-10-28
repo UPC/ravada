@@ -127,7 +127,7 @@ SKIP: {
 
     my $freemem = _check_free_memory($vm);
     my $n_domains = int($freemem)*2+2;
-    $RAM = int($freemem *0.9*1024*1024);
+    $RAM = int($freemem * 0.9 * 1024 * 1024);
 
     if ($n_domains > 50 ) {
         my $msg = "Skipped freemem check, too many memory in this host";
