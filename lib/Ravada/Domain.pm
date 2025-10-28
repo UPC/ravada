@@ -6381,30 +6381,39 @@ sub _change_info_filesystem($self, $data) {
 sub _load_info_filesystem($self, $list) {
     my $sth = $self->_dbh->prepare(
         "SELECT * FROM domain_filesystems "
-        ." WHERE id_domain=? AND source=?"
+        ." WHERE id_domain=? "
     );
+    $sth->execute($self->id);
+    my @fs;
+    while ( my $row =$sth->fetchrow_hashref ) {
+        push @fs,($row);
+    }
     for my $item (@$list) {
         unlock_hash(%$item);
 
         my $source = $item->{source};
         $source = $item->{source}->{dir} if ref($item->{source});
 
-        $sth->execute($self->id,$source);
-        my $info = $sth->fetchrow_hashref();
+        my ($info) = grep { $_->{source} eq $source} @fs;
 
         if ( !$info->{id} ) {
             my $data = {
                 source => $source
             };
             $self->_add_info_filesystem($data);
-            $sth->execute($self->id,$source);
             $info = $sth->fetchrow_hashref();
         }
 
+        $item->{enabled} = delete $info->{enabled};
         $item->{chroot} = delete $info->{chroot};
         $item->{subdir_uid} = delete $info->{subdir_uid};
         $item->{_id} = $info->{id};
         lock_hash(%$item);
+    }
+    for my $item (@fs) {
+        next if grep {$_->{source} eq $item->{source}} @$list;
+        $item->{_id}= delete $item->{id};
+        push @$list,($item);
     }
 }
 

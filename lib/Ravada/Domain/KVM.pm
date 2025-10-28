@@ -3296,6 +3296,7 @@ sub _change_hardware_filesystem($self, $index, $data) {
     if !keys %{$data->{source}};
     delete $data->{target}
     if !keys %{$data->{target}};
+    my $enabled = delete $data->{enabled};
 
     confess "Error: extra arguments ".Dumper($data)
     if keys %$data;
@@ -3314,6 +3315,7 @@ sub _change_hardware_filesystem($self, $index, $data) {
     my ($devices) = $doc->findnodes('/domain/devices');
     for my $fs ($devices->findnodes('filesystem')) {
         next if $count++ != $index;
+        $devices->removeChild($fs) if !$enabled;
         my ($xml_source) = $fs->findnodes("source");
         my ($xml_target) = $fs->findnodes("target");
         $xml_source->setAttribute(dir => $source);
