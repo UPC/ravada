@@ -1131,6 +1131,8 @@ Makes volumes indpendent from base
 sub spinoff {
     my $self = shift;
 
+    $self->_check_has_clones();
+
     $self->_do_force_shutdown() if $self->is_active;
     confess "Error: spinoff from remote nodes not available. Node: ".$self->_vm->name
         if !$self->is_local;
@@ -1180,7 +1182,7 @@ sub _check_has_clones {
     return if !$self->is_known();
 
     my @clones = $self->clones;
-    confess "Domain ".$self->name." has ".scalar @clones." clones : ".Dumper(\@clones)
+    die "Domain ".$self->name." has ".scalar @clones." clones.\n"
         if $#clones>=0;
 }
 
@@ -6592,7 +6594,7 @@ sub _around_add_hardware($orig, $self, $hardware, $index, $data=undef) {
             $self->_add_info_filesystem($data_orig);
         }
     }
-    if (!$hardware eq 'disk' && $self->is_known() && !$self->is_base ) {
+    if ($hardware ne 'disk' && $self->is_known() && !$self->is_base ) {
         # disk is changed in main node, then redefined already
         $self->_redefine_instances();
     }
@@ -6802,6 +6804,14 @@ sub _allow_group_access($self, %args) {
     $type = 'ldap' if !$type || $type eq 'group';
 
     confess "Error: unknown args ".Dumper(\%args) if keys %args;
+
+    if ($type eq 'local') {
+        $group = Ravada::Auth::Group::_search_name_by_id($id_group)
+        if !$group;
+        my %groups = map { $_ => 1 } $self->list_access_groups($type);
+        return if defined $group && $groups{$group};
+    }
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO group_access "
         ."( id_domain, id_group, name, type)"
@@ -6822,15 +6832,16 @@ sub list_access_groups($self, $type) {
         ."   AND type=?"
     );
     $sth->execute($self->id, $type);
-    my @groups;
+    my %groups;
     my $sth_gname = $$CONNECTOR->dbh->prepare("SELECT name FROM groups_local WHERE id=?");
     while ( my $row = $sth->fetchrow_hashref ) {
         if (!$row->{name} && $row->{id_group}) {
             $sth_gname->execute($row->{id_group});
             ($row->{name}) = $sth_gname->fetchrow;
         }
-        push @groups,($row->{name});
+        $groups{$row->{name}}++;
     }
+    my @groups = sort keys %groups;
     return @groups;
 }
 

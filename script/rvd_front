@@ -330,7 +330,7 @@ any '/login_openid' => sub($c) {
             app->log->error("Access denied with openid from "._remote_ip($c));
             app->log->error("Access denied error: ".($error or 'unknown')._remote_ip($c));
         }
-        return access_denied($c);
+        return access_denied($c,"Access denied: user not found or insufficient permissions.");
     }
     $c->session('logoutURL' => $RAVADA->setting('/frontend/openid/logout_url'));
     $c->session('OIDC_CLAIM_at_hash' => $header{'OIDC_CLAIM_at_hash'});
@@ -3477,7 +3477,7 @@ sub login($c, $status=200) {
     }
 
 
-    sleep 5 if scalar(@error) && !$ENV{mode} && !$ENV{mode} eq 'development';
+    sleep 5 if scalar(@error) && ( !$ENV{MOJO_MODE} || $ENV{MOJO_MODE} ne 'development');
     $status = 403 if @error;
 
     $c->stash('login' => $login);
@@ -4748,11 +4748,11 @@ sub machine_change_hardware($c, $id, $options) {
 
     my $info = $domain->get_info();
     my %change_mem;
-    if (int($info->{max_mem}/1024) != $max_mem && $USER->is_admin) {
+    if (defined $max_mem && int($info->{max_mem}/1024) != $max_mem && $USER->is_admin) {
         $change_mem{max_mem} = $max_mem*1024;
     }
 
-    if (int($info->{memory}/1024) != $memory) {
+    if (defined $memory && int($info->{memory}/1024) != $memory) {
         $change_mem{memory} = $memory*1024;
     }
     Ravada::Request->change_hardware(
@@ -4767,11 +4767,12 @@ sub machine_change_hardware($c, $id, $options) {
 
     my %change_cpu;
 
-    if ($info->{max_virt_cpu} != $max_virt_cpu && $USER->is_admin) {
+    if (defined $max_virt_cpu 
+            && $info->{max_virt_cpu} != $max_virt_cpu && $USER->is_admin) {
         $change_cpu{max_virt_cpu} = $max_virt_cpu;
     }
 
-    if ($info->{n_virt_cpu} != $n_virt_cpu) {
+    if (defined $n_virt_cpu && $info->{n_virt_cpu} != $n_virt_cpu) {
         $change_cpu{n_virt_cpu} = $n_virt_cpu;
     }
     Ravada::Request->change_hardware(
@@ -4826,7 +4827,6 @@ sub machine_set_options($c, $id, $options) {
         machine_set_value($c, $id, $key => $options->{$key}, $value_text);
     }
 
-    return $c->render(json => $change);
 }
 
 sub _privileged_machine_field($field) {
@@ -5019,6 +5019,7 @@ sub _insert_fields($c, $table, $arg) {
 
 sub _update_fields($c, $table, $arg) {
     my $id = delete $arg->{id};
+    delete $arg->{bases};
     return _insert_fields($c, $table, $arg) if !$id;
 
     my $sth = $RAVADA->_dbh->prepare("SELECT * FROM $table WHERE id=?");
