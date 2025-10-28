@@ -6415,6 +6415,7 @@ sub _load_info_filesystem($self, $list) {
         $item->{_id}= delete $item->{id};
         delete $item->{id_domain};
         push @$list,($item);
+        lock_hash(%$item);
     }
 }
 
