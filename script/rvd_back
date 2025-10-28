@@ -434,8 +434,8 @@ sub remove_group_ldap {
 
     my $ravada = Ravada->new( %CONFIG);
     my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
-    my @group = Ravada::Auth::LDAP::search_group( name => $login )
-        or die "Error: LDAP group '$login' not found\n";
+    my @group = Ravada::Auth::LDAP::search_group( name => $login );
+    die "Error: LDAP group '$login' not found\n" unless @group;
 
     for my $group ( @group ) {
         if ($ENV{TERM} && scalar(@group)>1) {
