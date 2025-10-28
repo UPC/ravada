@@ -440,7 +440,7 @@ sub remove_group_ldap {
     for my $group ( @group ) {
         if ($ENV{TERM} && scalar(@group)>1) {
             print "Remove LDAP group ".$group->dn." ? (y/N)";
-            my $ok = <stdin>;
+            my $ok = <STDIN>;
             next unless $ok =~ /y/i;
         }
         $group->delete()->update($ldap);
@@ -467,7 +467,7 @@ sub add_user_group {
     _show_ldap_group_membership($login);
 
     print "Add user to LDAP group: ";
-    my $new_group = <stdin>;
+    my $new_group = <STDIN>;
     chomp $new_group;
 
     my @groups = Ravada::Auth::LDAP::search_group( name => '*' );
@@ -1193,7 +1193,7 @@ sub purge_nodes($rvd_back) {
             print "Found $name [$id_domain] unused in $vm_name.\n";
             print "Remove $vol\n";
             print "[y/N] ? ";
-            my $ok= <stdin>;
+            my $ok= <STDIN>;
             next if $ok !~ /y/i;
 
                 $vm->remove_file($vol);
