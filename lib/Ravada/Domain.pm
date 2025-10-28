@@ -6413,6 +6413,7 @@ sub _load_info_filesystem($self, $list) {
     for my $item (@fs) {
         next if grep {$_->{source} eq $item->{source}} @$list;
         $item->{_id}= delete $item->{id};
+        delete $item->{id_domain};
         push @$list,($item);
     }
 }

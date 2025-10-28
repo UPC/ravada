@@ -130,10 +130,62 @@ sub test_fs_disabled($domain) {
     is($hw_fs2->[0]->{enabled},0) or die Dumper($hw_fs2->[0]);
 
     my ($fs_source_base, $fs_target_base) = _get_fs_xml($domain);
-    is($fs_source_base,0);
-    is($fs_target_base,0);
+    is($fs_source_base,undef);
+    is($fs_target_base,undef);
+
+    Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request();
+    ($fs_source_base, $fs_target_base) = _get_fs_xml($domain);
+    is($fs_source_base,undef);
+    is($fs_target_base,undef);
+
+    $domain->shutdown_now(user_admin);
+
 }
 
+sub test_fs_enabled($domain) {
+
+    my $hw_fs = $domain->info(user_admin)->{hardware}->{filesystem};
+    is($hw_fs->[0]->{enabled},0) or die "Expecting disabled";
+    my $new = dclone($hw_fs->[0]);
+    unlock_hash(%$new);
+    $new->{enabled}=1;
+
+    my $req2 = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,hardware => 'filesystem'
+        ,id_domain => $domain->id
+        ,index => 0
+        ,data => $new
+    );
+    wait_request();
+    is($req2->status,'done');
+    is($req2->error,'');
+
+    my $hw_fs2 = $domain->info(user_admin)->{hardware}->{filesystem};
+    ok($hw_fs2);
+    ok($hw_fs2->[0]) or die Dumper($hw_fs2);
+    is($hw_fs2->[0]->{enabled},1) or die Dumper($hw_fs2->[0]);
+
+    my ($fs_source_base, $fs_target_base) = _get_fs_xml($domain);
+    ok($fs_source_base);
+    ok($fs_target_base);
+
+    Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request();
+    ($fs_source_base, $fs_target_base) = _get_fs_xml($domain);
+    ok($fs_source_base);
+    ok($fs_target_base);
+
+    $domain->shutdown_now(user_admin);
+
+}
 sub test_remove_fs($domain) {
     my $req = Ravada::Request->remove_hardware(
         name => 'filesystem'
@@ -388,6 +440,7 @@ for my $vm_name ( 'KVM' ) {
 
         my $domain = test_fs_added($vm);
         test_fs_disabled($domain);
+        test_fs_enabled($domain);
 
         remove_domain($domain);
 

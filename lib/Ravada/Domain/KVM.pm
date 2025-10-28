@@ -17,6 +17,7 @@ use Hash::Util qw(lock_keys lock_hash);
 use IPC::Run3 qw(run3);
 use MIME::Base64;
 use Moose;
+use Storable qw(dclone);
 use Sys::Virt::Stream;
 use Sys::Virt::Domain;
 use Sys::Virt;
@@ -3288,6 +3289,9 @@ sub _change_hardware_filesystem($self, $index, $data) {
     if !ref($data->{source}) || !exists $data->{source}->{dir}
     || !defined $data->{source}->{dir};
 
+    # store original data to add filesystem when re-enabled
+    my $data0 = dclone($data);
+
     my $source = delete $data->{source}->{dir};
     my $target;
     $target = delete $data->{target}->{dir} if exists $data->{target};
@@ -3315,7 +3319,7 @@ sub _change_hardware_filesystem($self, $index, $data) {
     my ($devices) = $doc->findnodes('/domain/devices');
     for my $fs ($devices->findnodes('filesystem')) {
         next if $count++ != $index;
-        $devices->removeChild($fs) if !$enabled;
+        $devices->removeChild($fs) if defined $enabled && !$enabled;
         my ($xml_source) = $fs->findnodes("source");
         my ($xml_target) = $fs->findnodes("target");
         $xml_source->setAttribute(dir => $source);
@@ -3323,7 +3327,11 @@ sub _change_hardware_filesystem($self, $index, $data) {
         $changed++;
     }
 
-    $self->reload_config($doc) if $changed;
+    if ($changed) {
+        $self->reload_config($doc) if $changed;
+    } else {
+        $self->_set_controller_filesystem($index, $data0);
+    }
 }
 
 sub _default_cpu($self) {
