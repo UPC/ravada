@@ -3,9 +3,10 @@ use strict;
 
 use Carp qw(confess);
 use Data::Dumper;
-use Hash::Util qw(lock_hash);
+use Hash::Util qw(lock_hash unlock_hash);
 use IPC::Run3;
 use JSON::XS;
+use Storable qw(dclone);
 use Test::More;
 use XML::LibXML;
 
@@ -71,6 +72,9 @@ sub test_fs_added($vm) {
     );
     wait_request();
 
+    my ($fs_source_base, $fs_target_base) = _get_fs_xml($domain);
+    ok($fs_source_base);
+
     my $sth = connector->dbh->prepare(
         "DELETE FROM domain_filesystems WHERE id_domain=?"
     );
@@ -93,6 +97,41 @@ sub test_fs_added($vm) {
     );
     wait_request();
 
+    ($fs_source_base, $fs_target_base) = _get_fs_xml($domain);
+    ok($fs_source_base);
+
+    $domain->shutdown_now(user_admin);
+
+    return $domain;
+}
+
+sub test_fs_disabled($domain) {
+
+    my $hw_fs = $domain->info(user_admin)->{hardware}->{filesystem};
+    is($hw_fs->[0]->{enabled},1);
+    my $new = dclone($hw_fs->[0]);
+    unlock_hash(%$new);
+    $new->{enabled}=0;
+
+    my $req2 = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,hardware => 'filesystem'
+        ,id_domain => $domain->id
+        ,index => 0
+        ,data => $new
+    );
+    wait_request();
+    is($req2->status,'done');
+    is($req2->error,'');
+
+    my $hw_fs2 = $domain->info(user_admin)->{hardware}->{filesystem};
+    ok($hw_fs2);
+    ok($hw_fs2->[0]) or die Dumper($hw_fs2);
+    is($hw_fs2->[0]->{enabled},0) or die Dumper($hw_fs2->[0]);
+
+    my ($fs_source_base, $fs_target_base) = _get_fs_xml($domain);
+    is($fs_source_base,0);
+    is($fs_target_base,0);
 }
 
 sub test_remove_fs($domain) {
@@ -163,10 +202,14 @@ sub test_fs_change($vm) {
 
     my $xml = XML::LibXML->load_xml(string => $domain->xml_description);
     my ($fs) = $xml->findnodes("/domain/devices/filesystem");
-    my ($fs_source) = $fs->findnodes("source");
-    my ($fs_target) = $fs->findnodes("target");
-    is($fs_source->getAttribute('dir'), $source2 );
-    is($fs_target->getAttribute('dir'), $target2 );
+    ok($fs);
+    my ($fs_source, $fs_target);
+    if ($fs) {
+        ($fs_source) = $fs->findnodes("source");
+        ($fs_target) = $fs->findnodes("target");
+        is($fs_source->getAttribute('dir'), $source2 );
+        is($fs_target->getAttribute('dir'), $target2 );
+    }
 }
 
 
@@ -220,6 +263,7 @@ sub test_fs_table($id_domain, @data) {
 
 sub _fs_data {
     my $data = { chroot => 1
+            ,enabled => 1
             ,subdir_uid => $UID++
             ,source => {dir => _new_source()}
     };
@@ -342,7 +386,10 @@ for my $vm_name ( 'KVM' ) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
-        test_fs_added($vm);
+        my $domain = test_fs_added($vm);
+        test_fs_disabled($domain);
+
+        remove_domain($domain);
 
         test_fs_bare($vm);
         test_fs_change($vm);

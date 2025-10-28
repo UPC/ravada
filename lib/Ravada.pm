@@ -2220,7 +2220,7 @@ sub _sql_create_tables($self) {
             ,source => 'char(120) NOT NULL'
             ,chroot => 'integer(4) not null default 0'
             ,subdir_uid => 'integer not null default 1000'
-
+            ,enabled => 'integer(4) not null default 1'
             }
         ]
         ,[
