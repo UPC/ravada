@@ -6408,6 +6408,12 @@ sub _load_info_filesystem($self, $list) {
                 source => $source
             };
             $self->_add_info_filesystem($data);
+            # Re-query the database to fetch the newly created record
+            my $sth_info = $self->_dbh->prepare(
+                "SELECT * FROM domain_filesystems WHERE id_domain=? AND source=?"
+            );
+            $sth_info->execute($self->id, $source);
+            $info = $sth_info->fetchrow_hashref;
         }
 
         $item->{enabled} = delete $info->{enabled};
