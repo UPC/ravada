@@ -6369,41 +6369,64 @@ sub _change_info_filesystem($self, $data) {
         delete $data2->{$key} if $key =~ /^_/;
     }
 
+    # check the filesystem exists for this domain
+    my $sth = $self->_dbh->prepare("SELECT * FROM domain_filesystems "
+                                    ." WHERE id=? AND id_domain=?");
+    $sth->execute($id, $self->id);
+    my $row = $sth->fetchrow_hashref();
+    die "Error: filesystem $id not found for domain=".$self->id if !$row;
+
     my $sql = "UPDATE domain_filesystems SET "
         .join(",", map { "$_=?" } sort keys %$data2)
         ;
 
     my @values = map { $data2->{$_} } sort keys %$data2;
-    my $sth = $self->_dbh->prepare("$sql WHERE id=?");
+    $sth = $self->_dbh->prepare("$sql WHERE id=?");
     $sth->execute(@values,$id);
 }
 
 sub _load_info_filesystem($self, $list) {
     my $sth = $self->_dbh->prepare(
         "SELECT * FROM domain_filesystems "
-        ." WHERE id_domain=? AND source=?"
+        ." WHERE id_domain=? "
     );
+    $sth->execute($self->id);
+    my @fs;
+    while ( my $row =$sth->fetchrow_hashref ) {
+        push @fs,($row);
+    }
     for my $item (@$list) {
         unlock_hash(%$item);
 
         my $source = $item->{source};
         $source = $item->{source}->{dir} if ref($item->{source});
 
-        $sth->execute($self->id,$source);
-        my $info = $sth->fetchrow_hashref();
+        my ($info) = grep { $_->{source} eq $source} @fs;
 
         if ( !$info->{id} ) {
             my $data = {
                 source => $source
             };
             $self->_add_info_filesystem($data);
-            $sth->execute($self->id,$source);
-            $info = $sth->fetchrow_hashref();
+            # Re-query the database to fetch the newly created record
+            my $sth_info = $self->_dbh->prepare(
+                "SELECT * FROM domain_filesystems WHERE id_domain=? AND source=?"
+            );
+            $sth_info->execute($self->id, $source);
+            $info = $sth_info->fetchrow_hashref;
         }
 
+        $item->{enabled} = delete $info->{enabled};
         $item->{chroot} = delete $info->{chroot};
         $item->{subdir_uid} = delete $info->{subdir_uid};
         $item->{_id} = $info->{id};
+        lock_hash(%$item);
+    }
+    for my $item (@fs) {
+        next if grep {$_->{source} eq $item->{source}} @$list;
+        $item->{_id}= delete $item->{id};
+        delete $item->{id_domain};
+        push @$list,($item);
         lock_hash(%$item);
     }
 }

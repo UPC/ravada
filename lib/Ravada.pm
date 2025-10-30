@@ -2220,7 +2220,7 @@ sub _sql_create_tables($self) {
             ,source => 'char(120) NOT NULL'
             ,chroot => 'integer(4) not null default 0'
             ,subdir_uid => 'integer not null default 1000'
-
+            ,enabled => 'integer(4) not null default 1'
             }
         ]
         ,[
@@ -5467,12 +5467,39 @@ sub _apply_clones($self, $request) {
     }
 
     for my $clone ($domain->clones) {
+        if ( $request->command eq 'change_hardware' ) {
+            next if !$self->_fix_clone_args($args, $clone->{id})
+        }
+
         Ravada::Request->new_request(
             $request->command
             ,%$args
             ,id_domain => $clone->{id}
         );
     }
+}
+
+sub _fix_clone_args($self, $args, $id_clone) {
+    return 1 if $args->{hardware} ne 'filesystem';
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM domain_filesystems "
+        ." WHERE id_domain=? AND source=?"
+    );
+    my $source;
+    if (exists $args->{data}->{source} && defined $args->{data}->{source}) {
+        $source = $args->{data}->{source};
+        $source = $source->{dir} if ref($source) eq 'HASH';
+    } else {
+        # If source is not defined, skip setting _id
+        return;
+    }
+
+    $sth->execute($id_clone, $source);
+    my ($id) = $sth->fetchrow();
+    return if !defined $id;
+    $args->{data}->{_id}=$id;
+    return $id;
 }
 
 sub _cmd_shutdown {
