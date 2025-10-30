@@ -5485,8 +5485,14 @@ sub _fix_clone_args($self, $args, $id_clone) {
         "SELECT id FROM domain_filesystems "
         ." WHERE id_domain=? AND source=?"
     );
-    my $source = $args->{data}->{source};
-    $source = $source->{dir} if ref($source) eq 'HASH';
+    my $source;
+    if (exists $args->{data}->{source} && defined $args->{data}->{source}) {
+        $source = $args->{data}->{source};
+        $source = $source->{dir} if ref($source) eq 'HASH';
+    } else {
+        # If source is not defined, skip setting _id
+        return;
+    }
 
     $sth->execute($id_clone, $source);
     my ($id) = $sth->fetchrow();
