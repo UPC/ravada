@@ -6393,7 +6393,18 @@ sub _load_info_filesystem($self, $list) {
     $sth->execute($self->id);
     my @fs;
     while ( my $row =$sth->fetchrow_hashref ) {
+        my $found;
+        for my $item (@$list) {
+            my $source = $item->{source};
+            $source = $item->{source}->{dir} if ref($item->{source});
+            if ($source eq $row->{source}){
+                $found=$item;
+                last;
+            }
+        }
+        $row->{_id}=delete $row->{id};
         push @fs,($row);
+        die Dumper([$row,$found]);
     }
     for my $item (@$list) {
         unlock_hash(%$item);
@@ -6420,13 +6431,6 @@ sub _load_info_filesystem($self, $list) {
         $item->{chroot} = delete $info->{chroot};
         $item->{subdir_uid} = delete $info->{subdir_uid};
         $item->{_id} = $info->{id};
-        lock_hash(%$item);
-    }
-    for my $item (@fs) {
-        next if grep {$_->{source} eq $item->{source}} @$list;
-        $item->{_id}= delete $item->{id};
-        delete $item->{id_domain};
-        push @$list,($item);
         lock_hash(%$item);
     }
 }
