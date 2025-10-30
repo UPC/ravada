@@ -3315,10 +3315,12 @@ sub _change_hardware_filesystem($self, $index, $data) {
     my $doc = XML::LibXML->load_xml(string => $self->xml_description);
     my $count = 0;
     my $changed = 0;
+    my $found = 0;
 
     my ($devices) = $doc->findnodes('/domain/devices');
     for my $fs ($devices->findnodes('filesystem')) {
         next if $count++ != $index;
+        $found++;
         if (defined $enabled && !$enabled) {
             $devices->removeChild($fs);
         } else {
@@ -3332,7 +3334,7 @@ sub _change_hardware_filesystem($self, $index, $data) {
 
     if ($changed) {
         $self->reload_config($doc);
-    } else {
+    } elsif(!$found) {
         $self->_set_controller_filesystem($index, $data0);
     }
 }
