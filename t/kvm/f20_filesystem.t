@@ -42,6 +42,12 @@ sub test_fs_bare($vm) {
     is($fs_source_clone, $fs_source_base);
     is($fs_target_clone, $fs_target_base);
 
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    my $hw_fs2 = $domain->info(user_admin)->{hardware}->{filesystem};
+    ok($hw_fs2);
+    is(scalar(@$hw_fs2),1)or die Dumper($hw_fs2);
+    warn Dumper($hw_fs2);
+
     test_remove_fs($domain);
 
     my @id = ( $clone->id, $domain->id );
@@ -234,6 +240,16 @@ sub test_fs_disabled($domain) {
     ok($hw_fs2);
     ok($hw_fs2->[0]) or die Dumper($hw_fs2);
     is($hw_fs2->[0]->{enabled},0) or die Dumper($hw_fs2->[0]);
+
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    $hw_fs2 = $domain->info(user_admin)->{hardware}->{filesystem};
+    ok($hw_fs2);
+    is(scalar(@$hw_fs2),1)or die Dumper($hw_fs2);
+
+    ok($hw_fs2->[0]) or die Dumper($hw_fs2);
+    is($hw_fs2->[0]->{enabled},0) or die Dumper($hw_fs2->[0]);
+    is($hw_fs2->[0]->{_can_edit},1) or die Dumper($hw_fs2->[0]);
+    is($hw_fs2->[0]->{_can_remove},1) or die Dumper($hw_fs2->[0]);
 
     my ($fs_source_base, $fs_target_base) = _get_fs_xml($domain);
     is($fs_source_base,undef);
@@ -544,6 +560,8 @@ for my $vm_name ( 'KVM' ) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
+        test_fs_bare($vm);
+
         my $domain = test_fs_added($vm);
         test_fs_disabled($domain);
         test_fs_enabled($domain);
@@ -557,7 +575,6 @@ for my $vm_name ( 'KVM' ) {
 
         remove_domain($domain);
 
-        test_fs_bare($vm);
         test_fs_change($vm);
         test_fs_chrooted($vm);
         test_fs_chrooted_n($vm,3);
