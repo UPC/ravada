@@ -3319,11 +3319,14 @@ sub _change_hardware_filesystem($self, $index, $data) {
     my ($devices) = $doc->findnodes('/domain/devices');
     for my $fs ($devices->findnodes('filesystem')) {
         next if $count++ != $index;
-        $devices->removeChild($fs) if defined $enabled && !$enabled;
-        my ($xml_source) = $fs->findnodes("source");
-        my ($xml_target) = $fs->findnodes("target");
-        $xml_source->setAttribute(dir => $source);
-        $xml_target->setAttribute(dir => $target) if $target;
+        if (defined $enabled && !$enabled) {
+            $devices->removeChild($fs);
+        } else {
+            my ($xml_source) = $fs->findnodes("source");
+            my ($xml_target) = $fs->findnodes("target");
+            $xml_source->setAttribute(dir => $source);
+            $xml_target->setAttribute(dir => $target) if $target;
+        }
         $changed++;
     }
 
