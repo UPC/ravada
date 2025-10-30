@@ -5467,8 +5467,9 @@ sub _apply_clones($self, $request) {
     }
 
     for my $clone ($domain->clones) {
-        $self->_fix_clone_args($args, $clone->{id})
-        if $request->command eq 'change_hardware';
+        if ( $request->command eq 'change_hardware' ) {
+            next if !$self->_fix_clone_args($args, $clone->{id})
+        }
 
         Ravada::Request->new_request(
             $request->command
@@ -5479,7 +5480,7 @@ sub _apply_clones($self, $request) {
 }
 
 sub _fix_clone_args($self, $args, $id_clone) {
-    return if $args->{hardware} ne 'filesystem';
+    return 1 if $args->{hardware} ne 'filesystem';
 
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id FROM domain_filesystems "
@@ -5496,7 +5497,9 @@ sub _fix_clone_args($self, $args, $id_clone) {
 
     $sth->execute($id_clone, $source);
     my ($id) = $sth->fetchrow();
+    return if !defined $id;
     $args->{data}->{_id}=$id;
+    return $id;
 }
 
 sub _cmd_shutdown {
