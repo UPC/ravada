@@ -5467,12 +5467,30 @@ sub _apply_clones($self, $request) {
     }
 
     for my $clone ($domain->clones) {
+        $self->_fix_clone_args($args, $clone->{id})
+        if $request->command eq 'change_hardware';
+
         Ravada::Request->new_request(
             $request->command
             ,%$args
             ,id_domain => $clone->{id}
         );
     }
+}
+
+sub _fix_clone_args($self, $args, $id_clone) {
+    return if $args->{hardware} ne 'filesystem';
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM domain_filesystems "
+        ." WHERE id_domain=? AND source=?"
+    );
+    my $source = $args->{data}->{source};
+    $source = $source->{dir} if ref($source) eq 'HASH';
+
+    $sth->execute($id_clone, $source);
+    my ($id) = $sth->fetchrow();
+    $args->{data}->{_id}=$id;
 }
 
 sub _cmd_shutdown {

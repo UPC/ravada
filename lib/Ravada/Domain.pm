@@ -6369,12 +6369,19 @@ sub _change_info_filesystem($self, $data) {
         delete $data2->{$key} if $key =~ /^_/;
     }
 
+    # check the filesystem exists for this domain
+    my $sth = $self->_dbh->prepare("SELECT * FROM domain_filesystems "
+                                    ." WHERE id=? AND id_domain=?");
+    $sth->execute($id, $self->id);
+    my $row = $sth->fetchrow_hashref();
+    die "Error: filesystem $id not found for domain=".$self->id if !$row;
+
     my $sql = "UPDATE domain_filesystems SET "
         .join(",", map { "$_=?" } sort keys %$data2)
         ;
 
     my @values = map { $data2->{$_} } sort keys %$data2;
-    my $sth = $self->_dbh->prepare("$sql WHERE id=?");
+    $sth = $self->_dbh->prepare("$sql WHERE id=?");
     $sth->execute(@values,$id);
 }
 
