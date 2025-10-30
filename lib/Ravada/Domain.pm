@@ -6401,7 +6401,6 @@ sub _load_info_filesystem($self, $list) {
                 source => $source
             };
             $self->_add_info_filesystem($data);
-            $info = $sth->fetchrow_hashref();
         }
 
         $item->{enabled} = delete $info->{enabled};
