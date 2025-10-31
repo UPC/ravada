@@ -3301,6 +3301,7 @@ sub _change_hardware_filesystem($self, $index, $data) {
     delete $data->{target}
     if !keys %{$data->{target}};
     my $enabled = delete $data->{enabled};
+    delete $data->{id_domain};
 
     confess "Error: extra arguments ".Dumper($data)
     if keys %$data;

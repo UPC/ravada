@@ -136,22 +136,22 @@ sub _get_controller_video($self) {
 
 sub _get_controller_filesystem($self) {
     my @fs = $self->_get_controller_generic('filesystem');
-    for my $fs ( @fs ) {
-        my $name = $fs->{target}->{dir};
+    my @fs_info = $self->_load_info_filesystem(@fs);
+    for my $fs ( @fs_info ) {
         unlock_hash(%$fs);
+
+        my $name = $fs->{target}->{dir};
         $fs->{_name} = $name;
+
         delete $fs->{accessmode};
         delete $fs->{driver};
         delete $fs->{type};
-        $fs->{_can_edit} = 1;
-        $fs->{_can_remove} = 1;
 
         lock_hash(%$fs);
     }
 
-    $self->_load_info_filesystem(\@fs);
 
-    return @fs;
+    return @fs_info;
 }
 
 sub _get_controller_sound($self) {

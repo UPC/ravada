@@ -6361,13 +6361,14 @@ sub _change_info_filesystem($self, $data) {
 
     unlock_hash(%$data2);# it is local to this sub, so we may change it
     $data2->{source} = $data2->{source}->{dir} if ref($data2->{source});
-    delete $data2->{target};
+    delete $data2->{$_} for ('accessmode','driver','target','type');
 
     my $id = delete $data2->{_id};
     confess "Missing _id in data2 ".Dumper($data2) if !defined $id;
     for my $key (keys %$data2) {
         delete $data2->{$key} if $key =~ /^_/;
     }
+    return if !keys %$data2;
 
     # check the filesystem exists for this domain
     my $sth = $self->_dbh->prepare("SELECT * FROM domain_filesystems "
@@ -6385,7 +6386,7 @@ sub _change_info_filesystem($self, $data) {
     $sth->execute(@values,$id);
 }
 
-sub _load_info_filesystem($self, $list) {
+sub _load_info_filesystem($self, @list) {
     my $sth = $self->_dbh->prepare(
         "SELECT * FROM domain_filesystems "
         ." WHERE id_domain=? "
@@ -6394,7 +6395,7 @@ sub _load_info_filesystem($self, $list) {
     my @fs;
     while ( my $row =$sth->fetchrow_hashref ) {
         my $found;
-        for my $item (@$list) {
+        for my $item (@list) {
             my $source = $item->{source};
             $source = $item->{source}->{dir} if ref($item->{source});
             if ($source eq $row->{source}){
@@ -6403,18 +6404,20 @@ sub _load_info_filesystem($self, $list) {
             }
         }
         $row->{_id}=delete $row->{id};
+        for my $field(keys %$found) {
+            $row->{$field}=$found->{$field} if !exists $row->{$field};
+        }
         push @fs,($row);
-        die Dumper([$row,$found]);
     }
-    for my $item (@$list) {
-        unlock_hash(%$item);
+    # check if there are items in hardware not in the db
+    for my $item (@list) {
 
         my $source = $item->{source};
         $source = $item->{source}->{dir} if ref($item->{source});
 
         my ($info) = grep { $_->{source} eq $source} @fs;
-
-        if ( !$info->{id} ) {
+        if ( ! $info || !$info->{_id} ) {
+            unlock_hash(%$item);
             my $data = {
                 source => $source
             };
@@ -6424,15 +6427,23 @@ sub _load_info_filesystem($self, $list) {
                 "SELECT * FROM domain_filesystems WHERE id_domain=? AND source=?"
             );
             $sth_info->execute($self->id, $source);
-            $info = $sth_info->fetchrow_hashref;
+            my $info_new = $sth_info->fetchrow_hashref;
+            $item->{_id} = $info_new->{id};
+            for my $field(keys %$info_new) {
+                $item->{$field}=$info_new->{$field} if !exists $item->{$field};
+            }
+            lock_hash(%$item);
+            push @fs,($item);
         }
-
-        $item->{enabled} = delete $info->{enabled};
-        $item->{chroot} = delete $info->{chroot};
-        $item->{subdir_uid} = delete $info->{subdir_uid};
-        $item->{_id} = $info->{id};
-        lock_hash(%$item);
     }
+    for my $fs (@fs) {
+        unlock_hash(%$fs);
+        $fs->{_can_edit} = 1;
+        $fs->{_can_remove} = 1;
+        lock_hash(%$fs);
+    }
+
+    return @fs;
 }
 
 sub _create_filesystem($self, $source, $uid, $gid=0) {
@@ -6478,7 +6489,11 @@ sub _chroot_filesystems($self) {
         my $data = $self->_search_filesystem_index($row->{source});
         unlock_hash(%$data);
         my $source = $row->{source}."/".$self->name;
-        $data->{source}->{dir} = $source;
+        if (ref($data->{source})eq 'HASH') {
+            $data->{source}->{dir} = $source;
+        } else {
+            $data->{source} = $source;
+        }
         my $index = delete $data->{_index};
         lock_hash(%$data);
 
@@ -6496,7 +6511,9 @@ sub _search_filesystem_index($self, $source) {
         unlock_hash(%$fs);
         $fs->{_index} = $n;
         lock_hash(%$fs);
-        return $fs if $fs->{source}->{dir} eq $source;
+        my $fs_source = $fs->{source};
+        $fs_source = $fs->{source}->{dir} if ref($fs_source) eq 'HASH';
+        return $fs if $fs_source eq $source;
     }
     return;
 }

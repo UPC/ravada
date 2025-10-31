@@ -42,11 +42,25 @@ sub test_fs_bare($vm) {
     is($fs_source_clone, $fs_source_base);
     is($fs_target_clone, $fs_target_base);
 
+    my $hw_fs1 = $domain->info(user_admin)->{hardware}->{filesystem};
+
     my $domain_f = Ravada::Front::Domain->open($domain->id);
-    my $hw_fs2 = $domain->info(user_admin)->{hardware}->{filesystem};
-    ok($hw_fs2);
-    is(scalar(@$hw_fs2),1)or die Dumper($hw_fs2);
-    warn Dumper($hw_fs2);
+    my $hw_fs2 = $domain_f->info(user_admin)->{hardware}->{filesystem};
+
+    for my $hw_fs ($hw_fs2, $hw_fs1) {
+
+        ok($hw_fs);
+        is(ref($hw_fs),'ARRAY') or die Dumper($hw_fs);
+        is(scalar(@$hw_fs),1)or die Dumper($hw_fs);
+
+        for my $entry (@$hw_fs) {
+            die Dumper($hw_fs) if !$entry || !ref($entry);
+            for my $field ('_id','enabled','source') {
+                ok(exists $entry->{$field},"Missing field $field")
+                    or die Dumper($entry);
+            }
+        }
+    }
 
     test_remove_fs($domain);
 
@@ -236,13 +250,8 @@ sub test_fs_disabled($domain) {
     is($req2->status,'done');
     is($req2->error,'');
 
-    my $hw_fs2 = $domain->info(user_admin)->{hardware}->{filesystem};
-    ok($hw_fs2);
-    ok($hw_fs2->[0]) or die Dumper($hw_fs2);
-    is($hw_fs2->[0]->{enabled},0) or die Dumper($hw_fs2->[0]);
-
     my $domain_f = Ravada::Front::Domain->open($domain->id);
-    $hw_fs2 = $domain->info(user_admin)->{hardware}->{filesystem};
+    my $hw_fs2 = $domain->info(user_admin)->{hardware}->{filesystem};
     ok($hw_fs2);
     is(scalar(@$hw_fs2),1)or die Dumper($hw_fs2);
 

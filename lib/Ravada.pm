@@ -5499,6 +5499,7 @@ sub _fix_clone_args($self, $args, $id_clone) {
     my ($id) = $sth->fetchrow();
     return if !defined $id;
     $args->{data}->{_id}=$id;
+    delete $args->{data}->{id_domain};
     return $id;
 }
 
