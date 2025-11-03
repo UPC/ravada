@@ -55,10 +55,14 @@ sub test_fs_bare($vm) {
 
         for my $entry (@$hw_fs) {
             die Dumper($hw_fs) if !$entry || !ref($entry);
-            for my $field ('_id','enabled','source') {
+            for my $field ('_id','enabled','source','target','_name') {
                 ok(exists $entry->{$field},"Missing field $field")
                     or die Dumper($entry);
             }
+            is(ref($entry->{source}),'HASH');
+            is(ref($entry->{target}),'HASH');
+            ok(exists $entry->{source}->{dir});
+            ok(exists $entry->{target}->{dir});
         }
     }
 
@@ -130,6 +134,10 @@ sub test_fs_disabled_clones($base, $chroot) {
     my $hw_fs = $base->info(user_admin)->{hardware}->{filesystem};
     is($hw_fs->[0]->{enabled},1);
 
+    my $clone = _clone($base, user_admin());
+    my $hw_fs_clone = $clone->info(user_admin)->{hardware}->{filesystem};
+    is($hw_fs_clone->[0]->{target}->{dir},$hw_fs->[0]->{target}->{dir}) or die;
+
     my $new = dclone($hw_fs->[0]);
     unlock_hash(%$new);
     $new->{enabled}=0;
@@ -155,6 +163,7 @@ sub test_fs_disabled_clones($base, $chroot) {
         ok($hw_fs2);
         ok($hw_fs2->[0]) or die Dumper($hw_fs2);
         is($hw_fs2->[0]->{enabled},0) or die Dumper($hw_fs2->[0]);
+        is($hw_fs2->[0]->{target}->{dir},$new->{target}->{dir}) or die Dumper($hw_fs2->[0]);
 
         my ($fs_source_base, $fs_target_base) = _get_fs_xml($domain);
         is($fs_source_base,undef);
@@ -169,17 +178,26 @@ sub test_fs_disabled_clones($base, $chroot) {
 
     wait_request();
     for my $domain ( $base->clones()) {
-        my $clone = Ravada::Domain->open($domain->{id});
         my ($fs_source_base, $fs_target_base) = _get_fs_xml($clone);
         is($fs_source_base,undef);
         is($fs_target_base,undef);
 
-        $clone->shutdown_now(user_admin);
     }
+    my $req = Ravada::Request->remove_hardware(
+        name => 'filesystem'
+        ,uid => user_admin->id
+        ,id_domain => $clone->id
+        ,index => 0
+    );
+    wait_request();
+
+    remove_domain($clone);
 
 }
 
 sub test_fs_enabled_clones($base, $chroot) {
+
+    my $clone = _clone($base, user_admin());
 
     my $hw_fs = $base->info(user_admin)->{hardware}->{filesystem};
     is($hw_fs->[0]->{enabled},0);
@@ -221,23 +239,25 @@ sub test_fs_enabled_clones($base, $chroot) {
 
     wait_request();
     for my $domain ( $base->clones()) {
-        my $clone = Ravada::Domain->open($domain->{id});
         my ($fs_source_base, $fs_target_base) = _get_fs_xml($clone);
         like($fs_source_base,qr/source dir=/);
         like($fs_target_base, qr/target dir=/);
 
-        $clone->shutdown_now(user_admin);
     }
+
+    remove_domain($clone);
 }
 
 
 sub test_fs_disabled($domain) {
 
-    my $hw_fs = $domain->info(user_admin)->{hardware}->{filesystem};
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    my $hw_fs = $domain_f->info(user_admin)->{hardware}->{filesystem};
     is($hw_fs->[0]->{enabled},1);
     my $new = dclone($hw_fs->[0]);
     unlock_hash(%$new);
     $new->{enabled}=0;
+    $new->{target}->{dir}=new_domain_name();
 
     my $req2 = Ravada::Request->change_hardware(
         uid => user_admin->id
@@ -250,8 +270,8 @@ sub test_fs_disabled($domain) {
     is($req2->status,'done');
     is($req2->error,'');
 
-    my $domain_f = Ravada::Front::Domain->open($domain->id);
-    my $hw_fs2 = $domain->info(user_admin)->{hardware}->{filesystem};
+    $domain_f = Ravada::Front::Domain->open($domain->id);
+    my $hw_fs2 = $domain_f->info(user_admin)->{hardware}->{filesystem};
     ok($hw_fs2);
     is(scalar(@$hw_fs2),1)or die Dumper($hw_fs2);
 
@@ -259,6 +279,17 @@ sub test_fs_disabled($domain) {
     is($hw_fs2->[0]->{enabled},0) or die Dumper($hw_fs2->[0]);
     is($hw_fs2->[0]->{_can_edit},1) or die Dumper($hw_fs2->[0]);
     is($hw_fs2->[0]->{_can_remove},1) or die Dumper($hw_fs2->[0]);
+    my $entry = $hw_fs2->[0];
+    for my $field ('_id','enabled','source','target','_name') {
+        ok(exists $entry->{$field},"Missing field $field")
+            or die Dumper($entry);
+    }
+    # name is sucked from target, so we don't care
+    delete $new->{_name};
+    unlock_hash(%$entry);
+    delete $entry->{_name};
+    lock_hash(%$entry);
+    is_deeply($entry, $new) or die Dumper([$entry, $new]);
 
     my ($fs_source_base, $fs_target_base) = _get_fs_xml($domain);
     is($fs_source_base,undef);
@@ -279,7 +310,8 @@ sub test_fs_disabled($domain) {
 
 sub test_fs_enabled($domain) {
 
-    my $hw_fs = $domain->info(user_admin)->{hardware}->{filesystem};
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    my $hw_fs = $domain_f->info(user_admin)->{hardware}->{filesystem};
     is($hw_fs->[0]->{enabled},0) or die "Expecting disabled";
     my $new = dclone($hw_fs->[0]);
     unlock_hash(%$new);
@@ -300,6 +332,7 @@ sub test_fs_enabled($domain) {
     ok($hw_fs2);
     ok($hw_fs2->[0]) or die Dumper($hw_fs2);
     is($hw_fs2->[0]->{enabled},1) or die Dumper($hw_fs2->[0]);
+    is_deeply($hw_fs2->[0], $new);
 
     my ($fs_source_base, $fs_target_base) = _get_fs_xml($domain);
     ok($fs_source_base);
@@ -395,7 +428,6 @@ sub test_fs_change($vm) {
     }
 }
 
-
 sub _clone($base, $user) {
     my $name = new_domain_name();
     $base->prepare_base(user_admin) if !$base->is_base();
@@ -439,6 +471,8 @@ sub test_fs_table($id_domain, @data) {
         $data2{id_domain} = $id_domain;
         $data2{source} = $data2{source}->{dir};
 
+        like($row->{target},qr/[\w\d\_]+/);
+        delete $row->{target};
         is_deeply($row, \%data2,"Expecting same data in entry ".$n++)
             or die Dumper([$id_domain, $row, \%data2]);
     }
@@ -576,8 +610,7 @@ for my $vm_name ( 'KVM' ) {
         test_fs_enabled($domain);
 
         $domain->prepare_base(user_admin);
-        $domain->clone(name => new_domain_name,user => user_admin);
-        for my $chroot (0,1) {
+        for my $chroot (1,0) {
             test_fs_disabled_clones($domain, $chroot);
             test_fs_enabled_clones($domain, $chroot);
         }

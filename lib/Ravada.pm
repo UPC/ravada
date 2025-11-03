@@ -2218,6 +2218,7 @@ sub _sql_create_tables($self) {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
             ,source => 'char(120) NOT NULL'
+            ,target => 'char(120) NOT NULL default ""'
             ,chroot => 'integer(4) not null default 0'
             ,subdir_uid => 'integer not null default 1000'
             ,enabled => 'integer(4) not null default 1'
@@ -5483,22 +5484,23 @@ sub _fix_clone_args($self, $args, $id_clone) {
     return 1 if $args->{hardware} ne 'filesystem';
 
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id FROM domain_filesystems "
-        ." WHERE id_domain=? AND source=?"
+        "SELECT id,source FROM domain_filesystems "
+        ." WHERE id_domain=? AND target=?"
     );
-    my $source;
-    if (exists $args->{data}->{source} && defined $args->{data}->{source}) {
-        $source = $args->{data}->{source};
-        $source = $source->{dir} if ref($source) eq 'HASH';
+    my $target;
+    if (exists $args->{data}->{target} && defined $args->{data}->{target}) {
+        $target = $args->{data}->{target};
+        $target = $target->{dir} if ref($target) eq 'HASH';
     } else {
-        # If source is not defined, skip setting _id
+        # If target is not defined, skip setting _id
         return;
     }
 
-    $sth->execute($id_clone, $source);
-    my ($id) = $sth->fetchrow();
+    $sth->execute($id_clone, $target);
+    my ($id, $source) = $sth->fetchrow();
     return if !defined $id;
     $args->{data}->{_id}=$id;
+    $args->{data}->{source}=$source;
     delete $args->{data}->{id_domain};
     return $id;
 }

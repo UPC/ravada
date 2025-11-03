@@ -143,13 +143,10 @@ sub _get_controller_filesystem($self) {
         my $name = $fs->{target}->{dir};
         $fs->{_name} = $name;
 
-        delete $fs->{accessmode};
-        delete $fs->{driver};
-        delete $fs->{type};
+        delete $fs->{$_} for ('accessmode','driver','type');
 
         lock_hash(%$fs);
     }
-
 
     return @fs_info;
 }
