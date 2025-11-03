@@ -17,6 +17,7 @@ use Hash::Util qw(lock_keys lock_hash);
 use IPC::Run3 qw(run3);
 use MIME::Base64;
 use Moose;
+use Storable qw(dclone);
 use Sys::Virt::Stream;
 use Sys::Virt::Domain;
 use Sys::Virt;
@@ -3288,6 +3289,9 @@ sub _change_hardware_filesystem($self, $index, $data) {
     if !ref($data->{source}) || !exists $data->{source}->{dir}
     || !defined $data->{source}->{dir};
 
+    # store original data to add filesystem when re-enabled
+    my $data0 = dclone($data);
+
     my $source = delete $data->{source}->{dir};
     my $target;
     $target = delete $data->{target}->{dir} if exists $data->{target};
@@ -3296,6 +3300,7 @@ sub _change_hardware_filesystem($self, $index, $data) {
     if !keys %{$data->{source}};
     delete $data->{target}
     if !keys %{$data->{target}};
+    my $enabled = delete $data->{enabled};
 
     confess "Error: extra arguments ".Dumper($data)
     if keys %$data;
@@ -3310,18 +3315,28 @@ sub _change_hardware_filesystem($self, $index, $data) {
     my $doc = XML::LibXML->load_xml(string => $self->xml_description);
     my $count = 0;
     my $changed = 0;
+    my $found = 0;
 
     my ($devices) = $doc->findnodes('/domain/devices');
     for my $fs ($devices->findnodes('filesystem')) {
         next if $count++ != $index;
-        my ($xml_source) = $fs->findnodes("source");
-        my ($xml_target) = $fs->findnodes("target");
-        $xml_source->setAttribute(dir => $source);
-        $xml_target->setAttribute(dir => $target) if $target;
+        $found++;
+        if (defined $enabled && !$enabled) {
+            $devices->removeChild($fs);
+        } else {
+            my ($xml_source) = $fs->findnodes("source");
+            my ($xml_target) = $fs->findnodes("target");
+            $xml_source->setAttribute(dir => $source);
+            $xml_target->setAttribute(dir => $target) if $target;
+        }
         $changed++;
     }
 
-    $self->reload_config($doc) if $changed;
+    if ($changed) {
+        $self->reload_config($doc);
+    } elsif(!$found) {
+        $self->_set_controller_filesystem($index, $data0);
+    }
 }
 
 sub _default_cpu($self) {
@@ -3445,6 +3460,9 @@ sub _change_hardware_cpu($self, $index, $data) {
 
     _change_xml($domain, 'cpu', $data->{cpu});
 
+    if ($data->{cpu}->{mode} && $data->{cpu}->{mode} ne 'host-passthrough') {
+        $cpu->removeAttribute('migratable');
+    }
     if ( $feature ) {
         _change_xml_list($cpu, 'feature', $feature, 'name');
     }

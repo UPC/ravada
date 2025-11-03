@@ -229,4 +229,12 @@ sub _load_grants($self) {
     $sth->finish;
 }
 
+sub _search_name_by_id($id) {
+    _init_connector();
+    my $sth = $$CON->dbh->prepare("SELECT name FROM groups_local WHERE id=?");
+    $sth->execute($id);
+    my ($found) = $sth->fetchrow;
+    return $found;
+}
+
 1;

@@ -429,14 +429,24 @@ sub add_group_ldap {
 sub remove_group_ldap {
     my $login = shift;
 
+    die "Error: I will not remove all the groups"
+    if $login eq '*';
+
     my $ravada = Ravada->new( %CONFIG);
     my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
-    my $group = Ravada::Auth::LDAP::search_group( name => $login )
-        or die "Error: LDAP group '$login' not found\n";
+    my @group = Ravada::Auth::LDAP::search_group( name => $login );
+    die "Error: LDAP group '$login' not found\n" unless @group;
 
-    $group->delete()->update($ldap);
+    for my $group ( @group ) {
+        if ($ENV{TERM} && scalar(@group)>1) {
+            print "Remove LDAP group ".$group->dn." ? (y/N)";
+            my $ok = <STDIN>;
+            next unless $ok =~ /y/i;
+        }
+        $group->delete()->update($ldap);
 
-    print "LDAP group ".$group->dn." removed.\n";
+        print "LDAP group ".$group->dn." removed.\n";
+    }
     exit 0;
 }
 
@@ -457,7 +467,7 @@ sub add_user_group {
     _show_ldap_group_membership($login);
 
     print "Add user to LDAP group: ";
-    my $new_group = <stdin>;
+    my $new_group = <STDIN>;
     chomp $new_group;
 
     my @groups = Ravada::Auth::LDAP::search_group( name => '*' );
@@ -1183,7 +1193,7 @@ sub purge_nodes($rvd_back) {
             print "Found $name [$id_domain] unused in $vm_name.\n";
             print "Remove $vol\n";
             print "[y/N] ? ";
-            my $ok= <stdin>;
+            my $ok= <STDIN>;
             next if $ok !~ /y/i;
 
                 $vm->remove_file($vol);

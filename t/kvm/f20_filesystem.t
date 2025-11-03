@@ -3,9 +3,10 @@ use strict;
 
 use Carp qw(confess);
 use Data::Dumper;
-use Hash::Util qw(lock_hash);
+use Hash::Util qw(lock_hash unlock_hash);
 use IPC::Run3;
 use JSON::XS;
+use Storable qw(dclone);
 use Test::More;
 use XML::LibXML;
 
@@ -71,6 +72,9 @@ sub test_fs_added($vm) {
     );
     wait_request();
 
+    my ($fs_source_base, $fs_target_base) = _get_fs_xml($domain);
+    ok($fs_source_base);
+
     my $sth = connector->dbh->prepare(
         "DELETE FROM domain_filesystems WHERE id_domain=?"
     );
@@ -93,8 +97,201 @@ sub test_fs_added($vm) {
     );
     wait_request();
 
+    ($fs_source_base, $fs_target_base) = _get_fs_xml($domain);
+    ok($fs_source_base);
+
+    $domain->shutdown_now(user_admin);
+
+    return $domain;
 }
 
+sub test_fs_disabled_clones($base, $chroot) {
+
+    my $hw_fs = $base->info(user_admin)->{hardware}->{filesystem};
+    is($hw_fs->[0]->{enabled},1);
+
+    my $new = dclone($hw_fs->[0]);
+    unlock_hash(%$new);
+    $new->{enabled}=0;
+    $new->{chroot} = ( $chroot or 0);
+
+    my $req2 = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,hardware => 'filesystem'
+        ,id_domain => $base->id
+        ,index => 0
+        ,data => $new
+    );
+    wait_request(debug => 0);
+    is($req2->status,'done');
+    is($req2->error,'');
+    wait_request(debug => 0);
+
+    for my $domain ( $base, $base->clones()) {
+        $domain = Ravada::Domain->open($domain->{id})
+        if ref($domain) eq 'HASH';
+
+        my $hw_fs2 = $domain->info(user_admin)->{hardware}->{filesystem};
+        ok($hw_fs2);
+        ok($hw_fs2->[0]) or die Dumper($hw_fs2);
+        is($hw_fs2->[0]->{enabled},0) or die Dumper($hw_fs2->[0]);
+
+        my ($fs_source_base, $fs_target_base) = _get_fs_xml($domain);
+        is($fs_source_base,undef);
+        is($fs_target_base,undef);
+
+        Ravada::Request->start_domain(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+        ) unless $domain->is_base;
+
+    }
+
+    wait_request();
+    for my $domain ( $base->clones()) {
+        my $clone = Ravada::Domain->open($domain->{id});
+        my ($fs_source_base, $fs_target_base) = _get_fs_xml($clone);
+        is($fs_source_base,undef);
+        is($fs_target_base,undef);
+
+        $clone->shutdown_now(user_admin);
+    }
+
+}
+
+sub test_fs_enabled_clones($base, $chroot) {
+
+    my $hw_fs = $base->info(user_admin)->{hardware}->{filesystem};
+    is($hw_fs->[0]->{enabled},0);
+
+    my $new = dclone($hw_fs->[0]);
+    unlock_hash(%$new);
+    $new->{enabled}=1;
+    $new->{chroot} = ( $chroot or 0);
+
+    my $req2 = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,hardware => 'filesystem'
+        ,id_domain => $base->id
+        ,index => 0
+        ,data => $new
+    );
+    wait_request(debug => 0);
+    is($req2->status,'done');
+    is($req2->error,'');
+    wait_request(debug => 0);
+
+    for my $domain ( $base, $base->clones()) {
+        $domain = Ravada::Domain->open($domain->{id})
+        if ref($domain) eq 'HASH';
+        my $hw_fs2 = $domain->info(user_admin)->{hardware}->{filesystem};
+        ok($hw_fs2);
+        ok($hw_fs2->[0]) or die Dumper($hw_fs2);
+        is($hw_fs2->[0]->{enabled},1) or die Dumper($hw_fs2->[0]);
+
+        my ($fs_source_base, $fs_target_base) = _get_fs_xml($domain);
+        like($fs_source_base,qr/source dir=/);
+        like($fs_target_base, qr/target dir=/);
+
+        Ravada::Request->start_domain(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+        ) unless $domain->is_base;
+    }
+
+    wait_request();
+    for my $domain ( $base->clones()) {
+        my $clone = Ravada::Domain->open($domain->{id});
+        my ($fs_source_base, $fs_target_base) = _get_fs_xml($clone);
+        like($fs_source_base,qr/source dir=/);
+        like($fs_target_base, qr/target dir=/);
+
+        $clone->shutdown_now(user_admin);
+    }
+}
+
+
+sub test_fs_disabled($domain) {
+
+    my $hw_fs = $domain->info(user_admin)->{hardware}->{filesystem};
+    is($hw_fs->[0]->{enabled},1);
+    my $new = dclone($hw_fs->[0]);
+    unlock_hash(%$new);
+    $new->{enabled}=0;
+
+    my $req2 = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,hardware => 'filesystem'
+        ,id_domain => $domain->id
+        ,index => 0
+        ,data => $new
+    );
+    wait_request();
+    is($req2->status,'done');
+    is($req2->error,'');
+
+    my $hw_fs2 = $domain->info(user_admin)->{hardware}->{filesystem};
+    ok($hw_fs2);
+    ok($hw_fs2->[0]) or die Dumper($hw_fs2);
+    is($hw_fs2->[0]->{enabled},0) or die Dumper($hw_fs2->[0]);
+
+    my ($fs_source_base, $fs_target_base) = _get_fs_xml($domain);
+    is($fs_source_base,undef);
+    is($fs_target_base,undef);
+
+    Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request();
+    ($fs_source_base, $fs_target_base) = _get_fs_xml($domain);
+    is($fs_source_base,undef);
+    is($fs_target_base,undef);
+
+    $domain->shutdown_now(user_admin);
+
+}
+
+sub test_fs_enabled($domain) {
+
+    my $hw_fs = $domain->info(user_admin)->{hardware}->{filesystem};
+    is($hw_fs->[0]->{enabled},0) or die "Expecting disabled";
+    my $new = dclone($hw_fs->[0]);
+    unlock_hash(%$new);
+    $new->{enabled}=1;
+
+    my $req2 = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,hardware => 'filesystem'
+        ,id_domain => $domain->id
+        ,index => 0
+        ,data => $new
+    );
+    wait_request();
+    is($req2->status,'done');
+    is($req2->error,'');
+
+    my $hw_fs2 = $domain->info(user_admin)->{hardware}->{filesystem};
+    ok($hw_fs2);
+    ok($hw_fs2->[0]) or die Dumper($hw_fs2);
+    is($hw_fs2->[0]->{enabled},1) or die Dumper($hw_fs2->[0]);
+
+    my ($fs_source_base, $fs_target_base) = _get_fs_xml($domain);
+    ok($fs_source_base);
+    ok($fs_target_base);
+
+    Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request();
+    ($fs_source_base, $fs_target_base) = _get_fs_xml($domain);
+    ok($fs_source_base);
+    ok($fs_target_base);
+
+    $domain->shutdown_now(user_admin);
+
+}
 sub test_remove_fs($domain) {
     my $req = Ravada::Request->remove_hardware(
         name => 'filesystem'
@@ -163,10 +360,14 @@ sub test_fs_change($vm) {
 
     my $xml = XML::LibXML->load_xml(string => $domain->xml_description);
     my ($fs) = $xml->findnodes("/domain/devices/filesystem");
-    my ($fs_source) = $fs->findnodes("source");
-    my ($fs_target) = $fs->findnodes("target");
-    is($fs_source->getAttribute('dir'), $source2 );
-    is($fs_target->getAttribute('dir'), $target2 );
+    ok($fs);
+    my ($fs_source, $fs_target);
+    if ($fs) {
+        ($fs_source) = $fs->findnodes("source");
+        ($fs_target) = $fs->findnodes("target");
+        is($fs_source->getAttribute('dir'), $source2 );
+        is($fs_target->getAttribute('dir'), $target2 );
+    }
 }
 
 
@@ -220,6 +421,7 @@ sub test_fs_table($id_domain, @data) {
 
 sub _fs_data {
     my $data = { chroot => 1
+            ,enabled => 1
             ,subdir_uid => $UID++
             ,source => {dir => _new_source()}
     };
@@ -342,7 +544,18 @@ for my $vm_name ( 'KVM' ) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
-        test_fs_added($vm);
+        my $domain = test_fs_added($vm);
+        test_fs_disabled($domain);
+        test_fs_enabled($domain);
+
+        $domain->prepare_base(user_admin);
+        $domain->clone(name => new_domain_name,user => user_admin);
+        for my $chroot (0,1) {
+            test_fs_disabled_clones($domain, $chroot);
+            test_fs_enabled_clones($domain, $chroot);
+        }
+
+        remove_domain($domain);
 
         test_fs_bare($vm);
         test_fs_change($vm);

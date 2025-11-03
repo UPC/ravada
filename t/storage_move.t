@@ -29,13 +29,21 @@ sub _create_storage_pool($vm, $dir=undef) {
     mkdir $dir if ! -e $dir;
 
     my ($old) = grep {$_ eq $name } $vm->list_storage_pools();
-    return($name, $dir) if $old;
 
-    my $req = Ravada::Request->create_storage_pool(
+    if (!$old) {
+        my $req = Ravada::Request->create_storage_pool(
+            uid => user_admin->id
+            ,id_vm => $vm->id
+            ,name => $name
+            ,directory => $dir
+        );
+        wait_request();
+    }
+    Ravada::Request->active_storage_pool(
         uid => user_admin->id
         ,id_vm => $vm->id
         ,name => $name
-        ,directory => $dir
+        ,value => 1
     );
     wait_request();
 
@@ -77,6 +85,7 @@ sub test_do_not_overwrite($vm) {
     like($req->error, qr/already exist/);
 
     unlink "$dir/$filename" or die "$! $dir/$filename";
+    $vm->remove_storage_pool($sp);
     rmdir($dir) or die "$! $dir";
 }
 
@@ -144,6 +153,7 @@ sub test_fail($vm) {
 
     $domain->remove(user_admin);
     `umount $dir`;
+    $vm->remove_storage_pool($sp);
     rmdir $dir  or die "$! $dir";
     unlink $dev or die "$! $dev";
 
@@ -181,6 +191,7 @@ sub test_queue_move($vm) {
     is($req2->after_request, $req1->id);
 
     remove_domain($domain);
+    $vm->remove_storage_pool($sp);
 
 }
 
@@ -219,14 +230,18 @@ sub test_queue_change_hw($vm) {
 
     $domain->remove(user_admin);
 
+    $vm->remove_storage_pool($sp);
     rmdir($dir) or die "$! $dir";
 
 }
 
-sub test_move_volume($vm) {
-    my $domain = create_domain_v2(vm => $vm, data => 1, swap => 1 );
+sub test_move_volume($vm, $domain=undef) {
+    $domain = create_domain_v2(vm => $vm, data => 1, swap => 1 )
+    if !$domain;
+
     $domain->add_volume( name => new_domain_name().".raw"
-        ,type => "raw"
+        ,format => "raw"
+        ,size => 2*1024*1024*1024
     );
     my ($sp, $dir) = _create_storage_pool($vm);
 
@@ -263,6 +278,7 @@ sub test_move_volume($vm) {
         }
         ok(-e "$dir/$filename", "Expecting $dir/$filename") or exit;
     }
+    my $file_iso;
     for my $vol ($domain->list_volumes_info ) {
 
         is($vol->info->{storage_pool},$sp, $vol->file) or exit;
@@ -272,16 +288,32 @@ sub test_move_volume($vm) {
         $md5sum =~ s/(.*?) .*/$1/;
         my ($filename)= $file =~ m{.*/(.*)};
         is($md5sum,$md5{$filename}, $file) or exit;
-        unlink $file or die "$! $file"
+        $file_iso = $file
         if $file =~ /\.iso$/ && -e $file;
     }
     my @volumes = $domain->list_volumes();
     $domain->remove(user_admin);
+    unlink $file_iso if $file_iso;
     for my $vol (@volumes) {
         ok(!-e $vol);
     }
 
+    $vm->remove_storage_pool($sp);
     rmdir($dir) or die "$! $dir";
+}
+
+sub test_move_volume_zztest($vm) {
+    return if $vm->type ne 'KVM';
+    my $base = import_domain($vm);
+    my $clone = $base->clone(name => new_domain_name()
+        ,user => user_admin
+    );
+    my $req = Ravada::Request->spinoff(
+        uid => user_admin->id
+        ,id_domain => $clone->id
+    );
+    wait_request();
+    test_move_volume($vm, $clone);
 }
 
 ########################################################################
@@ -304,6 +336,7 @@ for my $vm_name ( vm_names() ) {
         skip $msg,10    if !$vm;
 
         diag("test $vm_name");
+        test_move_volume_zztest($vm);
         test_queue_move($vm);
         test_queue_change_hw($vm);
         test_fail($vm);

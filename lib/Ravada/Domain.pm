@@ -1131,6 +1131,8 @@ Makes volumes indpendent from base
 sub spinoff {
     my $self = shift;
 
+    $self->_check_has_clones();
+
     $self->_do_force_shutdown() if $self->is_active;
     confess "Error: spinoff from remote nodes not available. Node: ".$self->_vm->name
         if !$self->is_local;
@@ -1180,7 +1182,7 @@ sub _check_has_clones {
     return if !$self->is_known();
 
     my @clones = $self->clones;
-    confess "Domain ".$self->name." has ".scalar @clones." clones : ".Dumper(\@clones)
+    die "Domain ".$self->name." has ".scalar @clones." clones.\n"
         if $#clones>=0;
 }
 
@@ -6367,41 +6369,64 @@ sub _change_info_filesystem($self, $data) {
         delete $data2->{$key} if $key =~ /^_/;
     }
 
+    # check the filesystem exists for this domain
+    my $sth = $self->_dbh->prepare("SELECT * FROM domain_filesystems "
+                                    ." WHERE id=? AND id_domain=?");
+    $sth->execute($id, $self->id);
+    my $row = $sth->fetchrow_hashref();
+    die "Error: filesystem $id not found for domain=".$self->id if !$row;
+
     my $sql = "UPDATE domain_filesystems SET "
         .join(",", map { "$_=?" } sort keys %$data2)
         ;
 
     my @values = map { $data2->{$_} } sort keys %$data2;
-    my $sth = $self->_dbh->prepare("$sql WHERE id=?");
+    $sth = $self->_dbh->prepare("$sql WHERE id=?");
     $sth->execute(@values,$id);
 }
 
 sub _load_info_filesystem($self, $list) {
     my $sth = $self->_dbh->prepare(
         "SELECT * FROM domain_filesystems "
-        ." WHERE id_domain=? AND source=?"
+        ." WHERE id_domain=? "
     );
+    $sth->execute($self->id);
+    my @fs;
+    while ( my $row =$sth->fetchrow_hashref ) {
+        push @fs,($row);
+    }
     for my $item (@$list) {
         unlock_hash(%$item);
 
         my $source = $item->{source};
         $source = $item->{source}->{dir} if ref($item->{source});
 
-        $sth->execute($self->id,$source);
-        my $info = $sth->fetchrow_hashref();
+        my ($info) = grep { $_->{source} eq $source} @fs;
 
         if ( !$info->{id} ) {
             my $data = {
                 source => $source
             };
             $self->_add_info_filesystem($data);
-            $sth->execute($self->id,$source);
-            $info = $sth->fetchrow_hashref();
+            # Re-query the database to fetch the newly created record
+            my $sth_info = $self->_dbh->prepare(
+                "SELECT * FROM domain_filesystems WHERE id_domain=? AND source=?"
+            );
+            $sth_info->execute($self->id, $source);
+            $info = $sth_info->fetchrow_hashref;
         }
 
+        $item->{enabled} = delete $info->{enabled};
         $item->{chroot} = delete $info->{chroot};
         $item->{subdir_uid} = delete $info->{subdir_uid};
         $item->{_id} = $info->{id};
+        lock_hash(%$item);
+    }
+    for my $item (@fs) {
+        next if grep {$_->{source} eq $item->{source}} @$list;
+        $item->{_id}= delete $item->{id};
+        delete $item->{id_domain};
+        push @$list,($item);
         lock_hash(%$item);
     }
 }
@@ -6592,7 +6617,7 @@ sub _around_add_hardware($orig, $self, $hardware, $index, $data=undef) {
             $self->_add_info_filesystem($data_orig);
         }
     }
-    if (!$hardware eq 'disk' && $self->is_known() && !$self->is_base ) {
+    if ($hardware ne 'disk' && $self->is_known() && !$self->is_base ) {
         # disk is changed in main node, then redefined already
         $self->_redefine_instances();
     }
@@ -6802,6 +6827,14 @@ sub _allow_group_access($self, %args) {
     $type = 'ldap' if !$type || $type eq 'group';
 
     confess "Error: unknown args ".Dumper(\%args) if keys %args;
+
+    if ($type eq 'local') {
+        $group = Ravada::Auth::Group::_search_name_by_id($id_group)
+        if !$group;
+        my %groups = map { $_ => 1 } $self->list_access_groups($type);
+        return if defined $group && $groups{$group};
+    }
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO group_access "
         ."( id_domain, id_group, name, type)"
@@ -6822,15 +6855,16 @@ sub list_access_groups($self, $type) {
         ."   AND type=?"
     );
     $sth->execute($self->id, $type);
-    my @groups;
+    my %groups;
     my $sth_gname = $$CONNECTOR->dbh->prepare("SELECT name FROM groups_local WHERE id=?");
     while ( my $row = $sth->fetchrow_hashref ) {
         if (!$row->{name} && $row->{id_group}) {
             $sth_gname->execute($row->{id_group});
             ($row->{name}) = $sth_gname->fetchrow;
         }
-        push @groups,($row->{name});
+        $groups{$row->{name}}++;
     }
+    my @groups = sort keys %groups;
     return @groups;
 }
 

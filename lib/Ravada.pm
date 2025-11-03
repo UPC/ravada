@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '2.4.1';
+our $VERSION = '2.4.2';
 
 use utf8;
 
@@ -21,7 +21,6 @@ use Time::HiRes qw(gettimeofday tv_interval);
 use YAML;
 use MIME::Base64;
 use Socket qw( inet_aton inet_ntoa );
-use Image::Magick::Q16;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -457,19 +456,6 @@ sub _update_isos {
 
         }
 
-        ,bionic=> {
-                    name => 'Ubuntu 18.04 Bionic Beaver'
-            ,description => 'Ubuntu 18.04 Bionic Beaver 64 bits'
-                   ,arch => 'x86_64'
-                    ,xml => 'bionic-amd64.xml'
-             ,xml_volume => 'bionic64-volume.xml'
-                    ,url => 'http://releases.ubuntu.com/18.04/'
-                ,file_re => '^ubuntu-18.04.*desktop-amd64.iso'
-                ,sha256_url => '$url/SHA256SUMS'
-          ,min_disk_size => '9'
-                ,min_ram => 1
-            ,arch => 'x86_64'
-        }
         ,ubuntu_noble => {
                     name => 'Ubuntu 24.04 Noble Nombat'
             ,description => 'Ubuntu 24.04 Noble Nombat 64 bits'
@@ -705,7 +691,7 @@ sub _update_isos {
             name =>'Debian 12 Bookworm 64 bits'
             ,arch => 'x86_64'
             ,description => 'Debian 12 Bookworm 64 bits (netinst)'
-            ,url => 'https://cdimage.debian.org/debian-cd/12[\.\d]+/amd64/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/12[\.\d]+/amd64/iso-cd/'
             ,file_re => 'debian-12.[\d\.]+-amd64-netinst.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,xml => 'jessie-amd64.xml'
@@ -718,7 +704,7 @@ sub _update_isos {
             name =>'Debian 12 Bookworm 32 bits'
             ,arch => 'i686'
             ,description => 'Debian 12 Bookworm 32 bits (netinst)'
-            ,url => 'https://cdimage.debian.org/debian-cd/12[\.\d]+/i386/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/12[\.\d]+/i386/iso-cd/'
             ,file_re => 'debian-12.[\d\.]+-i386-netinst.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,xml => 'jessie-amd64.xml'
@@ -727,7 +713,19 @@ sub _update_isos {
             ,min_ram => 3
             ,options => { machine => 'pc-i440fx'}
         }
-
+        ,debian_trixie_64 => {
+            name =>'Debian 13 Trixie 64 bits'
+            ,arch => 'x86_64'
+            ,description => 'Debian 13 Trixie 64 bits (netinst)'
+            ,url => 'https://cdimage.debian.org/debian-cd/13[\.\d]+/amd64/iso-cd/'
+            ,file_re => 'debian-13.[\d\.]+-amd64-netinst.iso'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '11'
+            ,min_ram => 3
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+        }
         ,devuan_beowulf_amd64=> {
             name =>'Devuan 10 Beowulf 64 bits'
             ,description => 'Devuan Beowulf Desktop Live (amd64)'
@@ -1496,7 +1494,31 @@ sub _update_data {
     $self->_add_domain_drivers_cpu();
     $self->_add_domain_drivers_usb_controller();
 
+    $self->_remove_duplicated_group_access();
     $self->_add_indexes();
+}
+
+sub _remove_duplicated_group_access($self) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT * FROM group_access "
+    );
+    my $sth_del = $CONNECTOR->dbh->prepare(
+        "DELETE FROM group_access WHERE id=?"
+    );
+    $sth->execute();
+    my %found;
+    while (my $row = $sth->fetchrow_hashref ) {
+        my $key = ( $row->{id_domain} or '')
+                    .":".($row->{id_group} or '')
+                    .":".($row->{group} or '')
+                    .":".($row->{type} or '')
+                ;
+        if ($found{$key}++) {
+            warn "INFO: removing duplicated group_access ".Dumper($row);
+            $sth_del->execute($row->{id});
+        }
+    }
+
 }
 
 sub _install_grants($self) {
@@ -2203,7 +2225,7 @@ sub _sql_create_tables($self) {
             ,source => 'char(120) NOT NULL'
             ,chroot => 'integer(4) not null default 0'
             ,subdir_uid => 'integer not null default 1000'
-
+            ,enabled => 'integer(4) not null default 1'
             }
         ]
         ,[
@@ -2974,11 +2996,8 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
     $self->_upgrade_table('domains','balance_policy','int default 0');
 
-    if ($self->_upgrade_table('domains','screenshot','MEDIUMBLOB')) {
+    $self->_upgrade_table('domains','screenshot','MEDIUMBLOB');
 
-    $self->_upgrade_screenshots();
-
-    }
     $self->_upgrade_table('domains','shared_storage','varchar(254)');
     $self->_upgrade_table('domains','post_shutdown','int not null default 0');
     $self->_upgrade_table('domains','post_hibernated','int not null default 0');
@@ -4588,29 +4607,6 @@ sub _cmd_copy_screenshot {
     }
 }
 
-sub _upgrade_screenshots($self) {
-
-    my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id, name, file_screenshot FROM domains WHERE file_screenshot like '%' "
-    );
-    $sth->execute();
-
-    my $sth_update = $CONNECTOR->dbh->prepare(
-        "UPDATE domains set screenshot = ? WHERE id=?"
-    );
-    while ( my ($id, $name, $file_path)= $sth->fetchrow ) {
-        next if ! -e $file_path;
-        warn "INFO: converting screenshot from $name";
-        my $file= new Image::Magick::Q16;
-        $file->Read($file_path);
-        my @blobs = $file->ImageToBlob(magick => 'png');
-        eval {
-            $sth_update->execute(encode_base64($blobs[0]), $id);
-        };
-        warn $@;
-    }
-}
-
 sub _cmd_create{
     my $self = shift;
     my $request = shift;
@@ -5484,12 +5480,39 @@ sub _apply_clones($self, $request) {
     }
 
     for my $clone ($domain->clones) {
+        if ( $request->command eq 'change_hardware' ) {
+            next if !$self->_fix_clone_args($args, $clone->{id})
+        }
+
         Ravada::Request->new_request(
             $request->command
             ,%$args
             ,id_domain => $clone->{id}
         );
     }
+}
+
+sub _fix_clone_args($self, $args, $id_clone) {
+    return 1 if $args->{hardware} ne 'filesystem';
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM domain_filesystems "
+        ." WHERE id_domain=? AND source=?"
+    );
+    my $source;
+    if (exists $args->{data}->{source} && defined $args->{data}->{source}) {
+        $source = $args->{data}->{source};
+        $source = $source->{dir} if ref($source) eq 'HASH';
+    } else {
+        # If source is not defined, skip setting _id
+        return;
+    }
+
+    $sth->execute($id_clone, $source);
+    my ($id) = $sth->fetchrow();
+    return if !defined $id;
+    $args->{data}->{_id}=$id;
+    return $id;
 }
 
 sub _cmd_shutdown {
@@ -6006,13 +6029,20 @@ sub _cmd_list_storage_pools($self, $request) {
 
     my $data = $request->defined_arg('data');
 
+    $request->output(encode_json([]));
+
+    return if !$vm->vm;
+
     $request->output(encode_json([ $vm->list_storage_pools($data) ]));
 }
 
 sub _cmd_list_isos($self, $request){
     my $vm_type = $request->args('vm_type');
 
-    my $vm = Ravada::VM->open( type => $vm_type );
+    my @args = ( type => $vm_type );
+    @args = ( $vm_type) if $vm_type =~ /^\d+$/;
+
+    my $vm = Ravada::VM->open( @args );
     $vm->refresh_storage();
     my @isos = sort { "\L$a" cmp "\L$b" } $vm->search_volume_path_re(qr(.*\.iso$));
 
@@ -6611,6 +6641,7 @@ sub _domain_just_started($self, $domain) {
 sub _shutdown_disconnected($self) {
     for my $dom ( $self->list_domains_data(status => 'active') ) {
         next if !$dom->{shutdown_disconnected};
+        next if $dom->{is_pool} && $dom->{comment} eq 'daemon';
         my $domain = Ravada::Domain->open($dom->{id}) or next;
         my $is_active = $domain->is_active;
         my ($req_shutdown) = grep { $_->command eq 'shutdown'
@@ -6703,6 +6734,7 @@ sub _req_method {
 ,list_storage_pools => \&_cmd_list_storage_pools
 ,active_storage_pool => \&_cmd_active_storage_pool
 ,create_storage_pool => \&_cmd_create_storage_pool
+,remove_storage_pool => \&_cmd_remove_storage_pool
 
 # Domain ports
 ,expose => \&_cmd_expose
@@ -7347,7 +7379,26 @@ sub _cmd_create_storage_pool($self, $request) {
     my $vm = Ravada::VM->open($request->args('id_vm'));
     $vm->create_storage_pool($request->arg('name'), $request->arg('directory'));
 
+    Ravada::Request->refresh_storage(id_vm => $vm->id
+        ,uid => Ravada::Utils::user_daemon->id
+        ,_force => 1
+    );
 }
+
+sub _cmd_remove_storage_pool($self, $request) {
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized to manage storage pools"
+        if !$user->is_admin;
+
+    my $vm = Ravada::VM->open($request->args('id_vm'));
+    $vm->remove_storage_pool($request->arg('name'));
+
+    Ravada::Request->refresh_storage(id_vm => $vm->id
+        ,uid => Ravada::Utils::user_daemon->id
+        ,_force => 1
+    );
+}
+
 
 sub _cmd_move_volume($self, $request) {
 
@@ -7386,6 +7437,7 @@ sub _cmd_move_volume($self, $request) {
     if ($volume !~ /\.iso$/) {
         $vm->remove_file($volume);
     }
+    $vm->refresh_storage();
 }
 
 sub _cmd_backup($self, $request) {
