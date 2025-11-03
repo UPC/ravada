@@ -239,7 +239,7 @@ sub test_fs_enabled_clones($base, $chroot) {
 
     wait_request();
     for my $domain ( $base->clones()) {
-        my ($fs_source_base, $fs_target_base) = _get_fs_xml($clone);
+        my ($fs_source_base, $fs_target_base) = _get_fs_xml($domain);
         like($fs_source_base,qr/source dir=/);
         like($fs_target_base, qr/target dir=/);
 
