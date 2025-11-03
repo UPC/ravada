@@ -2166,9 +2166,10 @@ sub _sql_create_tables($self) {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
             ,source => 'char(120) NOT NULL'
+            ,target => 'char(120) NOT NULL default ""'
             ,chroot => 'integer(4) not null default 0'
             ,subdir_uid => 'integer not null default 1000'
-
+            ,enabled => 'integer(4) not null default 1'
             }
         ]
         ,[
@@ -5422,12 +5423,41 @@ sub _apply_clones($self, $request) {
     }
 
     for my $clone ($domain->clones) {
+        if ( $request->command eq 'change_hardware' ) {
+            next if !$self->_fix_clone_args($args, $clone->{id})
+        }
+
         Ravada::Request->new_request(
             $request->command
             ,%$args
             ,id_domain => $clone->{id}
         );
     }
+}
+
+sub _fix_clone_args($self, $args, $id_clone) {
+    return 1 if $args->{hardware} ne 'filesystem';
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,source FROM domain_filesystems "
+        ." WHERE id_domain=? AND target=?"
+    );
+    my $target;
+    if (exists $args->{data}->{target} && defined $args->{data}->{target}) {
+        $target = $args->{data}->{target};
+        $target = $target->{dir} if ref($target) eq 'HASH';
+    } else {
+        # If target is not defined, skip setting _id
+        return;
+    }
+
+    $sth->execute($id_clone, $target);
+    my ($id, $source) = $sth->fetchrow();
+    return if !defined $id;
+    $args->{data}->{_id}=$id;
+    $args->{data}->{source}=$source;
+    delete $args->{data}->{id_domain};
+    return $id;
 }
 
 sub _cmd_shutdown {
