@@ -706,7 +706,7 @@ sub can_do_domain($self, $grant, $domain) {
     # list of grants that can be applied to a virtual machine:warn
     my %valid_grant = map { $_ => 1 }
     qw(change_settings shutdown reboot rename expose_ports
-        hibernate screenshot
+        hibernate screenshot remove
     );
     confess "Invalid grant here '$grant'"   if !$valid_grant{$grant};
 

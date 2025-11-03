@@ -28,37 +28,38 @@ sub test_defaults {
 
     ok($user->can_clone);
     ok($user->can_change_settings);
-#    ok($user->can_screenshot);
+    ok($user->can_screenshot);
 
     ok($user->can_remove);
 
     ok(!$user->can_remove_clones);
 
-#    ok(!$user->can_clone_all);
+    ok(!$user->can_clone_all);
     ok(!$user->can_change_settings_all);
     ok(!$user->can_change_settings_clones);
 
 
     is($user->can_screenshot, 1);
-#    ok(!$user->can_screenshot_all);
+    ok(!$user->can_screenshot_all);
     ok(!$user->can_grant);
 
     ok(!$user->can_create_base);
     ok(!$user->can_create_machine);
-#    ok(!$user->can_remove_all);
+    ok(!$user->can_remove_all);
     ok(!$user->can_remove_clone_all);
 
-#    ok(!$user->can_shutdown_clone);
+    ok(!$user->can_shutdown_clone);
     ok(!$user->can_shutdown_all);
 
-#    ok(!$user->can_hibernate_clone);
-#    ok(!$user->can_hibernate_all);
-#    ok(!$user->can_hibernate_clone_all);
+    ok(!$user->can_hibernate_clone);
+    ok(!$user->can_hibernate_all);
+    ok(!$user->can_hibernate_clone_all);
     
     ok(!$user->can_manage_users);
 
     for my $perm (user_admin->list_permissions) {
         $perm = $perm->[0];
+        is(user_admin->can_do($perm),1);
         if ( $perm =~ m{^(clone|change_settings|screenshot|remove|shutdown|reboot|hibernate)$}) {
             is($user->can_do($perm),1,$perm);
         } else {
@@ -197,6 +198,40 @@ sub test_remove_clone {
     for my $clone3 ( $domain->clones ) {
         $clone3->remove($usera);
     }
+
+    $user->remove();
+    $usera->remove();
+}
+
+sub test_remove_all {
+    my $vm_name = shift;
+
+    my $usera = create_user(new_domain_name(),"bar",'is admin');
+    my $domain = create_domain($vm_name, $usera);
+
+    my $user = create_user();
+
+    my $req = Ravada::Request->remove_domain(
+        uid => $user->id
+        ,name => $domain->name
+    );
+    wait_request(check_error=>0);
+    like($req->error,qr/(not allowed|can't remove domain)/);
+
+    my $domain2;
+    eval { $domain2= rvd_back->search_domain($domain->name) };
+    ok($domain2, "Expecting ".$domain->name." not removed");
+
+    $usera->grant($user,'remove_all');
+    is($user->can_remove_all, 1);
+    is($user->can_remove($domain->id),1);
+
+    $req->status('requested');
+    wait_request(check_error=>0);
+    is($req->error,'');
+
+    eval { $domain2 = rvd_back->search_domain($domain->name) };
+    ok(!$domain2, "Expecting ".$domain->name." removed");
 
     $user->remove();
     $usera->remove();
@@ -1189,7 +1224,7 @@ for my $vm_name (vm_names()) {
 
     test_remove($vm_name);
     test_remove_clone($vm_name);
-    #test_remove_all($vm_name);
+    test_remove_all($vm_name);
 
     test_remove_clone_all($vm_name);
 
