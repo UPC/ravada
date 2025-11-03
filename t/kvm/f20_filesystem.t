@@ -178,7 +178,7 @@ sub test_fs_disabled_clones($base, $chroot) {
 
     wait_request();
     for my $domain ( $base->clones()) {
-        my ($fs_source_base, $fs_target_base) = _get_fs_xml($clone);
+        my ($fs_source_base, $fs_target_base) = _get_fs_xml($domain);
         is($fs_source_base,undef);
         is($fs_target_base,undef);
 
