@@ -177,7 +177,8 @@ sub test_fs_disabled_clones($base, $chroot) {
     }
 
     wait_request();
-    for my $domain ( $base->clones()) {
+    for my $domain0 ( $base->clones()) {
+        my $domain = Ravada::Domain->open($domain0->{id});
         my ($fs_source_base, $fs_target_base) = _get_fs_xml($domain);
         is($fs_source_base,undef);
         is($fs_target_base,undef);
@@ -238,7 +239,8 @@ sub test_fs_enabled_clones($base, $chroot) {
     }
 
     wait_request();
-    for my $domain ( $base->clones()) {
+    for my $domain0 ( $base->clones()) {
+        my $domain = Ravada::Domain->open($domain0->{id});
         my ($fs_source_base, $fs_target_base) = _get_fs_xml($domain);
         like($fs_source_base,qr/source dir=/);
         like($fs_target_base, qr/target dir=/);
