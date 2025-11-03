@@ -2431,6 +2431,7 @@ sub _set_controller_filesystem($self, $number, $data) {
     die "Error: missing source->{dir} in ".Dumper($data) if !ref($data->{source}) || !exists $data->{source}->{dir};
 
     my $source = delete $data->{source}->{dir} or die "Error: missing source";
+    my $target = delete $data->{target}->{dir} or confess "Error: missing target";
 
     die "Error: source '$source' doesn't exist"
     if !$self->_vm->file_exists($source);
@@ -2448,11 +2449,6 @@ sub _set_controller_filesystem($self, $number, $data) {
     $driver->setAttribute('type' => 'virtiofs');
     my $source_xml = $fs->addNewChild(undef,'source');
     $source_xml->setAttribute('dir' => $source);
-
-    my $target = $source;
-    $target =~ s{^/}{};
-    $target =~ s{/$}{};
-    $target =~ s{/}{_}g;
 
     my $target_xml = $fs->addNewChild(undef,'target');
     $target_xml->setAttribute('dir' => $target);
@@ -3301,6 +3297,7 @@ sub _change_hardware_filesystem($self, $index, $data) {
     delete $data->{target}
     if !keys %{$data->{target}};
     my $enabled = delete $data->{enabled};
+    delete $data->{id_domain};
 
     confess "Error: extra arguments ".Dumper($data)
     if keys %$data;

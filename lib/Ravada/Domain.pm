@@ -6328,9 +6328,12 @@ sub _add_info_filesystem($self, $data) {
     if exists $data->{source} && !defined $data->{source}
     || (ref($data->{source}) && !keys %{$data->{source}});
 
+    $self->_fix_filesystem_data($data);
+
     my $data2 = dclone($data);
     $data2->{id_domain} = $self->id;
     $data2->{source} = $data2->{source}->{dir} if ref($data2->{source});
+    $data2->{target} = $data2->{target}->{dir} if ref($data2->{target});
 
     my $sql = "INSERT INTO domain_filesystems ("
     .join(",",sort keys %$data2)
@@ -6352,6 +6355,7 @@ sub _remove_info_filesystem($self, $id_filesystem) {
 
 sub _change_info_filesystem($self, $data) {
     return if !keys %$data;
+    $self->_fix_filesystem_data($data);
 
     my $data2 = dclone($data);
     unlock_hash(%$data);
@@ -6361,13 +6365,14 @@ sub _change_info_filesystem($self, $data) {
 
     unlock_hash(%$data2);# it is local to this sub, so we may change it
     $data2->{source} = $data2->{source}->{dir} if ref($data2->{source});
-    delete $data2->{target};
+    $data2->{target} = $data2->{target}->{dir} if ref($data2->{target});
 
     my $id = delete $data2->{_id};
     confess "Missing _id in data2 ".Dumper($data2) if !defined $id;
     for my $key (keys %$data2) {
         delete $data2->{$key} if $key =~ /^_/;
     }
+    return if !keys %$data2;
 
     # check the filesystem exists for this domain
     my $sth = $self->_dbh->prepare("SELECT * FROM domain_filesystems "
@@ -6385,7 +6390,7 @@ sub _change_info_filesystem($self, $data) {
     $sth->execute(@values,$id);
 }
 
-sub _load_info_filesystem($self, $list) {
+sub _load_info_filesystem($self, @list) {
     my $sth = $self->_dbh->prepare(
         "SELECT * FROM domain_filesystems "
         ." WHERE id_domain=? "
@@ -6393,19 +6398,33 @@ sub _load_info_filesystem($self, $list) {
     $sth->execute($self->id);
     my @fs;
     while ( my $row =$sth->fetchrow_hashref ) {
+        my $found;
+        for my $item (@list) {
+            my $source = $item->{source}->{dir};
+            if ($source eq $row->{source}){
+                $found=$item;
+                last;
+            }
+        }
+        $row->{_id}=delete $row->{id};
+        for my $field(keys %$found) {
+            $row->{$field}=$found->{$field} if !exists $row->{$field};
+        }
+        $row->{source}->{dir} = delete $row->{source};
+        $row->{target}->{dir} = delete $row->{target};
         push @fs,($row);
     }
-    for my $item (@$list) {
-        unlock_hash(%$item);
+    # check if there are items in hardware not in the db
+    for my $item (@list) {
 
-        my $source = $item->{source};
-        $source = $item->{source}->{dir} if ref($item->{source});
+        my $source = $item->{source}->{dir};
 
-        my ($info) = grep { $_->{source} eq $source} @fs;
+        my ($info) = grep { $_->{source}->{dir} eq $source} @fs;
+        if ( ! $info || !$info->{_id} ) {
+            unlock_hash(%$item);
 
-        if ( !$info->{id} ) {
             my $data = {
-                source => $source
+                source => {dir => $source }
             };
             $self->_add_info_filesystem($data);
             # Re-query the database to fetch the newly created record
@@ -6413,22 +6432,24 @@ sub _load_info_filesystem($self, $list) {
                 "SELECT * FROM domain_filesystems WHERE id_domain=? AND source=?"
             );
             $sth_info->execute($self->id, $source);
-            $info = $sth_info->fetchrow_hashref;
+            my $info_new = $sth_info->fetchrow_hashref;
+            $item->{_id} = $info_new->{id};
+            for my $field(keys %$info_new) {
+                $item->{$field}=$info_new->{$field} if !exists $item->{$field};
+            }
+            lock_hash(%$item);
+            push @fs,($item);
         }
+    }
+    for my $fs (@fs) {
+        unlock_hash(%$fs);
+        $fs->{_can_edit} = 1;
+        $fs->{_can_remove} = 1;
+        lock_hash(%$fs);
+        $self->_fix_filesystem_data($fs);
+    }
 
-        $item->{enabled} = delete $info->{enabled};
-        $item->{chroot} = delete $info->{chroot};
-        $item->{subdir_uid} = delete $info->{subdir_uid};
-        $item->{_id} = $info->{id};
-        lock_hash(%$item);
-    }
-    for my $item (@fs) {
-        next if grep {$_->{source} eq $item->{source}} @$list;
-        $item->{_id}= delete $item->{id};
-        delete $item->{id_domain};
-        push @$list,($item);
-        lock_hash(%$item);
-    }
+    return @fs;
 }
 
 sub _create_filesystem($self, $source, $uid, $gid=0) {
@@ -6443,7 +6464,7 @@ sub _create_filesystem($self, $source, $uid, $gid=0) {
         if !S_ISDIR($mode) && !S_ISLNK($mode);
     }
     if (defined $uid &&( !@stat || $stat[4] != $uid)) {
-        chown $uid,undef,$source or die "$! chown $uid, $gid, $source";
+        chown $uid,$gid,$source or die "$! chown $uid, $gid, $source";
     }
 
 }
@@ -6474,13 +6495,17 @@ sub _chroot_filesystems($self) {
         my $data = $self->_search_filesystem_index($row->{source});
         unlock_hash(%$data);
         my $source = $row->{source}."/".$self->name;
-        $data->{source}->{dir} = $source;
+        if (ref($data->{source})eq 'HASH') {
+            $data->{source}->{dir} = $source;
+        } else {
+            $data->{source} = $source;
+        }
         my $index = delete $data->{_index};
         lock_hash(%$data);
 
+        $self->_create_filesystem($source,$row->{subdir_uid});
         $self->change_hardware('filesystem',$index, $data);
 
-        $self->_create_filesystem($source,$row->{subdir_uid});
     }
     $sth->finish;
 }
@@ -6492,7 +6517,9 @@ sub _search_filesystem_index($self, $source) {
         unlock_hash(%$fs);
         $fs->{_index} = $n;
         lock_hash(%$fs);
-        return $fs if $fs->{source}->{dir} eq $source;
+        my $fs_source = $fs->{source};
+        $fs_source = $fs->{source}->{dir} if ref($fs_source) eq 'HASH';
+        return $fs if $fs_source eq $source;
     }
     return;
 }
@@ -6597,6 +6624,27 @@ sub _add_hardware_disk($orig, $self, $index, $data) {
     }
 }
 
+sub _fix_filesystem_data($self,$data) {
+    return if exists $data->{target};
+
+    my $target = $data->{source};
+    if (ref($data->{source})) {
+        return if exists $data->{target} && exists $data->{target}->{dir}
+        && defined $data->{target}->{dir} && length($data->{target}->{dir});
+        $target = $data->{source}->{dir};
+    }
+    $target =~ s{^/}{};
+    $target =~ s{/$}{};
+    $target =~ s{/}{_}g;
+
+    if (ref($data->{source})) {
+        $data->{target}->{dir}=$target;
+    } else {
+        $data->{target}=$target;
+    }
+
+}
+
 sub _around_add_hardware($orig, $self, $hardware, $index, $data=undef) {
     confess "Error: minimal add hardware index>=0 , got '$index'" if defined $index && $index <0;
 
@@ -6604,6 +6652,7 @@ sub _around_add_hardware($orig, $self, $hardware, $index, $data=undef) {
     die "Error: Virtual Machines with host devices can not be modified while running"
     if $self->is_active && $self->list_host_devices_locked;
 
+    $self->_fix_filesystem_data($data) if $hardware eq 'filesystem';
     my $data_orig = undef;
     $data_orig = dclone($data ) if ref($data);
 
@@ -6683,7 +6732,11 @@ sub _around_remove_hardware($orig, $self, $hardware, $index=undef, $options=unde
             $self->_delete_db_display_by_driver($driver);
         }
     } else {
-        $orig->($self, $hardware, $index, %$options)
+        if ($hardware eq 'filesystem'
+            && $self->_hardware_enabled('filesystem', $index, $options)) {
+
+            $orig->($self, $hardware, $index, %$options)
+        }
     }
 
     $self->_remove_info_filesystem($id_filesystem)
@@ -6694,6 +6747,23 @@ sub _around_remove_hardware($orig, $self, $hardware, $index=undef, $options=unde
     }
     $self->_post_change_hardware( $hardware, $index);
 
+}
+
+sub _hardware_enabled($self, $name, $index, $options ) {
+    if ( $name eq 'filesystem') {
+        my $sth = $self->_dbh->prepare("SELECT id,enabled "
+            ." FROM domain_filesystems "
+            ." WHERE id_domain=?"
+            ." ORDER BY id" 
+        );
+        $sth->execute($self->id);
+        my $count=0;
+        while (my ($id, $enabled) = $sth->fetchrow)  {
+            return $enabled if $count++ == $index;
+        }
+    } else {
+        return 1;
+    }
 }
 
 =head2 Access restrictions
