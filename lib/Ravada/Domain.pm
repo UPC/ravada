@@ -848,7 +848,7 @@ sub _allow_hibernate($self, @args){
         my $base = Ravada::Domain->open($self->id_base)
             or die "ERROR: Base domain id: ".$self->id_base." not found";
         return if $base->id_owner == $user->id;
-    } elsif($user->can_hibernate_all) {
+    } elsif ($user->can_hibernate_all) {
         return;
     }
 
