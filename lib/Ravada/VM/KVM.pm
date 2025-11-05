@@ -1531,6 +1531,8 @@ sub _download_file_external($self, $url, $device, $verbose=1, $test=0) {
 
     my ($filename) = $device =~ m{.*/(.*)};
 
+    # The following regex checks if the URL does NOT end with a filename that has an extension
+    # (e.g., 'file.iso'), distinguishing file URLs from directory URLs.
     if ($url =~ m{[^*]} && $url !~ m{.*/.+\..+$}) {
         my @found = $self->_search_url_file($url, $filename);
         die "Error: URL not found '$url'" if !scalar @found;
