@@ -122,7 +122,7 @@ sub _copy_sys($self, $dst, $mode=undef) {
     } else {
         copy($file,$dst);
     }
-    $self->_chmod($mode) if $mode;
+    $self->_chmod($mode, $dst) if $mode;
 }
 
 sub clone($self, $file_clone) {
