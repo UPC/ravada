@@ -1103,6 +1103,7 @@ sub test_generic_clone($vm, $command, $status_fail, $status_ok) {
     is($clone->status,$status_fail);
 
     user_admin->grant($user,$command.'_clones');
+    is($user->can_list_clones_from_own_base(),1);
     $req->status('requested');
     wait_request(check_error => 0);
     is($req->status, 'done');

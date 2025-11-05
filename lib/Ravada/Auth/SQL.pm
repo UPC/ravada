@@ -413,7 +413,9 @@ sub can_list_clones_from_own_base($self) {
             || $self->can_rename_clones()
             || $self->can_shutdown_clones()
             || $self->can_list_clones()
-            || $self->can_list_machines();
+            || $self->can_list_machines()
+            || $self->can_hibernate_clones()
+    ;
     return 0;
 }
 
@@ -427,7 +429,9 @@ Returns true if the user can list all machines that are clones and its bases
 sub can_list_clones {
     my $self = shift;
     return 1 if $self->can_remove_clone_all()
-            || $self->can_list_machines();
+            || $self->can_list_machines()
+            || $self->can_hibernate_clone_all()
+            ;
     return 0;
   
 }

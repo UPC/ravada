@@ -1531,8 +1531,8 @@ sub _install_grants($self) {
         }
     }
     $self->_rename_grants();
-    $self->_alias_grants();
     $self->_add_grants();
+    $self->_alias_grants();
     $self->_enable_all_grants();
     $self->_update_user_grants();
     exit if $CAN_FORK;
@@ -1835,7 +1835,7 @@ sub _alias_grants($self) {
     );
     while (my ($old, $new) =  each(%alias)) {
         $sth_old->execute($old, $new);
-        return if $sth_old->fetch;
+        next if $sth_old->fetch;
         my $sth = $CONNECTOR->dbh->prepare(
                  "INSERT INTO grant_types_alias (name,alias)"
                  ." VALUES(?,?) "
