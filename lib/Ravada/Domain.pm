@@ -6434,7 +6434,7 @@ sub _create_filesystem($self, $source, $uid, $gid=0) {
     }
     if (defined $uid &&( !@stat || $stat[4] != $uid)) {
         confess Dumper([$uid,$source, $gid])
-        if !defined $uid || !defined$source || !defined $gid;
+        if !defined $uid || !defined $source || !defined $gid;
 
         chown $uid,$gid,$source or die "$! chown $uid, $gid, $source";
     }
