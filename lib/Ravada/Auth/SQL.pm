@@ -693,8 +693,7 @@ sub can_do($self, $grant) {
             ."Try removing the table grant_types and start rvd_back again:\n"
             ."mysql> drop table grant_types;\n"
             .Dumper($self->{_grant}, $self->{_grant_alias})
-        if !exists $self->{_grant}->{$grant};
-    return $self->{_grant}->{$grant};
+    ;
 }
 
 =head2 can_do_domain
