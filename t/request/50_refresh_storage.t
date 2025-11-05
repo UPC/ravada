@@ -22,7 +22,7 @@ sub test_request {
     my $vm_name = shift;
     my $id_vm = shift;
 
-    my $file = "a.iso";
+    my $file = new_domain_name().".iso";
 
     my $vm = rvd_back->search_vm($vm_name);
 
@@ -32,11 +32,11 @@ sub test_request {
         unlink $old_file or die "$! $old_file"
             if -e $old_file;
     }
-    $vm->_refresh_storage_pools();
+    $vm->refresh_storage_pools();
 
     # check there are no files
     @files = $vm->search_volume_path($file);
-    ok(!scalar @files) or next;
+    ok(!scalar @files) or return;
 
     my $file_out = $vm->dir_img."/$file";
     unlink $file_out or die "$! $file_out"
@@ -50,19 +50,25 @@ sub test_request {
     my $request;
 
     eval {
-        my @args;
-        @args = (id_vm => $id_vm ) if $id_vm;
+        my @args = ( uid => user_admin->id, _force => 1 );
+        push @args,( id_vm => $id_vm ) if $id_vm;
         $request = Ravada::Request->refresh_storage(@args);
     };
     is($@,'');
     ok($request,"Expecting a request") or next;
-    rvd_back->_process_all_requests_dont_fork();
+    wait_request(debug => 0);
 
     is($request->status,'done');
     is($request->error,'');
 
-    @files = $vm->search_volume_path($file);
-    ok(scalar @files,"Expecting $file exists on storage pool");
+    for (1 .. 3 ) {
+        @files = $vm->search_volume_path($file);
+        last if scalar(@files);
+        $request->status('requested');
+        wait_request(debug => 0);
+    }
+    ok(scalar @files,"Expecting $file exists on storage pool") or exit;
+    $vm->remove_file($file);
 }
 
 #########################################################
@@ -77,10 +83,6 @@ for my $vm_name ( vm_names() ) {
 
         if ($vm && $vm_name =~ /kvm/i && $>) {
             $msg = "SKIPPED: Test must run as root";
-            $vm= undef;
-        }
-        if ($vm_name eq 'Void') {
-            $msg = "SKIPPED: Refresh storage missing in Void";
             $vm= undef;
         }
 

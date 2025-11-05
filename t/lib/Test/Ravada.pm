@@ -2920,6 +2920,7 @@ sub mangle_volume($vm,$name,@vol) {
             print $out ("c" x 20)."\n";
             close $out;
             _umount_qcow();
+            unload_nbd();
         } elsif ($file =~ /\.iso$/) {
             # do nothing
         } else {
@@ -3061,9 +3062,11 @@ sub _mangle_vol2($vm,$name,@vol) {
 
 
 sub _test_file_exists($vm, $vol, $name, $expected=1) {
+    _load_nbd($vm);
     _mount_qcow($vm,$vol);
     my $ok = -e $MNT_RVD."/".$name;
     _umount_qcow();
+    _unload_nbd();
     return 1 if $ok && $expected;
     return 1 if !$ok && !$expected;
     return 0;

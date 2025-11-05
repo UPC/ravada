@@ -1400,12 +1400,13 @@ sub _iso_name($self, $iso, $req=undef, $verbose=1) {
 
         $self->_set_iso_downloading($iso,1);
         if ( !$device ) {
-            $self->_fetch_filename($iso);
+            $self->_fetch_filename($iso, $test);
             $device = $self->dir_img()."/".$iso->{filename};
             my $sth = $self->_dbh->prepare("UPDATE iso_images set device=?"
                 ." WHERE id=?"
             );
             $sth->execute($device, $iso->{id});
+            return $device if $device && !$test;
         }
         my $url = $self->_download_file_external($iso->{url}, $device, $verbose, $test);
         $self->_set_iso_downloading($iso,0);
@@ -1530,7 +1531,9 @@ sub _download_file_external($self, $url, $device, $verbose=1, $test=0) {
 
     my ($filename) = $device =~ m{.*/(.*)};
 
-    if ($url =~ m{[^*]}) {
+    # The following regex checks if the URL does NOT end with a filename that has an extension
+    # (e.g., 'file.iso'), distinguishing file URLs from directory URLs.
+    if ($url =~ m{[^*]} && $url !~ m{.*/.+\..+$}) {
         my @found = $self->_search_url_file($url, $filename);
         die "Error: URL not found '$url'" if !scalar @found;
         $url = $found[-1];
@@ -1546,7 +1549,10 @@ sub _download_file_external($self, $url, $device, $verbose=1, $test=0) {
             $device = $self->dir_img()."/".$device;
         }
         confess "I can't find filename in '$url'" unless $device;
-        $self->write_file($device,"mock") unless $self->file_exists($device);
+
+        $self->write_file($device,"mock")
+        if !$self->file_exists($device) && !$<;
+
         return $self->_download_file_external_headers($url);
     }
     return $url if $self->file_exists($device);
@@ -1588,7 +1594,9 @@ sub _search_iso($self, $id_iso, $file_iso=undef) {
     if $row->{options} && !ref($row->{options});
     die "Missing iso_image id=$id_iso" if !keys %$row;
 
+    $row->{filename} = undef;
     return $row if $file_iso &&  $self->file_exists($file_iso);
+    return $row if !$row->{url};
 
     Ravada::Front::_fix_iso_file_re($row);
 
@@ -1622,6 +1630,7 @@ sub _search_iso($self, $id_iso, $file_iso=undef) {
 
 sub _download($self, $url) {
     $url =~ s{(http://.*)//(.*)}{$1/$2};
+    $url =~ s{(.*/)[^/]+/\.\.\/(.*)}{$1$2};
     if ($url =~ m{[^*]}) {
         my @found = $self->_search_url_file($url);
         die "Error: URL not found '$url'" if !scalar @found;
@@ -1654,6 +1663,7 @@ sub _match_url($self,$url) {
 
     confess "No url1 from $url" if !defined $url1;
     my $dom = $self->_ua_get($url1);
+    return if !$dom;
     my @found;
     my $links = $dom->find('a')->map( attr => 'href');
     for my $link (@$links) {
@@ -1730,9 +1740,7 @@ sub _cache_filename($url) {
     return "$dir/$file";
 }
 
-sub _fetch_filename {
-    my $self = shift;
-    my $row = shift;
+sub _fetch_filename($self, $row, $test=0) {
 
     if (!$row->{file_re} && !$row->{url} && $row->{device}) {
          my ($file) = $row->{device} =~ m{.*/(.*)};
@@ -1750,7 +1758,6 @@ sub _fetch_filename {
         $row->{url} = $new_url;
         $row->{file_re} = "^$file";
     }
-    confess "No file_re" if !$row->{file_re};
     $row->{file_re} .= '$'  if $row->{file_re} !~ m{\$$};
 
     my @found;
@@ -1759,7 +1766,7 @@ sub _fetch_filename {
     } else {
         @found = $self->search_volume_re(qr($row->{file_re}));
     }
-    if (@found) {
+    if (@found && !$test) {
         $row->{device} = $found[0]->get_path;
         ($row->{filename}) = $found[0]->get_path =~ m{.*/(.*)};
         my $sth = $$CONNECTOR->dbh->prepare(
@@ -1769,8 +1776,8 @@ sub _fetch_filename {
         $sth->execute($row->{device}, $row->{id});
         return;
     } else {
-        warn Dumper([$row->{url}, $row->{file_re}]);
-        @found = $self->_search_url_file($row->{url}, $row->{file_re}) if !@found;
+        $row->{file_re} = $row->{file_re_orig} if exists $row->{file_re_orig};
+        @found = $self->_search_url_file($row->{url}, $row->{file_re});
         die "No ".qr($row->{file_re})." found on $row->{url}" if !@found;
     }
 
@@ -1788,7 +1795,7 @@ sub _search_url_file($self, $url_re, $file_re=undef) {
 
     if (!$file_re) {
         my $old_url_re = $url_re;
-        ($url_re, $file_re) = $old_url_re =~ m{(.*)/(.*)};
+        ($url_re, $file_re) = $old_url_re =~ m{(.*/)(.*)};
         confess "ERROR: Missing file part in $old_url_re"
             if !$file_re;
         if ($url_re =~ /\.\.$/) {
@@ -1827,6 +1834,7 @@ sub _match_file($self, $url, $file_re) {
 
     my $links = $dom->find('a')->map( attr => 'href');
     for my $link (@$links) {
+        $link =~ s/^\.\/// if $link;
         next if !defined $link || $link !~ qr($file_re);
         push @found, ($url.$link);
     }
