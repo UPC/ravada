@@ -844,7 +844,7 @@ sub _allow_hibernate($self, @args){
 
     return if $self->id_base && $user->can_hibernate_clone_all();
 
-    if ( $self->id_base() && $user->can_hibernate_clone()) {
+    if ( $self->id_base() && $user->can_hibernate_clones()) {
         my $base = Ravada::Domain->open($self->id_base)
             or die "ERROR: Base domain id: ".$self->id_base." not found";
         return if $base->id_owner == $user->id;
