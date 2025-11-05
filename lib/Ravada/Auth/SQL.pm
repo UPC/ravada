@@ -707,7 +707,7 @@ Returns if the user is allowed to perform a privileged action in a virtual machi
 =cut
 
 sub can_do_domain($self, $grant, $domain) {
-    # list of grants that can be applied to a virtual machine:warn
+    # list of grants that can be applied to a virtual machine
     my %valid_grant = map { $_ => 1 }
     qw(change_settings shutdown reboot rename expose_ports
         hibernate screenshot remove
