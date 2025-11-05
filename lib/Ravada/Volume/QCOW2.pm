@@ -119,6 +119,7 @@ sub _copy_sys($self, $dst, $mode=undef) {
     my $file = $self->file;
     if ($self->vm) {
         my ($out, $err) = $self->vm->run_command("cp",$file,$dst);
+        die $err if $err;
     } else {
         copy($file,$dst);
     }
