@@ -2194,6 +2194,10 @@ sub display($self, $user) {
 }
 
 sub _display_file_rdp($self,$display) {
+    my $error = '';
+    $error .= "Error: No IP detected for display.\n"   if !$display->{ip};
+    $error .= "Error: No Port detected for display.\n" if !$display->{port};
+    return $error if $error;
 
     my $ret = "screen mode id:i:2
 use multimon:i:0
