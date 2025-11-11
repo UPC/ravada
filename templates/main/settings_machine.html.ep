@@ -31,7 +31,7 @@
 %                  }
                  </div>
                  <div class="lgMachActions" style="display:inline-block; float: right">
-                   <badge style="float:right;" ng-show="showmachine.is_base && showmachine.is_public" class="badge border border-primary m-1" ng-cloak><%=l 'Public' %></badge>
+                   <span style="float:right;" ng-show="showmachine.is_base && showmachine.is_public" class="badge border border-primary m-1" ng-cloak><%=l 'Public' %></span>
                    <span style="float:right;" ng-show="showmachine.is_base && !showmachine.is_public" class="badge border border-danger m-1" ng-cloak><%=l 'Private' %></span>
                    <span style="float:right;" ng-show="showmachine.is_base" class="badge border border-secondary m-1" ng-cloak><%=l 'Base' %></span>
                    <span style="float:right;" ng-show="showmachine.is_paused && showmachine.is_active" class="badge label-warning" ng-cloak><%=l 'Paused' %></span>
