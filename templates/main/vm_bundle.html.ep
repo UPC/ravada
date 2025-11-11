@@ -42,7 +42,7 @@
         </div>
         <div class="col-sm-11">
             <select ng-model="bundle_new_base">
-                <option ng-value="base" ng-repeat="base in bases | orderBy :'name'">
+                <option ng-value="base" ng-repeat="base in bases_no_bundle | orderBy :'name'">
                     {{base.name}}
                 </option>
             </select>

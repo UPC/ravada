@@ -1740,7 +1740,7 @@ sub _add_indexes_generic($self) {
                 $CONNECTOR->dbh->do($sql);
             };
             die $@ if ($@ && $@ !~ /Cannot drop index/);
-            warn $@ if $ENV{TERM};
+            warn $@ if $@ && $ENV{TERM};
         }
     }
 }

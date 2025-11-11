@@ -590,6 +590,11 @@
                             $scope.bases = data;
                             $scope.new_base=undefined;
                             _select_new_base();
+                            $scope.bases_no_bundle = [];
+                            for ( var i=0; i<data.length; i++) {
+                                if(!data[i].id_bundle)
+                                    $scope.bases_no_bundle.push(data[i]);
+                            }
                         }
                     });
                 }
@@ -1436,12 +1441,22 @@
                 }
                 if (!found) {
                     $scope.showmachine.bundle.members.push($scope.bundle_new_base);
+                            $scope.bases_no_bundle = [];
+                    for ( var i=0; i<$scope.bases.length; i++) {
+                        var base = $scope.bases[i];
+                        if (base.id == $scope.bundle_new_base.id) 
+                            base.id_bundle=$scope.showmachine.bundle.id;
+                        if(!base.id_bundle )
+                            $scope.bases_no_bundle.push(base);
+                    }
+
                     $http.post('/v2/bundle/add_domain'
                         ,JSON.stringify({
                             'id_bundle': $scope.showmachine.bundle.id
                             ,'id_domain': $scope.bundle_new_base.id
                         }))
                         .then(function(response) {
+
                         }
                     );
                 }
@@ -1449,6 +1464,8 @@
             };
 
             $scope.remove_from_bundle = function(domain) {
+
+                $scope.bases_no_bundle.push(domain);
                 var members = [];
                 for ( var i=0;i<$scope.showmachine.bundle.members.length; i++) {
                     var member = $scope.showmachine.bundle.members[i];
@@ -1458,6 +1475,11 @@
                 }
                 $scope.showmachine.bundle.members=members;
 
+                for ( var i=0; i<$scope.bases.length; i++) {
+                    var base = $scope.bases[i];
+                    if (base.id == domain.id) 
+                        base.id_bundle=0;
+                }
                 $http.post('/v2/bundle/remove_domain'
                     ,JSON.stringify({
                         'id_bundle': $scope.showmachine.bundle.id
