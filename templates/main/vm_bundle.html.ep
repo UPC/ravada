@@ -54,7 +54,7 @@
         </div>
         <div class="col-sm-11">
             <div class="alert alert-warning border border-danger"
-            ng-show="bundle_new_base &&( bundle_new_base.id==showmachine.id || domain_in_bundle(bundle_new_base.id))"/>
+            ng-show="bundle_new_base &&( bundle_new_base.id==showmachine.id || domain_in_bundle(bundle_new_base.id))">
                 <%=l 'Virtual machine already added to bundle:' %>
                 <b>{{bundle_new_base.name}}</b>
             </div>
