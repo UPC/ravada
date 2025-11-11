@@ -2347,7 +2347,7 @@ sub info($self, $user) {
         ,id_vm => $self->_data('id_vm')
         ,auto_compact => ($self->auto_compact or 0)
         ,date_changed => $self->_data('date_changed')
-        ,bundle => $self->bundle()
+        ,bundle => ($self->bundle() or undef)
         ,is_volatile => $self->_data('is_volatile')
         ,networking => $self->_data('networking')
     };

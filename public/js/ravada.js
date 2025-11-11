@@ -1424,7 +1424,6 @@
                 };
                 $scope.bundle_new_base={ 'id': $scope.showmachine.id };
                 $scope.add_to_bundle();
-                console.log($scope.showmachine.bundle);
             };
 
             $scope.add_to_bundle = function() {

@@ -1736,7 +1736,11 @@ sub _add_indexes_generic($self) {
             confess "$table -> $name" if $FIRST_TIME_RUN;
             my $sql = "alter table $table drop index $name";
             warn Dumper($known2);
-            $CONNECTOR->dbh->do($sql);
+            eval {
+                $CONNECTOR->dbh->do($sql);
+            };
+            die $@ if ($@ && $@ !~ /Cannot drop index/);
+            warn $@ if $ENV{TERM};
         }
     }
 }
