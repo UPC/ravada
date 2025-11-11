@@ -1531,9 +1531,9 @@ sub _install_grants($self) {
         }
     }
     $self->_rename_grants();
-    $self->_alias_grants();
     $self->_add_grants();
-    $self->_enable_grants();
+    $self->_alias_grants();
+    $self->_enable_all_grants();
     $self->_update_user_grants();
     exit if $CAN_FORK;
 }
@@ -1827,6 +1827,7 @@ sub _alias_grants($self) {
         remove_clone => 'remove_clones'
         ,shutdown_clone => 'shutdown_clones'
         ,reboot_clone => 'reboot_clones'
+        ,hibernate_clone => 'hibernate_clones'
     );
 
     my $sth_old = $CONNECTOR->dbh->prepare("SELECT id FROM grant_types_alias"
@@ -1834,7 +1835,7 @@ sub _alias_grants($self) {
     );
     while (my ($old, $new) =  each(%alias)) {
         $sth_old->execute($old, $new);
-        return if $sth_old->fetch;
+        next if $sth_old->fetch;
         my $sth = $CONNECTOR->dbh->prepare(
                  "INSERT INTO grant_types_alias (name,alias)"
                  ." VALUES(?,?) "
@@ -1852,6 +1853,7 @@ sub _add_grants($self) {
     $self->_add_grant('reboot_all', 0,"can reboot all virtual machines.");
     $self->_add_grant('reboot_clones', 0,"can reboot clones own virtual machines.");
     $self->_add_grant('screenshot', 1,"can get a screenshot of own virtual machines.");
+    $self->_add_grant('screenshot_clones', 0,"can get a screenshot from clones of own virtual machines.");
     $self->_add_grant('start_many',0,"can have an unlimited amount of machines started.");
     $self->_add_grant('expose_ports',0,"can expose virtual machine ports.");
     $self->_add_grant('expose_ports_clones',0,"Can expose ports from clones of own virtual machines.");
@@ -1864,6 +1866,7 @@ sub _add_grants($self) {
     $self->_add_grant('quota_disk',0,'disk space limit',1);
     $self->_add_grant('create_networks',0,'can create virtual networks.');
     $self->_add_grant('manage_all_networks',0,'can manage all the virtual networks.');
+    $self->_add_grant('hibernate',1,'can hibernate own virtual machines.');
 }
 
 sub _add_grant($self, $grant, $allowed, $description, $is_int = 0, $default_admin=1) {
@@ -1884,8 +1887,9 @@ sub _add_grant($self, $grant, $allowed, $description, $is_int = 0, $default_admi
     }
     return if $id;
 
-    $sth = $CONNECTOR->dbh->prepare("INSERT INTO grant_types (name, description, is_int, default_admin)"
-        ." VALUES (?,?,?,?)");
+    $sth = $CONNECTOR->dbh->prepare("INSERT INTO grant_types"
+        ." (name, description, is_int, default_admin, enabled)"
+        ." VALUES (?,?,?,?,1)");
     $sth->execute($grant, $description, $is_int, $default_admin);
     $sth->finish;
 
@@ -1909,69 +1913,13 @@ sub _add_grant($self, $grant, $allowed, $description, $is_int = 0, $default_admi
     }
 }
 
-sub _null_grants($self) {
-    my $sth = $CONNECTOR->dbh->prepare("SELECT count(*) FROM grant_types "
-            ." WHERE enabled = NULL "
-        );
-    $sth->execute;
-    my ($count) = $sth->fetchrow;
-
-    warn "No null grants found" if !$count && $self->{_null_grants}++;
-    return $count;
-}
-
-sub _enable_grants($self) {
-
-    return if $self->_null_grants();
-
-    my @grants = (
-        'change_settings',  'change_settings_all',  'change_settings_clones'
-        ,'clone',           'clone_all',            'create_base', 'create_machine'
-        ,'expose_ports','expose_ports_clones','expose_ports_all'
-        ,'grant'
-        ,'manage_users'
-        ,'rename', 'rename_all', 'rename_clones'
-        ,'remove',          'remove_all',   'remove_clone',     'remove_clone_all'
-        ,'screenshot'
-        ,'shutdown',        'shutdown_all',    'shutdown_clone'
-        ,'reboot',          'reboot_all',      'reboot_clones'
-        ,'screenshot'
-        ,'start_many'
-        ,'view_groups',     'manage_groups'
-        ,'start_limit',     'start_many'
-        ,'view_all'
-        ,'create_disk', 'quota_disk'
-        ,'create_networks','manage_all_networks'
+sub _enable_all_grants($self) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "UPDATE grant_types set enabled=1 "
+        ." WHERE enabled <> 1 or enabled is null"
     );
+    $sth->execute();
 
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
-    $sth->execute;
-    my %grant_exists;
-    while (my ($id, $name) = $sth->fetchrow ) {
-        $grant_exists{$name} = $id;
-    }
-
-    $sth = $CONNECTOR->dbh->prepare(
-        "UPDATE grant_types set enabled=1 WHERE name=?"
-    );
-    my %done;
-    for my $name ( sort @grants ) {
-        die "Duplicate grant $name "    if $done{$name};
-        confess "Permission $name doesn't exist at table grant_types"
-                ."\n".Dumper(\%grant_exists)
-            if !$grant_exists{$name};
-
-        $sth->execute($name);
-
-    }
-    $self->_disable_other_grants(@grants);
-}
-
-sub _disable_other_grants($self, @grants) {
-    my $query = "UPDATE grant_types set enabled=0 WHERE  enabled=1 AND "
-    .join(" AND ",map { "name <> ? " } @grants );
-    my $sth = $CONNECTOR->dbh->prepare($query);
-    $sth->execute(@grants);
 }
 
 sub _update_old_qemus($self) {
@@ -4570,7 +4518,14 @@ sub _cmd_screenshot {
     my $request = shift;
 
     my $id_domain = $request->args('id_domain');
+    my $uid = $request->args('uid');
+
     my $domain = $self->search_domain_by_id($id_domain);
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    die "Error: user ".$user->name." not allowed to screenshot "
+    .$domain->name if !$user->can_do_domain('screenshot',$domain);
+
     if (!$domain->can_screenshot) {
         die "I can't take a screenshot of the domain ".$domain->name;
     } else {
@@ -6680,6 +6635,7 @@ sub _req_method {
       ,shutdown => \&_cmd_shutdown
       ,reboot => \&_cmd_reboot
      ,hybernate => \&_cmd_hybernate
+     ,hibernate => \&_cmd_hybernate
     ,set_driver => \&_cmd_set_driver
     ,screenshot => \&_cmd_screenshot
     ,add_disk => \&_cmd_add_disk

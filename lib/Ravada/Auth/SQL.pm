@@ -413,7 +413,9 @@ sub can_list_clones_from_own_base($self) {
             || $self->can_rename_clones()
             || $self->can_shutdown_clones()
             || $self->can_list_clones()
-            || $self->can_list_machines();
+            || $self->can_list_machines()
+            || $self->can_hibernate_clones()
+    ;
     return 0;
 }
 
@@ -427,7 +429,9 @@ Returns true if the user can list all machines that are clones and its bases
 sub can_list_clones {
     my $self = shift;
     return 1 if $self->can_remove_clone_all()
-            || $self->can_list_machines();
+            || $self->can_list_machines()
+            || $self->can_hibernate_clone_all()
+            ;
     return 0;
   
 }
@@ -677,18 +681,19 @@ sub can_do($self, $grant) {
     confess "Permission '$grant' invalid\n".Dumper($self->{_grant_alias})
         if $grant !~ /^[a-z_]+$/;
 
-    $grant = $self->_grant_alias($grant);
+    my $grant_alias = $self->_grant_alias($grant);
 
     confess "Wrong grant '$grant'\n".Dumper($self->{_grant_alias})
         if $grant !~ /^[a-z_]+$/;
 
-    return $self->{_grant}->{$grant} if defined $self->{_grant}->{$grant};
+    return $self->{_grant}->{$grant} if exists $self->{_grant}->{$grant};
+    return $self->{_grant}->{$grant_alias} if exists $self->{_grant}->{$grant_alias};
+
     confess "Unknown permission '$grant'. Maybe you are using an old release.\n"
             ."Try removing the table grant_types and start rvd_back again:\n"
             ."mysql> drop table grant_types;\n"
             .Dumper($self->{_grant}, $self->{_grant_alias})
-        if !exists $self->{_grant}->{$grant};
-    return $self->{_grant}->{$grant};
+    ;
 }
 
 =head2 can_do_domain
@@ -701,7 +706,11 @@ Returns if the user is allowed to perform a privileged action in a virtual machi
 =cut
 
 sub can_do_domain($self, $grant, $domain) {
-    my %valid_grant = map { $_ => 1 } qw(change_settings shutdown reboot rename expose_ports);
+    # list of grants that can be applied to a virtual machine
+    my %valid_grant = map { $_ => 1 }
+    qw(change_settings shutdown reboot rename expose_ports
+        hibernate screenshot remove
+    );
     confess "Invalid grant here '$grant'"   if !$valid_grant{$grant};
 
     return 1 if ( $grant eq 'shutdown' || $grant eq 'reboot' )
@@ -822,6 +831,7 @@ sub grant_user_permissions($self,$user) {
     $self->grant($user, 'shutdown');
     $self->grant($user, 'screenshot');
     $self->grant($user, 'reboot');
+    $self->grant($user, 'hibernate');
 }
 
 =head2 grant_operator_permissions

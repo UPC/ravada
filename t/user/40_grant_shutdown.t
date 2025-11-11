@@ -66,6 +66,7 @@ sub test_shutdown_all {
     is($base->is_active, 1) or BAIL_OUT();
 
     my $user = create_user("kevin.garvey","sleepwalk");
+    is($user->can_hibernate,1) or exit;
 
     is($user->can_shutdown($base), 0);
 
@@ -86,8 +87,13 @@ sub test_shutdown_all {
     $base->start(user_admin)    if !$base->is_active;
 
     is($user->can_shutdown($base), 1);
+
+    is($user->can_hibernate($base), 0);
+    user_admin->grant($user, 'hibernate_all');
+    is($user->can_hibernate($base), 1);
+
     eval { $base->hibernate( $user ) };
-    is($@, '');
+    is($@, '') or exit;
 
     $base->remove( user_admin );# if $base2;
 
@@ -125,6 +131,11 @@ sub test_shutdown_clones_from_own_base {
     is($clone->is_active, 0);
 
     $clone->start(user_admin)     if !$clone->is_active;
+    is($user->can_hibernate($clone),0);
+
+    user_admin->grant($user,'hibernate_clones');
+    is($user->can_hibernate($clone),1);
+
     eval { $clone->hibernate($user)};
     is($@, '');
     is($clone->is_hibernated, 1);
@@ -160,6 +171,7 @@ sub test_list_all{
     user_admin->grant($user, 'shutdown_all');
     is($user->can_list_machines, 1);
     is($user->is_operator, 1);
+    user_admin->grant($user, 'hibernate_all');
 
     $list = rvd_front->list_machines($user);
     is(scalar @$list , 2);
