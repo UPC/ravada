@@ -1198,7 +1198,11 @@
             var list_bundles = function() {
                 $http.get('/v2/bundle/list')
                     .then(function(response) {
-                        $scope.bundles=response.data;
+                        $scope.bundles = response.data;
+                    })
+                    .catch(function(error) {
+                        console.error("Failed to load bundles:", error);
+                        $scope.bundles = [];
                     });
             };
 

@@ -1684,8 +1684,7 @@ sub _add_indexes_generic($self) {
             "unique (name)"
         ]
         ,domains_bundle => [
-            "unique (id_bundle, id_domain)"
-            ,"unique (id_domain)"
+            "unique (id_domain)"
         ]
         ,vm_which => [
             "index(id_vm)"
