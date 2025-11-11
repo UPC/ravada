@@ -93,7 +93,7 @@ Returns a list of the base domains as a listref
 
 sub list_bases($self, %args) {
     $args{is_base} = 1;
-    my $query = "SELECT name, id, is_base, id_owner FROM domains "
+    my $query = "SELECT name, id, is_base, id_owner,is_public FROM domains "
         ._where(%args)
         ." ORDER BY name";
 

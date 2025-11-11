@@ -1409,6 +1409,7 @@
                 $scope.showmachine.bundle=undefined;
                 $http.get('/v2/bundle/remove/'+id)
                     .then(function(response) {
+                    list_bundles();
                 });
             };
 
@@ -1441,7 +1442,7 @@
                         }
                     );
                 }
-
+                $scope.bundle_new_base=undefined;
             };
 
             $scope.remove_from_bundle = function(domain) {

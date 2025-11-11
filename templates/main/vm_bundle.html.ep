@@ -3,7 +3,7 @@
 </div>
 
 <div ng-hide="showmachine.bundle">
-    <div class="row">
+    <div class="row" ng-hide="!bundles || !bundles.length">
         <ul class="no-bullets">
             <li><input type="radio" ng-model="bundle_option" name="bundle_option"
                 id="bundle_option_join" value="join"/>
@@ -24,13 +24,12 @@
         </select>
         </div>
     </div>
-    <div class="row" ng-show="bundle_option=='create'">
+    <div class="row" ng-show="bundle_option=='create' || (bundles && !bundles.length)">
         <input type="text" placeholder="new bundle" ng-model="new_bundle"/>
         <button ng-click="create_bundle()">create</button>
     </div>
 
 </div>
-
 
 <div ng-show="showmachine.bundle">
     <h3><%=l 'Bundle' %> {{showmachine.bundle.name}}</h3>
@@ -38,6 +37,9 @@
     <div class="row mt-2"
         ng-show="bases && bases.length"
     >
+        <div class="col-sm-11">
+            <i><%=l 'Add more bases to the bundle' %></i>
+        </div>
         <div class="col-sm-11">
             <select ng-model="bundle_new_base">
                 <option ng-value="base" ng-repeat="base in bases | orderBy :'name'">
@@ -49,10 +51,13 @@
             >
                 <%=l 'Add' %>
             </button>
-            <span class="info" ng-show="bundle_new_base &&( bundle_new_base.id==showmachine.id || domain_in_bundle(bundle_new_base.id))"/>
+        </div>
+        <div class="col-sm-11">
+            <div class="alert alert-warning border border-danger"
+            ng-show="bundle_new_base &&( bundle_new_base.id==showmachine.id || domain_in_bundle(bundle_new_base.id))"/>
                 <%=l 'Virtual machine already added to bundle:' %>
                 <b>{{bundle_new_base.name}}</b>
-            </span>
+            </div>
         </div>
     </div>
 
@@ -86,7 +91,7 @@
     </div>
 
     <hr/>
-    <button ng-disabled="showmachine.bundle.members.length>1"
+    <button ng-hide="showmachine.bundle.members.length>1"
         ng-click="remove_bundle()"
     ><%=l 'Remove' %></button>
 </div>
