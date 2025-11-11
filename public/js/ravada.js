@@ -1398,7 +1398,7 @@
             $scope.domain_in_bundle=function(id_domain) {
                 var found = false;
                 if (!$scope.showmachine.bundle) {
-                    return true;
+                    return false;
                 }
                 for ( var i=0;i<$scope.showmachine.bundle.members.length; i++) {
                     if ($scope.showmachine.bundle.members[i].id == id_domain) {
