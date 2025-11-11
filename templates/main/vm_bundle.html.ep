@@ -25,8 +25,8 @@
         </div>
     </div>
     <div class="row" ng-show="bundle_option=='create' || (bundles && !bundles.length)">
-        <input type="text" placeholder="new bundle" ng-model="new_bundle"/>
-        <button ng-click="create_bundle()">create</button>
+        <input type="text" placeholder="<%=l 'new bundle' %>" ng-model="new_bundle"/>
+        <button ng-click="create_bundle()"><%=l 'create' %></button>
     </div>
 
 </div>
