@@ -3082,7 +3082,7 @@ sub _follow_link($self, $file) {
             $link = "$path$link";
         }
         $self->{_is_link}->{$file} = $link;
-        $file2=$link;
+        $file2 = $link;
     }
 
     my ($dir, $name) = $file2 =~ m{(.*)/(.*)};
