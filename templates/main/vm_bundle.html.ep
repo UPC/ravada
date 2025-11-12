@@ -35,7 +35,7 @@
     <h3><%=l 'Bundle' %> {{showmachine.bundle.name}}</h3>
 
     <div class="row mt-2"
-        ng-show="bases && bases.length"
+        ng-show="bases_no_bundle && bases_no_bundle.length"
     >
         <div class="col-sm-11">
             <i><%=l 'Add more bases to the bundle' %></i>
@@ -61,7 +61,7 @@
         </div>
     </div>
 
-    <div ng-repeat="member in showmachine.bundle.members"
+    <div ng-repeat="member in showmachine.bundle.members | orderBy: 'name'"
         ng-hide="member._hide || member.id==showmachine.id"
         class="row">
 

@@ -1465,6 +1465,9 @@
 
             $scope.remove_from_bundle = function(domain) {
 
+                if (typeof($scope.bases_no_bundle)=='undefined') {
+                    $scope.bases_no_bundle = [];
+                }
                 $scope.bases_no_bundle.push(domain);
                 var members = [];
                 for ( var i=0;i<$scope.showmachine.bundle.members.length; i++) {
