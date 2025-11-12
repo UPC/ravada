@@ -440,6 +440,7 @@
                         return;
                     }
                     $scope.$apply(function () {
+                        $scope.showmachine = data;
                         $scope.showmachine.requests = data.requests;
                         if ($scope.lock_info) {
                             $scope.showmachine.is_active=data.is_active;
@@ -455,7 +456,6 @@
                             if( b == 'memory' && b != 'cpu') return 1;
                             return a >b;
                         });
-                        $scope.showmachine = data;
                         $scope.hardware_add = [];
                         for ( var n_key=0 ; n_key< $scope.hardware.length; n_key++) {
 
@@ -590,11 +590,7 @@
                             $scope.bases = data;
                             $scope.new_base=undefined;
                             _select_new_base();
-                            $scope.bases_no_bundle = [];
-                            for ( var i=0; i<data.length; i++) {
-                                if(!data[i].id_bundle)
-                                    $scope.bases_no_bundle.push(data[i]);
-                            }
+                            get_bases_no_bundle();
                         }
                     });
                 }
@@ -1431,6 +1427,19 @@
                 $scope.add_to_bundle();
             };
 
+            get_bases_no_bundle = function() {
+                $scope.bases_no_bundle = [];
+                for ( var i=0; i<$scope.bases.length; i++) {
+                    var base = $scope.bases[i];
+                    if (typeof($scope.bundle_new_base) != 'undefined'
+                            && base.id == $scope.bundle_new_base.id) {
+                        base.id_bundle=$scope.showmachine.bundle.id;
+                    }
+                    if(!base.id_bundle )
+                        $scope.bases_no_bundle.push(base);
+                }
+            }
+
             $scope.add_to_bundle = function() {
                 var found;
                 for ( var i=0;i<$scope.showmachine.bundle.members.length; i++) {
@@ -1441,15 +1450,7 @@
                 }
                 if (!found) {
                     $scope.showmachine.bundle.members.push($scope.bundle_new_base);
-                            $scope.bases_no_bundle = [];
-                    for ( var i=0; i<$scope.bases.length; i++) {
-                        var base = $scope.bases[i];
-                        if (base.id == $scope.bundle_new_base.id) 
-                            base.id_bundle=$scope.showmachine.bundle.id;
-                        if(!base.id_bundle )
-                            $scope.bases_no_bundle.push(base);
-                    }
-
+                    get_bases_no_bundle();
                     $http.post('/v2/bundle/add_domain'
                         ,JSON.stringify({
                             'id_bundle': $scope.showmachine.bundle.id
