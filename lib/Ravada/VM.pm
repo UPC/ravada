@@ -3066,28 +3066,32 @@ sub dir_backup($self) {
 }
 
 sub _follow_link($self, $file) {
-    my ($dir, $name) = $file =~ m{(.*)/(.*)};
+
+    return $self->{_is_link}->{$file}
+    if exists $self->{_is_link}->{$file}
+        && defined $self->{_is_link}->{$file};
+
+    my ($out,$err) = $self->run_command("stat","-c",'"%N"', $file);
+    chomp $out;
+    my ($link) = $out =~ m{ -> ['"](.+?)['"]+};
     my $file2 = $file;
+    if ($link) {
+        if ($link !~ m{^/}) {
+            my ($path) = $file =~ m{(.*/)};
+            $path = "/" if !$path;
+            $link = "$path$link";
+        }
+        $self->{_is_link}->{$file} = $link;
+        $file2=$link;
+    }
+
+    my ($dir, $name) = $file2 =~ m{(.*)/(.*)};
     if ($dir) {
         my $dir2 = $self->_follow_link($dir);
         $file2 = "$dir2/$name";
     }
+    return $file2;
 
-    if (!defined $self->{_is_link}->{$file2} ) {
-        my ($out,$err) = $self->run_command("stat","-c",'"%N"', $file2);
-        chomp $out;
-        my ($link) = $out =~ m{ -> '(.+)'};
-        if ($link) {
-            if ($link !~ m{^/}) {
-                my ($path) = $file2 =~ m{(.*/)};
-                $path = "/" if !$path;
-                $link = "$path$link";
-            }
-            $self->{_is_link}->{$file2} = $link;
-        }
-    }
-    $self->{_is_link}->{$file2} = $file2 if !exists $self->{_is_link}->{$file2};
-    return $self->{_is_link}->{$file2};
 }
 
 sub _is_link_remote($self, $vol) {

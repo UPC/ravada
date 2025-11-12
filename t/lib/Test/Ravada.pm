@@ -1709,7 +1709,7 @@ sub remove_qemu_pools($vm=undef) {
         next if $name !~ /^($base_pool|$base)/;
         eval {$pool->build(Sys::Virt::StoragePool::BUILD_NEW); $pool->create() };
         warn $@ if $@ && $@ !~ /already active/;
-        if ($pool->is_active) {
+        if ($pool->is_active && !_pool_is_link($pool)) {
             diag("Removing ".$vm->name." storage_pool ".$pool->get_name);
             for my $vol ( $pool->list_volumes ) {
                 diag("Removing ".$pool->get_name." vol ".$vol->get_name);
@@ -1733,6 +1733,14 @@ sub remove_qemu_pools($vm=undef) {
             remove_tree($dir,{ safe => 1, verbose => 1}) or die "$! $dir";
         }
     }
+}
+
+sub _pool_is_link($pool) {
+    my $xml = XML::LibXML->load_xml(string => $pool->get_xml_description());
+    my ($path) = $xml->findnodes('/pool/target/path');
+    my $dir = $path->textContent();
+
+    return -l $dir;
 }
 
 sub _delete_qemu_pool($pool) {
