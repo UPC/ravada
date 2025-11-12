@@ -3046,7 +3046,7 @@ del '/v1/booking_entry/:id/:mode' => sub($c) {
     return $c->render(json => { error => $error } );
 };
 
-get '/v2/bundle/remove/(:id_bundle)' => sub($c) {
+del '/v2/bundle/(:id_bundle)' => sub($c) {
 
     return access_denied_json($c) if !$USER->is_admin;
 

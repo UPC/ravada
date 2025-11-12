@@ -1412,7 +1412,7 @@
             $scope.remove_bundle = function() {
                 var id = $scope.showmachine.bundle.id;
                 $scope.showmachine.bundle=undefined;
-                $http.get('/v2/bundle/remove/'+id)
+                $http.delete('/v2/bundle/'+id)
                     .then(function(response) {
                     list_bundles();
                 });
