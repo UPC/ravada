@@ -1446,7 +1446,7 @@
                         var base = $scope.bases[i];
                         if (base.id == $scope.bundle_new_base.id) 
                             base.id_bundle=$scope.showmachine.bundle.id;
-                        if(!base.id_bundle )
+                        if (!base.id_bundle )
                             $scope.bases_no_bundle.push(base);
                     }
 
