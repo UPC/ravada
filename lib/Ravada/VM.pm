@@ -3090,6 +3090,7 @@ sub _follow_link($self, $file) {
         my $dir2 = $self->_follow_link($dir);
         $file2 = "$dir2/$name";
     }
+    $self->{_is_link}->{$file} = $file2 unless exists $self->{_is_link}->{$file};
     return $file2;
 
 }
