@@ -1438,7 +1438,7 @@
                     if(!base.id_bundle )
                         $scope.bases_no_bundle.push(base);
                 }
-            }
+            };
 
             $scope.add_to_bundle = function() {
                 var found;
