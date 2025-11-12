@@ -514,3 +514,7 @@ label.small_row {
     display: inline-block;
     margin-bottom: .5rem;
 }
+
+ul.no-bullets {
+  list-style-type: none; /* Remove bullets */
+}

@@ -2375,6 +2375,7 @@ sub info($self, $user) {
         ,id_vm => $self->_data('id_vm')
         ,auto_compact => ($self->auto_compact or 0)
         ,date_changed => $self->_data('date_changed')
+        ,bundle => ($self->bundle() or undef)
         ,is_volatile => $self->_data('is_volatile')
         ,networking => $self->_data('networking')
     };
@@ -8410,6 +8411,20 @@ sub bundle($self) {
     $sth->execute($self->id);
     my $bundle = $sth->fetchrow_hashref;
     return if !keys %$bundle;
+
+    $sth = $self->_dbh->prepare("SELECT d.id, d.alias, d.name, d.is_base, d.is_public "
+        ." FROM domains_bundle db, domains d"
+        ." WHERE db.id_domain=d.id "
+        ."   AND db.id_bundle=?"
+    );
+    $sth->execute($bundle->{id} );
+
+    my @domains;
+    while (my $domain = $sth->fetchrow_hashref ) {
+        push @domains, ($domain);
+    }
+    $bundle->{members}=\@domains;
+
     lock_hash(%$bundle);
     return $bundle;
 

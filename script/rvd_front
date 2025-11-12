@@ -3045,6 +3045,122 @@ del '/v1/booking_entry/:id/:mode' => sub($c) {
     my $error = ($@ or '');
     return $c->render(json => { error => $error } );
 };
+
+del '/v2/bundle/(:id_bundle)' => sub($c) {
+
+    return access_denied_json($c) if !$USER->is_admin;
+
+    my $sth = $RAVADA->_dbh->prepare("SELECT name FROM bundles WHERE id=?");
+    $sth->execute($c->stash('id_bundle'));
+    my ($name) = $sth->fetchrow;
+
+    $sth = $RAVADA->_dbh->prepare(
+        "DELETE FROM domains_bundle "
+        ." WHERE id_bundle=?"
+    );
+    $sth->execute($c->stash('id_bundle'));
+
+    $sth = $RAVADA->_dbh->prepare(
+        "DELETE FROM bundles "
+        ." WHERE id=?"
+    );
+    $sth->execute($c->stash('id_bundle'));
+
+    $USER->send_message('Bundle removed: '.$name);
+
+    return $c->render(json => { error => '' });
+
+};
+
+post '/v2/bundle/create' => sub($c) {
+
+    return access_denied_json($c) if !$USER->is_admin;
+
+    my $arg = decode_json($c->req->body);
+    my $name = delete $arg->{name};
+    my $id_domain = delete $arg->{id_domain};
+
+    my $error='';
+    $error = "Warning: Unknown args ".Dumper($arg)
+    if keys %$arg;
+
+    my $id_bundle;
+    eval {
+        $id_bundle = $RAVADA->create_bundle($name);
+        if ($id_bundle) {
+            $RAVADA->bundle_private_network($id_bundle, 1);
+            $RAVADA->add_to_bundle($id_bundle, $id_domain) if $id_domain;
+        }
+    };
+    my $error2 = ($@ or '');
+
+    $error .= " ".$error2 if $error2;
+    $USER->send_message($error or 'Bundle created '.$name);
+    return $c->render(json => { error => $error
+            , bundle => { id => $id_bundle ,name => $name } });
+
+};
+
+post '/v2/bundle/add_domain' => sub($c) {
+
+    return access_denied_json($c) if !$USER->is_admin;
+
+    my $arg = decode_json($c->req->body);
+    my $id_bundle = delete $arg->{id_bundle};
+    my $id_domain = delete $arg->{id_domain};
+
+    my $error='';
+    $error = "Warning: Unknown args ".Dumper($arg)
+    if keys %$arg;
+
+    eval {
+        $RAVADA->add_to_bundle($id_bundle, $id_domain);
+    };
+    my $error2 = ($@ or '');
+
+    $error .= " ".$error2 if $error2;
+    $USER->send_message($error) if $error;
+    return $c->render(json => { error => $error });
+
+};
+
+post '/v2/bundle/remove_domain' => sub($c) {
+
+    return access_denied_json($c) if !$USER->is_admin;
+
+    my $arg = decode_json($c->req->body);
+    my $id_bundle = delete $arg->{id_bundle};
+    my $id_domain = delete $arg->{id_domain};
+
+    my $error='';
+    $error = "Warning: Unknown args ".Dumper($arg)
+    if keys %$arg;
+
+    eval {
+        $RAVADA->remove_from_bundle($id_bundle, $id_domain);
+    };
+    my $error2 = ($@ or '');
+
+    $error .= " ".$error2 if $error2;
+    $USER->send_message($error) if $error;
+    return $c->render(json => { error => $error });
+
+};
+
+get '/v2/bundle/list' => sub($c) {
+    return access_denied_json($c) if !$USER->is_admin;
+
+    my $sth = $RAVADA->_dbh->prepare(
+        "SELECT id,name FROM bundles ORDER by name"
+    );
+    $sth->execute;
+    my @list;
+    while (my $row = $sth->fetchrow_hashref) {
+        push @list, ($row);
+    };
+    return $c->render(json => \@list);
+};
+
 ###################################################
 
 ## user_settings

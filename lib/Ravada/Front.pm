@@ -93,7 +93,11 @@ Returns a list of the base domains as a listref
 
 sub list_bases($self, %args) {
     $args{is_base} = 1;
-    my $query = "SELECT name, id, is_base, id_owner FROM domains "
+    my $query = "SELECT name, d.id, is_base, id_owner,is_public "
+    ."                    ,db.id_bundle"
+    ." FROM domains d "
+    ." LEFT JOIN domains_bundle db "
+    ."   ON d.id=db.id_domain "
         ._where(%args)
         ." ORDER BY name";
 
@@ -2134,6 +2138,23 @@ Arguments : id_bundle, id_domain
 sub add_to_bundle ($self, $id_bundle, $id_domain){
     my $sth = $self->_dbh->prepare(
         "INSERT INTO domains_bundle (id_bundle, id_domain ) VALUES(?,?)"
+    );
+    $sth->execute($id_bundle, $id_domain);
+
+}
+
+=head2 remove_from_bundle
+
+Removes a domain from a bundle
+
+Arguments : id_bundle, id_domain
+
+=cut
+
+sub remove_from_bundle ($self, $id_bundle, $id_domain){
+    my $sth = $self->_dbh->prepare(
+        "DELETE FROM domains_bundle "
+        ." WHERE id_bundle=? AND id_domain=? "
     );
     $sth->execute($id_bundle, $id_domain);
 
