@@ -825,13 +825,15 @@ Grant an user permissions for normal users
 =cut
 
 sub grant_user_permissions($self,$user) {
-    $self->grant($user, 'clone');
-    $self->grant($user, 'change_settings');
-    $self->grant($user, 'remove');
-    $self->grant($user, 'shutdown');
-    $self->grant($user, 'screenshot');
-    $self->grant($user, 'reboot');
-    $self->grant($user, 'hibernate');
+    my $sth = $$CON->dbh->prepare(
+        "SELECT name FROM grant_types"
+        ." WHERE default_user=1"
+        ." ORDER BY name"
+    );
+    $sth->execute();
+    while (my ($name) = $sth->fetchrow()) {
+        $self->grant($user, $name);
+    }
 }
 
 =head2 grant_operator_permissions

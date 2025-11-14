@@ -1,9 +1,9 @@
 
 /* any user should be allowed these */
-INSERT INTO grant_types(name,description,enabled) VALUES('clone',"can clone public virtual machines.",1);
-INSERT INTO grant_types(name,description,enabled) VALUES('change_settings',"can change the settings of owned virtual machines.",1);
-INSERT INTO grant_types(name,description,enabled) VALUES('remove',"can remove any virtual machine owned by the user.",1);
-INSERT INTO grant_types(name,description) VALUES('screenshot',"can take a screenshot of any virtual machine owned by the user.");
+INSERT INTO grant_types(name,description,enabled,default_user) VALUES('clone',"can clone public virtual machines.",1,1);
+INSERT INTO grant_types(name,description,enabled,default_user) VALUES('change_settings',"can change the settings of owned virtual machines.",1,1);
+INSERT INTO grant_types(name,description,enabled,default_user) VALUES('remove',"can remove any virtual machine owned by the user.",1,1);
+INSERT INTO grant_types(name,description,enabled,default_user) VALUES('screenshot',"can take a screenshot of any virtual machine owned by the user.",1,1);
 
 /* managers should be allowed these */
 INSERT INTO grant_types(name,description) VALUES('create_machine',"can create virtual machines.");
@@ -30,5 +30,5 @@ INSERT INTO grant_types(name,description) VALUES('shutdown_all',"can shutdown an
 INSERT INTO grant_types(name,description) VALUES('hibernate_all',"can hibernate any virtual machine.");
 INSERT INTO grant_types(name,description) VALUES('screenshot_all',"can take a screenshot of any virtual machine.");
 
-INSERT INTO grant_types(name,description, enabled) VALUES('grant','can grant permissions to other users', 1);
+INSERT INTO grant_types(name,description, enabled,default_user) VALUES('grant','can grant permissions to other users', 1,0);
 INSERT INTO grant_types(name,description) VALUES('manage_users','can manage users.');
