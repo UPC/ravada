@@ -178,7 +178,7 @@
             $scope.action = function(machine, action, confirmed) {
                 machine.action = false;
                 if (action == 'start') {
-                    if ((! confirmed) && (! machine.is_active)) {
+                    if (! confirmed && (!machine.clone || !machine.clone.is_active)) {
                         $scope.checkMaxMachines(action, machine); 
                     } else {
                         if (machine.clone || !machine.is_base) {
