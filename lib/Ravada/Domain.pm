@@ -6761,9 +6761,7 @@ sub _around_remove_hardware($orig, $self, $hardware, $index=undef, $options=unde
             $self->_delete_db_display_by_driver($driver);
         }
     } else {
-        if ($hardware eq 'filesystem'
-            && $self->_hardware_enabled('filesystem', $index, $options)) {
-
+        if ( $self->_hardware_enabled($hardware, $index, $options)) {
             $orig->($self, $hardware, $index, %$options)
         }
     }

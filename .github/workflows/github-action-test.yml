@@ -19,7 +19,7 @@ jobs:
         run: sudo apt update
       - name: Install auth packages
         run: |
-          sudo apt-get -y install perl libtest-perl-critic-perl liblist-moreutils-perl libyaml-perl libipc-run3-perl libmojolicious-perl libmojolicious-plugin-i18n-perl libxml-libxml-perl libdbix-connector-perl libmoose-perl libproc-pid-file-perl libimage-magick-perl libdatetime-perl libdatetime-format-dateparse-perl libjson-xs-perl libauthen-passphrase-perl libpbkdf2-tiny-perl libfile-rsync-perl libmoosex-types-netaddr-ip-perl libnet-dns-perl libnet-openssh-perl libio-interface-perl libsys-virt-perl libdbd-sqlite3-perl liblocale-maketext-lexicon-perl qemu-utils make cpanminus libnet-ldap-perl librrds-perl rrdtool
+          sudo apt-get -y install perl libtest-perl-critic-perl liblist-moreutils-perl libyaml-perl libipc-run3-perl libmojolicious-perl libmojolicious-plugin-i18n-perl libxml-libxml-perl libdbix-connector-perl libmoose-perl libproc-pid-file-perl libimage-magick-perl libdatetime-perl libdatetime-format-dateparse-perl libjson-xs-perl libauthen-passphrase-perl libpbkdf2-tiny-perl libfile-rsync-perl libmoosex-types-netaddr-ip-perl libnet-dns-perl libnet-openssh-perl libio-interface-perl libsys-virt-perl libdbd-sqlite3-perl liblocale-maketext-lexicon-perl qemu-utils make cpanminus libnet-ldap-perl librrds-perl rrdtool bridge-utils
       - name: Install LDAP server
         run: sudo apt-get install 389-ds-base
       - name: Configure LDAP server
@@ -58,3 +58,5 @@ jobs:
         run: prove -lr t/vm/60_new_args.t t/30_request.t
       - name: Test create from ISO
         run: prove -lr t/request/25_create_from_iso.t t/vm/d10_not_download.t
+      - name: Test hardware
+        run: prove -lr t/request/30_hardware.t
