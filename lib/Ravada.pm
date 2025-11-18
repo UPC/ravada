@@ -459,7 +459,7 @@ sub _update_isos {
         ,ubuntu_noble => {
                     name => 'Ubuntu 24.04 Noble Nombat'
             ,description => 'Ubuntu 24.04 Noble Nombat 64 bits'
-                    ,xml => 'focal_fossa-amd64.xml'
+                    ,xml => 'noble-amd64.xml'
              ,xml_volume => 'focal_fossa64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/24.04/'
                 ,file_re => '^ubuntu-24.04.*-desktop-amd64.iso'
