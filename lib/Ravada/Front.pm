@@ -231,6 +231,7 @@ sub _get_clone_info($user, $base, $clone = Ravada::Front::Domain->open($base->{i
         && $user->can_screenshot) {
         my $req = Ravada::Request->screenshot(
             id_domain => $clone->id
+            ,uid => $user->id
         );
     }
     return $c;

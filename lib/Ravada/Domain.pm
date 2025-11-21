@@ -1349,6 +1349,7 @@ sub _access_denied_error($self,$user) {
 }
 
 sub _allowed_start($self, $user) {
+    return if !defined $user;
     return if $user->is_admin || $user->can_view_all;
 
     $self->_access_denied_error($user);
