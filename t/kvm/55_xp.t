@@ -154,7 +154,7 @@ SKIP: {
     skip $msg,10    if !$vm;
 
     for my $xml ('t/kvm/etc/winxp.xml') {
-        my $name = test_create_domain_xml($xml);
+        my $name = test_create_domain_xml(qemu_fix_xml_file($xml));
         next if !$name;
         test_clone_domain($name, $xml);
     }
