@@ -89,7 +89,7 @@ sub test_add_hw($hardware, $base, $clone) {
     my $check_error = 1;
     $check_error=0 if $hardware eq 'disk';
 
-    wait_request(debug => 1, check_error => $check_error);
+    wait_request(debug => 0, check_error => $check_error);
     if ($hardware eq 'disk') {
         like($req->error, qr/new.*bases/);
     } else {
@@ -211,7 +211,7 @@ sub _test_change_display_driver($base, $clone) {
             ,index => 0
             ,data => {driver => $driver }
         );
-        wait_request(debug => 1);
+        wait_request(debug => 0);
         my $hw = $base->info(user_admin)->{hardware}->{display};
         is($hw->[0]->{driver},$driver);
 
@@ -266,7 +266,6 @@ sub test_add_rm_change_hw($base) {
     for my $hardware (sort keys %controllers ) {
         next if $hardware eq 'memory';
         next if $base->type eq 'KVM' && $hardware =~ /^(cpu|features)$/;
-        diag($hardware);
 
         if ( $hardware ne 'display' ) {
             test_add_hw($hardware, $base, $clone);
