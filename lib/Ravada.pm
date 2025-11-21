@@ -1884,8 +1884,8 @@ sub _add_grant($self, $grant, $allowed, $description, $is_int = 0, $default_admi
     $sth->finish;
     $current_int = 0 if !$current_int;
 
-    if ($id && ( $current_description ne $description || $current_int != $is_int)
-                        ||!defined $current_du || $current_du != $allowed) {
+    if ($id && ( $current_description ne $description || $current_int != $is_int
+                        || !defined $current_du || $current_du != $allowed )) {
         my $sth = $CONNECTOR->dbh->prepare(
             "UPDATE grant_types SET description = ?,is_int=?,default_user=? "
             ." WHERE id = ?;"
