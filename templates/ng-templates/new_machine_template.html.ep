@@ -53,7 +53,7 @@
                         <div class="mb-2" ng-show="id_iso.description" >
                             <small ng-bind-html="id_iso.description">{{id_iso.description}}</small>
                         </div>
-                        <div ng-show="id_iso.name && ( !id_iso.device && id_iso.url )
+                        <div ng-show="id_iso.name && ( id_iso.url && !iso_file )
                                 && !id_iso.downloading
                                 && (iso_file == '<NONE>' || !iso_file) ">
                             <font color="#500000"><%=l 'This ISO image has not been downloaded yet. It may take some minutes, even hours until the file is fetched from the Internet.' %></font>
