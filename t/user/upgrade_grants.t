@@ -82,7 +82,7 @@ sub test_upgrade_grants($domain, $grant_name, $allowed=undef, $base=undef) {
     ok($gu, "Expecting grant for id_grant=$grant->{id}, id_user=".$user->id);
 
     my $granted = ( $allowed or 0);
-    is($gu->{allowed},$granted,"Expecting no admin can not $grant_name");
+    is($gu->{allowed},$granted,"Expecting non-admin user allowed=$granted for $grant_name");
 
 }
 
