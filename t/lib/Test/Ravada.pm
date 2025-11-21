@@ -327,7 +327,7 @@ sub create_domain_v2(%args) {
         $iso_name = 'Alpine%64';
     }
     if ($iso_name) {
-        my $id_iso2 = search_id_iso($iso_name)
+        my $id_iso2 = search_id_iso($iso_name, $vm)
             or confess "Error: iso '$iso_name' not found";
         croak "Error: id_iso '$id_iso' && iso '$iso_name' not match"
         if $id_iso && $id_iso != $id_iso2;
@@ -402,11 +402,6 @@ sub create_domain($vm_name, $user=$USER_ADMIN, $id_iso='Alpine%64', $swap=undef)
     $id_iso = 'Alpine%64' if !defined $id_iso;
     $user = $USER_ADMIN if !defined $user;
 
-    if ( $id_iso && $id_iso !~ /^\d+$/) {
-        my $iso_name = $id_iso;
-        $id_iso = search_id_iso($iso_name);
-        warn "I can't find iso $iso_name" if !defined $id_iso;
-    }
     my $vm;
     if (ref($vm_name)) {
         $vm = $vm_name;
@@ -416,6 +411,11 @@ sub create_domain($vm_name, $user=$USER_ADMIN, $id_iso='Alpine%64', $swap=undef)
         ok($vm,"Expecting VM $vm_name, got ".$vm->type) or return;
     }
 
+    if ( $id_iso && $id_iso !~ /^\d+$/) {
+        my $iso_name = $id_iso;
+        $id_iso = search_id_iso($iso_name, $vm);
+        warn "I can't find iso $iso_name" if !defined $id_iso;
+    }
     confess "ERROR: Domains can only be created at localhost"
         if $vm->host ne 'localhost';
 
@@ -765,7 +765,7 @@ sub _discover() {
                         id_owner => user_admin->id
                         ,vm => $vm_type
                         ,name => $name
-                        ,id_iso => search_id_iso('Alpine%64')
+                        ,id_iso => search_id_iso('Alpine%64', $domain->_vm)
                     );
                     wait_request();
                 }
@@ -2008,17 +2008,32 @@ sub _remove_old_groups_ldap() {
     }
 }
 
-sub search_id_iso {
-    my $name = shift;
+sub search_id_iso($name, $vm=undef) {
     connector() if !$CONNECTOR;
     rvd_back();
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM iso_images "
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM iso_images "
         ." WHERE name like ?"
     );
     $sth->execute("$name%");
-    my ($id) = $sth->fetchrow;
-    die "There is no iso called $name%" if !$id;
-    return $id;
+    my $iso = $sth->fetchrow_hashref;
+    die "There is no iso called $name%" if !$iso || !$iso->{id};
+
+    if ($vm) {
+        my $iso = $vm->_search_iso($iso->{id});
+        my $device_cdrom = $vm->search_volume_path_re(qr($iso->{file_re}));
+        if (!$device_cdrom) {
+            my $req= Ravada::Request->download(
+                id_vm => $vm->id
+                ,id_iso => $iso->{id}
+                ,uid => user_admin->id
+                ,retry => 2
+            );
+            wait_request();
+        }
+
+    }
+
+    return $iso->{id};
 }
 
 sub _search_cd {
@@ -2346,7 +2361,7 @@ sub start_node($node) {
         }
         sleep 1;
     }
-    eval { $node2->run_command("hwclock","--hctosys") };
+    eval { $node2->run_command("true") };
     is($@,'',"Expecting no error setting clock on ".$node->name." ".($@ or ''));
 }
 

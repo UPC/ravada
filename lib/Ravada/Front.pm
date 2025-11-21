@@ -822,6 +822,7 @@ sub iso_file ($self, $id_vm, $uid) {
 
     Ravada::Request->refresh_storage(
         id_vm=> $id_vm
+	,uid => Ravada::Utils::user_daemon->id
     );
 
     my $req = Ravada::Request->list_isos(
