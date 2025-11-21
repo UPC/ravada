@@ -1848,8 +1848,11 @@ sub _alias_grants($self) {
 }
 
 sub _add_grants($self) {
+    $self->_add_grant('clone',1,"can clone public virtual machines.");
+    $self->_add_grant('change_settings',1,"can change the settings of owned virtual machines.");
     $self->_add_grant('rename', 0,"can rename any virtual machine owned by the user.");
     $self->_add_grant('rename_all', 0,"can rename any virtual machine.");
+    $self->_add_grant('remove',1,"can remove any virtual machine owned by the user.");
     $self->_add_grant('rename_clones', 0,"can rename clones from virtual machines owned by the user.");
     $self->_add_grant('shutdown', 1,"can shutdown own virtual machines.");
     $self->_add_grant('reboot', 1,"can reboot own virtual machines.");
@@ -1874,18 +1877,20 @@ sub _add_grants($self) {
 
 sub _add_grant($self, $grant, $allowed, $description, $is_int = 0, $default_admin=1) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id, description,is_int FROM grant_types WHERE name=?"
+        "SELECT id, description,is_int,default_user FROM grant_types WHERE name=?"
     );
     $sth->execute($grant);
-    my ($id, $current_description, $current_int) = $sth->fetchrow();
+    my ($id, $current_description, $current_int, $current_du) = $sth->fetchrow();
     $sth->finish;
     $current_int = 0 if !$current_int;
 
-    if ($id && ( $current_description ne $description || $current_int != $is_int) ) {
+    if ($id && ( $current_description ne $description || $current_int != $is_int)
+                        ||!defined $current_du || $current_du != $allowed) {
         my $sth = $CONNECTOR->dbh->prepare(
-            "UPDATE grant_types SET description = ?,is_int=? WHERE id = ?;"
+            "UPDATE grant_types SET description = ?,is_int=?,default_user=? "
+            ." WHERE id = ?;"
         );
-        $sth->execute($description, $is_int, $id);
+        $sth->execute($description, $is_int, $allowed, $id);
         $sth->finish;
     }
     return if $id;

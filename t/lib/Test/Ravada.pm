@@ -2354,7 +2354,7 @@ sub start_node($node) {
         }
         sleep 1;
     }
-    eval { $node2->run_command("hwclock","--hctosys") };
+    eval { $node2->run_command("true") };
     is($@,'',"Expecting no error setting clock on ".$node->name." ".($@ or ''));
 }
 

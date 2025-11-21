@@ -1,10 +1,4 @@
 
-/* any user should be allowed these */
-INSERT INTO grant_types(name,description,enabled,default_user) VALUES('clone',"can clone public virtual machines.",1,1);
-INSERT INTO grant_types(name,description,enabled,default_user) VALUES('change_settings',"can change the settings of owned virtual machines.",1,1);
-INSERT INTO grant_types(name,description,enabled,default_user) VALUES('remove',"can remove any virtual machine owned by the user.",1,1);
-INSERT INTO grant_types(name,description,enabled,default_user) VALUES('screenshot',"can take a screenshot of any virtual machine owned by the user.",1,1);
-
 /* managers should be allowed these */
 INSERT INTO grant_types(name,description) VALUES('create_machine',"can create virtual machines.");
 INSERT INTO grant_types(name,description) VALUES('create_base',"can create bases.");

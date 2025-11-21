@@ -102,6 +102,25 @@ sub test_default_user() {
         is($user->can_do($name),1) or die "Expecting user can $name";
     }
 }
+
+sub test_upgrade_default_user() {
+    my $sth = connector->dbh->prepare(
+        "alter table grant_types drop column default_user"
+    );
+    $sth->execute();
+
+    rvd_back->_install();
+
+    my $user = create_user();
+    is($user->can_clone(),1);
+    is($user->can_change_settings(),1);
+    is($user->can_remove(),1);
+    is($user->can_screenshot(),1);
+    is($user->can_shutdown(),1);
+    is($user->can_reboot(),1);
+    is($user->can_hibernate(),1);
+
+}
 ######################################################################
 
 init();
@@ -116,6 +135,8 @@ $domain->prepare_base(user_admin);
 $domain->is_public(1);
 
 test_default_user();
+test_upgrade_default_user();
+
 test_upgrade_grants($domain,'hibernate_all');
 test_upgrade_grants($domain,'hibernate_clone');
 test_upgrade_grants($domain,'hibernate_clone_all');
