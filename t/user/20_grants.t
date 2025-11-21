@@ -1019,6 +1019,29 @@ sub test_view_all($vm) {
     $domain->remove(user_admin);
 }
 
+sub test_change_hardware($vm) {
+
+    my $domain = create_domain($vm);
+    my $user= create_user(new_domain_name(),"bar");
+    $domain->_data('id_owner'=>$user->id);
+
+    my $req = Ravada::Request->change_hardware(
+        uid => $user->id
+        ,id_domain => $domain->id
+        ,hardware => 'cpu'
+        ,data => { n_virt_cpu => 2 , max_virt_cpu => 5 }
+    );
+    wait_request(debug=>0, check_error => 0);
+    like($req->error, qr/not.*allowed/);
+
+    user_admin->grant($user,'change_hardware');
+    $req->status('requested');
+
+    wait_request(debug=>0, check_error => 0);
+    is($req->error, '');
+
+}
+
 ##########################################################
 
 test_start_many();
@@ -1048,6 +1071,9 @@ for my $vm_name (vm_names()) {
     next if !$vm;
 
     diag("Testing VM $vm_name");
+
+    test_change_hardware($vm);
+
     test_view_all($vm);
     test_expose_ports($vm_name);
     test_change_settings($vm_name);
