@@ -1943,7 +1943,7 @@ sub _enable_all_grants($self) {
     );
     while ( my ($id_grant,$name,$default_user,$default_admin) = $sth->fetchrow()) {
         $sth_enable->execute($id_grant);
-        $self->_insert_grant_all_users($id_grant,$default_user,$default_admin); 
+        $self->_insert_grant_all_users($id_grant,$default_user,$default_admin);
     }
 }
 
