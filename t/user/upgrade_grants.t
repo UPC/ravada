@@ -60,6 +60,7 @@ sub test_upgrade_grants($domain, $grant_name, $allowed=undef, $base=undef) {
         ." WHERE id=?"
     );
     $sth_undefine->execute($grant->{id});
+    $sth->execute($grant_name);
     my $grant2 = $sth->fetchrow_hashref;
     is($grant2->{enabled},undef);
 
