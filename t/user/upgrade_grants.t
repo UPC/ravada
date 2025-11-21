@@ -47,7 +47,7 @@ sub test_upgrade_grants($domain, $grant_name, $allowed=undef, $base=undef) {
     $sth->execute($grant_name);
     my $grant = $sth->fetchrow_hashref;
     lock_hash(%$grant);
-    die "Error: unknonwn grant_types=$grant" if !$grant->{id};
+    die "Error: unknown grant_types=$grant" if !$grant->{id};
 
     my $sth_remove = connector->dbh->prepare(
         "DELETE FROM grants_user WHERE id_grant=? AND id_user=?"
