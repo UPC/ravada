@@ -527,14 +527,14 @@ sub pre_prepare_base($self) {
     $self->_detect_disks_driver();
 }
 
-=head2 post_prepare_base
+=head2 after_prepare_base
 
 Task to run after preparing a base virtual machine
 
 =cut
 
 
-sub post_prepare_base {
+sub after_prepare_base {
     my $self = shift;
 
     $self->_set_volumes_backing_store();

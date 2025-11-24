@@ -4371,6 +4371,12 @@ sub _execute {
     $request->status('working','') unless $request->status() eq 'waiting';
     $request->start_time(time);
     $request->error('');
+
+    if ( $request->error_check_request() ) {
+        $request->status('done');
+        return;
+    }
+
     if ($dont_fork || !$CAN_FORK) {
         $self->_do_execute_command($sub, $request);
         return;
@@ -5299,7 +5305,7 @@ sub _cmd_prepare_base {
     $self->_remove_unnecessary_downs($domain);
     return if $domain->is_base();
 
-    $domain->prepare_base(user => $user, with_cd => $with_cd);
+    $domain->prepare_base(user => $user, with_cd => $with_cd, request => $request);
     $domain->is_public(1) if $request->defined_arg('publish');
 
 }
@@ -6802,6 +6808,7 @@ sub _req_method {
    ,refresh_vms => \&_cmd_refresh_vms
   ,ping_backend => \&_cmd_ping_backend
   ,prepare_base => \&_cmd_prepare_base
+  ,prepare_base => \&_cmd_post_prepare_base
  ,rename_domain => \&_cmd_rename_domain
  ,open_iptables => \&_cmd_open_iptables
  ,list_vm_types => \&_cmd_list_vm_types
@@ -6872,6 +6879,7 @@ sub _req_method {
     ,remove_network => \&_cmd_remove_network
     ,change_network => \&_cmd_change_network
 
+    ,wait_job => \&_cmd_wait_job
     );
     return $methods{$cmd};
 }
@@ -7578,6 +7586,51 @@ sub _cmd_restore_backup($self, $request) {
 
     $self->restore_backup($file,0);
     $request->output();
+}
+
+sub _cmd_wait_job($self, $request) {
+
+    my $id_vm = $request->args('id_vm');
+    my $vm = Ravada::VM->open($id_vm);
+
+    die "Error: VM $id_vm not found" if !$vm;
+
+    die "Warning: VM ".$vm->name." unreachable. Retry"
+    if !$vm->enabled || !$vm->ping;
+
+    my $job = $request->args('id_job');
+    my $file = $request->args('file');
+
+    my ($out, $err) = $vm->_wait_job($job, $file);
+
+    if ($out =~ /^$job/) {
+        $request->status('retry');
+        $request->at_time(time+10);
+    }
+
+    $request->error($err);
+    $request->output($out);
+
+}
+
+sub _cmd_prepare_base_end($self, $request) {
+    my $id_domain = $request->id_domain   or confess "Missing request id_domain";
+    my $uid = $request->args('uid')     or confess "Missing argument uid";
+
+    my $domain = $self->search_domain_by_id($id_domain);
+    die "Unknown domain id '$id_domain'\n" if !$domain;
+
+    my $user = Ravada::Auth::SQL->search_by_id( $uid)
+        or confess "Error: Unknown user id $uid in request ".Dumper($request);
+
+    die "User ".$user->name." [".$user->id."] not allowed to prepare base "
+                .$domain->name."\n"
+            unless $user->is_admin || (
+                $domain->id_owner == $user->id && $user->can_create_base());
+
+    $domain->prepare_base_end();
+    $domain->post_prepare_base();
+
 }
 
 =head2 set_debug_value

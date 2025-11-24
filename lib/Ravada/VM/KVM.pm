@@ -395,7 +395,11 @@ sub remove_file($self,@files) {
             $vol = $self->search_volume($file);
         }
         if (!$vol) {
-            warn "Warning: '$file' not found\n";
+            if ($self->file_exists($file)) {
+                $self->_remove_file_os($file);
+            } else {
+                warn "Warning: '$file' not found\n";
+            }
         }
         $vol->delete if $vol;
     }

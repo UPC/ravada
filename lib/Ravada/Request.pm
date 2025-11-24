@@ -63,6 +63,7 @@ our %VALID_ARG = (
     ,open_iptables => $args_manage_iptables
       ,remove_base => $args_remove_base
      ,prepare_base => $args_prepare
+     ,post_prepare_base => { id_domain => 1, uid => 1 }
      ,spinoff => { id_domain => 1, uid => 1 }
      ,pause_domain => $args_manage
     ,resume_domain => {%$args_manage, remote_ip => 1 }
@@ -183,6 +184,8 @@ our %VALID_ARG = (
     ,change_network => { uid => 1, data => 1 }
 
     ,remove_clones => { uid => 1, id_domain => 1 }
+
+    ,wait_job => { uid => 1, id_job=> 1, id_vm => 1, file => 1, id_domain => 2 }
 );
 
 $VALID_ARG{shutdown} = $VALID_ARG{shutdown_domain};
@@ -221,6 +224,7 @@ qw(
     manage_pools
     screenshot
     prepare_base
+    wait_job
 );
 
 our $TIMEOUT_SHUTDOWN = 120;
@@ -576,7 +580,7 @@ sub _check_args {
     my $args = { @_ };
 
     my $valid_args = $VALID_ARG{$sub};
-    for (qw(at after_request after_request_ok retry _no_duplicate _force uid)) {
+    for (qw(at after_request after_request_ok retry _no_duplicate _force uid check_requests)) {
         $valid_args->{$_}=2 if !exists $valid_args->{$_};
     }
 
@@ -1988,6 +1992,9 @@ sub remove($status, %args) {
 }
 
 sub _data($self, $field, $value=undef) {
+    confess if $field eq 'after_request' && defined $value
+    && $value == $self->id;
+
     if (defined $value
         && (
           !exists $self->{_data}->{$field}
@@ -2047,6 +2054,27 @@ Refresh request status and data
 
 sub refresh($self) {
     delete $self->{_data};
+}
+
+sub error_check_request($self) {
+    my $check_request = $self->defined_arg('check_requests');
+    return if !$check_request;
+
+    my $error;
+    for my $id_req ( @$check_request ) {
+        my $req = Ravada::Request->open($id_req);
+        next if !$req->error;
+        if ($error) {
+            chomp $error;
+            $error .= "\n";
+        }
+        $error .= $req->error;
+    }
+    return 0 if !$error;
+
+    $self->error($error);
+    return 1;
+
 }
 
 sub AUTOLOAD {

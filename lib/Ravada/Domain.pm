@@ -167,10 +167,6 @@ before 'remove' => \&_pre_remove_domain;
 #\&_allow_remove;
  after 'remove' => \&_after_remove_domain;
 
-around 'prepare_base' => \&_around_prepare_base;
-#before 'prepare_base' => \&_pre_prepare_base;
-# after 'prepare_base' => \&_post_prepare_base;
-
 #before 'start' => \&_start_preconditions;
 # after 'start' => \&_post_start;
 around 'start' => \&_around_start;
@@ -230,6 +226,9 @@ around 'remove_controller' => \&_around_remove_hardware;
 around 'change_hardware' => \&_around_change_hardware;
 
 around 'name' => \&_around_name;
+
+before 'post_prepare_base' => \&_before_post_prepare_base;
+after 'post_prepare_base' => \&_after_post_prepare_base;
 
 ##################################################
 #
@@ -953,8 +952,7 @@ sub _around_list_volumes_info($orig, $self, $attribute=undef, $value=undef) {
     return @volumes;
 }
 
-sub _around_prepare_base($orig, $self, @args) {
-    #sub _around_prepare_base($orig, $self, $user, $request = undef) {
+sub prepare_base($orig, $self, @args) {
     my ($user, $request, $with_cd);
     if(ref($args[0]) =~/^Ravada::/) {
         ($user, $request) = @args;
@@ -972,15 +970,42 @@ sub _around_prepare_base($orig, $self, @args) {
         $self->_vm($vm_local);
     }
     $self->pre_prepare_base();
-    my @base_img = $self->$orig($with_cd);
+    my @base_img = $self->_do_prepare_base($with_cd, $request);
 
     die "Error: No information files returned from prepare_base"
         if !scalar (\@base_img);
 
+    my $pending_post = 0;
+    if ($request) {
+        my $id_req = $request->id;
+        my @jobs;
+        for my $req ($self->list_requests) {
+            if ($req->command eq 'wait_job') {
+                $req->after_request($id_req);
+                $id_req = $req->id;
+                push @jobs,($req->id);
+            }
+        }
+        my $req_post = Ravada::Request->prepare_base_end(
+            uid => $user->id
+            ,id_domain => $self->id
+            ,after_request => $id_req
+            ,check_requests => \@jobs
+        );
+        my $sth = $self->_dbh->prepare(
+            "UPDATE requests set after_request=? "
+            ." WHERE after_request=?"
+            ."   AND command <> 'wait_job'"
+            ."   AND id <> ?"
+        );
+        $sth->execute($req_post->id, $request->id, $req_post->id);
+        $pending_post++;
+    }
     $self->_prepare_base_db(@base_img);
     $self->_set_base_vm_db($self->_vm->id, 1);
 
-    $self->_post_prepare_base($user, $request);
+    $self->_after_prepare_base($user, $request);
+    $self->is_base(0) if $pending_post;
 }
 
 =head2 pre_prepare_base
@@ -1010,7 +1035,7 @@ Prepares the virtual machine as a base:
 
 =cut
 
-sub prepare_base($self, $with_cd) {
+sub _do_prepare_base($self, $with_cd, $req=undef) {
     my @base_img;
 
     for my $volume ($self->list_volumes_info()) {
@@ -1028,21 +1053,65 @@ sub prepare_base($self, $with_cd) {
             if !$volume->info->{target};
 
         next if !defined $volume->file || !length($volume->file);
-        my $base = $volume->prepare_base();
+        my $base = $volume->prepare_base($req);
         push @base_img,([$base, $volume->info->{target}]);
     }
-    $self->post_prepare_base();
+    $self->after_prepare_base();
     return @base_img;
 }
 
-=head2 post_prepare_base
+=head2 after_prepare_base
 
 Placeholder for optional method implemented in subclasses. This will
 run after preparing the base files.
 
 =cut
 
-sub post_prepare_base($self) {}
+sub after_prepare_base($self) {}
+
+sub after_prepare_base($self) {warn $self->name}
+
+sub _before_post_prepare_base($self) {
+    $self->_data('is_base' => 0 );
+    $self->_clone_volumes_base();
+    $self->_data('is_base' => 1 );
+}
+
+sub _after_post_prepare_base($self) {
+    $self->after_prepare_base();
+}
+
+sub _clone_volumes_base($self) {
+
+    my %base;
+    for my $file_data ( $self->list_files_base_target ) {
+        my ($file_base,$target) = @$file_data;
+        $base{$target} = $file_base;
+    }
+    for my $volume ($self->list_volumes_info()) {
+        next if !$volume->info->{target} && $volume->info->{device} eq 'cdrom';
+        confess "Undefined info->target ".Dumper($volume)
+            if !$volume->info->{target};
+
+        next if !defined $volume->file || !length($volume->file);
+
+        next if $volume->backing_file
+        && exists $base{$volume->info->{target}}
+        && $volume->backing_file eq $base{$volume->info->{target}};
+
+        my $file = $volume->file;
+        my $file_base = $base{$volume->info->{target}};
+        next if !$file_base;
+
+        my $base = Ravada::Volume->new(
+            file => $file_base
+            ,is_base => 1
+            ,domain => $self
+        );
+        $base->clone(file => $volume->file);
+
+    }
+}
 
 sub _pre_prepare_base($self, $user, $request = undef ) {
 
@@ -1102,12 +1171,10 @@ sub _check_free_space_prepare_base($self) {
     }
 };
 
-sub _post_prepare_base {
+sub _after_prepare_base {
     my $self = shift;
 
     my ($user) = @_;
-
-    $self->is_base(1);
 
     if ($self->id_base && !$self->description()) {
         my $base = Ravada::Domain->open($self->id_base);
@@ -1886,7 +1953,7 @@ sub _data_extra($self, $field, $value=undef) {
 sub _assert_update($self, $table, $field, $value) {
     return if $table =~ /extra$/;
     if ($field eq 'is_base' && !$value && $self->clones ) {
-        confess "Error: You can set $field=$value if there are clones";
+        confess "Error: You can not set $field=$value if there are clones";
     }
 }
 
@@ -2115,6 +2182,7 @@ sub _prepare_base_db {
     for my $file_img (@file_img) {
         my $target;
         ($file_img, $target) = @$file_img if ref $file_img;
+        next if !$file_img;
         $sth->execute($self->id, $file_img, $target );
     }
     $sth->finish;
@@ -6240,7 +6308,7 @@ sub _post_change_hardware($self, $hardware, $index, $data=undef) {
     $self->info(Ravada::Utils->user_daemon) if $self->is_known();
 
     $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active' && $hardware ne 'memory' && $hardware !~ /cpu/;
-    $self->post_prepare_base() if $self->is_base();
+    $self->after_prepare_base() if $self->is_base();
 
     $self->_backup_config_no_hd() if $self->is_known;
 }
