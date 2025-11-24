@@ -970,7 +970,9 @@ sub prepare_base($orig, $self, @args) {
         $self->_vm($vm_local);
     }
     $self->pre_prepare_base();
+    warn 1;
     my @base_img = $self->_do_prepare_base($with_cd, $request);
+    warn 2;
 
     die "Error: No information files returned from prepare_base"
         if !scalar (\@base_img);
@@ -1053,6 +1055,7 @@ sub _do_prepare_base($self, $with_cd, $req=undef) {
             if !$volume->info->{target};
 
         next if !defined $volume->file || !length($volume->file);
+        warn ref($volume)." ".$volume->file;
         my $base = $volume->prepare_base($req);
         push @base_img,([$base, $volume->info->{target}]);
     }
@@ -1067,8 +1070,6 @@ run after preparing the base files.
 
 =cut
 
-sub after_prepare_base($self) {}
-
 sub after_prepare_base($self) {warn $self->name}
 
 sub _before_post_prepare_base($self) {
@@ -1076,6 +1077,8 @@ sub _before_post_prepare_base($self) {
     $self->_clone_volumes_base();
     $self->_data('is_base' => 1 );
 }
+
+sub post_prepare_base($self) { confess;}
 
 sub _after_post_prepare_base($self) {
     $self->after_prepare_base();

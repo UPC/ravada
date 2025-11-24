@@ -19,8 +19,9 @@ has 'capacity' => (
 
 our $QEMU_IMG = "qemu-img";
 
-sub prepare_base($self) {
+sub prepare_base($self, $req=undef) {
 
+    confess if !defined $req;
     my $file_img = $self->file;
     my $base_img = $self->base_filename();
     confess $base_img if $base_img !~ /\.ro/;
@@ -34,10 +35,15 @@ sub prepare_base($self) {
     eval {
         $format = $self->_qemu_info('file format')
     };
-    confess $@ if $@;
+    warn $@ if $@;
     @cmd = _cmd_copy($file_img, $base_img)
     if $format && $format eq 'qcow2';# && !$self->backing_file;
 
+    if (defined $req) {
+        my $id_req = $self->vm->queue_command(\@cmd, $self->domain->id, $req->id);
+        warn $id_req;
+        return $base_img;
+    }
     my ($out, $err) = $self->vm->run_command( @cmd );
     warn $out  if $out;
     confess "$?: $err"   if $err;
@@ -60,13 +66,6 @@ sub prepare_base($self) {
 }
 
 sub clone($self, $file_clone) {
-    my $n = 10;
-    for (;;) {
-        my @stat = stat($self->file);
-        last if time-$stat[9] || $n--<0;
-        sleep 1;
-        die "Error: ".$self->file." looks active" if $n-- <0;
-    }
     confess if $self->file =~ /ISO$/i;
     confess if $file_clone =~ /ISO$/i;
 
@@ -83,7 +82,7 @@ sub clone($self, $file_clone) {
         last if !$err || $err !~ /Failed to get .*lock/;
         sleep 1;
     }
-    confess $self->vm->name." ".$err if $err;
+    die $self->vm->name." ".$err if $err;
 
     return $file_clone;
 }

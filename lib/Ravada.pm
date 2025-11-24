@@ -5265,6 +5265,7 @@ sub _cmd_prepare_base {
     my $self = shift;
     my $request = shift;
 
+    warn 1;
     my $id_domain = $request->id_domain   or confess "Missing request id_domain";
     my $uid = $request->args('uid')     or confess "Missing argument uid";
 
@@ -5305,6 +5306,7 @@ sub _cmd_prepare_base {
     $self->_remove_unnecessary_downs($domain);
     return if $domain->is_base();
 
+    warn Dumper([$domain->name,$request->id]);
     $domain->prepare_base(user => $user, with_cd => $with_cd, request => $request);
     $domain->is_public(1) if $request->defined_arg('publish');
 
@@ -7613,7 +7615,7 @@ sub _cmd_wait_job($self, $request) {
 
 }
 
-sub _cmd_prepare_base_end($self, $request) {
+sub _cmd_post_prepare_base($self, $request) {
     my $id_domain = $request->id_domain   or confess "Missing request id_domain";
     my $uid = $request->args('uid')     or confess "Missing argument uid";
 
@@ -7628,7 +7630,6 @@ sub _cmd_prepare_base_end($self, $request) {
             unless $user->is_admin || (
                 $domain->id_owner == $user->id && $user->can_create_base());
 
-    $domain->prepare_base_end();
     $domain->post_prepare_base();
 
 }

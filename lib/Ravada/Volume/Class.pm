@@ -15,7 +15,7 @@ requires 'spinoff';
 around 'prepare_base' => \&_around_prepare_base;
 around 'clone' => \&_around_clone;
 
-sub _around_prepare_base($orig, $self) {
+sub _around_prepare_base($orig, $self, $req=undef) {
     confess "Error: unknown VM " if !defined $self->vm;
 
     confess "Error: missing file ".$self->domain->name if !$self->file;
@@ -24,10 +24,16 @@ sub _around_prepare_base($orig, $self) {
     my $storage_pool = ($self->vm->base_storage_pool or $self->vm->default_storage_pool_name);
     $self->vm->_check_free_disk($self->capacity, $storage_pool);
 
-    my $base_file = $orig->($self);
-    confess "No base file returned by ".ref($self)."->prepare_base" if !$base_file;
+    my $base_file = $orig->($self,$req);
+    return if !$base_file;
+
+        $self->_post_prepare_base($base_file);
+}
+
+sub _post_prepare_base($self, $base_file) {
 
     return $base_file if ! $self->clone_base_after_prepare;
+    return $base_file if !$self->vm->file_exists($base_file);
 
     $self->vm->refresh_storage_pools();
     $self->vm->remove_file($self->file);
