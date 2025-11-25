@@ -3365,13 +3365,13 @@ sub qemu_fix_xml_file($file) {
     while (my $line = <$in>) {
         if ($line =~ /<type /) {
             ($arch,$machine) = $line =~ /arch=['"](.*?)["'] machine=["'](.*?)["'"]/ if !defined $arch;
-            if (my ($family)=$machine =~ /^(\w+-[\d\w]+)-/) {
-                my ($new_machine) = grep /^$machine/,@{$types{$arch}};
-                ($new_machine) = grep /^$family/,@{$types{$arch}} if !$new_machine;
+            if (defined $machine && (my ($family) = $machine =~ /^(\w+-[\d\w]+)-/)) {
+                my ($new_machine) = grep { defined $_ && defined $machine && /^$machine/ } @{$types{$arch}};
+                ($new_machine) = grep { defined $_ && defined $family && /^$family/ } @{$types{$arch}} if !$new_machine;
 
-                $line =~ s/(.*machine=["']).*?(["'])/$1$new_machine$2/
-                unless $new_machine eq $machine;
-
+                if (defined $new_machine && defined $machine && $new_machine ne $machine) {
+                    $line =~ s/(.*machine=["']).*?(["'])/$1$new_machine$2/;
+                }
             }
         }
         print $out $line;
