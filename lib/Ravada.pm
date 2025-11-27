@@ -207,6 +207,7 @@ sub _install($self) {
     $self->_upgrade_timestamps();
     $self->_update_data();
     $self->_init_user_daemon();
+    $self->_init_user_admin();
     $self->_sql_insert_defaults();
 
     $self->_do_create_constraints();
@@ -320,6 +321,29 @@ sub _init_user_daemon {
         $USER_DAEMON = Ravada::Auth::SQL->new(name => $USER_DAEMON_NAME);
     }
 
+}
+sub _init_user_admin {
+    my $self = shift;
+    return if !$FIRST_TIME_RUN;   
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT count(*) FROM users WHERE is_admin=1 AND name <> ?"
+    );
+    $sth->execute($USER_DAEMON_NAME);
+    my ($count) = $sth->fetchrow;
+    $sth->finish;
+    return if $count;
+
+    my $user_admin = Ravada::Auth::SQL->new(name => 'admin');
+    return if $user_admin->id; 
+
+    Ravada::Auth::SQL::add_user(
+        name => 'admin'
+        ,password => 'admin'
+        ,is_admin => 1
+    );
+    warn "INFO: created default admin user 'admin' with password 'admin'\n"
+        if $0 !~ /\.t$/;
 }
 sub _update_user_grants {
     my $self = shift;
@@ -457,8 +481,8 @@ sub _update_isos {
         }
 
         ,ubuntu_noble => {
-                    name => 'Ubuntu 24.04 Noble Nombat'
-            ,description => 'Ubuntu 24.04 Noble Nombat 64 bits'
+                    name => 'Ubuntu 24.04 Noble Numbat'
+            ,description => 'Ubuntu 24.04 Noble Numbat 64 bits'
                     ,xml => 'noble-amd64.xml'
              ,xml_volume => 'focal_fossa64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/24.04/'
