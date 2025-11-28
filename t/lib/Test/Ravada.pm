@@ -109,6 +109,7 @@ create_domain
     wait_ip
 
     config_host_devices
+    qemu_fix_xml_file
 
     end
 );
@@ -166,6 +167,7 @@ my $FH_FW;
 my $FH_NODE;
 my %LOCKED_FH;
 my $FILE_DB;
+my @FILES_TMP;
 
 my ($MOJO_USER, $MOJO_PASSWORD);
 
@@ -1846,6 +1848,10 @@ sub clean($ldap=undef, $file_remote_config=undef) {
     }
     unlink $FILE_CONFIG_TMP or die "$! $FILE_CONFIG_TMP"
         if $FILE_CONFIG_TMP && -e $FILE_CONFIG_TMP;
+
+    for my $file (@FILES_TMP) {
+        unlink $file or warn "$! $file" if -e $file;
+    }
     _clean_db();
     _clean_file_config();
     shutdown_nodes();
@@ -3336,5 +3342,44 @@ sub _search_domain_by_name($name) {
     return $id;
 }
 
+sub _new_tmp_file($extension) {
+    my $file;
+    for (;;) {
+        $file = _dir_db()."/".new_domain_name().".$extension";
+        push @FILES_TMP,($file);
+        last if !-e $file;
+    }
+    return $file;
+}
+
+sub qemu_fix_xml_file($file) {
+
+    open my $in,"<",$file or die "$! $file";
+    my $file_dst = _new_tmp_file("xml");
+    open my $out,">",$file_dst or die "$! $file_dst";
+
+    my $vm = rvd_back->search_vm('KVM');
+    my %types = $vm->list_machine_types();
+
+    my ( $arch,$machine);
+    while (my $line = <$in>) {
+        if ($line =~ /<type /) {
+            ($arch,$machine) = $line =~ /arch=['"](.*?)["'] machine=["'](.*?)["'"]/ if !defined $arch;
+            if (defined $machine && (my ($family) = $machine =~ /^(\w+-[\d\w]+)-/)) {
+                my ($new_machine) = grep { defined $_ && defined $machine && /^$machine/ } @{$types{$arch}};
+                ($new_machine) = grep { defined $_ && defined $family && /^$family/ } @{$types{$arch}} if !$new_machine;
+
+                if (defined $new_machine && defined $machine && $new_machine ne $machine) {
+                    $line =~ s/(.*machine=["']).*?(["'])/$1$new_machine$2/;
+                }
+            }
+        }
+        print $out $line;
+    }
+    close $in;
+    close $out or die "$! $file_dst";
+
+    return $file_dst;
+}
 
 1;
