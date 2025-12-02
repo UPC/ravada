@@ -325,7 +325,7 @@ sub _init_user_daemon {
 
 sub _init_user_admin {
     my $self = shift;
-    return if !$FIRST_TIME_RUN;   
+    return if !$FIRST_TIME_RUN;
 
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT count(*) FROM users WHERE is_admin=1 AND name <> ?"
@@ -336,7 +336,7 @@ sub _init_user_admin {
     return if $count;
 
     my $user_admin = Ravada::Auth::SQL->new(name => 'admin');
-    return if $user_admin->id; 
+    return if $user_admin->id;
 
     Ravada::Auth::SQL::add_user(
         name => 'admin'
