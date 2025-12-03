@@ -345,6 +345,7 @@ sub _init_user_admin {
     warn "INFO: created default admin user 'admin' with password 'admin'\n"
         if $0 !~ /\.t$/;
 }
+
 sub _update_user_grants {
     my $self = shift;
     $self->_init_user_daemon();
