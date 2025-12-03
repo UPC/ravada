@@ -22,7 +22,7 @@ sub test_admin_no_need {
     rvd_back->_install();
 
     $user = Ravada::Auth::SQL->new(name => 'admin');
-    ok(!$user->id) or exit;
+    ok(!$user->id);
 }
 
 sub test_default_admin {
