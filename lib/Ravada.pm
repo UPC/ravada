@@ -325,7 +325,6 @@ sub _init_user_daemon {
 
 sub _init_user_admin {
     my $self = shift;
-    return if !$FIRST_TIME_RUN;
 
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT count(*) FROM users WHERE is_admin=1 AND name <> ?"
