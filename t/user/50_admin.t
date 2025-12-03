@@ -13,6 +13,7 @@ init();
 
 ################################################################
 
+# Test that admin user is not created when another admin already exists
 sub test_admin_no_need {
 
     my $user = Ravada::Auth::SQL->new(name => 'admin');
