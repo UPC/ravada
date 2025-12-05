@@ -345,8 +345,8 @@ sub start {
 		$ravada->set_debug_value();
         $ravada->_wait_pids();
         $ravada->_clean_tls();
-        Ravada::Request->refresh_vms();
-        Ravada::Request->refresh_storage();
+        Ravada::Request->refresh_vms(uid =>Ravada::Utils::user_daemon->id);
+        Ravada::Request->refresh_storage(uid =>Ravada::Utils::user_daemon->id);
         Ravada::Request->update_iso_urls(uid =>Ravada::Utils::user_daemon->id);
         Ravada::Request->list_host_devices(uid =>Ravada::Utils::user_daemon->id);
         autostart_machines($ravada);

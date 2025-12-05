@@ -1873,8 +1873,11 @@ sub _alias_grants($self) {
 }
 
 sub _add_grants($self) {
+    $self->_add_grant('clone',1,"can clone public virtual machines.");
+    $self->_add_grant('change_settings',1,"can change the settings of owned virtual machines.");
     $self->_add_grant('rename', 0,"can rename any virtual machine owned by the user.");
     $self->_add_grant('rename_all', 0,"can rename any virtual machine.");
+    $self->_add_grant('remove',1,"can remove any virtual machine owned by the user.");
     $self->_add_grant('rename_clones', 0,"can rename clones from virtual machines owned by the user.");
     $self->_add_grant('shutdown', 1,"can shutdown own virtual machines.");
     $self->_add_grant('reboot', 1,"can reboot own virtual machines.");
@@ -1899,38 +1902,50 @@ sub _add_grants($self) {
 
 sub _add_grant($self, $grant, $allowed, $description, $is_int = 0, $default_admin=1) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id, description,is_int FROM grant_types WHERE name=?"
+        "SELECT id, description,is_int,default_user FROM grant_types WHERE name=?"
     );
     $sth->execute($grant);
-    my ($id, $current_description, $current_int) = $sth->fetchrow();
+    my ($id, $current_description, $current_int, $current_du) = $sth->fetchrow();
     $sth->finish;
     $current_int = 0 if !$current_int;
 
-    if ($id && ( $current_description ne $description || $current_int != $is_int) ) {
+    if ($id && ( $current_description ne $description || $current_int != $is_int
+                        || !defined $current_du || $current_du != $allowed )) {
         my $sth = $CONNECTOR->dbh->prepare(
-            "UPDATE grant_types SET description = ?,is_int=? WHERE id = ?;"
+            "UPDATE grant_types SET description = ?,is_int=?,default_user=? "
+            ." WHERE id = ?;"
         );
-        $sth->execute($description, $is_int, $id);
+        $sth->execute($description, $is_int, $allowed, $id);
         $sth->finish;
     }
     return if $id;
 
     $sth = $CONNECTOR->dbh->prepare("INSERT INTO grant_types"
-        ." (name, description, is_int, default_admin, enabled)"
-        ." VALUES (?,?,?,?,1)");
-    $sth->execute($grant, $description, $is_int, $default_admin);
+        ." (name, description, is_int, default_admin, default_user,enabled)"
+        ." VALUES (?,?,?,?,?,1)");
+    $sth->execute($grant, $description, $is_int, $default_admin,$allowed);
     $sth->finish;
 
     $sth = $CONNECTOR->dbh->prepare("SELECT id FROM grant_types WHERE name=?");
     $sth->execute($grant);
     my ($id_grant) = $sth->fetchrow;
     $sth->finish;
+    $self->_insert_grant_all_users($id_grant, $allowed, $default_admin);
+}
+
+sub _insert_grant_all_users($self, $id_grant, $allowed, $default_admin) {
 
     my $sth_insert = $CONNECTOR->dbh->prepare(
         "INSERT INTO grants_user (id_user, id_grant, allowed) VALUES(?,?,?) ");
 
-    $sth = $CONNECTOR->dbh->prepare("SELECT id,name,is_admin FROM users WHERE is_temporary = 0");
-    $sth->execute;
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT u.id,u.name,u.is_admin "
+        ." FROM users u"
+        ."  LEFT join grants_user gu ON u.id=gu.id_user AND gu.id_grant=?"
+        ." WHERE is_temporary = 0 "
+        ."   AND gu.id is NULL"
+    );
+    $sth->execute($id_grant);
 
     while (my ($id_user, $name, $is_admin) = $sth->fetchrow ) {
         my $allowed_current = $allowed;
@@ -1943,11 +1958,18 @@ sub _add_grant($self, $grant, $allowed, $description, $is_int = 0, $default_admi
 
 sub _enable_all_grants($self) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "UPDATE grant_types set enabled=1 "
-        ." WHERE enabled <> 1 or enabled is null"
+        "SELECT id,name,default_user,default_admin FROM grant_types "
+        ." WHERE enabled is null"
+        ." ORDER BY name"
     );
     $sth->execute();
-
+    my $sth_enable = $CONNECTOR->dbh->prepare(
+        "UPDATE grant_types set enabled=1 WHERE id=?"
+    );
+    while ( my ($id_grant,$name,$default_user,$default_admin) = $sth->fetchrow()) {
+        $sth_enable->execute($id_grant);
+        $self->_insert_grant_all_users($id_grant,$default_user,$default_admin);
+    }
 }
 
 sub _update_old_qemus($self) {
@@ -2982,6 +3004,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms','security','varchar(255) default NULL');
     $self->_upgrade_table('grant_types','enabled','int not null default 1');
     $self->_upgrade_table('grant_types','default_admin','int not null default 1');
+    $self->_upgrade_table('grant_types','default_user','int not null default 0');
 
     $self->_upgrade_table('vms','mac','char(18)');
     $self->_upgrade_table('vms','tls','text');
