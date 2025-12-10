@@ -732,14 +732,13 @@ sub _send_answer($self, $ws_client, $channel, $key = $ws_client) {
     $channel =~ s{/.*}{};
     my $exec = $SUB{$channel} or die "Error: unknown channel $channel";
 
-    my $old_ret;
+    my $old_ret = $self->clients->{$key}->{ret};
     if (exists $TABLE_CHANNEL{$channel} && $TABLE_CHANNEL{$channel}
             && defined $self->clients->{$key}->{TIME0}->{$channel}
             && time < $self->clients->{$key}->{TIME0}->{$channel}+60) {
         my ($old_count, $old_changed) = $self->_old_info($key);
         my ($new_count, $new_changed) = $self->_new_info($key);
 
-        $old_ret = $self->clients->{$key}->{ret};
 
         return $old_ret if defined $new_count && defined $new_changed
         && $old_count eq $new_count && $old_changed eq $new_changed;

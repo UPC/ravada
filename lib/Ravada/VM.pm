@@ -1211,8 +1211,8 @@ sub _insert_vm_db {
     return if !$self->store();
 
     my $sth = $$CONNECTOR->dbh->prepare(
-        "INSERT INTO vms (name, vm_type, hostname, public_ip)"
-        ." VALUES(?, ?, ?, ?)"
+        "INSERT INTO vms (name, vm_type, hostname, public_ip, is_active, enabled)"
+        ." VALUES(?, ?, ?, ?, 1, 1)"
     );
     my %args = @_;
     my $name = ( delete $args{name} or $self->name);
@@ -3245,6 +3245,14 @@ sub _set_active_machines_isolated($self, $network) {
         }
         $domain->_fetch_networking_mode() if $found;
     }
+}
+
+sub _set_iso_downloading($self, $iso,$value) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE iso_images SET downloading=?"
+        ." WHERE id=?"
+    );
+    $sth->execute($value,$iso->{id});
 }
 
 1;

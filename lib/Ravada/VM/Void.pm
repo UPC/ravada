@@ -760,12 +760,6 @@ sub _iso_name($self, $iso, $request=undef, $verbose=0) {
 
     $name = $self->_storage_path($self->default_storage_pool_name)."/".$name unless $name =~ m{^/};
 
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "UPDATE iso_images "
-        ." SET device=? WHERE id=?"
-    );
-    $sth->execute($name, $iso->{id});
-
     open my $out,">",$name or die "$! $name";
     print $out "...\n";
     close $out;

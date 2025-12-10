@@ -9,6 +9,9 @@ use Mojo::JSON qw(decode_json);
 use XML::LibXML;
 use Test::More;
 
+use File::stat;
+use Fcntl qw(:mode);
+
 use lib 't/lib';
 use Test::Ravada;
 
@@ -1097,31 +1100,47 @@ sub test_devices_clone {
     }
 }
 
+sub test_remove_base_level($vm_name) {
+
+    my $base = test_create_domain($vm_name);
+    $base->prepare_base( user_admin );
+
+    my @clones;
+    for ( 1 .. 3 ) {
+        my $clone = $base->clone(name => new_domain_name, user => user_admin);
+        push @clones,($clone);
+    }
+
+    for ( 1 .. 3) {
+        for my $domain(@clones) {
+            _do_test_remove_base($domain, $base);
+        }
+    }
+
+    my @clones2;
+    for ( 1 .. 3 ) {
+        for my $base2 ($base, @clones ) {
+            my $clone = $base2->clone(name => new_domain_name, user => user_admin);
+            push @clones2,($clone);
+        }
+    }
+
+    for ( 1 .. 3) {
+        for my $domain(@clones2) {
+            _do_test_remove_base($domain, $base);
+        }
+    }
+
+    remove_domain($base);
+}
+
 sub test_remove_base {
     my $vm_name = shift;
 
     my $domain = test_create_domain($vm_name);
-    ok($domain,"Expecting domain, got NONE") or return;
 
-    my @files0 = $domain->list_files_base();
-    ok(!scalar @files0,"Expecting no files base, got ".Dumper(\@files0)) or return;
-
-    $domain->prepare_base( user_admin );
-    ok($domain->is_base,"Domain ".$domain->name." should be base") or return;
-
-    my @files = $domain->list_files_base();
-    ok(scalar @files,"Expecting files base, got ".Dumper(\@files)) or return;
-
-    $domain->remove_base( user_admin );
-    ok(!$domain->is_base,"Domain ".$domain->name." should be base") or return;
-
-    for my $file (@files) {
-        die $file if $file !~ m{^[0-9a-z_/\-\.]+$};
-        if ($file =~ /\.iso$/) {
-            ok(-e $file,"Expecting file base '$file' removed" );
-        } else {
-            ok(!-e $file,"Expecting file base '$file' removed" );
-        }
+    for ( 1 .. 3 ) {
+        _do_test_remove_base($domain);
     }
 
     my @files_deleted = $domain->list_files_base();
@@ -1138,6 +1157,77 @@ sub test_remove_base {
     is($count,0,"[$vm_name] Count files base after remove base domain");
 
     $domain->remove(user_admin);
+
+}
+
+sub _do_test_remove_base($domain, $base=undef) {
+    my @files0 = $domain->list_files_base();
+    ok(!scalar @files0,"Expecting no files base, got ".Dumper(\@files0)) or return;
+    for my $file ( $domain->list_volumes) {
+        _check_volume_mode($file);
+    }
+
+    $domain->prepare_base( user_admin );
+    ok($domain->is_base,"Domain ".$domain->name." should be base") or return;
+
+    my @files = $domain->list_files_base();
+    ok(scalar @files,"Expecting files base, got ".Dumper(\@files)) or return;
+    for my $file ( $domain->list_files_base() ) {
+        _check_base_volume_mode($file);
+
+    }
+
+    $domain->remove_base( user_admin );
+    ok(!$domain->is_base,"Domain ".$domain->name." should be base") or return;
+
+    for my $file (@files) {
+        die $file if $file !~ m{^[0-9a-z_/\-\.]+$};
+        if ($file =~ /\.iso$/) {
+            ok(-e $file,"Expecting file base '$file' removed" );
+        } else {
+            ok(!-e $file,"Expecting file base '$file' removed" );
+        }
+    }
+    for my $file ( $domain->list_volumes) {
+        _check_volume_mode($file);
+    }
+
+    if ($base) {
+        for my $file ( $base->list_volumes, $base->list_files_base ) {
+            ok(-e $file) or die $file;
+        }
+    }
+}
+
+sub _check_volume_mode($file) {
+    my $mode = stat($file)->mode;
+    if ($file =~ /\.iso$/) {
+        ok($mode & S_IRUSR); # user can read
+
+        # ok(!($mode & S_IWGRP),"Group can not write $file") or confess;
+        ok(!($mode & S_IWOTH));  # Others can not write
+    } else {
+        ok($mode & S_IRUSR); # User can read
+        ok($mode & S_IWUSR); # User can write
+
+        ok(!($mode & S_IRGRP));   # Group can not read
+        ok(!($mode & S_IROTH));  # Others can not read
+        ok(!($mode & S_IWGRP));   # Group can not write
+        ok(!($mode & S_IWOTH));  # Others can not write
+    }
+
+}
+
+sub _check_base_volume_mode($file) {
+        my $mode = stat($file)->mode;
+
+        ok($mode & S_IRUSR); # User can read
+
+        ok(!($mode & S_IWUSR)); # User can not write
+        ok(!($mode & S_IRGRP));   # Group can not read
+        ok(!($mode & S_IROTH));  # Others can not read
+        ok(!($mode & S_IWGRP));   # Group can not write
+        ok(!($mode & S_IWOTH));  # Others can not write
 }
 
 sub test_dont_remove_base_cloned {
@@ -1858,6 +1948,9 @@ for my $vm_name ( vm_names() ) {
         }
         flush_rules() if !$<;
 
+        test_remove_base($vm_name);
+        test_remove_base_level($vm_name);# if $ENV{TEST_LONG};
+
         test_already_requested($vm);
         test_already_requested_working($vm);
         test_already_requested_recent($vm);
@@ -1903,7 +1996,6 @@ for my $vm_name ( vm_names() ) {
         my $domain = test_create_domain($vm_name);
         test_prepare_base($vm_name, $domain);
         test_prepare_base_active($vm_name);
-        test_remove_base($vm_name);
         test_dont_remove_base_cloned($vm_name);
 
         test_private_base($vm_name);
