@@ -530,48 +530,6 @@ Refreshes all the storage pools
 sub refresh_storage($self) {
     $self->_check_default_storage();
     $self->_refresh_storage_pools();
-    $self->_refresh_isos();
-}
-
-sub _refresh_isos($self) {
-    $self->_init_connector();
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT * FROM iso_images ORDER BY name"
-    );
-    my $sth_update = $$CONNECTOR->dbh->prepare("UPDATE iso_images set device=? WHERE id=?");
-
-    $sth->execute;
-    while (my $row = $sth->fetchrow_hashref) {
-
-        if ( $row->{device} && !-e $row->{device} ) {
-            delete $row->{device};
-            $sth_update->execute($row->{device}, $row->{id});
-            next;
-        }
-        next if $row->{device};
-        next if !$row->{url};
-
-        my $file_re = $row->{file_re};
-        my ($file);
-        ($file) = $row->{url} =~ m{.*/(.*)}   if $row->{url};
-        $file = $row->{rename_file} if $row->{rename_file};
-
-        $file_re = "^$file\$" if $file;
-
-        if (!$file_re) {
-            warn "Error: ISO mismatch ".Dumper($row);
-            next;
-        }
-        $file_re = "$file_re\$" unless $file_re =~ /\$$/;
-        $file_re = "^$file_re"  unless $file_re =~ /^\$/;
-
-        my $iso_file = $self->search_volume_path_re(qr($file_re));
-        if ($iso_file) {
-            $row->{device} = $iso_file;
-        }
-        $sth_update->execute($row->{device}, $row->{id}) if $row->{device};
-    }
-    $sth->finish;
 }
 
 =head2 search_volume_path_re
@@ -1363,26 +1321,9 @@ sub _fix_pci_slots {
 
 }
 
-sub _set_iso_downloading($self, $iso,$value) {
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "UPDATE iso_images SET downloading=?"
-        ." WHERE id=?"
-    );
-    $sth->execute($value,$iso->{id});
-}
-
 sub _iso_name($self, $iso, $req=undef, $verbose=1) {
 
     return '' if !$iso->{has_cd};
-    my $iso_name;
-    if ($iso->{rename_file}) {
-        $iso_name = $iso->{rename_file};
-    } elsif ($iso->{device}) {
-        $iso_name = $iso->{device};
-    }
-
-    my $device = $iso->{device};
-    $device = $self->dir_img."/$iso_name" if !$device && $iso_name;
 
     warn "Missing MD5 and SHA256 field on table iso_images FOR $iso->{url}"
         if $VERIFY_ISO && $iso->{url} && !$iso->{md5} && !$iso->{sha256};
@@ -1391,29 +1332,27 @@ sub _iso_name($self, $iso, $req=undef, $verbose=1) {
     my $test = 0;
     $test = 1 if $req && $req->defined_arg('test');
 
-    if ($test || !$device || ! $self->file_exists($device) ) {
-        $req->status("downloading ".$iso->{file_re}." file"
-                ,"Downloading ISO file for ".$iso->{file_re}
+    confess if !exists $iso->{filename};
+
+    my $device_cdrom = $self->search_volume_path_re(qr($iso->{filename}));
+    if ($test || ! $device_cdrom) {
+        $req->status("downloading ".$iso->{filename}." file"
+                ,"Downloading ISO file for ".$iso->{name}
                  ." from $iso->{url}. It may take several minutes"
         )   if $req;
         _fill_url($iso);
 
         $self->_set_iso_downloading($iso,1);
-        if ( !$device ) {
-            $self->_fetch_filename($iso, $test);
-            $device = $self->dir_img()."/".$iso->{filename};
-            my $sth = $self->_dbh->prepare("UPDATE iso_images set device=?"
-                ." WHERE id=?"
-            );
-            $sth->execute($device, $iso->{id});
-            return $device if $device && !$test;
-        }
-        my $url = $self->_download_file_external($iso->{url}, $device, $verbose, $test);
+
+        $device_cdrom = $self->dir_img."/".$iso->{filename}
+        if !$device_cdrom;
+
+        my $url = $self->_download_file_external($iso->{url}, $device_cdrom, $verbose, $test);
         $self->_set_iso_downloading($iso,0);
         $req->output($url) if $req;
         $self->_refresh_storage_pools();
-        die "Download failed, file $device missing.\n"
-            if !$test && ! -$self->file_exists($device);
+        die "Download failed, file $iso->{filename} missing.\n"
+            if !$test && ! $self->file_exists($device_cdrom);
 
         my $verified = 0;
         for my $check ( qw(md5 sha256)) {
@@ -1431,26 +1370,20 @@ sub _iso_name($self, $iso, $req=undef, $verbose=1) {
             next if !$iso->{$check};
             next if $test;
 
-            $req->status("working","Download failed, $check id=$iso->{id} missmatched for $device."
+            $req->status("working","Download failed, $check id=$iso->{id} missmatched for $iso->{filename}."
             ." Please read ISO "
             ." verification missmatch at operation docs.\n")
-            if (! _check_signature($device, $check, $iso->{$check}));
+            if (! _check_signature($device_cdrom, $check, $iso->{$check}));
             $verified++;
         }
         return if $test;
-        warn "WARNING: $device signature not verified ".Dumper($iso)    if !$verified;
+        warn "WARNING: $device_cdrom signature not verified ".Dumper($iso)    if !$verified;
 
         $req->status("done","File $iso->{filename} downloaded") if $req;
         $downloaded = 1;
     }
-    if ($downloaded || !$iso->{device} ) {
-        my $sth = $$CONNECTOR->dbh->prepare(
-                "UPDATE iso_images SET device=? WHERE id=?"
-        );
-        $sth->execute($device,$iso->{id});
-    }
     $self->_refresh_storage_pools();
-    return $device;
+    return $device_cdrom;
 }
 
 sub _fill_url($iso) {
@@ -1458,7 +1391,6 @@ sub _fill_url($iso) {
     if ($iso->{file_re}) {
         $iso->{url} .= "/" if $iso->{url} !~ m{/$};
         $iso->{url} .= $iso->{file_re};
-        $iso->{filename} = '';
         return;
     }
     confess "Error: Missing field file_re for ".$iso->{name};
@@ -1767,13 +1699,7 @@ sub _fetch_filename($self, $row, $test=0) {
         @found = $self->search_volume_re(qr($row->{file_re}));
     }
     if (@found && !$test) {
-        $row->{device} = $found[0]->get_path;
         ($row->{filename}) = $found[0]->get_path =~ m{.*/(.*)};
-        my $sth = $$CONNECTOR->dbh->prepare(
-            "UPDATE iso_images SET device=?"
-            ." WHERE id=?"
-        );
-        $sth->execute($row->{device}, $row->{id});
         return;
     } else {
         $row->{file_re} = $row->{file_re_orig} if exists $row->{file_re_orig};

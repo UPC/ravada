@@ -2329,7 +2329,6 @@ sub _sql_create_tables($self) {
             ,'md5' => 'varchar(32) DEFAULT NULL'
             ,'md5_url' => 'varchar(255) DEFAULT NULL'
             ,'sha256_url' => 'varchar(255) DEFAULT NULL'
-            ,'device' => 'varchar(255) DEFAULT NULL'
             ,'min_disk_size' => 'int(11) DEFAULT NULL'
             ,'rename_file' => 'varchar(80) DEFAULT NULL'
             ,'sha256' => 'varchar(255) DEFAULT NULL'
@@ -5387,6 +5386,7 @@ sub _cmd_download {
 
     if ($device_cdrom && !$test) {
         $request->status('done',"$iso->{name} already downloaded");
+        $vm->_set_iso_downloading($iso,0);
         return;
     }
 

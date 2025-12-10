@@ -3247,6 +3247,14 @@ sub _set_active_machines_isolated($self, $network) {
     }
 }
 
+sub _set_iso_downloading($self, $iso,$value) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE iso_images SET downloading=?"
+        ." WHERE id=?"
+    );
+    $sth->execute($value,$iso->{id});
+}
+
 1;
 
 

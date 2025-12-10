@@ -276,10 +276,6 @@ sub add_ubuntu_minimal_iso {
         ,arch => 'i686'
         ,md5 => 'c7b21dea4d2ea037c3d97d5dac19af99'
     });
-    my $device = "/var/lib/libvirt/images/".$info{$distro}->{rename_file};
-    if ( -e $device ) {
-        $info{$distro}->{device} = $device;
-    }
     $RVD_BACK->_update_table('iso_images','name',\%info);
 }
 

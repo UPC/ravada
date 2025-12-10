@@ -221,6 +221,7 @@ qw(
     manage_pools
     screenshot
     prepare_base
+    download
 );
 
 our $TIMEOUT_SHUTDOWN = 120;
@@ -1042,30 +1043,23 @@ sub _validate_create_domain($self) {
 
 sub _check_downloading($self) {
     my $id_iso = $self->defined_arg('id_iso');
-    my $iso_file = $self->defined_arg('iso_file');
 
-    $iso_file = '' if $iso_file && $iso_file eq '<NONE>';
-
-    return if !$id_iso && !$iso_file;
+    return if !$id_iso;
 
     my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT id,downloading,device,has_cd,name,url "
+        "SELECT id,downloading,has_cd,name,url "
         ." FROM iso_images "
-        ." WHERE (id=? or device=?) "
+        ." WHERE id=? "
     );
-    $sth->execute($id_iso,$iso_file);
-    my ($id_iso2,$downloading, $device, $has_cd, $iso_name, $iso_url)
+    $sth->execute($id_iso);
+    my ($id_iso2,$downloading, $has_cd, $iso_name, $iso_url)
         = $sth->fetchrow;
 
-    return if !$downloading && $device;
+    return if !$downloading;
 
     my $req_download = $self->_search_request('download', id_iso => $id_iso2);
 
-    return $self->_status_error("done"
-        ,"Error: ISO file required for $iso_name")
-    if $has_cd && !$device && !$iso_file && !$iso_url && !$device;
-
-    if ($has_cd && !$device && !$iso_file && !$req_download) {
+    if ($has_cd && !$req_download) {
         $req_download = Ravada::Request->download(
             id_iso => $id_iso2
             ,uid => Ravada::Utils::user_daemon->id
