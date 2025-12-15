@@ -186,7 +186,11 @@ sub _clean_tls($self) {
     $sth->execute();
 }
 
-sub _install($self) {
+sub _install($self, %args) {
+    my $add_user_admin=1;
+    $add_user_admin = delete $args{add_user_admin}
+    if exists $args{add_user_admin};
+
     my $pid = Proc::PID::File->new(name => $self->pid_name);
     $pid->file({dir => "/run/user/$>"}) if $>;
     if ( $pid->alive ) {
@@ -207,7 +211,7 @@ sub _install($self) {
     $self->_upgrade_timestamps();
     $self->_update_data();
     $self->_init_user_daemon();
-    $self->_init_user_admin();
+    $self->_init_user_admin() if $add_user_admin;
     $self->_sql_insert_defaults();
 
     $self->_do_create_constraints();
