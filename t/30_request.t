@@ -30,6 +30,7 @@ $RVD_BACK = undef;
 my @ARG_CREATE_DOM = (
         id_owner => $USER->id
         ,disk => 1024 * 1024
+        ,data => 1024 * 1024
 );
 
 $Ravada::CAN_FORK = 0;
@@ -171,7 +172,14 @@ sub test_req_create_base {
     my $domain =  $ravada->search_domain($name);
 
     ok($domain,"I can't find domain $name") && do {
-        $domain->prepare_base(user_admin);
+        $domain->add_volume( format => 'qcow2', size => 1*1024*1024)
+        if $domain->type eq 'Void';
+
+        Ravada::Request->prepare_base(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+        );
+        wait_request();
         ok($domain && $domain->is_base,"Domain $name should be base");
     };
     return $domain;
