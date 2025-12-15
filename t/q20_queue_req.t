@@ -19,8 +19,8 @@ sub test_queue_fail($vm) {
     $Ravada::VM::QUEUE_AT_TIME=1;
 
     my $domain = create_domain($vm);
-    $domain->add_volume( format => 'qcow2');
-    $domain->add_volume( format => 'raw');
+    $domain->add_volume( format => 'qcow2', size => 1*1024*1024);
+    $domain->add_volume( format => 'raw', size => 1*1024*1024);
     if ($vm->type eq 'Void') {
         $domain->add_volume( format => 'qcow2');
     }
@@ -58,10 +58,10 @@ sub test_queue_fail($vm) {
 
 sub test_queue($vm) {
     my $domain = create_domain($vm);
-    $domain->add_volume( format => 'qcow2');
-    $domain->add_volume( format => 'raw');
+    $domain->add_volume( format => 'qcow2', size => 1*1024*1024);
+    $domain->add_volume( format => 'raw', size => 1*1024*1024);
     if ($vm->type eq 'Void') {
-        $domain->add_volume( format => 'qcow2');
+        $domain->add_volume( format => 'qcow2', size => 1*1024*1024);
     }
 
     my $n_vols = scalar( grep {$_ =~ /img|qcow2|raw/ } $domain->list_volumes);

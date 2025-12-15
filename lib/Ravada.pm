@@ -5265,7 +5265,6 @@ sub _cmd_prepare_base {
     my $self = shift;
     my $request = shift;
 
-    warn 1;
     my $id_domain = $request->id_domain   or confess "Missing request id_domain";
     my $uid = $request->args('uid')     or confess "Missing argument uid";
 
@@ -5306,7 +5305,6 @@ sub _cmd_prepare_base {
     $self->_remove_unnecessary_downs($domain);
     return if $domain->is_base();
 
-    warn Dumper([$domain->name,$request->id]);
     $domain->prepare_base(user => $user, with_cd => $with_cd, request => $request);
     $domain->is_public(1) if $request->defined_arg('publish');
 
@@ -6810,7 +6808,7 @@ sub _req_method {
    ,refresh_vms => \&_cmd_refresh_vms
   ,ping_backend => \&_cmd_ping_backend
   ,prepare_base => \&_cmd_prepare_base
-  ,prepare_base => \&_cmd_post_prepare_base
+  ,post_prepare_base => \&_cmd_post_prepare_base
  ,rename_domain => \&_cmd_rename_domain
  ,open_iptables => \&_cmd_open_iptables
  ,list_vm_types => \&_cmd_list_vm_types
