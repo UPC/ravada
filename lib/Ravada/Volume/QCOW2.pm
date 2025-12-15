@@ -1,5 +1,6 @@
 package Ravada::Volume::QCOW2;
 
+use Carp qw(cluck);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
 use Moose;
@@ -21,7 +22,7 @@ our $QEMU_IMG = "qemu-img";
 
 sub prepare_base($self, $req=undef) {
 
-    confess if !defined $req;
+    cluck if !defined $req;
     my $file_img = $self->file;
     my $base_img = $self->base_filename();
     confess $base_img if $base_img !~ /\.ro/;
@@ -41,7 +42,6 @@ sub prepare_base($self, $req=undef) {
 
     if (defined $req) {
         my $id_req = $self->vm->queue_command(\@cmd, $self->domain->id, $req->id);
-        warn $id_req;
         return $base_img;
     }
     my ($out, $err) = $self->vm->run_command( @cmd );
