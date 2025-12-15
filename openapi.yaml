@@ -11,11 +11,15 @@ info:
     ## Authentication
     Most endpoints require authentication. Use `/login` to authenticate and establish a session.
     
-    ## Route Parameter Conventions
-    - `#param` - Required placeholder parameter
-    - `(:param)` - Optional placeholder parameter
-    - `:param` - Placeholder parameter (standard Mojolicious format)
+    ## Notes on Source Routes
+    The routes in this specification are extracted from `script/rvd_front` which uses Mojolicious 
+    route syntax. In the source code, you may see different parameter formats:
+    - `#param` - Required placeholder (rendered as `{param}` in OpenAPI)
+    - `(:param)` - Optional placeholder (rendered as `{param}` in OpenAPI)
+    - `:param` - Standard Mojolicious placeholder (rendered as `{param}` in OpenAPI)
     - `*param` - Wildcard parameter
+    
+    All path parameters in this OpenAPI specification use the standard `{param}` format.
     
   version: 1.8.0
   contact:
@@ -983,7 +987,6 @@ paths:
           required: true
           schema:
             type: string
-            default: ''
           description: Field value (can be empty string)
       responses:
         '200':
@@ -1393,6 +1396,28 @@ paths:
       responses:
         '200':
           description: System status
+
+  /host_devices/templates/list/{id_vm}:
+    get:
+      tags: [hostdevices]
+      summary: List host device templates
+      description: Returns list of host device templates available for a specific VM
+      parameters:
+        - name: id_vm
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Virtual machine ID
+      responses:
+        '200':
+          description: List of host device templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
 
 components:
   schemas:
