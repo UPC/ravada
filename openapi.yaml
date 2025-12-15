@@ -980,10 +980,11 @@ paths:
           description: Field name
         - name: value
           in: path
-          required: false
+          required: true
           schema:
             type: string
-          description: Field value
+            default: ''
+          description: Field value (can be empty string)
       responses:
         '200':
           description: Field updated
