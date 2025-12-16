@@ -1043,6 +1043,9 @@ sub _validate_create_domain($self) {
 
 sub _check_downloading($self) {
     my $id_iso = $self->defined_arg('id_iso');
+    my $iso_file = $self->defined_arg('iso_file');
+
+    $iso_file = '' if $iso_file && $iso_file eq '<NONE>';
 
     return if !$id_iso;
 
@@ -1054,6 +1057,10 @@ sub _check_downloading($self) {
     $sth->execute($id_iso);
     my ($id_iso2,$downloading, $has_cd, $iso_name, $iso_url)
         = $sth->fetchrow;
+
+    return $self->_status_error("done"
+        ,"Error: ISO file required for $iso_name")
+    if $has_cd && !$iso_file && !$iso_url;
 
     return if !$downloading;
 
