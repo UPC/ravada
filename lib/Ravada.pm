@@ -341,6 +341,7 @@ sub _init_user_admin {
         name => 'admin'
         ,password => 'admin'
         ,is_admin => 1
+        ,change_password => 1
     );
     warn "INFO: created default admin user 'admin' with password 'admin'\n"
         if $0 !~ /\.t$/;

@@ -113,6 +113,7 @@ Adds a new user in the SQL database. Returns nothing.
            , password => $pass
            , is_admin => 0
        , is_temporary => 0
+     , change_password => 0
     );
 
 =cut
@@ -128,8 +129,9 @@ sub add_user {
     my $is_temporary= ($args{is_temporary} or 0);
     my $is_external= ($args{is_external} or 0);
     my $external_auth = $args{external_auth};
+    my $change_password = ($args{change_password} or 0);
 
-    delete @args{'name','password','is_admin','is_temporary','is_external', 'external_auth'};
+    delete @args{'name','password','is_admin','is_temporary','is_external', 'external_auth', 'change_password'};
 
     confess "WARNING: Unknown arguments ".Dumper(\%args)
         if keys %args;
@@ -137,8 +139,8 @@ sub add_user {
 
     my $sth;
     eval { $sth = $$CON->dbh->prepare(
-            "INSERT INTO users (name,password,is_admin,is_temporary, is_external, external_auth)"
-            ." VALUES(?,?,?,?,?,?)");
+            "INSERT INTO users (name,password,is_admin,is_temporary, is_external, external_auth, change_password)"
+            ." VALUES(?,?,?,?,?,?,?)");
     };
     confess $@ if $@;
     if ($password && !$external_auth) {
@@ -146,7 +148,7 @@ sub add_user {
     } else {
         $password = '*LK* no pss';
     }
-    $sth->execute($name,$password,$is_admin,$is_temporary, $is_external, $external_auth);
+    $sth->execute($name,$password,$is_admin,$is_temporary, $is_external, $external_auth, $change_password);
     $sth->finish;
 
     $sth = $$CON->dbh->prepare("SELECT id FROM users WHERE name = ? ");
