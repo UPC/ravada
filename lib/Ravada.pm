@@ -479,7 +479,7 @@ sub _update_isos {
            ,arch => 'x86_64'
             ,xml => 'xenial64-amd64.xml'
      ,xml_volume => 'xenial64-volume.xml'
-            ,url => 'https://mirrors.edge.kernel.org/linuxmint/stable/20.*'
+            ,url => 'https://mirrors.edge.kernel.org/linuxmint/stable/20.*/'
         ,file_re => 'linuxmint-20.2-mate-64bit.iso'
         ,sha256_url => '$url/sha256sum.txt'
             ,min_disk_size => '15'
@@ -490,7 +490,7 @@ sub _update_isos {
            ,arch => 'x86_64'
             ,xml => 'xenial64-amd64.xml'
      ,xml_volume => 'xenial64-volume.xml'
-            ,url => 'https://mirrors.edge.kernel.org/linuxmint/stable/22.*'
+            ,url => 'https://mirrors.edge.kernel.org/linuxmint/stable/22.*/'
         ,file_re => 'linuxmint-22.*-mate-64bit.iso'
         ,sha256_url => '$url/sha256sum.txt'
             ,min_disk_size => '15'
@@ -504,8 +504,7 @@ sub _update_isos {
            ,arch => 'x86_64'
             ,xml => 'alpine-amd64.xml'
      ,xml_volume => 'alpine381_64-volume.xml'
-            #,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.16/releases/x86_64/'
-            ,url => 'http://localhost/isos/'
+            ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.16/releases/x86_64/'
         ,file_re => 'alpine-standard-3.16.*-x86_64.iso'
         ,sha256_url => '$url/alpine-standard-3.16.*.iso.sha256'
             ,min_disk_size => '2'
@@ -518,8 +517,7 @@ sub _update_isos {
            ,arch => 'i686'
             ,xml => 'alpine-i386.xml'
      ,xml_volume => 'alpine381_32-volume.xml'
-            #,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.16/releases/x86/'
-            ,url => 'http://localhost/isos/'
+            ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.16/releases/x86/'
             ,options => { machine => 'pc-i440fx' }
         ,file_re => 'alpine-standard-3.16.*-x86.iso'
         ,sha256_url => '$url/alpine-standard-3.16.*.iso.sha256'
@@ -925,7 +923,7 @@ sub _update_table_isos_url($self, $data) {
         $sth->execute($entry->{name});
         my $row = $sth->fetchrow_hashref();
         if (keys %$entry == 1) {
-            if ($row->{id} && !$row->{device}) {
+            if ($row->{id}) {
                 warn "INFO: removing old $entry->{name}\n";
                 $sth_delete->execute($row->{id});
             }
@@ -2331,7 +2329,6 @@ sub _sql_create_tables($self) {
             ,'md5' => 'varchar(32) DEFAULT NULL'
             ,'md5_url' => 'varchar(255) DEFAULT NULL'
             ,'sha256_url' => 'varchar(255) DEFAULT NULL'
-            ,'device' => 'varchar(255) DEFAULT NULL'
             ,'min_disk_size' => 'int(11) DEFAULT NULL'
             ,'rename_file' => 'varchar(80) DEFAULT NULL'
             ,'sha256' => 'varchar(255) DEFAULT NULL'
@@ -2914,7 +2911,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms','connection_args',"text DEFAULT NULL");
     $self->_upgrade_table('vms','cached_active_time',"int DEFAULT 0");
     $self->_upgrade_table('vms','public_ip',"varchar(128) DEFAULT NULL");
-    $self->_upgrade_table('vms','is_active',"int DEFAULT 0");
+    $self->_upgrade_table('vms','is_active',"int DEFAULT 1");
     $self->_upgrade_table('vms','enabled',"int DEFAULT 1");
     $self->_upgrade_table('vms','display_ip',"varchar(128) DEFAULT NULL");
     $self->_upgrade_table('vms','nat_ip',"varchar(128) DEFAULT NULL");
@@ -3536,6 +3533,7 @@ sub _add_extra_iso($domain, $request, $previous_request) {
     if $previous_request;
 
     my $req = Ravada::Request->refresh_storage(id_vm => $domain->_vm->id
+                                        ,uid => Ravada::Utils::user_daemon->id
                                         ,@after_request);
 
     @after_request = ( after_request => $req->id ) if $req;
@@ -3609,9 +3607,13 @@ sub remove_domain {
     warn "Warning: $@" if $@;
 
     if (!$domain0) {
-            warn "Warning: I can't find domain [$id ] '$name' , maybe already removed.\n";
+        warn "Warning: I can't find domain [$id ] '$name' , maybe already removed.\n"
+        if $ENV{TERM};
+        $domain0 = Ravada::Domain->open(id => $id, _force => 1);
+        if  (!$domain0) {
             Ravada::Domain::_remove_domain_data_db($id);
             return;
+        }
     };
 
     $domain0->remove( $user);
@@ -5380,20 +5382,24 @@ sub _cmd_download {
     my $test = $request->defined_arg('test');
 
     my $iso = $vm->_search_iso($id_iso);
-    my $device_cdrom = $vm->search_volume_path_re(qr($iso->{file_re}));
+    my $device_cdrom;
+    $device_cdrom = $vm->search_volume_path_re(qr($iso->{file_re}))
+    if exists $iso->{file_re} && $iso->{file_re};
 
-    if ($device_cdrom) {
+    if ($device_cdrom && !$test) {
         $request->status('done',"$iso->{name} already downloaded");
+        $vm->_set_iso_downloading($iso,0);
         return;
     }
 
     if ($vm->is_local) {
+        $iso->{filename} = undef if !exists $iso->{filename};
         $vm->_iso_name($iso, $request, $verbose);
     } else {
         $self->_download_local_and_rsync($request, $vm, $iso);
     }
 
-    Ravada::Request->refresh_storage(id_vm => $vm->id);
+    Ravada::Request->refresh_storage(id_vm => $vm->id, uid => Ravada::Utils::user_daemon->id);
 }
 
 sub _download_local_and_rsync($self, $request, $vm, $iso) {
@@ -6124,7 +6130,7 @@ sub _cmd_list_cpu_models($self, $request) {
     my $id_domain = $request->args('id_domain');
 
     my $domain = Ravada::Domain->open($id_domain);
-    return [] if !$domain->_vm->can_list_cpu_models();
+    return [] if !$domain->_vm || !$domain->_vm->can_list_cpu_models();
 
     my $info = $domain->get_info();
     my $vm = $domain->_vm->vm;

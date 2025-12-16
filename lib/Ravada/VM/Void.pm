@@ -751,7 +751,7 @@ sub _iso_name($self, $iso, $request=undef, $verbose=0) {
     return '' if !$iso->{has_cd};
 
     my $name = ($iso->{device} or $iso->{rename_file} or $iso->{file_re});
-    confess Dumper($iso) if !$name;
+    return if !$name;
     $name =~ s/(.*)\.\*(.*)/$1$2/;
     $name =~ s/(.*)\.\+(.*)/$1.$2/;
     $name =~ s/(.*)\[\\d.*?\]\+(.*)/${1}1$2/;
@@ -759,12 +759,6 @@ sub _iso_name($self, $iso, $request=undef, $verbose=0) {
     confess $name if $name =~ m{[*+\\]};
 
     $name = $self->_storage_path($self->default_storage_pool_name)."/".$name unless $name =~ m{^/};
-
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "UPDATE iso_images "
-        ." SET device=? WHERE id=?"
-    );
-    $sth->execute($name, $iso->{id});
 
     open my $out,">",$name or die "$! $name";
     print $out "...\n";

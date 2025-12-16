@@ -89,7 +89,7 @@ our %VALID_ARG = (
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
     ,hybernate=> {uid => 1, id_domain => 1}
     ,download => {uid => 2, id_iso => 1, id_vm => 2, vm => 2, verbose => 2, delay => 2, test => 2}
-    ,refresh_storage => { id_vm => 2, uid => 2 }
+    ,refresh_storage => { id_vm => 2, uid => 1 }
     ,list_storage_pools => { id_vm => 1 , uid => 1, data => 2 }
     ,active_storage_pool => { uid => 1, id_vm => 1, name => 1, value => 1}
     ,remove_storage_pool => { uid => 1, id_vm => 1, name => 1}
@@ -221,6 +221,7 @@ qw(
     manage_pools
     screenshot
     prepare_base
+    download
 );
 
 our $TIMEOUT_SHUTDOWN = 120;
@@ -1046,26 +1047,24 @@ sub _check_downloading($self) {
 
     $iso_file = '' if $iso_file && $iso_file eq '<NONE>';
 
-    return if !$id_iso && !$iso_file;
+    return if !$id_iso;
 
     my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT id,downloading,device,has_cd,name,url "
+        "SELECT id,downloading,has_cd,name,url "
         ." FROM iso_images "
-        ." WHERE (id=? or device=?) "
+        ." WHERE id=? "
     );
-    $sth->execute($id_iso,$iso_file);
-    my ($id_iso2,$downloading, $device, $has_cd, $iso_name, $iso_url)
+    $sth->execute($id_iso);
+    my ($id_iso2,$downloading, $has_cd, $iso_name, $iso_url)
         = $sth->fetchrow;
-
-    return if !$downloading && $device;
-
-    my $req_download = $self->_search_request('download', id_iso => $id_iso2);
 
     return $self->_status_error("done"
         ,"Error: ISO file required for $iso_name")
-    if $has_cd && !$device && !$iso_file && !$iso_url && !$device;
+    if $has_cd && !$iso_file && !$iso_url;
 
-    if ($has_cd && !$device && !$iso_file && !$req_download) {
+    my $req_download = $self->_search_request('download', id_iso => $id_iso2);
+
+    if ($has_cd && !$req_download) {
         $req_download = Ravada::Request->download(
             id_iso => $id_iso2
             ,uid => Ravada::Utils::user_daemon->id
