@@ -190,6 +190,7 @@ sub _install($self, %args) {
     my $add_user_admin=1;
     $add_user_admin = delete $args{add_user_admin}
     if exists $args{add_user_admin};
+    confess "ERROR: Unknown arguments ".join(",",sort keys %args) if keys %args;
 
     my $pid = Proc::PID::File->new(name => $self->pid_name);
     $pid->file({dir => "/run/user/$>"}) if $>;
