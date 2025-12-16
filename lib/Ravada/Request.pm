@@ -1062,8 +1062,6 @@ sub _check_downloading($self) {
         ,"Error: ISO file required for $iso_name")
     if $has_cd && !$iso_file && !$iso_url;
 
-    return if !$downloading;
-
     my $req_download = $self->_search_request('download', id_iso => $id_iso2);
 
     if ($has_cd && !$req_download) {

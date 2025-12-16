@@ -1334,6 +1334,7 @@ sub _iso_name($self, $iso, $req=undef, $verbose=1) {
 
     confess if !exists $iso->{filename};
 
+    return if !exists $iso->{filename} || !$iso->{filename};
     my $device_cdrom = $self->search_volume_path_re(qr($iso->{filename}));
     if ($test || ! $device_cdrom) {
         $req->status("downloading ".$iso->{filename}." file"
@@ -1532,29 +1533,10 @@ sub _search_iso($self, $id_iso, $file_iso=undef) {
 
     Ravada::Front::_fix_iso_file_re($row);
 
-    if ( !$row->{device} || ! $self->file_exists($row->{device}) ) {
-        my $device_cdrom = $self->search_volume_path_re(qr($row->{file_re}));
-        $row->{device} = $device_cdrom
-            if ($device_cdrom);
-    }
-
-    ($row->{filename}) = $row->{device} =~ m{.*/(.*)}
-    if $row->{device} && $self->file_exists($row->{device});
-
     $self->_fetch_filename($row);#    if $row->{file_re};
     if ($VERIFY_ISO) {
         $self->_fetch_md5($row)         if !$row->{md5} && $row->{md5_url};
         $self->_fetch_sha256($row)         if !$row->{sha256} && $row->{sha256_url};
-    }
-
-    if ( !$row->{device} && $row->{filename}) {
-        if (my $volume = $self->search_volume_re(qr("^".$row->{filename}))) {
-            $row->{device} = $volume->get_path;
-            my $sth = $$CONNECTOR->dbh->prepare(
-                "UPDATE iso_images SET device=? WHERE id=?"
-            );
-            $sth->execute($volume->get_path, $row->{id});
-        }
     }
 
     return $row;

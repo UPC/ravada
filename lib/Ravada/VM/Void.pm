@@ -751,7 +751,7 @@ sub _iso_name($self, $iso, $request=undef, $verbose=0) {
     return '' if !$iso->{has_cd};
 
     my $name = ($iso->{device} or $iso->{rename_file} or $iso->{file_re});
-    confess Dumper($iso) if !$name;
+    return if !$name;
     $name =~ s/(.*)\.\*(.*)/$1$2/;
     $name =~ s/(.*)\.\+(.*)/$1.$2/;
     $name =~ s/(.*)\[\\d.*?\]\+(.*)/${1}1$2/;

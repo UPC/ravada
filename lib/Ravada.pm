@@ -923,7 +923,7 @@ sub _update_table_isos_url($self, $data) {
         $sth->execute($entry->{name});
         my $row = $sth->fetchrow_hashref();
         if (keys %$entry == 1) {
-            if ($row->{id} && !$row->{device}) {
+            if ($row->{id}) {
                 warn "INFO: removing old $entry->{name}\n";
                 $sth_delete->execute($row->{id});
             }
@@ -5382,7 +5382,9 @@ sub _cmd_download {
     my $test = $request->defined_arg('test');
 
     my $iso = $vm->_search_iso($id_iso);
-    my $device_cdrom = $vm->search_volume_path_re(qr($iso->{file_re}));
+    my $device_cdrom;
+    $device_cdrom = $vm->search_volume_path_re(qr($iso->{file_re}))
+    if exists $iso->{file_re} && $iso->{file_re};
 
     if ($device_cdrom && !$test) {
         $request->status('done',"$iso->{name} already downloaded");
@@ -5392,7 +5394,6 @@ sub _cmd_download {
 
     if ($vm->is_local) {
         $iso->{filename} = undef if !exists $iso->{filename};
-        delete $iso->{device} if $test;
         $vm->_iso_name($iso, $request, $verbose);
     } else {
         $self->_download_local_and_rsync($request, $vm, $iso);
