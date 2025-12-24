@@ -280,3 +280,20 @@ Apply the updated Netplan configuration:
     sudo netplan apply
 
 With these steps, each cloned virtual machine will be assigned a unique IP address based on its MAC address, resolving the issue of both machines receiving the same IP.
+
+Safari users fail to login
+-----------------------------
+
+If users are denied login despite filling the correct username and password it may be
+caused because the server time is not correct. 
+
+Fix it installing the timesync tool for systemd:
+
+.. prompt:: bash
+
+    sudo apt install systemd-timesyncd
+
+This has been detected only for users
+of Safari Browser so far, but it may happen to other. It is a good idea to have the
+system time properly synced.
+
