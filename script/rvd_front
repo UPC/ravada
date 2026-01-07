@@ -180,6 +180,13 @@ sub _security_policy() {
     return $sec;
 }
 
+# change 'scheme' of request url
+hook 'before_dispatch' => sub {
+  my $c = shift;
+  $c->req->url->base->scheme( $c->req->headers->header('X-Forwarded-Proto'))
+    if $c->req->headers->header('X-Forwarded-Proto');
+};
+
 hook before_routes => sub {
   my $c = shift;
 
