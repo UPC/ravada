@@ -34,6 +34,14 @@ sub test_default_admin {
     my $user = Ravada::Auth::login('admin','admin');
     ok($user);
     is($user->password_will_be_changed(),1);
+    ok($user->password_expiration_date())
+    && ok($user->password_expiration_date()-time >= 590 );
+
+    $user->password_expiration_date(time-1);
+
+    my $user2;
+    eval { $user2= Ravada::Auth::login('admin','admin');};
+    ok(!$user2);
 }
 
 ################################################################
