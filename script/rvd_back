@@ -1394,7 +1394,9 @@ sub DESTROY {
 {
 
 my $rvd_back = Ravada->new(%CONFIG);
-$rvd_back->_install();
+my %install_args;
+$install_args{add_user_admin} = 0 if $ADD_USER;
+$rvd_back->_install(%install_args);
 
 my @domains;
 @domains = _list_domains($rvd_back
