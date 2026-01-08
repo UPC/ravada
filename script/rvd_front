@@ -4349,7 +4349,7 @@ sub change_password {
     my $old_password = $c->param('old_password');
 
     if ($old_password) {
-        return $c->render(template => 'bootstrap/change_password', error => [ "Old password do not match!" ]) if (! $USER->compare_password($old_password));
+        return $c->render(template => 'bootstrap/change_password', error => [ "Old password does not match!" ]) if (! $USER->compare_password($old_password));
 
         my $new_password = $c->param('new_password');
         return $c->render(template => 'bootstrap/change_password', error => [ "New password length is less than 6!" ]) if (length($new_password) < 6);
