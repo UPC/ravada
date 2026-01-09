@@ -28,6 +28,18 @@ use Data::Dumper;
 
 with 'Ravada::Auth::User';
 
+# Whitelist of user data fields that can be updated via _data.
+# Keys are logical field names used by callers, values are the corresponding
+# column names in the "users" table.
+my %ALLOWED_USER_DATA_FIELDS = (
+                 name => 1
+           , password => 1
+           , is_admin => 1
+       , is_temporary => 1
+     , change_password => 1
+     , password_expiration_date => 1
+
+);
 
 our $CON;
 
@@ -114,6 +126,7 @@ Adds a new user in the SQL database. Returns nothing.
            , is_admin => 0
        , is_temporary => 0
      , change_password => 0
+     , password_expiration_date => 0
     );
 
 =cut
@@ -280,8 +293,8 @@ sub login {
         $self->{_data} = $found if ref $self && $found;
     }
 
-    confess "Error: password expired for $name"
-    ."\n"
+    die "Password expired for $name."
+        ." Please contact your administrator to reset your password.\n"
     if $found && $found->{password_expiration_date}
     && time >= $found->{password_expiration_date};
 
@@ -629,10 +642,13 @@ sub password_expiration_date($self, $value=undef) {
 }
 
 sub _data($self, $field, $value=undef) {
-    return $self->{_data}->{$field} if !defined $value;
 
     confess "Wrong field '$field'"
-    unless $field =~ /^[a-z_]+$/;
+    unless $ALLOWED_USER_DATA_FIELDS{$field};
+
+    return $self->{_data}->{$field} if !defined $value;
+
+    _init_connector();
 
     my $sth = $$CON->dbh->prepare(
         "UPDATE users set $field=? WHERE id=?"
