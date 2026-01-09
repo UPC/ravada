@@ -3573,6 +3573,7 @@ sub login($c, $status=200) {
     if (!@error) {
         if (defined $login && defined $password) {
             eval { $auth_ok = Ravada::Auth::login($login, $password)};
+            push @error,($@) if $@;
         } elsif (($c->param('ticket')) || ($c->param('submit') && $c->param('submit') eq 'sso')) {
             eval { $auth_ok = Ravada::Auth::login_external($ticket, $c->session('ticket')) };
             if ($auth_ok && !$@) {

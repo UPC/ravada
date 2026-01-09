@@ -15,7 +15,7 @@ use Ravada;
 use Ravada::Utils;
 use Ravada::Front;
 use Digest::SHA qw(sha1_hex);
-use Hash::Util qw(lock_hash);
+use Hash::Util qw(lock_hash unlock_hash);
 use Mojo::JSON qw(decode_json);
 use Moose;
 
@@ -28,6 +28,18 @@ use Data::Dumper;
 
 with 'Ravada::Auth::User';
 
+# Whitelist of user data fields that can be updated via _data.
+# Keys are logical field names used by callers, values are the corresponding
+# column names in the "users" table.
+my %ALLOWED_USER_DATA_FIELDS = (
+                 name => 1
+           , password => 1
+           , is_admin => 1
+       , is_temporary => 1
+     , change_password => 1
+     , password_expiration_date => 1
+
+);
 
 our $CON;
 
@@ -114,6 +126,7 @@ Adds a new user in the SQL database. Returns nothing.
            , is_admin => 0
        , is_temporary => 0
      , change_password => 0
+     , password_expiration_date => 0
     );
 
 =cut
@@ -130,8 +143,10 @@ sub add_user {
     my $is_external= ($args{is_external} or 0);
     my $external_auth = $args{external_auth};
     my $change_password = ($args{change_password} or 0);
+    my $password_expiration_date = $args{password_expiration_date};
 
-    delete @args{'name','password','is_admin','is_temporary','is_external', 'external_auth', 'change_password'};
+    delete @args{'name','password','is_admin','is_temporary','is_external', 'external_auth', 'change_password'
+                ,'password_expiration_date'};
 
     confess "WARNING: Unknown arguments ".Dumper(\%args)
         if keys %args;
@@ -139,8 +154,9 @@ sub add_user {
 
     my $sth;
     eval { $sth = $$CON->dbh->prepare(
-            "INSERT INTO users (name,password,is_admin,is_temporary, is_external, external_auth, change_password)"
-            ." VALUES(?,?,?,?,?,?,?)");
+            "INSERT INTO users (name,password,is_admin,is_temporary, is_external, external_auth, change_password
+                                ,password_expiration_date)"
+            ." VALUES(?,?,?,?,?,?,?,?)");
     };
     confess $@ if $@;
     if ($password && !$external_auth) {
@@ -148,7 +164,8 @@ sub add_user {
     } else {
         $password = '*LK* no pss';
     }
-    $sth->execute($name,$password,$is_admin,$is_temporary, $is_external, $external_auth, $change_password);
+    $sth->execute($name,$password,$is_admin,$is_temporary, $is_external, $external_auth, $change_password
+                    , $password_expiration_date);
     $sth->finish;
 
     $sth = $$CON->dbh->prepare("SELECT id FROM users WHERE name = ? ");
@@ -275,6 +292,11 @@ sub login {
         lock_hash %$found;
         $self->{_data} = $found if ref $self && $found;
     }
+
+    die "Password expired for $name."
+        ." Please contact your administrator to reset your password.\n"
+    if $found && $found->{password_expiration_date}
+    && time >= $found->{password_expiration_date};
 
     return 1 if $found;
 
@@ -601,6 +623,41 @@ sub compare_password {
     else {
         return 0;
     }
+}
+
+=head2 password_expiration_date
+
+Sets or gets the password expiration date for this user, if any.
+When set, the user is denied access after the expiration date if the
+password has not been changed.
+
+=cut
+
+sub password_expiration_date($self, $value=undef) {
+
+    return $self->_data('password_expiration_date', $value) if defined $value;
+
+    return $self->{_data}->{password_expiration_date};
+
+}
+
+sub _data($self, $field, $value=undef) {
+
+    confess "Wrong field '$field'"
+    unless $ALLOWED_USER_DATA_FIELDS{$field};
+
+    return $self->{_data}->{$field} if !defined $value;
+
+    _init_connector();
+
+    my $sth = $$CON->dbh->prepare(
+        "UPDATE users set $field=? WHERE id=?"
+    );
+    $sth->execute($value,$self->id);
+    unlock_hash(%{$self->{_data}});
+    $self->{_data}->{$field} = $value;
+    lock_hash(%{$self->{_data}});
+    return $value;
 }
 
 =head2 language
