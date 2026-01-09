@@ -612,6 +612,14 @@ sub compare_password {
     }
 }
 
+=head2 password_expiration_date
+
+Sets or gets the password expiration date for this user, if any.
+When set, the user is denied access after the expiration date if the
+password has not been changed.
+
+=cut
+
 sub password_expiration_date($self, $value=undef) {
 
     return $self->_data('password_expiration_date', $value) if defined $value;
