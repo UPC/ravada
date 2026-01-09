@@ -2953,7 +2953,7 @@ sub _upgrade_tables {
     }
     $self->_upgrade_table('users','external_auth','char(32) DEFAULT NULL');
     $self->_upgrade_table('users','date_created','timestamp DEFAULT CURRENT_TIMESTAMP');
-    $self->_upgrade_table('users','password_expiration_date','datetime default null');
+    $self->_upgrade_table('users','password_expiration_date','int default null');
 
     $self->_upgrade_table('networks','requires_password','int(11)');
     $self->_upgrade_table('networks','n_order','int(11) not null default 0');

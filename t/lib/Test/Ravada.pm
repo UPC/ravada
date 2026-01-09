@@ -528,6 +528,13 @@ sub rvd_back($config=undef, $init=1, $sqlite=1) {
         my $sth = $CONNECTOR->dbh->table_info('%',undef,'users','TABLE');
         my $info = $sth->fetchrow_hashref();
         $sth->finish;
+
+        if ($info) {
+            my $sth = $CONNECTOR->dbh->column_info(undef,undef,'users','password_expiration_date');
+            my $row = $sth->fetchrow_hashref;
+            $info = undef if !$row;
+        }
+
         if (!$info) {
             $rvd->_install();
             $rvd->_update_isos();
