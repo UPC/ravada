@@ -556,10 +556,9 @@ Arguments: password
 
 =cut
 
-sub change_password {
-    my $self = shift;
-    my $password = shift or die "ERROR: password required\n";
-    my ($force_change_password) = @_;
+sub change_password($self, $password, $force_change_password=0) {
+    die "ERROR: password required\n"
+    if !defined $password || !length($password);
 
     _init_connector();
 
@@ -570,14 +569,18 @@ sub change_password {
     }
 
     my $sth;
-    if (defined($force_change_password)) {
-        $sth= $$CON->dbh->prepare("UPDATE users set password=?, change_password=?"
-            ." WHERE name=?");
-        $sth->execute(sha1_hex($password), $force_change_password ? 1 : 0, $self->name);
-    } else {
-        my $sth= $$CON->dbh->prepare("UPDATE users set password=?"
-            ." WHERE name=?");
-        $sth->execute(sha1_hex($password), $self->name);
+    $sth= $$CON->dbh->prepare("UPDATE users "
+        ." set password=?, change_password=?, password_expiration_date=?"
+            ." WHERE id=?");
+    $sth->execute(sha1_hex($password), ($force_change_password or 0) ,0, $self->id);
+
+    # Keep the in-memory user data in sync with the database after a password change.
+    if (exists $self->{_data} && ref($self->{_data}) eq 'HASH') {
+        # Safely unlock and relock the hash if it is locked.
+        eval { unlock_hash(%{ $self->{_data} }) };
+        $self->{_data}->{change_password}           = ($force_change_password or 0);
+        $self->{_data}->{password_expiration_date}  = 0;
+        eval { lock_hash(%{ $self->{_data} }) };
     }
 }
 
