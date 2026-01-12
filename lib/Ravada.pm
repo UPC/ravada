@@ -220,7 +220,7 @@ sub _install($self, %args) {
 
     $pid->release();
 
-    print "\n" if $FIRST_TIME_RUN;
+    print "\n" if $FIRST_TIME_RUN && $ENV{TERM};
 
 }
 
@@ -295,7 +295,7 @@ sub _do_create_constraints($self) {
 
         warn "INFO: creating constraint $name \n"
         if $name && !$FIRST_TIME_RUN && $0 !~ /\.t$/;
-        print "+" if $FIRST_TIME_RUN && !$CAN_FORK;
+        print "+" if $FIRST_TIME_RUN && !$CAN_FORK && $ENV{TERM};
 
         $self->_clean_db_leftovers();
 
@@ -349,7 +349,7 @@ sub _init_user_admin {
         ,change_password => 1
         ,password_expiration_date => time+600
     );
-    warn "INFO: created default admin user 'admin' with password 'admin'\n"
+    warn "INFO: created default admin user 'admin'\n"
         if $0 !~ /\.t$/;
 }
 
@@ -1717,6 +1717,7 @@ sub _add_indexes_generic($self) {
         ]
         ,domains_bundle => [
             "unique (id_domain)"
+            ,"index (id_bundle)"
         ]
         ,vm_which => [
             "index(id_vm)"
@@ -1749,7 +1750,7 @@ sub _add_indexes_generic($self) {
 
             $self->_clean_index_conflicts($table, $name);
 
-            print "+" if $FIRST_TIME_RUN;
+            print "+" if $FIRST_TIME_RUN && $ENV{TERM};
             if ($table eq 'domain_displays' && $name =~ /port/) {
                 my $sth_clean=$CONNECTOR->dbh->prepare(
                     "UPDATE domain_displays set port=NULL"
@@ -2053,7 +2054,7 @@ sub _upgrade_table($self, $table, $field, $definition) {
             ." $row->{COLUMN_SIZE} to ".($new_size or '')."\n"
             ." $row->{TYPE_NAME} -> $new_type \n"
             ." in $table\n$definition\n"  if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
-        print "-" if $FIRST_TIME_RUN;
+        print "-" if $FIRST_TIME_RUN && $ENV{TERM};
         $dbh->do("alter table $table change $field $field $definition");
 
         $self->_create_constraints($table, [$field, $constraint]) if $constraint;
@@ -2078,7 +2079,7 @@ sub _upgrade_table($self, $table, $field, $definition) {
     if ( $sqlite_trigger && !$self->_exists_trigger($dbh, "Update$field") ) {
         $self->_sqlite_trigger($dbh,$table, $field, $sqlite_trigger);
     }
-    print "-" if $FIRST_TIME_RUN;
+    print "-" if $FIRST_TIME_RUN && $ENV{TERM};
     return 1;
 }
 
@@ -2135,7 +2136,7 @@ sub _create_table {
     warn "INFO: creating table $table\n"
     if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
 
-    print "." if $FIRST_TIME_RUN;
+    print "." if $FIRST_TIME_RUN && $ENV{TERM};
 
     my $file_sql = "$DIR_SQL/$table.sql";
     open my $in,'<',$file_sql or die "$! $file_sql";
