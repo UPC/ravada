@@ -21,7 +21,6 @@ my $SECONDS_TIMEOUT = 15;
 my $t;
 
 my $URL_LOGOUT = '/logout';
-my ($USERNAME, $PASSWORD) = (user_admin->name, "$$ $$");
 my $SCRIPT = path(__FILE__)->dirname->sibling('../script/rvd_front');
 
 $ENV{MOJO_MODE} = 'devel';
@@ -30,6 +29,8 @@ my $connector = rvd_back->connector;
 like($connector->{driver} , qr/mysql/i) or BAIL_OUT;
 
 $Test::Ravada::BACKGROUND=1;
+
+my ($USERNAME, $PASSWORD) = (user_admin->name, "$$ $$");
 
 $t = Test::Mojo->new($SCRIPT);
 $t->ua->inactivity_timeout(900);

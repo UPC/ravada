@@ -48,6 +48,19 @@ sub test_default_admin {
     eval { $user2= Ravada::Auth::login('admin','admin');};
     like($@, qr/Password expired/, "Expected error message");
     ok(!$user2);
+
+    $user->password_expiration_date(time+300);
+    eval { $user2= Ravada::Auth::login('admin','admin');};
+    ok($user2);
+
+    my $p = "newnew";
+    $user2->change_password($p);
+
+    eval { $user2= Ravada::Auth::login('admin',$p);};
+    ok($user2);
+    is($user2->password_expiration_date(),0);
+    is($user2->password_will_be_changed(),0);
+
 }
 
 ################################################################
