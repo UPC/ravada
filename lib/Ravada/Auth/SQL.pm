@@ -109,21 +109,27 @@ sub _verify_password {
     }
     
     # Legacy SHA1 support for backwards compatibility
-    # Use constant-time comparison to prevent timing attacks
+    # Use XOR-based constant-time comparison to prevent timing attacks
     my $computed_hash = sha1_hex($password);
-    my $result = 1;
     
-    # Compare lengths first
-    if (length($stored_hash) != length($computed_hash)) {
-        return 0;
+    # Always compare the same number of bytes regardless of length mismatch
+    my $result = 0;
+    my $len_a = length($stored_hash);
+    my $len_b = length($computed_hash);
+    
+    # XOR the lengths - will be 0 only if they match
+    $result |= $len_a ^ $len_b;
+    
+    # Compare bytes using XOR (always compare full length to avoid timing leaks)
+    my $cmp_len = $len_a < $len_b ? $len_b : $len_a;
+    for (my $i = 0; $i < $cmp_len; $i++) {
+        my $byte_a = $i < $len_a ? ord(substr($stored_hash, $i, 1)) : 0;
+        my $byte_b = $i < $len_b ? ord(substr($computed_hash, $i, 1)) : 0;
+        $result |= $byte_a ^ $byte_b;
     }
     
-    # Constant-time byte comparison
-    for (my $i = 0; $i < length($stored_hash); $i++) {
-        $result &= (substr($stored_hash, $i, 1) eq substr($computed_hash, $i, 1));
-    }
-    
-    return $result;
+    # Return 1 if result is 0 (all bytes matched), 0 otherwise
+    return $result == 0 ? 1 : 0;
 }
 
 =head2 _needs_password_upgrade
@@ -385,7 +391,7 @@ sub login {
                 $update_sth->finish;
             };
             # Log upgrade failure but don't break login flow
-            carp "Warning: Failed to upgrade password hash for user $name: $@" if $@;
+            carp "Warning: Failed to upgrade password hash for user $name" if $@;
         }
     } else {
         $found = undef;  # Clear found if password doesn't match
