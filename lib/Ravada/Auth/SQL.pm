@@ -573,6 +573,15 @@ sub change_password($self, $password, $force_change_password=0) {
         ." set password=?, change_password=?, password_expiration_date=?"
             ." WHERE id=?");
     $sth->execute(sha1_hex($password), ($force_change_password or 0) ,0, $self->id);
+
+    # Keep the in-memory user data in sync with the database after a password change.
+    if (exists $self->{_data} && ref($self->{_data}) eq 'HASH') {
+        # Safely unlock and relock the hash if it is locked.
+        eval { unlock_hash(%{ $self->{_data} }) };
+        $self->{_data}->{change_password}           = ($force_change_password or 0);
+        $self->{_data}->{password_expiration_date}  = 0;
+        eval { lock_hash(%{ $self->{_data} }) };
+    }
 }
 
 sub _change_password_external($self,$password) {
