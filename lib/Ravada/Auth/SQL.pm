@@ -71,7 +71,8 @@ Hash a password using bcrypt (Authen::Passphrase::BlowfishCrypt)
 =cut
 
 sub _hash_password {
-    my $password = shift or die "ERROR: password required for hashing\n";
+    my $password = shift;
+    die "ERROR: password required for hashing\n" if !defined $password || !length($password);
     
     my $ppr = Authen::Passphrase::BlowfishCrypt->new(
         cost        => 12,
@@ -108,7 +109,21 @@ sub _verify_password {
     }
     
     # Legacy SHA1 support for backwards compatibility
-    return ($stored_hash eq sha1_hex($password));
+    # Use constant-time comparison to prevent timing attacks
+    my $computed_hash = sha1_hex($password);
+    my $result = 1;
+    
+    # Compare lengths first
+    if (length($stored_hash) != length($computed_hash)) {
+        return 0;
+    }
+    
+    # Constant-time byte comparison
+    for (my $i = 0; $i < length($stored_hash); $i++) {
+        $result &= (substr($stored_hash, $i, 1) eq substr($computed_hash, $i, 1));
+    }
+    
+    return $result;
 }
 
 =head2 _needs_password_upgrade
@@ -362,11 +377,15 @@ sub login {
         
         # Migrate old SHA1 hash to bcrypt on successful login
         if (_needs_password_upgrade($found->{password})) {
-            my $new_hash = _hash_password($password);
-            my $update_sth = $$CON->dbh->prepare(
-                "UPDATE users SET password=? WHERE id=?");
-            $update_sth->execute($new_hash, $found->{id});
-            $update_sth->finish;
+            eval {
+                my $new_hash = _hash_password($password);
+                my $update_sth = $$CON->dbh->prepare(
+                    "UPDATE users SET password=? WHERE id=?");
+                $update_sth->execute($new_hash, $found->{id});
+                $update_sth->finish;
+            };
+            # Log upgrade failure but don't break login flow
+            carp "Warning: Failed to upgrade password hash for user $name: $@" if $@;
         }
     } else {
         $found = undef;  # Clear found if password doesn't match
@@ -651,14 +670,16 @@ sub change_password($self, $password, $force_change_password=0) {
     $sth= $$CON->dbh->prepare("UPDATE users "
         ." set password=?, change_password=?, password_expiration_date=?"
             ." WHERE id=?");
-    $sth->execute(_hash_password($password), ($force_change_password or 0) ,0, $self->id);
+    my $new_password_hash = _hash_password($password);
+    $sth->execute($new_password_hash, ($force_change_password or 0) ,0, $self->id);
 
     # Keep the in-memory user data in sync with the database after a password change.
     if (exists $self->{_data} && ref($self->{_data}) eq 'HASH') {
         # Safely unlock and relock the hash if it is locked.
         eval { unlock_hash(%{ $self->{_data} }) };
-        $self->{_data}->{change_password}           = ($force_change_password or 0);
-        $self->{_data}->{password_expiration_date}  = 0;
+        $self->{_data}->{password}                      = $new_password_hash;
+        $self->{_data}->{change_password}               = ($force_change_password or 0);
+        $self->{_data}->{password_expiration_date}      = 0;
         eval { lock_hash(%{ $self->{_data} }) };
     }
 }
