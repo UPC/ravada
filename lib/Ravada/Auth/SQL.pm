@@ -18,6 +18,8 @@ use Digest::SHA qw(sha1_hex);
 use Hash::Util qw(lock_hash unlock_hash);
 use Mojo::JSON qw(decode_json);
 use Moose;
+use Authen::Passphrase;
+use Authen::Passphrase::BlowfishCrypt;
 
 use feature qw(signatures);
 no warnings "experimental::signatures";
@@ -58,6 +60,92 @@ sub _init_connector {
     }
 
     die "Undefined connector"   if !$CON || !$$CON;
+}
+
+=head2 _hash_password
+
+Hash a password using bcrypt (Authen::Passphrase::BlowfishCrypt)
+
+    my $hashed = _hash_password($plaintext_password);
+
+=cut
+
+sub _hash_password {
+    my $password = shift;
+    die "ERROR: password required for hashing\n" if !defined $password || !length($password);
+    
+    my $ppr = Authen::Passphrase::BlowfishCrypt->new(
+        cost        => 12,
+        salt_random => 1,
+        passphrase  => $password,
+    );
+    
+    return $ppr->as_rfc2307();
+}
+
+=head2 _verify_password
+
+Verify a password against a stored hash. Supports both bcrypt and legacy SHA1 hashes.
+
+    my $is_valid = _verify_password($plaintext_password, $stored_hash);
+
+=cut
+
+sub _verify_password {
+    my ($password, $stored_hash) = @_;
+    
+    die "ERROR: password and hash required for verification\n"
+        if !defined $password || !defined $stored_hash;
+    
+    # Check if this is a bcrypt hash (RFC 2307 format starting with {CRYPT})
+    if ($stored_hash =~ /^\{CRYPT\}/) {
+        my $result;
+        eval {
+            my $ppr = Authen::Passphrase->from_rfc2307($stored_hash);
+            $result = $ppr->match($password);
+        };
+        return 0 if $@;  # Return false if hash parsing fails
+        return $result ? 1 : 0;
+    }
+    
+    # Legacy SHA1 support for backwards compatibility
+    # Use XOR-based constant-time comparison to prevent timing attacks
+    my $computed_hash = sha1_hex($password);
+    
+    # Always compare the same number of bytes regardless of length mismatch
+    my $result = 0;
+    my $len_a = length($stored_hash);
+    my $len_b = length($computed_hash);
+    
+    # XOR the lengths - will be 0 only if they match
+    $result |= $len_a ^ $len_b;
+    
+    # Compare bytes using XOR (always compare full length to avoid timing leaks)
+    my $cmp_len = $len_a < $len_b ? $len_b : $len_a;
+    for (my $i = 0; $i < $cmp_len; $i++) {
+        my $byte_a = $i < $len_a ? ord(substr($stored_hash, $i, 1)) : 0;
+        my $byte_b = $i < $len_b ? ord(substr($computed_hash, $i, 1)) : 0;
+        $result |= $byte_a ^ $byte_b;
+    }
+    
+    # Return 1 if result is 0 (all bytes matched), 0 otherwise
+    return $result == 0 ? 1 : 0;
+}
+
+=head2 _needs_password_upgrade
+
+Check if a password hash needs to be upgraded from SHA1 to bcrypt.
+
+    my $needs_upgrade = _needs_password_upgrade($stored_hash);
+
+=cut
+
+sub _needs_password_upgrade {
+    my $stored_hash = shift;
+    return 0 if !defined $stored_hash;
+    
+    # If it doesn't start with {CRYPT}, it's a legacy SHA1 hash
+    return ($stored_hash !~ /^\{CRYPT\}/);
 }
 
 
@@ -160,7 +248,7 @@ sub add_user {
     };
     confess $@ if $@;
     if ($password && !$external_auth) {
-        $password = sha1_hex($password);
+        $password = _hash_password($password);
     } else {
         $password = '*LK* no pss';
     }
@@ -283,14 +371,30 @@ sub login {
 
 
     my $sth = $$CON->dbh->prepare(
-       "SELECT * FROM users WHERE name=? AND password=?");
-    $sth->execute($name , sha1_hex($password));
+       "SELECT * FROM users WHERE name=?");
+    $sth->execute($name);
     my ($found) = $sth->fetchrow_hashref;
     $sth->finish;
 
-    if ($found) {
+    # Verify password using the new function that supports both hash types
+    if ($found && _verify_password($password, $found->{password})) {
         lock_hash %$found;
         $self->{_data} = $found if ref $self && $found;
+        
+        # Migrate old SHA1 hash to bcrypt on successful login
+        if (_needs_password_upgrade($found->{password})) {
+            eval {
+                my $new_hash = _hash_password($password);
+                my $update_sth = $$CON->dbh->prepare(
+                    "UPDATE users SET password=? WHERE id=?");
+                $update_sth->execute($new_hash, $found->{id});
+                $update_sth->finish;
+            };
+            # Log upgrade failure but don't break login flow
+            carp "Warning: Failed to upgrade password hash for user $name" if $@;
+        }
+    } else {
+        $found = undef;  # Clear found if password doesn't match
     }
 
     die "Password expired for $name."
@@ -572,14 +676,16 @@ sub change_password($self, $password, $force_change_password=0) {
     $sth= $$CON->dbh->prepare("UPDATE users "
         ." set password=?, change_password=?, password_expiration_date=?"
             ." WHERE id=?");
-    $sth->execute(sha1_hex($password), ($force_change_password or 0) ,0, $self->id);
+    my $new_password_hash = _hash_password($password);
+    $sth->execute($new_password_hash, ($force_change_password or 0) ,0, $self->id);
 
     # Keep the in-memory user data in sync with the database after a password change.
     if (exists $self->{_data} && ref($self->{_data}) eq 'HASH') {
         # Safely unlock and relock the hash if it is locked.
         eval { unlock_hash(%{ $self->{_data} }) };
-        $self->{_data}->{change_password}           = ($force_change_password or 0);
-        $self->{_data}->{password_expiration_date}  = 0;
+        $self->{_data}->{password}                      = $new_password_hash;
+        $self->{_data}->{change_password}               = ($force_change_password or 0);
+        $self->{_data}->{password_expiration_date}      = 0;
         eval { lock_hash(%{ $self->{_data} }) };
     }
 }
@@ -619,13 +725,9 @@ sub compare_password {
     
     my $sth= $$CON->dbh->prepare("SELECT password FROM users WHERE name=?");
     $sth->execute($self->name);
-    my $hex_pass = $sth->fetchrow();
-    if ($hex_pass eq sha1_hex($password)) {
-        return 1;
-    }
-    else {
-        return 0;
-    }
+    my $stored_hash = $sth->fetchrow();
+    
+    return _verify_password($password, $stored_hash);
 }
 
 =head2 password_expiration_date
