@@ -915,6 +915,15 @@ sub _update_isos {
           ,has_cd => 0
         }
     );
+    for my $item ( keys %data ) {
+        if (!exists $data{$item}->{file_re} && exists $data{$item}->{url}) {
+            my ($url, $file) = $data{$item}->{url} =~ m{(.*/)(.*)};
+            $data{$item}->{url} = $url;
+            $data{$item}->{file_re} = '^'.$file.'$';
+        }
+        $data{$item}->{file_re} = '^'.$data{$item}->{file_re}.'$'
+        if exists $data{$item}->{file_re} && $data{$item}->{file_re} !~ qr/^\^.*\$$/
+    }
     $self->_update_table($table, $field, \%data);
     $self->_update_table_isos_url(\%data);
 
