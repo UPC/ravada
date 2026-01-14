@@ -2050,12 +2050,16 @@ sub _xml_add_uefi($self, $doc, $name) {
     my $arch = $type->getAttribute('arch');
     if ( $arch =~ /x86_64/ ) {
 
-        $type->setAttribute('machine' => $self->_find_machine_type($arch, qr/^pc-q35/))
-        if $type->getAttribute('machine') !~ /pc-q35/;
+        #$type->setAttribute('machine' => $self->_find_machine_type($arch, qr/^pc-q35/))
+        #if $type->getAttribute('machine') !~ /pc-q35/;
 
         $ovmf = '/usr/share/OVMF/OVMF_CODE_4M.fd';
     } else {
-        die "Unsupported UEFI in this architecture ".$type->toString();
+        if (!$self->file_exists($ovmf)) {
+            $ovmf = '/usr/share/OVMF/OVMF32_CODE_4M.fd';
+        }
+        die "Unsupported UEFI in this architecture ".$type->toString()
+        unless $self->file_exists($ovmf);
     }
     my ($text) = $loader->findnodes("text()");
     if ($text) {
