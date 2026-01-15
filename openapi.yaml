@@ -1,0 +1,1442 @@
+openapi: 3.0.3
+info:
+  title: Ravada Frontend API
+  description: |
+    This document describes the Ravada Frontend REST API endpoints.
+    Ravada is a Remote Virtual Desktops Manager that provides a web-based user interface 
+    for managing and accessing virtual machines based on QEMU/KVM virtualization technology.
+    
+    The frontend is implemented as a Mojolicious application in the file `script/rvd_front`.
+    
+    ## Authentication
+    Most endpoints require authentication. Use `/login` to authenticate and establish a session.
+    
+    ## Notes on Source Routes
+    The routes in this specification are extracted from `script/rvd_front` which uses Mojolicious 
+    route syntax. In the source code, you may see different parameter formats:
+    - `#param` - Required placeholder (rendered as `{param}` in OpenAPI)
+    - `(:param)` - Optional placeholder (rendered as `{param}` in OpenAPI)
+    - `:param` - Standard Mojolicious placeholder (rendered as `{param}` in OpenAPI)
+    - `*param` - Wildcard parameter
+    
+    All path parameters in this OpenAPI specification use the standard `{param}` format.
+    
+  version: 1.8.0
+  contact:
+    name: Ravada VDI
+    url: https://github.com/UPC/ravada
+  license:
+    name: AGPL v3
+    url: https://github.com/UPC/ravada/blob/master/LICENSE
+
+servers:
+  - url: http://localhost:8081
+    description: Default development server
+  - url: https://{hostname}:{port}
+    description: Custom server
+    variables:
+      hostname:
+        default: localhost
+      port:
+        default: '8081'
+
+tags:
+  - name: auth
+    description: Authentication and authorization endpoints
+  - name: machines
+    description: Virtual machine management operations
+  - name: nodes
+    description: Hypervisor node management
+  - name: users
+    description: User management and information
+  - name: groups
+    description: Group management (local and LDAP)
+  - name: admin
+    description: Administrative operations
+  - name: lists
+    description: List resources (machines, nodes, users, etc.)
+  - name: networking
+    description: Network and routing configuration
+  - name: storage
+    description: Storage pool management
+  - name: requests
+    description: Asynchronous request and message handling
+  - name: booking
+    description: Machine booking and scheduling
+  - name: bundles
+    description: Machine bundle management
+  - name: hostdevices
+    description: Host device passthrough management
+  - name: misc
+    description: Miscellaneous endpoints
+
+paths:
+  /robots.txt:
+    get:
+      tags: [misc]
+      summary: Robots.txt file
+      description: Returns a robots.txt file suitable for external robots/crawlers
+      responses:
+        '200':
+          description: Robots.txt content
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "User-agent: *\nDisallow: /"
+
+  /:
+    get:
+      tags: [misc]
+      summary: Main landing page
+      description: Renders the main application page
+      responses:
+        '200':
+          description: HTML page rendered
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /index.html:
+    get:
+      tags: [misc]
+      summary: Index page
+      description: Renders the index page (same as /)
+      responses:
+        '200':
+          description: HTML page rendered
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /user.json:
+    get:
+      tags: [auth]
+      summary: Get current user information
+      description: Returns the ID and name of the currently logged-in user
+      responses:
+        '200':
+          description: User information
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    description: User ID
+                  name:
+                    type: string
+                    description: User name
+
+  /login:
+    get:
+      tags: [auth]
+      summary: Login page
+      description: Displays the login form
+      responses:
+        '200':
+          description: Login page rendered
+          content:
+            text/html:
+              schema:
+                type: string
+    post:
+      tags: [auth]
+      summary: Authenticate user
+      description: Authenticates a user with credentials
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Authentication successful
+        '401':
+          description: Authentication failed
+
+  /login_openid:
+    get:
+      tags: [auth]
+      summary: OpenID login
+      description: Initiates OpenID authentication flow
+      responses:
+        '302':
+          description: Redirect to OpenID provider
+
+  /login_openid/redirect_uri:
+    get:
+      tags: [auth]
+      summary: OpenID redirect URI
+      description: Callback endpoint for OpenID authentication
+      responses:
+        '302':
+          description: Redirect after authentication
+
+  /logout:
+    get:
+      tags: [auth]
+      summary: Logout
+      description: Logs out the current user
+      responses:
+        '302':
+          description: Redirect to login page
+
+  /logout.json:
+    get:
+      tags: [auth]
+      summary: Logout (JSON)
+      description: Logs out the current user and returns JSON response
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /anonymous:
+    get:
+      tags: [auth]
+      summary: Anonymous access
+      description: Provides anonymous access to the system
+      responses:
+        '200':
+          description: Anonymous session established
+
+  /anonymous_logout.html:
+    get:
+      tags: [auth]
+      summary: Anonymous logout
+      description: Logs out anonymous user
+      responses:
+        '200':
+          description: Logout page
+
+  /anonymous/{base_id}.html:
+    get:
+      tags: [auth]
+      summary: Anonymous base access
+      description: Accesses a specific base machine anonymously
+      parameters:
+        - name: base_id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Base machine ID
+      responses:
+        '200':
+          description: Base machine page
+
+  /settings_global.json:
+    get:
+      tags: [admin]
+      summary: Get global settings
+      description: Returns global Ravada settings
+      responses:
+        '200':
+          description: Global settings
+          content:
+            application/json:
+              schema:
+                type: object
+    post:
+      tags: [admin]
+      summary: Update global settings
+      description: Updates global Ravada settings (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: integer
+                  reload:
+                    type: integer
+
+  /list_bases.json:
+    get:
+      tags: [lists]
+      summary: List base machines
+      description: Returns a list of base machines (templates). Non-admin users only see public bases.
+      responses:
+        '200':
+          description: List of base machines
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+                    is_public:
+                      type: boolean
+
+  /list_machines.json:
+    get:
+      tags: [lists]
+      summary: List all machines
+      description: Returns a list of all virtual machines
+      responses:
+        '200':
+          description: List of machines
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /list_machines_user.json:
+    get:
+      tags: [lists]
+      summary: List user machines
+      description: Returns machines belonging to the current user
+      responses:
+        '200':
+          description: List of user machines
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /list_bases_anonymous.json:
+    get:
+      tags: [lists]
+      summary: List bases for anonymous users
+      description: Returns public base machines available to anonymous users
+      responses:
+        '200':
+          description: List of public bases
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /list_nodes.json:
+    get:
+      tags: [lists]
+      summary: List nodes
+      description: Returns a list of hypervisor nodes
+      responses:
+        '200':
+          description: List of nodes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: integer
+                    name:
+                      type: string
+                    hostname:
+                      type: string
+
+  /list_nodes_by_id.json:
+    get:
+      tags: [lists]
+      summary: List nodes by ID
+      description: Returns nodes indexed by their ID
+      responses:
+        '200':
+          description: Nodes by ID
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /list_vm_types.json:
+    get:
+      tags: [lists]
+      summary: List VM types
+      description: Returns available virtual machine types (KVM, LXC, etc.)
+      responses:
+        '200':
+          description: List of VM types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+  /list_images.json:
+    get:
+      tags: [lists]
+      summary: List ISO images
+      description: Returns available ISO images for machine creation
+      parameters:
+        - name: backend
+          in: query
+          schema:
+            type: string
+          description: Filter by backend type
+      responses:
+        '200':
+          description: List of ISO images
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /list_machine_types.json:
+    get:
+      tags: [lists]
+      summary: List machine types
+      description: Returns machine types available for a VM backend
+      parameters:
+        - name: vm_type
+          in: query
+          schema:
+            type: string
+          description: VM type to filter by
+      responses:
+        '200':
+          description: List of machine types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /list_cpu_models.json:
+    get:
+      tags: [lists]
+      summary: List CPU models
+      description: Returns available CPU models for virtual machines
+      responses:
+        '200':
+          description: List of CPU models
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+  /list_users.json:
+    get:
+      tags: [lists]
+      summary: List users
+      description: Returns a list of all users (admin only)
+      responses:
+        '200':
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /machine/info/{id}.{type}:
+    get:
+      tags: [machines]
+      summary: Get machine information
+      description: Returns detailed information about a specific machine
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Machine ID
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [json, html]
+          description: Response format
+      responses:
+        '200':
+          description: Machine information
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /machine/start/{id}.{type}:
+    get:
+      tags: [machines]
+      summary: Start machine
+      description: Starts a virtual machine
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Machine ID
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Response format
+      responses:
+        '200':
+          description: Machine start requested
+
+  /machine/shutdown/{id}.{type}:
+    get:
+      tags: [machines]
+      summary: Shutdown machine
+      description: Gracefully shuts down a virtual machine
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Machine ID
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Response format
+      responses:
+        '200':
+          description: Shutdown requested
+
+  /machine/force_shutdown/{id}.{type}:
+    get:
+      tags: [machines]
+      summary: Force shutdown machine
+      description: Forcefully shuts down a virtual machine
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Machine ID
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Response format
+      responses:
+        '200':
+          description: Force shutdown requested
+
+  /machine/reboot/{id}.{type}:
+    get:
+      tags: [machines]
+      summary: Reboot machine
+      description: Reboots a virtual machine
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Machine ID
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Response format
+      responses:
+        '200':
+          description: Reboot requested
+
+  /machine/pause/{id}.{type}:
+    get:
+      tags: [machines]
+      summary: Pause machine
+      description: Pauses a running virtual machine
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Machine ID
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Response format
+      responses:
+        '200':
+          description: Machine paused
+
+  /machine/resume/{id}.{type}:
+    get:
+      tags: [machines]
+      summary: Resume machine
+      description: Resumes a paused virtual machine
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Machine ID
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Response format
+      responses:
+        '200':
+          description: Machine resumed
+
+  /machine/hibernate/{id}.{type}:
+    get:
+      tags: [machines]
+      summary: Hibernate machine
+      description: Hibernates a virtual machine (saves state to disk)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Machine ID
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Response format
+      responses:
+        '200':
+          description: Hibernate requested
+
+  /machine/clone/{id}.{type}:
+    get:
+      tags: [machines]
+      summary: Clone machine
+      description: Creates a clone of a base machine for the user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Base machine ID
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Response format
+      responses:
+        '200':
+          description: Clone requested
+
+  /machine/remove/{id}.{type}:
+    delete:
+      tags: [machines]
+      summary: Remove machine
+      description: Removes a virtual machine
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Machine ID
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Response format
+      responses:
+        '200':
+          description: Machine removal requested
+
+  /machine/exists/{name}:
+    get:
+      tags: [machines]
+      summary: Check if machine exists
+      description: Checks if a machine with the given name exists
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Machine name
+      responses:
+        '200':
+          description: Existence check result
+          content:
+            application/json:
+              schema:
+                type: boolean
+
+  /machine/set:
+    post:
+      tags: [machines]
+      summary: Update machine settings
+      description: Updates machine configuration settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Settings updated
+
+  /machine/set/{id}/{field}/{value}:
+    get:
+      tags: [machines]
+      summary: Set machine field
+      description: Sets a specific field value for a machine
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Machine ID
+        - name: field
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Field name
+        - name: value
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Field value
+      responses:
+        '200':
+          description: Field updated
+
+  /machine/hardware/change:
+    post:
+      tags: [machines]
+      summary: Change machine hardware
+      description: Updates hardware configuration of a machine
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id_domain:
+                  type: integer
+      responses:
+        '200':
+          description: Hardware change requested
+
+  /machine/hardware/add:
+    post:
+      tags: [machines]
+      summary: Add hardware to machine
+      description: Adds new hardware component to a machine
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Hardware added
+
+  /machine/hardware/remove/{id_domain}/{hardware}/{index}:
+    get:
+      tags: [machines]
+      summary: Remove hardware from machine
+      description: Removes a hardware component from a machine
+      parameters:
+        - name: id_domain
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Machine ID
+        - name: hardware
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Hardware type
+        - name: index
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Hardware index
+      responses:
+        '200':
+          description: Hardware removed
+
+  /machine/screenshot/{id}.{type}:
+    get:
+      tags: [machines]
+      summary: Get machine screenshot
+      description: Returns a screenshot of the machine's display
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Machine ID
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Response format
+      responses:
+        '200':
+          description: Screenshot returned
+
+  /machine/list_access/{id_domain}:
+    get:
+      tags: [machines]
+      summary: List machine access rules
+      description: Returns access control rules for a machine
+      parameters:
+        - name: id_domain
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Machine ID
+      responses:
+        '200':
+          description: Access rules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /machine/add_access/{id_domain}:
+    post:
+      tags: [machines]
+      summary: Add machine access rule
+      description: Adds an access control rule to a machine
+      parameters:
+        - name: id_domain
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Machine ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Access rule added
+
+  /node/info/{id}.json:
+    get:
+      tags: [nodes]
+      summary: Get node information
+      description: Returns detailed information about a hypervisor node
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Node ID
+      responses:
+        '200':
+          description: Node information
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /node/enable/{id}.json:
+    get:
+      tags: [nodes]
+      summary: Enable node
+      description: Enables a hypervisor node
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Node ID
+      responses:
+        '200':
+          description: Node enabled
+
+  /node/disable/{id}.json:
+    get:
+      tags: [nodes]
+      summary: Disable node
+      description: Disables a hypervisor node
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Node ID
+      responses:
+        '200':
+          description: Node disabled
+
+  /node/start/{id}.json:
+    get:
+      tags: [nodes]
+      summary: Start node
+      description: Starts a hypervisor node
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Node ID
+      responses:
+        '200':
+          description: Node start requested
+
+  /node/shutdown/{id}.json:
+    get:
+      tags: [nodes]
+      summary: Shutdown node
+      description: Shuts down a hypervisor node
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Node ID
+      responses:
+        '200':
+          description: Node shutdown requested
+
+  /node/set/{id}/{field}/{value}:
+    get:
+      tags: [nodes]
+      summary: Set node field
+      description: Sets a configuration field for a node
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Node ID
+        - name: field
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Field name
+        - name: value
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Field value (can be empty string)
+      responses:
+        '200':
+          description: Field updated
+
+  /user/info/{id}:
+    get:
+      tags: [users]
+      summary: Get user information
+      description: Returns information about a specific user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: User ID
+      responses:
+        '200':
+          description: User information
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /user/set/{id}:
+    post:
+      tags: [users]
+      summary: Update user information
+      description: Updates user settings
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: User ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: User updated
+
+  /user/grants/{id}:
+    get:
+      tags: [users]
+      summary: Get user grants
+      description: Returns permission grants for a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: User ID
+      responses:
+        '200':
+          description: User grants
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /user/grant/{id_user}/{grant}/{value}:
+    get:
+      tags: [users]
+      summary: Set user grant
+      description: Sets a specific permission grant for a user
+      parameters:
+        - name: id_user
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: User ID
+        - name: grant
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Grant name
+        - name: value
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Grant value (0 or 1)
+      responses:
+        '200':
+          description: Grant updated
+
+  /requests.json:
+    get:
+      tags: [requests]
+      summary: List requests
+      description: Returns list of asynchronous requests
+      responses:
+        '200':
+          description: List of requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /request/{name}/:
+    post:
+      tags: [requests]
+      summary: Create request
+      description: Creates a new asynchronous request
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Request type name
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Request created
+
+  /request/{id}.{type}:
+    get:
+      tags: [requests]
+      summary: Get request status
+      description: Returns status of an asynchronous request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Request ID
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Response format
+      responses:
+        '200':
+          description: Request status
+
+  /messages.json:
+    get:
+      tags: [requests]
+      summary: Get messages
+      description: Returns user messages
+      responses:
+        '200':
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /messages/read/{id}.json:
+    get:
+      tags: [requests]
+      summary: Mark message as read
+      description: Marks a message as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Message ID
+      responses:
+        '200':
+          description: Message marked as read
+
+  /v1/bookings/:
+    get:
+      tags: [booking]
+      summary: List bookings
+      description: Returns list of machine bookings
+      responses:
+        '200':
+          description: List of bookings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+    post:
+      tags: [booking]
+      summary: Create booking
+      description: Creates a new machine booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Booking created
+
+  /v1/bookings/{id}:
+    get:
+      tags: [booking]
+      summary: Get booking details
+      description: Returns details of a specific booking
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Booking ID
+      responses:
+        '200':
+          description: Booking details
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /v2/bundle/create:
+    post:
+      tags: [bundles]
+      summary: Create bundle
+      description: Creates a new machine bundle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Bundle created
+
+  /v2/bundle/list:
+    get:
+      tags: [bundles]
+      summary: List bundles
+      description: Returns list of machine bundles
+      responses:
+        '200':
+          description: List of bundles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /v2/bundle/add_domain:
+    post:
+      tags: [bundles]
+      summary: Add domain to bundle
+      description: Adds a machine to a bundle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Domain added to bundle
+
+  /v2/bundle/remove_domain:
+    post:
+      tags: [bundles]
+      summary: Remove domain from bundle
+      description: Removes a machine from a bundle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Domain removed from bundle
+
+  /storage/list_pools/{id_vm}:
+    get:
+      tags: [storage]
+      summary: List storage pools
+      description: Returns storage pools for a VM
+      parameters:
+        - name: id_vm
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: VM ID
+      responses:
+        '200':
+          description: List of storage pools
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /storage/list_unused_volumes:
+    get:
+      tags: [storage]
+      summary: List unused volumes
+      description: Returns list of unused storage volumes
+      responses:
+        '200':
+          description: List of unused volumes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /group/new:
+    get:
+      tags: [groups]
+      summary: New group form
+      description: Displays form to create a new group
+      responses:
+        '200':
+          description: New group form
+    post:
+      tags: [groups]
+      summary: Create group
+      description: Creates a new group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Group created
+
+  /group/{type}/list:
+    get:
+      tags: [groups]
+      summary: List groups
+      description: Returns list of groups by type
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [local, ldap]
+          description: Group type
+      responses:
+        '200':
+          description: List of groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+  /network/new:
+    get:
+      tags: [networking]
+      summary: New network form
+      description: Displays form to create a new network
+      responses:
+        '200':
+          description: New network form
+
+  /route/new:
+    get:
+      tags: [networking]
+      summary: New route form
+      description: Displays form to create a new route
+      responses:
+        '200':
+          description: New route form
+
+  /status.{type}:
+    get:
+      tags: [misc]
+      summary: System status
+      description: Returns system status information
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [json, html]
+          description: Response format
+      responses:
+        '200':
+          description: System status
+
+  /host_devices/templates/list/{id_vm}:
+    get:
+      tags: [hostdevices]
+      summary: List host device templates
+      description: Returns list of host device templates available for a specific VM
+      parameters:
+        - name: id_vm
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Virtual machine ID
+      responses:
+        '200':
+          description: List of host device templates
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error message
+        code:
+          type: integer
+          description: Error code
+
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: ravada
+      description: Session-based authentication using cookies
+
+security:
+  - sessionCookie: []
