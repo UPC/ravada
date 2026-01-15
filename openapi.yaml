@@ -253,6 +253,8 @@ paths:
             application/json:
               schema:
                 type: object
+
+  /settings_global:
     post:
       tags: [admin]
       summary: Update global settings
