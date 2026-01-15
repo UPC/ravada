@@ -995,6 +995,22 @@ paths:
           description: Field updated
 
   /v1/node/new:
+    get:
+      tags: [nodes]
+      summary: Get new node form
+      description: |
+        Returns the HTML form used to create a new hypervisor node (`main/new_node` template).
+        Requires admin privileges.
+      responses:
+        '200':
+          description: HTML form for creating a new node
+          content:
+            text/html:
+              schema:
+                type: string
+                description: New node form HTML
+        '401':
+          description: Unauthorized - admin privileges required
     post:
       tags: [nodes]
       summary: Create a new node
