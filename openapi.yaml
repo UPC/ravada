@@ -994,6 +994,54 @@ paths:
         '200':
           description: Field updated
 
+  /v1/node/new:
+    post:
+      tags: [nodes]
+      summary: Create a new node
+      description: Creates a new hypervisor node in the system. Requires admin privileges.
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              required:
+                - name
+                - vm_type
+                - hostname
+                - _submit
+              properties:
+                name:
+                  type: string
+                  description: Name of the new node
+                  example: "node1"
+                vm_type:
+                  type: string
+                  description: Type of virtual machine hypervisor
+                  example: "KVM"
+                  enum: [KVM, LXC, Void]
+                hostname:
+                  type: string
+                  description: Fully qualified domain name or IP address of the node
+                  example: "192.168.1.100"
+                _submit:
+                  type: integer
+                  description: Submit flag (must be 1)
+                  example: 1
+                  enum: [1]
+      responses:
+        '200':
+          description: Node created successfully
+          content:
+            text/html:
+              schema:
+                type: string
+                description: Admin nodes page rendered
+        '401':
+          description: Unauthorized - admin privileges required
+        '400':
+          description: Bad request - missing or invalid parameters
+
   /user/info/{id}:
     get:
       tags: [users]
