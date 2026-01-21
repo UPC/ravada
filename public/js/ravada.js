@@ -1602,12 +1602,10 @@
             var ws = new WebSocket(url);
             ws.onopen = function(event) { ws.send('request/'+id_request) };
 
-            ws.onclose = function() {
-                $scope.$apply(function() {
-                    $timeout(function() {
-                        $scope.ws_connection_lost = true;
-                    }, 5*1000);
-                });
+            ws.onclose = function(event) {
+                $timeout(function() {
+                    $scope.ws_connection_lost = true;
+                }, 5*1000);
             };
 
             ws.onmessage = function(event) {
@@ -1660,12 +1658,10 @@
             var ws = new WebSocket(url);
             ws.onopen = function(event) { ws.send('machine_info/'+id_domain) };
 
-            ws.onclose = function() {
-                $scope.$apply(function() {
-                    $timeout(function() {
-                        $scope.ws_connection_lost = true;
-                    }, 5*1000);
-                });
+            ws.onclose = function(event) {
+                $timeout(function() {
+                    $scope.ws_connection_lost = true;
+                }, 5*1000);
             };
 
             ws.onmessage = function(event) {
