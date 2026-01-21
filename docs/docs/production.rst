@@ -75,6 +75,22 @@ You have to restart libvirt after changing this file:
 
     sudo systemctl restart libvirtd
 
+Server Time sync
+----------------
+
+It is important the time and date of the server are correct. Some RDP clients
+may refuse to connect when it is not.
+
+You should at least enable systemd time syncronizer or install another tool like chrony.
+
+.. prompt:: bash $
+
+    .. prompt:: bash $
+
+    sudo apt install systemd-timesyncd
+    sudo systemctl enable systemd-timesyncd
+    sudo systemctl restart systemd-timesyncd
+
 SPICE-TLS
 ---------
 
