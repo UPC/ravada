@@ -35,7 +35,9 @@ Allow default
 ~~~~~~~~~~~~~
 
 Edit /etc/apache2/sites-enabled/default-ssl.conf and allow access
-to the error pages
+to the error pages. We provide the configuration for openid just
+in case. It will do no harm to put it even if you are not using
+it right now.
 
 ::
 
@@ -45,6 +47,11 @@ to the error pages
 
         <Location /favicon.ico>
             Require all granted
+        </Location>
+
+        <Location /login_openid>
+            AuthType openid-connect
+            Require valid-user
         </Location>
 
         ProxyPass /error/ !
