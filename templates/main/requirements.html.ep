@@ -10,7 +10,6 @@
 
             <div class="page-header">
                 <div class="card">
-                    {{os}}
                     <div class="card-header">
                         <h2 class="text-center"><%=l 'Requirements' %></h2>
 						<i class="fab fa-linux fa-3x " aria-hidden="true"> GNU/Linux</i>
