@@ -48,12 +48,14 @@ sub read_po($file) {
 
 sub read_template($file){
     open my $in,"<",$file or die "$! $file";
-    my @strings;
+    my %strings;
     while (my $line = <$in>) {
-        my ($string) = $line =~ /<%=l '(.*?)'/;
-        push @strings,($string) if $string;
+        my ($string) = $line =~ /<%=l '(.*?)'\s*%>/;
+        next if !$string;
+        $string =~ s{\\}{};
+        $strings{$string}++;
     }
-    return @strings;
+    return keys %strings;
 }
 
 sub list_templates($dir) {

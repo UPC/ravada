@@ -2218,3 +2218,12 @@ msgstr "local"
 
 msgid "Batch upload"
 msgstr "Batch upload"
+
+msgid "Routes"
+msgstr "Routes"
+
+msgid "Storage"
+msgstr "Storage"
+
+msgid "Charts"
+msgstr "Charts"
