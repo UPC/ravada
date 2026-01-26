@@ -407,6 +407,9 @@ msgstr ""
 msgid "Download now"
 msgstr "Download now"
 
+msgid "Downloading"
+msgstr "Downloading"
+
 msgid "Select ISO"
 msgstr "Select ISO"
 
@@ -496,6 +499,9 @@ msgstr "Hide Private"
 
 msgid "Show All"
 msgstr "Show All"
+
+msgid "Show all"
+msgstr "Show all"
 
 msgid "Shutting down ..."
 msgstr "Shutting down …"
@@ -2203,3 +2209,12 @@ msgstr "Show the base when the user already created a clone"
 
 msgid "Show Clones"
 msgstr "Show Clones"
+
+msgid "Install remmina with RDP plugin to view Windows and Linux virtual machines with RDP."
+msgstr "Install remmina with RDP plugin to view Windows and Linux virtual machines with RDP."
+
+msgid "local"
+msgstr "local"
+
+msgid "Batch upload"
+msgstr "Batch upload"
