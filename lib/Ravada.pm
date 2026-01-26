@@ -1967,7 +1967,7 @@ sub _insert_grant_all_users($self, $id_grant, $allowed, $default_admin) {
 sub _enable_all_grants($self) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id,name,default_user,default_admin FROM grant_types "
-        ." WHERE enabled is null || enabled=0"
+        ." WHERE enabled is null OR enabled=0"
         ." ORDER BY name"
     );
     $sth->execute();
