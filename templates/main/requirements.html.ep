@@ -24,6 +24,7 @@
                                 <%=l 'Search in your distro, e.g. in Debian/Ubuntu with' %>
                                 <pre>sudo apt-get install virt-viewer</pre>
                                 <%=l 'Another tool that works well with SPICE is remmina.' %>
+                                <%=l 'If you installed it for RDP support it will work for SPICE too.' %>
                                 <pre>sudo apt-get install remmina</pre>
                             </li>
                         </ul>
@@ -48,7 +49,7 @@
                         <i class="fab fa-apple fa-3x " aria-hidden="true"> macOS</i>&copy;
                         <ul>
                             <li><b>RDP:</b>
-                                <%=l 'RDP works out of the box because the client is installed by default.' %>
+                                <%=l 'Install Microsoft Remote Desktop from the Mac App Store.' %>
                             </li>
                             <li><b>SPICE:</b>
                                 <%=l 'Follow these steps for Spice client setup' %> <a target=_blank href="https://ravada.readthedocs.io/en/latest/docs/mac_clients.html">link <i class="fa fa-link" aria-hidden="true"></i></a>.
