@@ -31,7 +31,7 @@
                         <i class="fab fa-windows fa-3x" aria-hidden="true"> Microsoft Windows </i>&copy;
                         <ul>
                             <li><b>RDP:</b>
-                                <%=l 'RDP works out of the box in because the client is installed by default.' %>
+                                <%=l 'RDP works out of the box because the client is installed by default.' %>
                             </li>
                             <li><b>SPICE:</b>
                         <%=l 'You will need to install' %>
@@ -49,7 +49,7 @@
                         <i class="fab fa-apple fa-3x " aria-hidden="true"> macOS</i>&copy;
                         <ul>
                             <li><b>RDP:</b>
-                                <%=l 'RDP works out of the box in because the client is installed by default.' %>
+                                <%=l 'RDP works out of the box because the client is installed by default.' %>
                             </li>
                             <li><b>SPICE:</b>
                                 <%=l 'Follow these steps for Spice client setup' %> <a target=_blank href="https://ravada.readthedocs.io/en/latest/docs/mac_clients.html">link <i class="fa fa-link" aria-hidden="true"></i></a>.
