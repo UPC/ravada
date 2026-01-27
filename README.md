@@ -55,6 +55,17 @@ See [operation](http://ravada.readthedocs.io/en/latest/docs/operation.html).
 - [View all rvd_back options](https://ravada.readthedocs.io/en/latest/docs/operation.html#view-all-rvd-back-options)
 - [Admin Operations](https://ravada.readthedocs.io/en/latest/docs/operation.html#admin)
 
+### API Documentation
+
+Ravada provides a REST API for programmatic access to its functionality. The API is documented using OpenAPI 3.0 specification:
+
+- [OpenAPI Specification](openapi.yaml) - Complete API documentation for the Ravada frontend endpoints
+
+You can view and interact with the API documentation using tools like:
+- [Swagger Editor](https://editor.swagger.io/) - Paste the contents of `openapi.yaml`
+- [Redoc](https://redocly.github.io/redoc/) - For a cleaner documentation view
+- [Swagger UI](https://swagger.io/tools/swagger-ui/) - For interactive API testing
+
 ### Update
 
 See [update](http://ravada.readthedocs.io/en/latest/docs/update.html).

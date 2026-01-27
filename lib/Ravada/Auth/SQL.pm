@@ -164,7 +164,7 @@ sub BUILD {
 
     return if !$self->password();
 
-    die "ERROR: Login failed ".$self->name
+    die "ERROR: Login failed ".$self->name."\n"
         if !$self->login();#$self->name, $self->password);
 
     return $self;
