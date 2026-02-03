@@ -789,6 +789,7 @@ sub _swap_volumes_id($domain) {
 sub test_order($vm) {
     my $domain = create_domain_v2(vm => $vm, data => 1, swap =>1 );
     _swap_volumes_id($domain);
+    $domain->remove(user_admin);
 }
 
 #######################################################################33
