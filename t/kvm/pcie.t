@@ -193,7 +193,7 @@ sub test_pcie_2($vm) {
       <address type='pci' domain='0x0000' bus='0x00' slot='0x07' function='0x0'/>
     </memballoon>
   </devices>
-  <seclabel type='dynamic' model='apparmor' relabel='yes'>
+  <seclabel type='dynamic' model='none' relabel='yes'>
     <label>libvirt-55b671a7-77c8-4447-b21e-1771055f8bc3</label>
     <imagelabel>libvirt-55b671a7-77c8-4447-b21e-1771055f8bc3</imagelabel>
   </seclabel>

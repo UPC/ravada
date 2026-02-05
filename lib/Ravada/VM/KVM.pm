@@ -2059,6 +2059,7 @@ sub _xml_add_uefi($self, $doc, $name) {
             $ovmf = '/usr/share/OVMF/OVMF32_CODE_4M.fd';
         }
         die "Unsupported UEFI in this architecture ".$type->toString()
+            ." missing file $ovmf"
         unless $self->file_exists($ovmf);
     }
     my ($text) = $loader->findnodes("text()");

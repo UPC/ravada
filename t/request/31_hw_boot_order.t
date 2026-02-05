@@ -194,6 +194,10 @@ sub _fix_domain_config($domain) {
     my ($uuid) = $doc->findnodes('/domain/uuid/text()');
     $uuid->setData($old_uuid);
 
+    my $machine_type = $domain->_vm->_find_machine_type('i686',qr'pc-i440fx');
+    my ($os_type) = $doc->findnodes('/domain/os/type');
+    $os_type->setAttribute('machine' => $machine_type);
+
     for my $volume ( $doc->findnodes("/domain/devices/disk/source") ) {
         my $old_file = $volume->getAttribute('file');
         my ($path,$ext) = $old_file =~ m{(.*)/.*(-sd.*)};
