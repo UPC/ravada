@@ -70,6 +70,15 @@ Fix it with granting the rights it requests:
     sudo chgrp tss /var/lib/swtpm-localca
     sudo chmod g+w /var/lib/swtpm-localca
 
+    chmod g+w /var/lib/swtpm-localca/certserial
+    chmod g+w /var/lib/swtpm-localca/.lock.swtpm-localca
+
+    usermod -a -G tss swtpm
+    usermod -a -G swtpm tss
+
+    service libvirtd stop
+    service libvirtd start
+
 Apparmor Policy
 ~~~~~~~~~~~~~~~
 
