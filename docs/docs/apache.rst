@@ -103,6 +103,24 @@ Edit /etc/apache2/sites-enabled/000-default.conf
 .. Tip:: Remember restart Apache2 service, with ``systemctl restart apache2`` or ``services apache2 restart``.
 
 
+Apache Security
+---------------
+
+Enable apache security configuration and set it to do not disclose internal information
+
+
+.. prompt:: bash #
+
+   a2enconf security
+
+Edit the security settings in /etc/apache2/conf-enabled/security.conf , search for
+these options and set it this way:
+
+::
+
+    ServerTokens Prod
+
+    ServerSignature Off
 
 
 .. prompt:: bash $
