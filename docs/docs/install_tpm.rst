@@ -136,6 +136,21 @@ those files:
 
     /run/libvirt/qemu/swtpm/*.pid rwk,
 
+
+.. prompt:: bash $
+
+   sudo systemctl restart apparmor
+
+
+If apparmor keeps on denying the access to swtpm, disable it completely doing:
+
+
+.. prompt:: bash $
+
+    sudo systemctl stop apparmor
+    sudo systemctl disable apparmor
+
+ 
 References
 ----------
 
