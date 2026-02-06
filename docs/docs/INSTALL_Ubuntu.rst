@@ -18,17 +18,17 @@ repository <http://infoteleco.upc.edu/img/debian/>`__.
 
 Install the ravada package. Choose the one that matches your OS release:
 
-- ravada_2.4.3_ubuntu-20.04_all.deb
-- ravada_2.4.3_ubuntu-22.04_all.deb
-- ravada_2.4.3_ubuntu-24.04_all.deb
+- ravada_2.4.4_ubuntu-20.04_all.deb
+- ravada_2.4.4_ubuntu-22.04_all.deb
+- ravada_2.4.4_ubuntu-24.04_all.deb
 
 In this example we download for Ubuntu 24.
 
 .. prompt:: bash $
 
-     wget http://infoteleco.upc.edu/img/debian/ravada_2.4.3_ubuntu-24.04_all.deb
+     wget http://infoteleco.upc.edu/img/debian/ravada_2.4.4_ubuntu-24.04_all.deb
      sudo apt-get update
-     sudo apt install ./ravada_2.4.3_ubuntu-24.04_all.deb
+     sudo apt install ./ravada_2.4.4_ubuntu-24.04_all.deb
 
 The last command may show a warning about missing dependencies. Install
 them running:
