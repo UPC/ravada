@@ -4,4 +4,6 @@
 
 **Bugfixes**
 
+* Fix volume misplaced [\#2286]
+
 **Refactors**
