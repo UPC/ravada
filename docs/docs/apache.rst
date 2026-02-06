@@ -100,7 +100,6 @@ Edit /etc/apache2/sites-enabled/000-default.conf
         Redirect / https://hostname.domainname/
     </virtualhost>
     
-.. Tip:: Remember restart Apache2 service, with ``systemctl restart apache2`` or ``services apache2 restart``.
 
 
 Apache Security
@@ -123,7 +122,9 @@ these options and set it this way:
     ServerSignature Off
 
 
-.. prompt:: bash $
+Restrict access
+---------------
 
-    sudo systemctl restart apache2
+Follow `this guide <apache_restrict.html>`__ to restrict access to your Ravada Server by IP:  `Apache restriction <apache_restrict.html>`__ 
 
+.. Tip:: Remember restart Apache2 service, with ``systemctl restart apache2`` or ``services apache2 restart``.
