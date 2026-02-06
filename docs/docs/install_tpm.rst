@@ -70,6 +70,63 @@ Fix it with granting the rights it requests:
     sudo chgrp tss /var/lib/swtpm-localca
     sudo chmod g+w /var/lib/swtpm-localca
 
+Apparmor Policy
+===============
+
+If apparmor complains about swtpm when starting the virtual machine make sure
+you have installed the latest apparmor package. If it continues failing check
+those files:
+
+/etc/apparmor.d/usr.bin.swtpm 
+
+::
+    
+    # AppArmor policy for swtpm
+    # Author: Lena Voytek <email address hidden>
+    # Last Modified: Tue Oct 11 10:53:05 2022
+    
+    #include <tunables/global>
+    
+    profile swtpm /usr/bin/swtpm {
+      #include <abstractions/base>
+      #include <abstractions/openssl>
+    
+      # Site-specific additions and overrides. See local/README for details.
+      #include <local/usr.bin.swtpm>
+    
+      capability chown,
+      capability dac_override,
+      capability dac_read_search,
+      capability fowner,
+      capability fsetid,
+      capability setgid,
+      capability setuid,
+    
+      network inet stream,
+      network inet6 stream,
+      unix (send) type=dgram addr=none peer=(addr=none),
+      unix (send, receive) type=stream addr=none peer=(label=libvirt-*),
+    
+      /usr/bin/swtpm rm,
+    
+      /tmp/** rwk,
+      owner @{HOME}/** rwk,
+      owner /var/lib/libvirt/swtpm/** rwk,
+      /run/libvirt/qemu/swtpm/*.sock rwk,
+      owner /var/log/swtpm/libvirt/qemu/*.log rwk,
+      owner /run/libvirt/qemu/swtpm/*.pid rwk,
+      owner /dev/vtpmx rw,
+      owner /etc/nsswitch.conf r,
+      owner /var/lib/swtpm/** rwk,
+      owner /run/swtpm/sock rw,
+    }
+    
+/etc/apparmor.d/local/usr.bin.swtpm 
+
+::
+
+    /run/libvirt/qemu/swtpm/*.pid rwk,
+
 References
 ----------
 
