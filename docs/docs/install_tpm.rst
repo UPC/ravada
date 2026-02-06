@@ -59,7 +59,7 @@ Virtual machine may fail to launch. It should generate a log file at
 /var/log/swtpm/libvirt/qemu/
 
 Need read/write rights on statedir
-==================================
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Need read/write rights on statedir /var/lib/swtpm-localca for user tss
 
@@ -71,7 +71,7 @@ Fix it with granting the rights it requests:
     sudo chmod g+w /var/lib/swtpm-localca
 
 Apparmor Policy
-===============
+~~~~~~~~~~~~~~~
 
 If apparmor complains about swtpm when starting the virtual machine make sure
 you have installed the latest apparmor package. If it continues failing check
