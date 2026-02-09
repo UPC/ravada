@@ -1229,6 +1229,37 @@ sub test_change_network_isolated($vm, $domain, $index) {
         my $domain_f = Ravada::Front::Domain->open($domain->id);
         $info = $domain_f->info(user_admin);
         is ($info->{hardware}->{network}->[$index]->{port}->{isolated}, $option) or die $domain->name;
+
+        return if $vm->type ne 'KVM';
+
+        Ravada::Request->start_domain(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+        );
+        wait_request();
+        my $info2;
+        for ( 1 .. 60 ) {
+            $info2 = $domain_f->info(user_admin);
+            last if exists $info2->{hardware}->{network}
+            && defined $info2->{hardware}->{network}->[0]
+            && exists $info2->{hardware}->{network}->[0]->{port}
+            && exists $info2->{hardware}->{network}->[0]->{port}->{isolated}
+            && $info2->{hardware}->{network}->[0]->{port}->{isolated} eq $option;
+
+            diag("Waiting for interface ".$domain_f->id." ".$domain_f->name);
+            sleep 1;
+            Ravada::Request->refresh_machine(
+                uid => user_admin->id
+                ,id_domain => $domain->id
+                ,_force => 1
+            );
+            wait_request(debug => 0);
+        }
+        is ($info2->{hardware}->{network}->[0]->{port}->{isolated},$option) or die $domain->name;
+        Ravada::Request->force_shutdown(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+        );
     }
 
 }

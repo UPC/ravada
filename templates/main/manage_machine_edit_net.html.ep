@@ -55,8 +55,8 @@
         <li class="list-group-item">
             <select ng-model="item.port.isolated"
                 ng-options="option for option in isolated_options"
-                />
-            <select>
+                >
+            </select>
         </li>
     </ul>
     </div>
