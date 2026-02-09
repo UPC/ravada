@@ -1793,7 +1793,7 @@ sub test_remove_display($vm) {
 sub _shutdown_domain($domain, $hardware=undef) {
 
     if (!defined $hardware || $hardware eq 'filesystem') {
-        Ravada::Request->shutdown_now(
+        Ravada::Request->shutdown(
             uid => user_admin->id
             ,id_domain => $domain->id
         );
