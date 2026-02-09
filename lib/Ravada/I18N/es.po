@@ -2284,6 +2284,9 @@ msgstr "Monitorización"
 msgid "For Spice client setup follow this "
 msgstr "Para configurar el cliente Spice, seguid este "
 
+msgid "Bundle"
+msgstr "Racimo"
+
 msgid "Follow these steps for Spice client setup"
 msgstr "Siga estos pasos para la configuración del cliente Spice"
 

@@ -2343,6 +2343,9 @@ msgstr ""
 msgid "For Spice client setup follow this "
 msgstr "Per a la configuració del client Spice, seguiu aquest "
 
+msgid "Bundle"
+msgstr "Ramat"
+
 msgid "Follow these steps for Spice client setup"
 msgstr "Seguiu aquests passos per a la configuració del client Spice"
 
@@ -2360,3 +2363,6 @@ msgstr "Auto compressió"
 
 msgid "Host Devices"
 msgstr "Dispositiu amfitrió"
+
+msgid "Access denied: user not found or insufficient permissions."
+msgstr "Accés denegat: usuari no trobat o permissos insuficients."

@@ -163,6 +163,7 @@ sub test_queue_move($vm) {
     my $domain = create_domain_v2(vm => $vm, data => 1, swap => 1 );
     my $vol = $domain->add_volume( name => new_domain_name().".raw"
         ,type => "raw"
+        ,capacity => 1024*10
     );
     my ($sp, $dir) = _create_storage_pool($vm);
 
@@ -199,6 +200,7 @@ sub test_queue_change_hw($vm) {
     my $domain = create_domain_v2(vm => $vm, data => 1, swap => 1 );
     my $vol = $domain->add_volume( name => new_domain_name().".raw"
         ,type => "raw"
+        ,capacity => 1024*10
     );
     my ($sp, $dir) = _create_storage_pool($vm);
 
@@ -241,7 +243,7 @@ sub test_move_volume($vm, $domain=undef) {
 
     $domain->add_volume( name => new_domain_name().".raw"
         ,format => "raw"
-        ,size => 2*1024*1024*1024
+        ,size => 1024*10
     );
     my ($sp, $dir) = _create_storage_pool($vm);
 

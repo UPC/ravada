@@ -1,4 +1,15 @@
 <div ng-show="new_hardware=='filesystem' || name == 'filesystem'" class="form-group mt-4">
+    <div class="row" ng-show="name=='filesystem'">
+        <div class="col-lg-2" align="right">
+            <%=l 'Enabled' %>
+        </div>
+        <div class="col-lg-2">
+            <input type="checkbox" ng-model="item.enabled"
+                ng-true-value="1" ng-false-value="0"
+                >
+        </div>
+    </div>
+
     <div class="row">
         <div class="col-lg-2" align="right">
             <%=l 'Source' %>

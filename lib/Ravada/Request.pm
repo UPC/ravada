@@ -78,9 +78,9 @@ our %VALID_ARG = (
     ,force_reboot_domain => { id_domain => 1, uid => 1, at => 2, id_vm => 2 }
     ,shutdown_start =>{ name => 2, id_domain => 2, uid => 1, timeout => 2
         , at => 2 , id_vm => 2 }
-    ,screenshot => { id_domain => 1 }
+    ,screenshot => { id_domain => 1, uid => 1 }
     ,domain_autostart => { id_domain => 1 , uid => 1, value => 2 }
-    ,copy_screenshot => { id_domain => 1 }
+    ,copy_screenshot => { id_domain => 1, uid => 1 }
     ,start_domain => {%$args_manage, remote_ip => 2, name => 2, id_domain => 2, enable_host_devices => 2 }
     ,start_clones => { id_domain => 1, uid => 1, remote_ip => 1, sequential => 2 }
     ,shutdown_clones => { id_domain => 1, uid => 1, timeout => 2 }
@@ -88,6 +88,7 @@ our %VALID_ARG = (
     ,dettach => { uid => 1, id_domain => 1 }
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
     ,hybernate=> {uid => 1, id_domain => 1}
+    ,hibernate=> {uid => 1, id_domain => 1}
     ,download => {uid => 2, id_iso => 1, id_vm => 2, vm => 2, verbose => 2, delay => 2, test => 2}
     ,refresh_storage => { id_vm => 2, uid => 2 }
     ,list_storage_pools => { id_vm => 1 , uid => 1, data => 2 }
@@ -188,7 +189,7 @@ our %VALID_ARG = (
 $VALID_ARG{shutdown} = $VALID_ARG{shutdown_domain};
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
-    qw( create start shutdown force_shutdown reboot prepare_base remove remove_base rename_domain screenshot download
+    qw( create start shutdown force_shutdown reboot prepare_base remove remove_base rename_domain download
             clone
             set_base_vm remove_base_vm
             domain_autostart hibernate hybernate

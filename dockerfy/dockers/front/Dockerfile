@@ -7,7 +7,7 @@ RUN apt-get update \
     perl libmojolicious-perl libauthen-passphrase-perl \
     libdbd-mysql-perl libdbi-perl libdbix-connector-perl libipc-run3-perl libnet-ldap-perl \
     libproc-pid-file-perl libsys-virt-perl libxml-libxml-perl libconfig-yaml-perl \
-    libmoose-perl libjson-xs-perl perlmagick libmoosex-types-netaddr-ip-perl libsys-statistics-linux-perl \
+    libmoose-perl libjson-xs-perl perlmagick libmoosex-types-netaddr-ip-perl \
     libio-interface-perl libnet-dns-perl liblocale-maketext-lexicon-perl \
     libmojolicious-plugin-i18n-perl libdbd-sqlite3-perl debconf adduser libdigest-sha-perl libnet-ssh2-perl libpbkdf2-tiny-perl \
     libfile-rsync-perl libdate-calc-perl libparallel-forkmanager-perl libdatetime-perl libencode-locale-perl netcat-openbsd \
