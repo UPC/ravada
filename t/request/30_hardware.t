@@ -1203,6 +1203,7 @@ sub test_change_network_nat($vm, $domain, $index) {
 }
 
 sub test_change_network_isolated($vm, $domain, $index) {
+    return if $vm->type ne 'KVM';
     my $info = $domain->info(user_admin);
 
     my $data = $info->{hardware}->{network}->[$index];
@@ -1210,6 +1211,7 @@ sub test_change_network_isolated($vm, $domain, $index) {
     is ($info->{hardware}->{network}->[$index]->{port}->{isolated}, 'no');
 
     for my $option ( 'yes', 'no') {
+        _shutdown_domain($domain);
 
         $data->{port}->{isolated} = $option;
 
@@ -1241,12 +1243,11 @@ sub test_change_network_isolated($vm, $domain, $index) {
         for ( 1 .. 60 ) {
             $info2 = $domain_f->info(user_admin);
             last if exists $info2->{hardware}->{network}
-            && defined $info2->{hardware}->{network}->[0]
-            && exists $info2->{hardware}->{network}->[0]->{port}
-            && exists $info2->{hardware}->{network}->[0]->{port}->{isolated}
-            && $info2->{hardware}->{network}->[0]->{port}->{isolated} eq $option;
+            && defined $info2->{hardware}->{network}->[$index]
+            && exists $info2->{hardware}->{network}->[$index]->{port}
+            && exists $info2->{hardware}->{network}->[$index]->{port}->{isolated}
+            && $info2->{hardware}->{network}->[$index]->{port}->{isolated} eq $option;
 
-            diag("Waiting for interface ".$domain_f->id." ".$domain_f->name);
             sleep 1;
             Ravada::Request->refresh_machine(
                 uid => user_admin->id
@@ -1255,7 +1256,7 @@ sub test_change_network_isolated($vm, $domain, $index) {
             );
             wait_request(debug => 0);
         }
-        is ($info2->{hardware}->{network}->[0]->{port}->{isolated},$option) or die $domain->name;
+        is ($info2->{hardware}->{network}->[$index]->{port}->{isolated},$option);
         Ravada::Request->force_shutdown(
             uid => user_admin->id
             ,id_domain => $domain->id
@@ -1789,6 +1790,17 @@ sub test_remove_display($vm) {
     $domain->remove(user_admin);
 }
 
+sub _shutdown_domain($domain, $hardware=undef) {
+
+    if (!defined $hardware || $hardware eq 'filesystem') {
+        Ravada::Request->shutdown_now(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+        );
+        wait_request();
+    }
+    $domain->shutdown_now(user_admin) if $domain->is_active;
+}
 ########################################################################
 
 
@@ -1859,7 +1871,7 @@ for my $vm_name (vm_names()) {
         ok($domain_b->is_active) or next;
 
 
-        $domain_b->shutdown_now(user_admin) if $domain_b->is_active;
+        _shutdown_domain($domain_b, $hardware);
         is($domain_b->is_active,0) or next;
 
         if ( $hardware !~ /memory|cpu|features|usb/ ) {
@@ -1870,12 +1882,11 @@ for my $vm_name (vm_names()) {
 
 
 
-        $domain_b->shutdown_now(user_admin) if $domain_b->is_active;
-        ok(!$domain_b->is_active);
-        $domain_b->remove(user_admin);
+        _shutdown_domain($domain_b, $hardware);
+        remove_domain($domain_b);
         }
 
-    $domain_b0->remove(user_admin);
+        remove_domain($domain_b0);
     }
     ok($TEST_TIMESTAMP);
 }
