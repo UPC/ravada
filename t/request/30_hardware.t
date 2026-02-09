@@ -1202,6 +1202,37 @@ sub test_change_network_nat($vm, $domain, $index) {
 
 }
 
+sub test_change_network_isolated($vm, $domain, $index) {
+    my $info = $domain->info(user_admin);
+
+    my $data = $info->{hardware}->{network}->[$index];
+
+    is ($info->{hardware}->{network}->[$index]->{port}->{isolated}, 'no');
+
+    for my $option ( 'yes', 'no') {
+
+        $data->{port}->{isolated} = $option;
+
+        my $req = Ravada::Request->change_hardware(
+            id_domain => $domain->id
+            ,hardware => 'network'
+            ,index => $index
+            ,data => $data
+            ,uid => user_admin->id
+        );
+
+        wait_request(debug => 0);
+
+        is($req->status,'done');
+        is($req->error, '');
+
+        my $domain_f = Ravada::Front::Domain->open($domain->id);
+        $info = $domain_f->info(user_admin);
+        is ($info->{hardware}->{network}->[$index]->{port}->{isolated}, $option) or die $domain->name;
+    }
+
+}
+
 sub test_change_network($vm, $domain) {
     my $domain_f = Ravada::Front::Domain->open($domain->id);
     my $info = $domain_f->info(user_admin);
@@ -1210,6 +1241,7 @@ sub test_change_network($vm, $domain) {
 
     my $index = int(scalar(@{$info->{hardware}->{$hardware}}) / 2);
 
+    test_change_network_isolated($vm, $domain, $index);
     test_change_network_bridge($vm, $domain, $index);
     test_change_network_nat($vm, $domain, $index);
     _test_change_defaults($domain,'network');
