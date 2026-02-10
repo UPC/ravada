@@ -48,4 +48,10 @@
     %   }
 
         <a class="nav-link" id="v-pills-share-tab" ng-click="refresh_machine()" href="#v-pills-share" data-toggle="pill" role="tab" aria-controls="v-pills-share" aria-selected="false"><%=l 'Share' %></a>
+
+    % if ($USER->is_admin) {
+        <a class="nav-link" id="v-pills-bundle-tab" ng-click="refresh_machine()" href="#v-pills-bundle" data-toggle="pill" role="tab" aria-controls="v-pills-bundle" aria-selected="false"
+            ng-show="showmachine.is_base || showmachine.bundle"
+        ><%=l 'Bundle' %></a>
+    % }
 	</div>

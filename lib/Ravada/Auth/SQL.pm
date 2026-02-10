@@ -15,7 +15,7 @@ use Ravada;
 use Ravada::Utils;
 use Ravada::Front;
 use Digest::SHA qw(sha1_hex);
-use Hash::Util qw(lock_hash);
+use Hash::Util qw(lock_hash unlock_hash);
 use Mojo::JSON qw(decode_json);
 use Moose;
 
@@ -28,6 +28,18 @@ use Data::Dumper;
 
 with 'Ravada::Auth::User';
 
+# Whitelist of user data fields that can be updated via _data.
+# Keys are logical field names used by callers, values are the corresponding
+# column names in the "users" table.
+my %ALLOWED_USER_DATA_FIELDS = (
+                 name => 1
+           , password => 1
+           , is_admin => 1
+       , is_temporary => 1
+     , change_password => 1
+     , password_expiration_date => 1
+
+);
 
 our $CON;
 
@@ -64,7 +76,7 @@ sub BUILD {
 
     return if !$self->password();
 
-    die "ERROR: Login failed ".$self->name
+    die "ERROR: Login failed ".$self->name."\n"
         if !$self->login();#$self->name, $self->password);
 
     return $self;
@@ -113,6 +125,8 @@ Adds a new user in the SQL database. Returns nothing.
            , password => $pass
            , is_admin => 0
        , is_temporary => 0
+     , change_password => 0
+     , password_expiration_date => 0
     );
 
 =cut
@@ -128,8 +142,11 @@ sub add_user {
     my $is_temporary= ($args{is_temporary} or 0);
     my $is_external= ($args{is_external} or 0);
     my $external_auth = $args{external_auth};
+    my $change_password = ($args{change_password} or 0);
+    my $password_expiration_date = $args{password_expiration_date};
 
-    delete @args{'name','password','is_admin','is_temporary','is_external', 'external_auth'};
+    delete @args{'name','password','is_admin','is_temporary','is_external', 'external_auth', 'change_password'
+                ,'password_expiration_date'};
 
     confess "WARNING: Unknown arguments ".Dumper(\%args)
         if keys %args;
@@ -137,8 +154,9 @@ sub add_user {
 
     my $sth;
     eval { $sth = $$CON->dbh->prepare(
-            "INSERT INTO users (name,password,is_admin,is_temporary, is_external, external_auth)"
-            ." VALUES(?,?,?,?,?,?)");
+            "INSERT INTO users (name,password,is_admin,is_temporary, is_external, external_auth, change_password
+                                ,password_expiration_date)"
+            ." VALUES(?,?,?,?,?,?,?,?)");
     };
     confess $@ if $@;
     if ($password && !$external_auth) {
@@ -146,7 +164,8 @@ sub add_user {
     } else {
         $password = '*LK* no pss';
     }
-    $sth->execute($name,$password,$is_admin,$is_temporary, $is_external, $external_auth);
+    $sth->execute($name,$password,$is_admin,$is_temporary, $is_external, $external_auth, $change_password
+                    , $password_expiration_date);
     $sth->finish;
 
     $sth = $$CON->dbh->prepare("SELECT id FROM users WHERE name = ? ");
@@ -273,6 +292,11 @@ sub login {
         lock_hash %$found;
         $self->{_data} = $found if ref $self && $found;
     }
+
+    die "Password expired for $name."
+        ." Please contact your administrator to reset your password.\n"
+    if $found && $found->{password_expiration_date}
+    && time >= $found->{password_expiration_date};
 
     return 1 if $found;
 
@@ -413,7 +437,9 @@ sub can_list_clones_from_own_base($self) {
             || $self->can_rename_clones()
             || $self->can_shutdown_clones()
             || $self->can_list_clones()
-            || $self->can_list_machines();
+            || $self->can_list_machines()
+            || $self->can_hibernate_clones()
+    ;
     return 0;
 }
 
@@ -427,7 +453,9 @@ Returns true if the user can list all machines that are clones and its bases
 sub can_list_clones {
     my $self = shift;
     return 1 if $self->can_remove_clone_all()
-            || $self->can_list_machines();
+            || $self->can_list_machines()
+            || $self->can_hibernate_clone_all()
+            ;
     return 0;
   
 }
@@ -528,10 +556,9 @@ Arguments: password
 
 =cut
 
-sub change_password {
-    my $self = shift;
-    my $password = shift or die "ERROR: password required\n";
-    my ($force_change_password) = @_;
+sub change_password($self, $password, $force_change_password=0) {
+    die "ERROR: password required\n"
+    if !defined $password || !length($password);
 
     _init_connector();
 
@@ -542,14 +569,18 @@ sub change_password {
     }
 
     my $sth;
-    if (defined($force_change_password)) {
-        $sth= $$CON->dbh->prepare("UPDATE users set password=?, change_password=?"
-            ." WHERE name=?");
-        $sth->execute(sha1_hex($password), $force_change_password ? 1 : 0, $self->name);
-    } else {
-        my $sth= $$CON->dbh->prepare("UPDATE users set password=?"
-            ." WHERE name=?");
-        $sth->execute(sha1_hex($password), $self->name);
+    $sth= $$CON->dbh->prepare("UPDATE users "
+        ." set password=?, change_password=?, password_expiration_date=?"
+            ." WHERE id=?");
+    $sth->execute(sha1_hex($password), ($force_change_password or 0) ,0, $self->id);
+
+    # Keep the in-memory user data in sync with the database after a password change.
+    if (exists $self->{_data} && ref($self->{_data}) eq 'HASH') {
+        # Safely unlock and relock the hash if it is locked.
+        eval { unlock_hash(%{ $self->{_data} }) };
+        $self->{_data}->{change_password}           = ($force_change_password or 0);
+        $self->{_data}->{password_expiration_date}  = 0;
+        eval { lock_hash(%{ $self->{_data} }) };
     }
 }
 
@@ -595,6 +626,41 @@ sub compare_password {
     else {
         return 0;
     }
+}
+
+=head2 password_expiration_date
+
+Sets or gets the password expiration date for this user, if any.
+When set, the user is denied access after the expiration date if the
+password has not been changed.
+
+=cut
+
+sub password_expiration_date($self, $value=undef) {
+
+    return $self->_data('password_expiration_date', $value) if defined $value;
+
+    return $self->{_data}->{password_expiration_date};
+
+}
+
+sub _data($self, $field, $value=undef) {
+
+    confess "Wrong field '$field'"
+    unless $ALLOWED_USER_DATA_FIELDS{$field};
+
+    return $self->{_data}->{$field} if !defined $value;
+
+    _init_connector();
+
+    my $sth = $$CON->dbh->prepare(
+        "UPDATE users set $field=? WHERE id=?"
+    );
+    $sth->execute($value,$self->id);
+    unlock_hash(%{$self->{_data}});
+    $self->{_data}->{$field} = $value;
+    lock_hash(%{$self->{_data}});
+    return $value;
 }
 
 =head2 language
@@ -677,18 +743,19 @@ sub can_do($self, $grant) {
     confess "Permission '$grant' invalid\n".Dumper($self->{_grant_alias})
         if $grant !~ /^[a-z_]+$/;
 
-    $grant = $self->_grant_alias($grant);
+    my $grant_alias = $self->_grant_alias($grant);
 
     confess "Wrong grant '$grant'\n".Dumper($self->{_grant_alias})
         if $grant !~ /^[a-z_]+$/;
 
-    return $self->{_grant}->{$grant} if defined $self->{_grant}->{$grant};
+    return $self->{_grant}->{$grant} if exists $self->{_grant}->{$grant};
+    return $self->{_grant}->{$grant_alias} if exists $self->{_grant}->{$grant_alias};
+
     confess "Unknown permission '$grant'. Maybe you are using an old release.\n"
             ."Try removing the table grant_types and start rvd_back again:\n"
             ."mysql> drop table grant_types;\n"
             .Dumper($self->{_grant}, $self->{_grant_alias})
-        if !exists $self->{_grant}->{$grant};
-    return $self->{_grant}->{$grant};
+    ;
 }
 
 =head2 can_do_domain
@@ -701,7 +768,11 @@ Returns if the user is allowed to perform a privileged action in a virtual machi
 =cut
 
 sub can_do_domain($self, $grant, $domain) {
-    my %valid_grant = map { $_ => 1 } qw(change_settings shutdown reboot rename expose_ports);
+    # list of grants that can be applied to a virtual machine
+    my %valid_grant = map { $_ => 1 }
+    qw(change_settings shutdown reboot rename expose_ports
+        hibernate screenshot remove
+    );
     confess "Invalid grant here '$grant'"   if !$valid_grant{$grant};
 
     return 1 if ( $grant eq 'shutdown' || $grant eq 'reboot' )
@@ -816,12 +887,15 @@ Grant an user permissions for normal users
 =cut
 
 sub grant_user_permissions($self,$user) {
-    $self->grant($user, 'clone');
-    $self->grant($user, 'change_settings');
-    $self->grant($user, 'remove');
-    $self->grant($user, 'shutdown');
-    $self->grant($user, 'screenshot');
-    $self->grant($user, 'reboot');
+    my $sth = $$CON->dbh->prepare(
+        "SELECT name FROM grant_types"
+        ." WHERE default_user=1"
+        ." ORDER BY name"
+    );
+    $sth->execute();
+    while (my ($name) = $sth->fetchrow()) {
+        $self->grant($user, $name);
+    }
 }
 
 =head2 grant_operator_permissions

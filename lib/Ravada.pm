@@ -186,7 +186,12 @@ sub _clean_tls($self) {
     $sth->execute();
 }
 
-sub _install($self) {
+sub _install($self, %args) {
+    my $add_user_admin=1;
+    $add_user_admin = delete $args{add_user_admin}
+    if exists $args{add_user_admin};
+    confess "ERROR: Unknown arguments ".join(",",sort keys %args) if keys %args;
+
     my $pid = Proc::PID::File->new(name => $self->pid_name);
     $pid->file({dir => "/run/user/$>"}) if $>;
     if ( $pid->alive ) {
@@ -207,6 +212,7 @@ sub _install($self) {
     $self->_upgrade_timestamps();
     $self->_update_data();
     $self->_init_user_daemon();
+    $self->_init_user_admin() if $add_user_admin;
     $self->_sql_insert_defaults();
 
     $self->_do_create_constraints();
@@ -214,7 +220,7 @@ sub _install($self) {
 
     $pid->release();
 
-    print "\n" if $FIRST_TIME_RUN;
+    print "\n" if $FIRST_TIME_RUN && $ENV{TERM};
 
 }
 
@@ -289,7 +295,7 @@ sub _do_create_constraints($self) {
 
         warn "INFO: creating constraint $name \n"
         if $name && !$FIRST_TIME_RUN && $0 !~ /\.t$/;
-        print "+" if $FIRST_TIME_RUN && !$CAN_FORK;
+        print "+" if $FIRST_TIME_RUN && !$CAN_FORK && $ENV{TERM};
 
         $self->_clean_db_leftovers();
 
@@ -321,6 +327,32 @@ sub _init_user_daemon {
     }
 
 }
+
+sub _init_user_admin {
+    my $self = shift;
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT count(*) FROM users WHERE is_admin=1 AND name <> ?"
+    );
+    $sth->execute($USER_DAEMON_NAME);
+    my ($count) = $sth->fetchrow;
+    $sth->finish;
+    return if $count;
+
+    my $user_admin = Ravada::Auth::SQL->new(name => 'admin');
+    return if $user_admin->id;
+
+    Ravada::Auth::SQL::add_user(
+        name => 'admin'
+        ,password => 'admin'
+        ,is_admin => 1
+        ,change_password => 1
+        ,password_expiration_date => time+600
+    );
+    warn "INFO: created default admin user 'admin'\n"
+        if $0 !~ /\.t$/;
+}
+
 sub _update_user_grants {
     my $self = shift;
     $self->_init_user_daemon();
@@ -376,7 +408,7 @@ sub _update_isos {
                     name => 'Ubuntu Mate 24.04 Noble Numbat 64 bits'
             ,description => 'Ubuntu Mate 24.04 Noble Nubat m64 bits'
                    ,arch => 'x86_64'
-                    ,xml => 'focal_fossa-amd64.xml'
+                    ,xml => 'noble-amd64.xml'
              ,xml_volume => 'focal_fossa64-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/24.04.*/release/ubuntu-mate-24.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
@@ -444,7 +476,7 @@ sub _update_isos {
                     name => 'Ubuntu 22.04 Jammy Jellyfish'
             ,description => 'Ubuntu 22.04 Jammy Jellyfish 64 bits'
                    ,arch => 'x86_64'
-                    ,xml => 'focal_fossa-amd64.xml'
+                    ,xml => 'noble-amd64.xml'
              ,xml_volume => 'focal_fossa64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/22.04/'
                 ,file_re => '^ubuntu-22.04.*-desktop-amd64.iso'
@@ -459,7 +491,7 @@ sub _update_isos {
         ,ubuntu_noble => {
                     name => 'Ubuntu 24.04 Noble Nombat'
             ,description => 'Ubuntu 24.04 Noble Nombat 64 bits'
-                    ,xml => 'focal_fossa-amd64.xml'
+                    ,xml => 'noble-amd64.xml'
              ,xml_volume => 'focal_fossa64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/24.04/'
                 ,file_re => '^ubuntu-24.04.*-desktop-amd64.iso'
@@ -527,7 +559,7 @@ sub _update_isos {
             name => 'Kubuntu 24.04 Noble Nombat'
             ,description => 'Kubuntu 22.04 Noble Nombat 64 bits'
             ,arch => 'x86_64'
-            ,xml => 'focal_fossa-amd64.xml'
+            ,xml => 'noble-amd64.xml'
             ,xml_volume => 'focal_fossa64-volume.xml'
             ,sha256_url => '$url/SHA256SUMS'
             ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/24.04.*/release/'
@@ -1532,9 +1564,9 @@ sub _install_grants($self) {
         }
     }
     $self->_rename_grants();
-    $self->_alias_grants();
     $self->_add_grants();
-    $self->_enable_grants();
+    $self->_alias_grants();
+    $self->_enable_all_grants();
     $self->_update_user_grants();
     exit if $CAN_FORK;
 }
@@ -1685,8 +1717,8 @@ sub _add_indexes_generic($self) {
             "unique (name)"
         ]
         ,domains_bundle => [
-            "index(id_domain)"
-            ,"unique (id_bundle, id_domain)"
+            "unique (id_domain)"
+            ,"index (id_bundle)"
         ]
         ,vm_which => [
             "index(id_vm)"
@@ -1719,7 +1751,7 @@ sub _add_indexes_generic($self) {
 
             $self->_clean_index_conflicts($table, $name);
 
-            print "+" if $FIRST_TIME_RUN;
+            print "+" if $FIRST_TIME_RUN && $ENV{TERM};
             if ($table eq 'domain_displays' && $name =~ /port/) {
                 my $sth_clean=$CONNECTOR->dbh->prepare(
                     "UPDATE domain_displays set port=NULL"
@@ -1738,7 +1770,11 @@ sub _add_indexes_generic($self) {
             confess "$table -> $name" if $FIRST_TIME_RUN;
             my $sql = "alter table $table drop index $name";
             warn Dumper($known2);
-            $CONNECTOR->dbh->do($sql);
+            eval {
+                $CONNECTOR->dbh->do($sql);
+            };
+            die $@ if ($@ && $@ !~ /Cannot drop index/);
+            warn $@ if $@ && $ENV{TERM};
         }
     }
 }
@@ -1828,6 +1864,7 @@ sub _alias_grants($self) {
         remove_clone => 'remove_clones'
         ,shutdown_clone => 'shutdown_clones'
         ,reboot_clone => 'reboot_clones'
+        ,hibernate_clone => 'hibernate_clones'
     );
 
     my $sth_old = $CONNECTOR->dbh->prepare("SELECT id FROM grant_types_alias"
@@ -1835,7 +1872,7 @@ sub _alias_grants($self) {
     );
     while (my ($old, $new) =  each(%alias)) {
         $sth_old->execute($old, $new);
-        return if $sth_old->fetch;
+        next if $sth_old->fetch;
         my $sth = $CONNECTOR->dbh->prepare(
                  "INSERT INTO grant_types_alias (name,alias)"
                  ." VALUES(?,?) "
@@ -1845,14 +1882,18 @@ sub _alias_grants($self) {
 }
 
 sub _add_grants($self) {
+    $self->_add_grant('clone',1,"can clone public virtual machines.");
+    $self->_add_grant('change_settings',1,"can change the settings of owned virtual machines.");
     $self->_add_grant('rename', 0,"can rename any virtual machine owned by the user.");
     $self->_add_grant('rename_all', 0,"can rename any virtual machine.");
+    $self->_add_grant('remove',1,"can remove any virtual machine owned by the user.");
     $self->_add_grant('rename_clones', 0,"can rename clones from virtual machines owned by the user.");
     $self->_add_grant('shutdown', 1,"can shutdown own virtual machines.");
     $self->_add_grant('reboot', 1,"can reboot own virtual machines.");
     $self->_add_grant('reboot_all', 0,"can reboot all virtual machines.");
     $self->_add_grant('reboot_clones', 0,"can reboot clones own virtual machines.");
     $self->_add_grant('screenshot', 1,"can get a screenshot of own virtual machines.");
+    $self->_add_grant('screenshot_clones', 0,"can get a screenshot from clones of own virtual machines.");
     $self->_add_grant('start_many',0,"can have an unlimited amount of machines started.");
     $self->_add_grant('expose_ports',0,"can expose virtual machine ports.");
     $self->_add_grant('expose_ports_clones',0,"Can expose ports from clones of own virtual machines.");
@@ -1865,41 +1906,55 @@ sub _add_grants($self) {
     $self->_add_grant('quota_disk',0,'disk space limit',1);
     $self->_add_grant('create_networks',0,'can create virtual networks.');
     $self->_add_grant('manage_all_networks',0,'can manage all the virtual networks.');
+    $self->_add_grant('hibernate',1,'can hibernate own virtual machines.');
 }
 
 sub _add_grant($self, $grant, $allowed, $description, $is_int = 0, $default_admin=1) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id, description,is_int FROM grant_types WHERE name=?"
+        "SELECT id, description,is_int,default_user FROM grant_types WHERE name=?"
     );
     $sth->execute($grant);
-    my ($id, $current_description, $current_int) = $sth->fetchrow();
+    my ($id, $current_description, $current_int, $current_du) = $sth->fetchrow();
     $sth->finish;
     $current_int = 0 if !$current_int;
 
-    if ($id && ( $current_description ne $description || $current_int != $is_int) ) {
+    if ($id && ( $current_description ne $description || $current_int != $is_int
+                        || !defined $current_du || $current_du != $allowed )) {
         my $sth = $CONNECTOR->dbh->prepare(
-            "UPDATE grant_types SET description = ?,is_int=? WHERE id = ?;"
+            "UPDATE grant_types SET description = ?,is_int=?,default_user=? "
+            ." WHERE id = ?;"
         );
-        $sth->execute($description, $is_int, $id);
+        $sth->execute($description, $is_int, $allowed, $id);
         $sth->finish;
     }
     return if $id;
 
-    $sth = $CONNECTOR->dbh->prepare("INSERT INTO grant_types (name, description, is_int, default_admin)"
-        ." VALUES (?,?,?,?)");
-    $sth->execute($grant, $description, $is_int, $default_admin);
+    $sth = $CONNECTOR->dbh->prepare("INSERT INTO grant_types"
+        ." (name, description, is_int, default_admin, default_user,enabled)"
+        ." VALUES (?,?,?,?,?,1)");
+    $sth->execute($grant, $description, $is_int, $default_admin,$allowed);
     $sth->finish;
 
     $sth = $CONNECTOR->dbh->prepare("SELECT id FROM grant_types WHERE name=?");
     $sth->execute($grant);
     my ($id_grant) = $sth->fetchrow;
     $sth->finish;
+    $self->_insert_grant_all_users($id_grant, $allowed, $default_admin);
+}
+
+sub _insert_grant_all_users($self, $id_grant, $allowed, $default_admin) {
 
     my $sth_insert = $CONNECTOR->dbh->prepare(
         "INSERT INTO grants_user (id_user, id_grant, allowed) VALUES(?,?,?) ");
 
-    $sth = $CONNECTOR->dbh->prepare("SELECT id,name,is_admin FROM users WHERE is_temporary = 0");
-    $sth->execute;
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT u.id,u.name,u.is_admin "
+        ." FROM users u"
+        ."  LEFT join grants_user gu ON u.id=gu.id_user AND gu.id_grant=?"
+        ." WHERE is_temporary = 0 "
+        ."   AND gu.id is NULL"
+    );
+    $sth->execute($id_grant);
 
     while (my ($id_user, $name, $is_admin) = $sth->fetchrow ) {
         my $allowed_current = $allowed;
@@ -1910,69 +1965,20 @@ sub _add_grant($self, $grant, $allowed, $description, $is_int = 0, $default_admi
     }
 }
 
-sub _null_grants($self) {
-    my $sth = $CONNECTOR->dbh->prepare("SELECT count(*) FROM grant_types "
-            ." WHERE enabled = NULL "
-        );
-    $sth->execute;
-    my ($count) = $sth->fetchrow;
-
-    warn "No null grants found" if !$count && $self->{_null_grants}++;
-    return $count;
-}
-
-sub _enable_grants($self) {
-
-    return if $self->_null_grants();
-
-    my @grants = (
-        'change_settings',  'change_settings_all',  'change_settings_clones'
-        ,'clone',           'clone_all',            'create_base', 'create_machine'
-        ,'expose_ports','expose_ports_clones','expose_ports_all'
-        ,'grant'
-        ,'manage_users'
-        ,'rename', 'rename_all', 'rename_clones'
-        ,'remove',          'remove_all',   'remove_clone',     'remove_clone_all'
-        ,'screenshot'
-        ,'shutdown',        'shutdown_all',    'shutdown_clone'
-        ,'reboot',          'reboot_all',      'reboot_clones'
-        ,'screenshot'
-        ,'start_many'
-        ,'view_groups',     'manage_groups'
-        ,'start_limit',     'start_many'
-        ,'view_all'
-        ,'create_disk', 'quota_disk'
-        ,'create_networks','manage_all_networks'
+sub _enable_all_grants($self) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,name,default_user,default_admin FROM grant_types "
+        ." WHERE enabled is null OR enabled=0"
+        ." ORDER BY name"
     );
-
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
-    $sth->execute;
-    my %grant_exists;
-    while (my ($id, $name) = $sth->fetchrow ) {
-        $grant_exists{$name} = $id;
-    }
-
-    $sth = $CONNECTOR->dbh->prepare(
-        "UPDATE grant_types set enabled=1 WHERE name=?"
+    $sth->execute();
+    my $sth_enable = $CONNECTOR->dbh->prepare(
+        "UPDATE grant_types set enabled=1 WHERE id=?"
     );
-    my %done;
-    for my $name ( sort @grants ) {
-        die "Duplicate grant $name "    if $done{$name};
-        confess "Permission $name doesn't exist at table grant_types"
-                ."\n".Dumper(\%grant_exists)
-            if !$grant_exists{$name};
-
-        $sth->execute($name);
-
+    while ( my ($id_grant,$name,$default_user,$default_admin) = $sth->fetchrow()) {
+        $sth_enable->execute($id_grant);
+        $self->_insert_grant_all_users($id_grant,$default_user,$default_admin);
     }
-    $self->_disable_other_grants(@grants);
-}
-
-sub _disable_other_grants($self, @grants) {
-    my $query = "UPDATE grant_types set enabled=0 WHERE  enabled=1 AND "
-    .join(" AND ",map { "name <> ? " } @grants );
-    my $sth = $CONNECTOR->dbh->prepare($query);
-    $sth->execute(@grants);
 }
 
 sub _update_old_qemus($self) {
@@ -2049,7 +2055,7 @@ sub _upgrade_table($self, $table, $field, $definition) {
             ." $row->{COLUMN_SIZE} to ".($new_size or '')."\n"
             ." $row->{TYPE_NAME} -> $new_type \n"
             ." in $table\n$definition\n"  if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
-        print "-" if $FIRST_TIME_RUN;
+        print "-" if $FIRST_TIME_RUN && $ENV{TERM};
         $dbh->do("alter table $table change $field $field $definition");
 
         $self->_create_constraints($table, [$field, $constraint]) if $constraint;
@@ -2074,7 +2080,7 @@ sub _upgrade_table($self, $table, $field, $definition) {
     if ( $sqlite_trigger && !$self->_exists_trigger($dbh, "Update$field") ) {
         $self->_sqlite_trigger($dbh,$table, $field, $sqlite_trigger);
     }
-    print "-" if $FIRST_TIME_RUN;
+    print "-" if $FIRST_TIME_RUN && $ENV{TERM};
     return 1;
 }
 
@@ -2131,7 +2137,7 @@ sub _create_table {
     warn "INFO: creating table $table\n"
     if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
 
-    print "." if $FIRST_TIME_RUN;
+    print "." if $FIRST_TIME_RUN && $ENV{TERM};
 
     my $file_sql = "$DIR_SQL/$table.sql";
     open my $in,'<',$file_sql or die "$! $file_sql";
@@ -2219,9 +2225,10 @@ sub _sql_create_tables($self) {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
             ,source => 'char(120) NOT NULL'
+            ,target => 'char(120) NOT NULL default ""'
             ,chroot => 'integer(4) not null default 0'
             ,subdir_uid => 'integer not null default 1000'
-
+            ,enabled => 'integer(4) not null default 1'
             }
         ]
         ,[
@@ -2947,6 +2954,7 @@ sub _upgrade_tables {
     }
     $self->_upgrade_table('users','external_auth','char(32) DEFAULT NULL');
     $self->_upgrade_table('users','date_created','timestamp DEFAULT CURRENT_TIMESTAMP');
+    $self->_upgrade_table('users','password_expiration_date','int default null');
 
     $self->_upgrade_table('networks','requires_password','int(11)');
     $self->_upgrade_table('networks','n_order','int(11) not null default 0');
@@ -3005,6 +3013,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms','security','varchar(255) default NULL');
     $self->_upgrade_table('grant_types','enabled','int not null default 1');
     $self->_upgrade_table('grant_types','default_admin','int not null default 1');
+    $self->_upgrade_table('grant_types','default_user','int not null default 0');
 
     $self->_upgrade_table('vms','mac','char(18)');
     $self->_upgrade_table('vms','tls','text');
@@ -4583,7 +4592,14 @@ sub _cmd_screenshot {
     my $request = shift;
 
     my $id_domain = $request->args('id_domain');
+    my $uid = $request->args('uid');
+
     my $domain = $self->search_domain_by_id($id_domain);
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    die "Error: user ".$user->name." not allowed to screenshot "
+    .$domain->name if !$user->can_do_domain('screenshot',$domain);
+
     if (!$domain->can_screenshot) {
         die "I can't take a screenshot of the domain ".$domain->name;
     } else {
@@ -5550,12 +5566,41 @@ sub _apply_clones($self, $request) {
     }
 
     for my $clone ($domain->clones) {
+        if ( $request->command eq 'change_hardware' ) {
+            next if !$self->_fix_clone_args($args, $clone->{id})
+        }
+
         Ravada::Request->new_request(
             $request->command
             ,%$args
             ,id_domain => $clone->{id}
         );
     }
+}
+
+sub _fix_clone_args($self, $args, $id_clone) {
+    return 1 if $args->{hardware} ne 'filesystem';
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,source FROM domain_filesystems "
+        ." WHERE id_domain=? AND target=?"
+    );
+    my $target;
+    if (exists $args->{data}->{target} && defined $args->{data}->{target}) {
+        $target = $args->{data}->{target};
+        $target = $target->{dir} if ref($target) eq 'HASH';
+    } else {
+        # If target is not defined, skip setting _id
+        return;
+    }
+
+    $sth->execute($id_clone, $target);
+    my ($id, $source) = $sth->fetchrow();
+    return if !defined $id;
+    $args->{data}->{_id}=$id;
+    $args->{data}->{source}=$source;
+    delete $args->{data}->{id_domain};
+    return $id;
 }
 
 sub _cmd_shutdown {
@@ -6794,6 +6839,7 @@ sub _req_method {
       ,shutdown => \&_cmd_shutdown
       ,reboot => \&_cmd_reboot
      ,hybernate => \&_cmd_hybernate
+     ,hibernate => \&_cmd_hybernate
     ,set_driver => \&_cmd_set_driver
     ,screenshot => \&_cmd_screenshot
     ,add_disk => \&_cmd_add_disk

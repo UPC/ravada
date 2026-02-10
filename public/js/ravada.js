@@ -178,7 +178,7 @@
             $scope.action = function(machine, action, confirmed) {
                 machine.action = false;
                 if (action == 'start') {
-                    if ((! confirmed) && (! machine.is_active)) {
+                    if (! confirmed && (!machine.clone || !machine.clone.is_active)) {
                         $scope.checkMaxMachines(action, machine); 
                     } else {
                         if (machine.clone || !machine.is_base) {
@@ -440,6 +440,7 @@
                         return;
                     }
                     $scope.$apply(function () {
+                        $scope.showmachine = data;
                         $scope.showmachine.requests = data.requests;
                         if ($scope.lock_info) {
                             $scope.showmachine.is_active=data.is_active;
@@ -455,7 +456,6 @@
                             if( b == 'memory' && b != 'cpu') return 1;
                             return a >b;
                         });
-                        $scope.showmachine = data;
                         $scope.hardware_add = [];
                         for ( var n_key=0 ; n_key< $scope.hardware.length; n_key++) {
 
@@ -590,6 +590,7 @@
                             $scope.bases = data;
                             $scope.new_base=undefined;
                             _select_new_base();
+                            get_bases_no_bundle();
                         }
                     });
                 }
@@ -704,6 +705,7 @@
                 });
                 if (is_admin ) {
                     $scope.list_ldap_attributes();
+                    list_bundles();
                     list_groups();
                 }
                 $scope.list_cpu_models();
@@ -1194,6 +1196,17 @@
                     });
             };
 
+            var list_bundles = function() {
+                $http.get('/v2/bundle/list')
+                    .then(function(response) {
+                        $scope.bundles = response.data;
+                    })
+                    .catch(function(error) {
+                        console.error("Failed to load bundles:", error);
+                        $scope.bundles = [];
+                    });
+            };
+
             /* Host Devices */
             var list_host_devices = function() {
                 $http.get('/list_host_devices/'+$scope.showmachine.id_vm)
@@ -1365,6 +1378,123 @@
                 });
             };
 
+            $scope.create_bundle = function() {
+                $http.post('/v2/bundle/create'
+                    ,JSON.stringify({
+                        'name': $scope.new_bundle
+                        ,'id_domain': $scope.showmachine.id
+                    }))
+                    .then(function(response) {
+                        console.log(response.data);
+                        var bundle = response.data.bundle;
+                        bundle.members = [
+                            {   'id': $scope.showmachine.id
+                                ,'name': $scope.showmachine.name
+                            }
+                        ];
+                        $scope.showmachine.bundle = bundle;
+                });
+            };
+
+            $scope.domain_in_bundle=function(id_domain) {
+                var found = false;
+                if (!$scope.showmachine.bundle) {
+                    return false;
+                }
+                for ( var i=0;i<$scope.showmachine.bundle.members.length; i++) {
+                    if ($scope.showmachine.bundle.members[i].id == id_domain) {
+                        found=true;
+                    }
+                }
+                return found;
+            };
+
+            $scope.remove_bundle = function() {
+                var id = $scope.showmachine.bundle.id;
+                $scope.showmachine.bundle=undefined;
+                $http.delete('/v2/bundle/'+id)
+                    .then(function(response) {
+                    list_bundles();
+                });
+            };
+
+            $scope.join_bundle=function(id_bundle) {
+                $scope.showmachine.bundle = {
+                    'id': id_bundle
+                    ,'members': []
+                };
+                $scope.bundle_new_base={ 'id': $scope.showmachine.id };
+                $scope.add_to_bundle();
+            };
+
+            get_bases_no_bundle = function() {
+                $scope.bases_no_bundle = [];
+                for ( var i=0; i<$scope.bases.length; i++) {
+                    var base = $scope.bases[i];
+                    if (typeof($scope.bundle_new_base) != 'undefined'
+                            && base.id == $scope.bundle_new_base.id) {
+                        base.id_bundle=$scope.showmachine.bundle.id;
+                    }
+                    if(!base.id_bundle )
+                        $scope.bases_no_bundle.push(base);
+                }
+            };
+
+            $scope.add_to_bundle = function() {
+                var found;
+                for ( var i=0;i<$scope.showmachine.bundle.members.length; i++) {
+                    var member = $scope.showmachine.bundle.members[i];
+                    if (member.id == $scope.bundle_new_base.id) {
+                        found = true;
+                    }
+                }
+                if (!found) {
+                    $scope.showmachine.bundle.members.push($scope.bundle_new_base);
+                    get_bases_no_bundle();
+                    $http.post('/v2/bundle/add_domain'
+                        ,JSON.stringify({
+                            'id_bundle': $scope.showmachine.bundle.id
+                            ,'id_domain': $scope.bundle_new_base.id
+                        }))
+                        .then(function(response) {
+
+                        }
+                    );
+                }
+                $scope.bundle_new_base=undefined;
+            };
+
+            $scope.remove_from_bundle = function(domain) {
+
+                if (typeof($scope.bases_no_bundle)=='undefined') {
+                    $scope.bases_no_bundle = [];
+                }
+                $scope.bases_no_bundle.push(domain);
+                var members = [];
+                for ( var i=0;i<$scope.showmachine.bundle.members.length; i++) {
+                    var member = $scope.showmachine.bundle.members[i];
+                    if (member.id != domain.id) {
+                        members.push(member);
+                    }
+                }
+                $scope.showmachine.bundle.members=members;
+
+                for ( var i=0; i<$scope.bases.length; i++) {
+                    var base = $scope.bases[i];
+                    if (base.id == domain.id) 
+                        base.id_bundle=0;
+                }
+                $http.post('/v2/bundle/remove_domain'
+                    ,JSON.stringify({
+                        'id_bundle': $scope.showmachine.bundle.id
+                        ,'id_domain': domain.id
+                    }))
+                    .then(function(response) {
+                });
+
+            };
+
+
             $scope.message = [];
             $scope.disk_remove = [];
             $scope.pending_before = 10;
@@ -1467,9 +1597,16 @@
             }
         }
         $scope.subscribe_request= function(url, id_request) {
+            $scope.id_request = id_request;
             already_subscribed_to_domain = false;
             var ws = new WebSocket(url);
             ws.onopen = function(event) { ws.send('request/'+id_request) };
+
+            ws.onclose = function(event) {
+                $timeout(function() {
+                    $scope.ws_connection_lost = true;
+                }, 5*1000);
+            };
 
             ws.onmessage = function(event) {
                 var data = JSON.parse(event.data);
@@ -1486,6 +1623,7 @@
                 }
             }
         }
+
         $scope.refresh_ports = function(url, id_domain ) {
             var id_request = $scope.request.id;
             $http.post('/request/open_exposed_ports/'
@@ -1509,10 +1647,23 @@
                     });
             });
         }
+
+        $scope.subscribe_all = function(url) {
+             $scope.ws_connection_lost = false;
+             $scope.subscribe_request(url, $scope.id_request);
+        };
+
         $scope.subscribe_domain_info= function(url, id_domain) {
             already_subscribed_to_domain = true;
             var ws = new WebSocket(url);
             ws.onopen = function(event) { ws.send('machine_info/'+id_domain) };
+
+            ws.onclose = function(event) {
+                $timeout(function() {
+                    $scope.ws_connection_lost = true;
+                }, 5*1000);
+            };
+
             ws.onmessage = function(event) {
                 var data = JSON.parse(event.data);
                 $scope.$apply(function () {

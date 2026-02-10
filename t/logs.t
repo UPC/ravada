@@ -181,7 +181,7 @@ sub test_1month() {
     ok(scalar(@labels)>=28 && scalar(@labels)<=32,"Got ".scalar(@labels)." labels");
     my $ok = 1;
     for my $label (@labels) {
-        if ($label !~ /^\d\d-\d\d$/) {
+        if ($label !~ /^\d\d-\d\d$/ && $label !~ /^\d{4}-\d\d-\d\d$/) {
             diag("Wrong label $label, expecting MM-DD");
             $ok=0;
             last;

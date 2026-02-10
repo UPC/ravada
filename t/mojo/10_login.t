@@ -60,11 +60,13 @@ sub login( $user=$USERNAME, $pass=$PASSWORD ) {
     mojo_check_login($t, $user, $pass);
 }
 
-sub test_view_tls($base) {
+sub test_view_tls($vm_name) {
 
-    return if $base->type ne 'KVM';
+    return if $vm_name ne 'KVM';
 
     mojo_check_login($t);
+
+    my $base = _clone_and_base($vm_name);
 
     my $name = new_domain_name();
     Ravada::Request->clone(
@@ -99,15 +101,19 @@ sub test_view_tls($base) {
     );
     wait_request();
 
-    for ( 1 .. 10 ) {
+    my $ip;
+    for ( 1 .. 60 ) {
         $info = $clone_f->info(user_admin);
+        $ip = $info->{ip};
         $display = $info->{hardware}->{display};
         my ($found_spice) = grep { $_->{driver} eq 'spice' } @$display;
         my ($found_rdp) = grep { $_->{driver} eq 'rdp' } @$display;
-        last if $found_spice && $found_rdp;
+        last if $found_spice && $found_rdp && $ip;
 
         wait_request();
     }
+    die "Error: no ip for ".$clone_f->name." cloned from ".$base->name
+    if !$ip;
 
     $t->get_ok("/machine/display/spice/".$clone->{id}.".vv")
     ->status_is(200);

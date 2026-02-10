@@ -89,6 +89,13 @@
     <div class="tab-pane fade" id="v-pills-share" role="tabpanel" aria-labelledby="v-pills-share-tab">
         %= include 'main/vm_share'
     </div>
+%if ($USER->is_admin) {
+    <div class="tab-pane fade" id="v-pills-bundle" role="tabpanel" aria-labelledby="v-pills-bundle-tab"
+        ng-show="showmachine.is_base || showmachine.bundle"
+    >
+        %= include 'main/vm_bundle'
+    </div>
+% }
 
 
 </div><!-- from tab content -->
