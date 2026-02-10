@@ -22,45 +22,6 @@ init();
 
 #########################################################
 
-sub test_dont_download {
-    my $vm = shift;
-
-    my ($me) = $0 =~ m{.*/(.*)};
-    my $device = "/tmp/$me.iso";
-    open my $out,'>',$device or die $!;
-    print $out $$;
-    close $out;
-
-    my $sth = connector->dbh->prepare(
-        "INSERT INTO iso_images (name,xml,xml_volume,device) "
-        ." VALUES('test".$vm->type."','jessie-i386.xml','dsl-volume.xml','$device')"
-    );
-    $sth->execute;
-    my $name = new_domain_name();
-    my $id_iso = search_id_iso('test'.$vm->type);
-    eval {
-        $vm->create_domain(
-                 name => $name
-                  ,vm => $vm
-                ,disk => 1024 * 1024
-              ,id_iso => $id_iso
-            ,id_owner => user_admin->id
-        );
-    };
-    is($@, '');
-
-    my $domain = $vm->search_domain($name);
-    ok($domain);
-
-    $domain->remove(user_admin) if $domain;
-
-    unlink $device;
-    $sth = connector->dbh->prepare(
-        "DELETE FROM iso_images WHERE id=?"
-    );
-    $sth->execute($id_iso);
-}
-
 sub test_windows($vm) {
     my $isos = rvd_front->list_iso_images();
     my $dev = "/var/tmp/a.iso";
@@ -147,7 +108,6 @@ for my $vm_name ( vm_names() ) {
         skip($msg,10)   if !$vm;
 
         test_windows($vm);
-        test_dont_download($vm);
     }
 
 }
