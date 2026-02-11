@@ -2056,6 +2056,12 @@ sub refresh($self) {
     delete $self->{_data};
 }
 
+=head2 error_check_request
+
+Returns errors from requested jobs created from this request
+
+=cut
+
 sub error_check_request($self) {
     my $check_request = $self->defined_arg('check_requests');
     return if !$check_request;

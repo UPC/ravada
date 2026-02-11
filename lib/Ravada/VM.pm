@@ -1959,6 +1959,26 @@ sub _new_file_queue {
     return _dir_queue."/".$$.".".time().".".int(rand(100));
 }
 
+=head2 queue_command
+
+    Creates an entry in at to run a command.
+
+    Arguments:
+
+=over
+
+=item $self
+
+=item $command : array ref of command exec and args
+
+=item $id_domain : optional name of the domain
+
+=item $id_req : optional name of parent request
+
+=back
+
+=cut
+
 sub queue_command($self, $command , $id_domain=undef, $id_req=undef ) {
     my $file_queue = _new_file_queue();
     $self->write_file("$file_queue.sh",

@@ -812,8 +812,6 @@ sub get_cpu_model_names($self,$arch='x86_64') {
     return qw(486 qemu32 qemu64);
 }
 
-sub has_networking { return 1 };
-
 sub _check_duplicated_network($self, $field, $data) {
     my @networks = $self->list_virtual_networks();
     my ($found) = grep {$data->{name} ne $_->{name}
