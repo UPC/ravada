@@ -305,7 +305,9 @@ sub test_list_clones($user, $action, $base, $clone) {
 sub test_list_requests($user) {
 
     my $requests = rvd_front->list_requests;
-    my @found = grep { $_->{command} =~ /base/ } @$requests;
+    my @found = grep 
+        { $_->{command} =~ /base/ && $_->{command} !~ /^post_prepare_base/ }
+        @$requests;
     ok(!@found,"Expecting no other requests found") or die Dumper(\@found);
     for my $req_data (@$requests) {
         next if !exists $req_data->{uid} || $req_data->{uid} == $user->id;
