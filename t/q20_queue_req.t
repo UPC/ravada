@@ -28,7 +28,7 @@ sub test_queue_fail($vm) {
         uid => user_admin->id
         ,id_domain => $domain->id
     );
-    rvd_back->_process_requests_dont_fork(1);
+    rvd_back->_process_requests_dont_fork();
     is($req->error,'');
     is($req->status(),'done');
 
@@ -64,7 +64,7 @@ sub test_queue($vm) {
         $domain->add_volume( format => 'qcow2', size => 1*1024*1024);
     }
 
-    my $n_vols = scalar( grep {$_ =~ /img|qcow2|raw/ } $domain->list_volumes);
+    my $n_vols_raw = scalar( grep {$_ =~ /img|raw/ } $domain->list_volumes);
     my $req = Ravada::Request->prepare_base(
         uid => user_admin->id
         ,id_domain => $domain->id
@@ -77,7 +77,7 @@ sub test_queue($vm) {
     is($domain->is_base,0);
 
     my @req = $domain->list_requests();
-    is(scalar(@req),$n_vols+1) or do {
+    is(scalar(@req),$n_vols_raw+1) or do {
         for my $req ( @req) {
             diag($req->id." ".$req->command);
         }

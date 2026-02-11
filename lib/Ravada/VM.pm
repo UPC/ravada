@@ -1213,8 +1213,8 @@ sub _insert_vm_db {
     return if !$self->store();
 
     my $sth = $$CONNECTOR->dbh->prepare(
-        "INSERT INTO vms (name, vm_type, hostname, public_ip)"
-        ." VALUES(?, ?, ?, ?)"
+        "INSERT INTO vms (name, vm_type, hostname, public_ip, is_active, enabled)"
+        ." VALUES(?, ?, ?, ?, 1, 1)"
     );
     my %args = @_;
     my $name = ( delete $args{name} or $self->name);
@@ -3169,28 +3169,33 @@ sub dir_backup($self) {
 }
 
 sub _follow_link($self, $file) {
-    my ($dir, $name) = $file =~ m{(.*)/(.*)};
+
+    return $self->{_is_link}->{$file}
+    if exists $self->{_is_link}->{$file}
+        && defined $self->{_is_link}->{$file};
+
+    my ($out,$err) = $self->run_command("stat","-c",'"%N"', $file);
+    chomp $out;
+    my ($link) = $out =~ m{ -> ['"](.+?)['"]+};
     my $file2 = $file;
+    if ($link) {
+        if ($link !~ m{^/}) {
+            my ($path) = $file =~ m{(.*/)};
+            $path = "/" if !$path;
+            $link = "$path$link";
+        }
+        $self->{_is_link}->{$file} = $link;
+        $file2 = $link;
+    }
+
+    my ($dir, $name) = $file2 =~ m{(.*)/(.*)};
     if ($dir) {
         my $dir2 = $self->_follow_link($dir);
         $file2 = "$dir2/$name";
     }
+    $self->{_is_link}->{$file} = $file2 unless exists $self->{_is_link}->{$file};
+    return $file2;
 
-    if (!defined $self->{_is_link}->{$file2} ) {
-        my ($out,$err) = $self->run_command("stat","-c",'"%N"', $file2);
-        chomp $out;
-        my ($link) = $out =~ m{ -> '(.+)'};
-        if ($link) {
-            if ($link !~ m{^/}) {
-                my ($path) = $file2 =~ m{(.*/)};
-                $path = "/" if !$path;
-                $link = "$path$link";
-            }
-            $self->{_is_link}->{$file2} = $link;
-        }
-    }
-    $self->{_is_link}->{$file2} = $file2 if !exists $self->{_is_link}->{$file2};
-    return $self->{_is_link}->{$file2};
 }
 
 sub _is_link_remote($self, $vol) {
@@ -3348,6 +3353,14 @@ sub _set_active_machines_isolated($self, $network) {
         }
         $domain->_fetch_networking_mode() if $found;
     }
+}
+
+sub _set_iso_downloading($self, $iso,$value) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE iso_images SET downloading=?"
+        ." WHERE id=?"
+    );
+    $sth->execute($value,$iso->{id});
 }
 
 1;

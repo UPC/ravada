@@ -12,7 +12,7 @@ Ravada::Front - Web Frontend library for Ravada
 use Carp qw(carp);
 use DateTime;
 use DateTime::Format::DateParse;
-use Hash::Util qw(lock_hash lock_keys);
+use Hash::Util qw(unlock_keys lock_hash lock_keys);
 use IPC::Run3 qw(run3);
 use JSON::XS;
 use Moose;
@@ -93,7 +93,11 @@ Returns a list of the base domains as a listref
 
 sub list_bases($self, %args) {
     $args{is_base} = 1;
-    my $query = "SELECT name, id, is_base, id_owner FROM domains "
+    my $query = "SELECT name, d.id, is_base, id_owner,is_public "
+    ."                    ,db.id_bundle"
+    ." FROM domains d "
+    ." LEFT JOIN domains_bundle db "
+    ."   ON d.id=db.id_domain "
         ._where(%args)
         ." ORDER BY name";
 
@@ -227,6 +231,7 @@ sub _get_clone_info($user, $base, $clone = Ravada::Front::Domain->open($base->{i
         && $user->can_screenshot) {
         my $req = Ravada::Request->screenshot(
             id_domain => $clone->id
+            ,uid => $user->id
         );
     }
     return $c;
@@ -791,8 +796,11 @@ sub list_iso_images {
 
 sub _fix_iso_file_re($row) {
     if ($row->{rename_file}) {
+        unlock_keys(%$row);
+        $row->{file_re_orig} = $row->{file_re};
+        lock_keys(%$row);
         $row->{file_re} = $row->{rename_file};
-    } elsif ($row->{url} ) {
+    } elsif ($row->{url} && !$row->{file_re} ) {
         my ($file_re) = $row->{url} =~ m{.*/([^/]+)$};
         $row->{file_re}= $file_re if $file_re;
     }
@@ -819,6 +827,7 @@ sub iso_file ($self, $id_vm, $uid) {
 
     Ravada::Request->refresh_storage(
         id_vm=> $id_vm
+	,uid => Ravada::Utils::user_daemon->id
     );
 
     my $req = Ravada::Request->list_isos(
@@ -2160,6 +2169,23 @@ Arguments : id_bundle, id_domain
 sub add_to_bundle ($self, $id_bundle, $id_domain){
     my $sth = $self->_dbh->prepare(
         "INSERT INTO domains_bundle (id_bundle, id_domain ) VALUES(?,?)"
+    );
+    $sth->execute($id_bundle, $id_domain);
+
+}
+
+=head2 remove_from_bundle
+
+Removes a domain from a bundle
+
+Arguments : id_bundle, id_domain
+
+=cut
+
+sub remove_from_bundle ($self, $id_bundle, $id_domain){
+    my $sth = $self->_dbh->prepare(
+        "DELETE FROM domains_bundle "
+        ." WHERE id_bundle=? AND id_domain=? "
     );
     $sth->execute($id_bundle, $id_domain);
 

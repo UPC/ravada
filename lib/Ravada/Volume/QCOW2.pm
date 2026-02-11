@@ -22,7 +22,6 @@ our $QEMU_IMG = "qemu-img";
 
 sub prepare_base($self, $req=undef) {
 
-    cluck if !defined $req;
     my $file_img = $self->file;
     my $base_img = $self->base_filename();
     confess $base_img if $base_img !~ /\.ro/;
@@ -30,19 +29,29 @@ sub prepare_base($self, $req=undef) {
     confess "Error: '$base_img' already exists" if -e $base_img;
     confess if $file_img =~ /\.iso$/i;
 
-    my @cmd = _cmd_convert($file_img,$base_img);
-
     my $format;
     eval {
         $format = $self->_qemu_info('file format')
     };
-    warn $@ if $@;
-    @cmd = _cmd_copy($file_img, $base_img)
-    if $format && $format eq 'qcow2';# && !$self->backing_file;
+
+    if ($format && $format eq 'qcow2') {
+        $self->_copy($base_img, '0400');
+    } else {
+        $self->_convert($base_img, $req);
+    }
+
+    return $base_img;
+
+}
+
+sub _convert($self, $dst, $req=undef) {
+    my $file_img = $self->file;
+    my $base_img = $self->base_filename();
+    my @cmd = _cmd_convert($file_img,$base_img);
 
     if (defined $req) {
         my $id_req = $self->vm->queue_command(\@cmd, $self->domain->id, $req->id);
-        return $base_img;
+        return;
     }
     my ($out, $err) = $self->vm->run_command( @cmd );
     warn $out  if $out;
@@ -59,10 +68,71 @@ sub prepare_base($self, $req=undef) {
         .join(" ",@cmd);
     }
 
-    chmod 0555,$base_img;
+}
 
-    return $base_img;
+sub _copy($self, $dst, $mode=undef) {
+    my $src = $self->file;
 
+    if (!$self->vm || $self->vm->type ne 'KVM') {
+        return $self->_copy_sys($dst,$mode);
+    }
+    my $vol = $self->vm->search_volume($src);
+
+    confess "Error: '$src' not found in ".$self->vm->name." [ ".$self->vm->type." ]" if !$vol;
+    my $vol_capacity = $vol->get_info()->{capacity};
+    #my $sp = $self->vm->vm->get_storage_pool_by_volume($vol);
+    my ($path) = $dst =~ m{(.*)/};
+    my $sp = $self->vm->vm->get_storage_pool_by_target_path($path);
+    if (!$sp) {
+        warn "Warning: pool not found in $path, reverting to ".$vol->get_path;
+        $sp = $self->vm->vm->get_storage_pool_by_volume($vol);
+    }
+
+    _refresh_sp($self->vm,$sp);
+    my $pool_capacity = $sp->get_info()->{capacity};
+
+    die "Error: '$dst' too big to fit in ".$sp->get_name.". ".Ravada::Utils::number_to_size($vol_capacity)." > ".Ravada::Utils::number_to_size($pool_capacity)."\n"
+    if $vol_capacity>$pool_capacity;
+
+    my $xml = $vol->get_xml_description();
+    my $doc = XML::LibXML->load_xml(string => $xml);
+
+    my ($name) = $dst =~ m{.*/(.*)};
+
+    $doc->findnodes('/volume/name/text()')->[0]->setData($name);
+    $doc->findnodes('/volume/key/text()')->[0]->setData($dst);
+    $doc->findnodes('/volume/target/path/text()')->[0]->setData( $dst);
+    $doc->findnodes('/volume/target/permissions/mode/text()')->[0]
+        ->setData( $mode ) if $mode;
+
+    my $vol_dst;
+    my $err;
+    for ( 1 .. 5 ) {
+        eval {
+            $vol_dst = $sp->clone_volume($doc->toString, $vol);
+        };
+        $err = $@;
+        last if !$err
+            || (ref($err) eq 'Sys::Virt::Error'
+                && $err->code == 1) ; #internal error: pool 'default' has asynchronous jobs running
+        sleep 1;
+    }
+    die $err if $err;
+
+    _refresh_sp($self->vm,$vol_dst);
+
+    return $vol_dst;
+}
+
+sub _copy_sys($self, $dst, $mode=undef) {
+    my $file = $self->file;
+    if ($self->vm) {
+        my ($out, $err) = $self->vm->run_command("cp",$file,$dst);
+        die $err if $err;
+    } else {
+        copy($file,$dst);
+    }
+    $self->_chmod($mode, $dst) if $mode;
 }
 
 sub clone($self, $file_clone) {
@@ -84,7 +154,35 @@ sub clone($self, $file_clone) {
     }
     die $self->vm->name." ".$err if $err;
 
+    my $vol;
+    for ( 1 .. 3 ) {
+        $vol = $self->vm->search_volume($file_clone);
+        last if $vol;
+    }
+    if ($vol) {
+        _refresh_sp($self->vm, $vol);
+    } else {
+        $self->vm->refresh_storage();
+    }
+
     return $file_clone;
+}
+
+sub _refresh_sp($vm, $vol) {
+    my $sp;
+    if (ref($vol) eq 'Sys::Virt::StoragePool') {
+        $sp = $vol;
+    } else {
+        $sp = $vm->vm->get_storage_pool_by_volume($vol);
+    }
+    for ( 1 .. 3 ) {
+        eval { $sp->refresh() };
+        my $err = $@;
+        last if !$err;
+        warn $err;
+        sleep 1;
+    }
+
 }
 
 sub _get_capacity($self) {

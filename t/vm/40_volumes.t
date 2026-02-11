@@ -748,6 +748,50 @@ sub test_base_clone($vm, $remove_base_first=0) {
     $base->remove(user_admin);
 }
 
+sub _swap_volumes_id($domain) {
+
+    my $domain_f0 = Ravada::Front::Domain->open($domain->id);
+    my $info0 = $domain_f0->info(user_admin);
+    my $info0_d = $info0->{hardware}->{disk};
+
+    my $sth = connector->dbh->prepare("SELECT id,name,n_order "
+        ." FROM volumes "
+        ." WHERE id_domain = ? order by n_order"
+    );
+    $sth->execute($domain->id);
+    my @volumes;
+    while (my $row = $sth->fetchrow_hashref) {
+        push @volumes,($row);
+    }
+    my $sth_change = connector->dbh->prepare(
+        "UPDATE volumes set id=? WHERE id=?"
+    );
+    $sth_change->execute($volumes[-1]->{id}+1 , $volumes[1]->{id});
+
+    $sth->execute($domain->id);
+
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    my $domain2 = Ravada::Domain->open($domain->id);
+
+    my $info_f = $domain_f->info(user_admin);
+    my $info_b = $domain2->info(user_admin);
+
+    for my $info ( $info_f , $info_b ) {
+        my $info_d = $info->{hardware}->{disk};
+        is($info_d->[2]->{target}, $info0_d->[2]->{target});
+        for my $n ( 0 .. 3 ) {
+            is($info_d->[$n]->{name}, $volumes[$n]->{name});
+            is($info_d->[$n]->{target}, $info0_d->[$n]->{target});
+        }
+    }
+}
+
+sub test_order($vm) {
+    my $domain = create_domain_v2(vm => $vm, data => 1, swap =>1 );
+    _swap_volumes_id($domain);
+    $domain->remove(user_admin);
+}
+
 #######################################################################33
 
 clean();
@@ -768,6 +812,8 @@ for my $vm_name (reverse sort @VMS) {
 
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
+
+        test_order($vm);
 
         test_base_clone($vm);
         test_base_clone($vm,1);

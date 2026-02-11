@@ -35,6 +35,8 @@ sub _post_prepare_base($self, $base_file) {
     return $base_file if ! $self->clone_base_after_prepare;
     return $base_file if !$self->vm->file_exists($base_file);
 
+    $self->_chmod(oct(400),$base_file);
+
     $self->vm->refresh_storage_pools();
     $self->vm->remove_file($self->file);
 
@@ -50,6 +52,21 @@ sub _post_prepare_base($self, $base_file) {
 
     return $base_file;
 }
+
+sub _chmod($self, $mode, $file=$self->file) {
+
+    my $vm = $self->vm;
+
+    if ($vm && !$vm->is_local) {
+        my $mode_o = sprintf("%o",$mode);
+        my ($out,$err) = $vm->run_command("chmod",$mode_o,$file);
+        die $err if $err;
+    } else {
+        confess if !-e $file;
+        chmod $mode,$file or die "$! chmod $mode $file";
+    }
+}
+
 
 sub _domain_file($self, $file) {
     my $sth = $self->_dbh->prepare("SELECT id_domain FROM volumes WHERE file=? "
@@ -88,10 +105,13 @@ sub _around_clone($orig, $self, %args) {
         if !$self->domain || $self->domain->id != $id_domain_file;
     }
 
-    return $self->new(
+    my $ret = $self->new(
         file => $orig->($self, $file_clone)
         ,vm => $self->vm
     );
+    $self->_chmod(oct(600), $file_clone);
+
+    return $ret;
 }
 
 sub copy_file($self, $src, $dst) {
