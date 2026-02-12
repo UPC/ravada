@@ -157,6 +157,7 @@ sub test_base($volume) {
 }
 
 sub _check_base_volume_mode($file) {
+    return if $file =~ /\.iso$/;
     my $mode = stat($file)->mode;
 
     ok($mode & S_IRUSR); # User can read
@@ -364,7 +365,6 @@ sub _check_volume_mode($file) {
 
 
 sub test_defaults($vm, $volume_type=undef) {
-    diag("Testing defaults for ".$vm->name);
     my $domain = create_domain($vm);
     my @format;
     @format = ( format => $volume_type ) if $vm->type eq 'void' && $volume_type;
@@ -558,7 +558,6 @@ for my $vm_name (reverse vm_names() ) {
         diag($msg)      if !$vm;
         skip($msg,10)   if !$vm;
 
-        diag("Testing volumes in $vm_name");
         init_vm($vm);
 
         test_no_extension($vm);
