@@ -151,6 +151,27 @@ sub test_remove_spice($domain) {
     like($info->{hardware}->{display}->[0]->{driver},qr'spice');
 }
 
+sub test_add_usb_spicevmc($vm) {
+    my $domain = create_domain($vm);
+
+    my $req = Ravada::Request->remove_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,name => 'display'
+        ,index => 0
+    );
+    wait_request(debug => 0);
+
+    my $req_add =Ravada::Request->add_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,name => 'usb'
+    );
+    wait_request(debug => 0);
+    remove_domain($domain);
+
+}
+
 #######################################################
 
 if ($>)  {
@@ -177,6 +198,7 @@ SKIP: {
 
     $TLS = 1 if check_libvirt_tls() && $vm_name eq 'KVM';
 
+    test_add_usb_spicevmc($vm);
     my $domain = test_spice($vm_name);
     test_remove_spice($domain);
 }
