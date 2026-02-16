@@ -4638,6 +4638,8 @@ sub screenshot_machine {
 
     my $req = Ravada::Request->screenshot(
         id_domain => $domain->id
+        ,uid => $USER->id
+        ,_force => 1
     );
     $c->render(json => { request => $req->id});
 }
@@ -4645,11 +4647,14 @@ sub screenshot_machine {
 sub copy_screenshot {
     my $c = shift;
     return login($c)    if !_logged_in($c);
+    return access_denied_json($c) if !$USER->is_admin;
 
     my $domain = _search_requested_machine($c);
 
     my $req = Ravada::Request->copy_screenshot (
         id_domain => $domain->id
+        ,uid => $USER->id
+        ,_force => 1
     );
     $c->render(json => { request => $req->id});
 }

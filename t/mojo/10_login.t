@@ -24,6 +24,7 @@ my ($USERNAME, $PASSWORD);
 my $SCRIPT = path(__FILE__)->dirname->sibling('../script/rvd_front');
 
 my $BASE_NAME = "zz-test-base-alpine";
+my %DONE_SCREENSHOT;
 ########################################################################################
 
 sub remove_machines(@machines) {
@@ -809,7 +810,7 @@ sub test_new_machine_empty($t, $vm_name) {
     }
 }
 
-sub test_new_machine_default($t, $vm_name, $empty_iso_file=undef) {
+sub _new_machine($t,$vm_name, $empty_iso_file=1) {
     my $name = new_domain_name();
 
     my $iso_name = 'Alpine%64 bits';
@@ -832,6 +833,10 @@ sub test_new_machine_default($t, $vm_name, $empty_iso_file=undef) {
 
     wait_request();
 
+    return _wait_for_domain($name);
+}
+
+sub _wait_for_domain($name) {
     my $domain;
     for ( 1 .. 10 ) {
         $domain = rvd_front->search_domain($name);
@@ -839,6 +844,13 @@ sub test_new_machine_default($t, $vm_name, $empty_iso_file=undef) {
         sleep 1;
         wait_request();
     }
+    return $domain;
+}
+
+sub test_new_machine_default($t, $vm_name, $empty_iso_file=undef) {
+
+    my $domain = _new_machine($t, $vm_name, $empty_iso_file);
+    die if !$domain;
 
     my $disks = $domain->info(user_admin)->{hardware}->{disk};
 
@@ -855,6 +867,21 @@ sub test_new_machine_default($t, $vm_name, $empty_iso_file=undef) {
 
     my ($iso) = grep { $_->{file} =~ /iso$/ } @$disks;
     ok($iso,"Expecting an ISO cdrom disk volume");
+
+    remove_domain_and_clones_req($domain); #remove and wait
+}
+
+sub test_screenshot($t,$vm_name) {
+
+    my $base = _new_machine($t, $vm_name);
+    die if !$base;
+    mojo_request($t,"prepare_base", {id_domain => $base->id });
+    my $new_name= new_domain_name();
+    mojo_request($t,"clone", {id_domain => $base->id, name => $new_name });
+    my $domain = _wait_for_domain($new_name);
+    $t->get_ok("/machine/screenshot/".$domain->id.".json")->status_is(200);
+    $t->get_ok("/machine/copy_screenshot/".$domain->id.".json")->status_is(200);
+    remove_domain_and_clones_req($base); #remove and wait
 }
 
 sub test_new_machine_advanced_options($t, $vm_name, $swap=undef ,$data=undef) {
@@ -1202,6 +1229,7 @@ for my $vm_name (@{rvd_front->list_vm_types} ) {
 
     _init_mojo_client();
 
+    test_screenshot($t, $vm_name);
     test_new_machine($t);
     my $base0 = test_create_base($t, $vm_name, $name);
     push @bases,($base0->name);

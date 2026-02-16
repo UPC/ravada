@@ -746,11 +746,10 @@
           $scope.reload_page_msg = false;
           $scope.fail_page_msg = false;
           $scope.screenshot = function(machineId) {
-                  $scope.reload_page_msg = true;
-                  setTimeout(function () {
-                    $scope.reload_page_msg = false;
-                  }, 2000);
+              $scope.screenshot_waiting=true;
+              $scope.showmachine.screenshot='';
                   $http.get('/machine/screenshot/'+machineId+'.json');
+              $scope.showmachine.screenshot='';
           };
 
           $scope.reload_page_copy_msg = false;
