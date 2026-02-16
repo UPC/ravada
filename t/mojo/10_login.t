@@ -24,7 +24,6 @@ my ($USERNAME, $PASSWORD);
 my $SCRIPT = path(__FILE__)->dirname->sibling('../script/rvd_front');
 
 my $BASE_NAME = "zz-test-base-alpine";
-my %DONE_SCREENSHOT;
 ########################################################################################
 
 sub remove_machines(@machines) {
