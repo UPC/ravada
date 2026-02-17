@@ -19,7 +19,7 @@ Go to the Hardware tab and add a new display for 'Windows RDP'
 
 .. image:: images/vm_add_hardware.png
 
-Yo do not add the display in each Virtual Machine clone. Setting the
+Yo do not need to add the display in each Virtual Machine clone. Setting the
 RDP in the base replicates this configuration to all the clones. This works
 even after the clones have been created.
 
