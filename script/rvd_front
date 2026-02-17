@@ -4636,10 +4636,13 @@ sub screenshot_machine {
 
     my $domain = _search_requested_machine($c);
 
+    my $force = 0;
+    $force = 1 if $USER->is_operator;
+
     my $req = Ravada::Request->screenshot(
         id_domain => $domain->id
         ,uid => $USER->id
-        ,_force => 1
+        ,_force => $force
     );
     $c->render(json => { request => $req->id});
 }
