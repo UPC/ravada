@@ -82,7 +82,7 @@ Open the Virtual Machine with a RDP client
 Clicking the *View* button should launch the remote desktop client with the proper
 connections settings.
 
-.. image:: images/rdp-open-port.png
+.. image:: images/rdp_view.png
 
 If you open your RDP client manually, pay attention to the port number.
 
