@@ -821,6 +821,7 @@ sub _new_machine($t,$vm_name, $empty_iso_file=1) {
             ,disk => 1
             ,ram => 1
             ,submit => 1
+            ,start => 0
     };
     $args->{iso_file} = '' if $empty_iso_file;
 
@@ -849,7 +850,7 @@ sub _wait_for_domain($name) {
 sub test_new_machine_default($t, $vm_name, $empty_iso_file=undef) {
 
     my $domain = _new_machine($t, $vm_name, $empty_iso_file);
-    die if !$domain;
+    ok($domain, "Expected domain to be created for backend '$vm_name'") or exit;
 
     my $disks = $domain->info(user_admin)->{hardware}->{disk};
 
@@ -870,16 +871,32 @@ sub test_new_machine_default($t, $vm_name, $empty_iso_file=undef) {
     remove_domain_and_clones_req($domain); #remove and wait
 }
 
+sub _wait_screenshot($domain) {
+    my $sth = connector->dbh->prepare("SELECT screenshot from domains where id=?");
+
+    for ( 1 .. 60 ) {
+        $sth->execute($domain->id);
+        my ($screenshot) = $sth->fetchrow;
+        return $screenshot if $screenshot;
+        sleep 1;
+    }
+}
 sub test_screenshot($t,$vm_name) {
 
     my $base = _new_machine($t, $vm_name);
     die if !$base;
+    mojo_request($t,"force_shutdown", {id_domain => $base->id });
     mojo_request($t,"prepare_base", {id_domain => $base->id });
     my $new_name= new_domain_name();
-    mojo_request($t,"clone", {id_domain => $base->id, name => $new_name });
+    mojo_request($t,"clone", {id_domain => $base->id, name => $new_name, start => 1 });
     my $domain = _wait_for_domain($new_name);
+    Ravada::Request->start_domain( uid => user_admin->id, id_domain => $domain->id);
     $t->get_ok("/machine/screenshot/".$domain->id.".json")->status_is(200);
+    my $screenshot_clone = _wait_screenshot($domain);
     $t->get_ok("/machine/copy_screenshot/".$domain->id.".json")->status_is(200);
+    my $screenshot_base = _wait_screenshot($base);
+    ok($screenshot_base);
+    ok(substr($screenshot_base,0,10), substr($screenshot_clone,0,10));
     remove_domain_and_clones_req($base); #remove and wait
 }
 
