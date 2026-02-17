@@ -747,7 +747,6 @@
           $scope.fail_page_msg = false;
           $scope.screenshot = function(machineId) {
               $scope.screenshot_waiting=true;
-              $scope.showmachine.screenshot='';
                   $http.get('/machine/screenshot/'+machineId+'.json');
               $scope.showmachine.screenshot='';
           };
