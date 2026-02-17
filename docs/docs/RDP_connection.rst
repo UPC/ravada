@@ -12,12 +12,12 @@ Steps to open RDP
 
 
 Step 1: Configure RDP Display
-----------------------
+-----------------------------
 
 Edit the virtual machine settings clicking in the name in the admin machines page.
 Go to the Hardware tab and add a new display for 'Windows RDP'
 
-.. image:: images/vm_add_hardware.png
+.. image:: images/vm-add-hardwre.png
 
 Yo do not need to add the display in each Virtual Machine clone. Setting the
 RDP in the base replicates this configuration to all the clones. This works
@@ -30,7 +30,7 @@ machine to properly launch and start the RDP service. Once you are sure RDP work
 may want to remove the SPICE display to make it easier for your users.
 
 Step 2: Allow RDP connections
----------------------
+-----------------------------
 
 Once the display is configured, you need to enable RDP connections to the virtual machine.
 This may require install or enable RDP service.
@@ -82,7 +82,7 @@ Open the Virtual Machine with a RDP client
 Clicking the *View* button should launch the remote desktop client with the proper
 connections settings.
 
-.. image:: images/rdp_view.png
+.. image:: images/rdp-view.png
 
 If you open your RDP client manually, pay attention to the port number.
 
