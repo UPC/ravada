@@ -442,6 +442,9 @@
                     $scope.$apply(function () {
                         $scope.showmachine = data;
                         $scope.showmachine.requests = data.requests;
+                        if ($scope.showmachine.screenshot) {
+                            $scope.screenshot_waiting = false;
+                        }
                         if ($scope.lock_info) {
                             $scope.showmachine.is_active=data.is_active;
                             $scope.showmachine.is_hibernated=data.is_hibernated;
