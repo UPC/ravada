@@ -168,6 +168,18 @@ sub test_add_usb_spicevmc($vm) {
         ,name => 'usb'
     );
     wait_request(debug => 0);
+
+    # After adding USB (spicevmc), ensure a SPICE graphics device is present again
+    my $doc = XML::LibXML->load_xml(string => $domain->domain->get_xml_description());
+    my ($spice_graphics) = $doc->findnodes("/domain/devices/graphics[\@type='spice']");
+    ok($spice_graphics, "SPICE graphics device exists after adding USB spicevmc");
+    if ($spice_graphics) {
+        is($spice_graphics->getAttribute('type'), 'spice', "graphics type is 'spice'");
+        my $autoport = $spice_graphics->getAttribute('autoport');
+        ok(defined($autoport) && $autoport eq 'yes', "SPICE graphics autoport is 'yes'");
+        my ($listen) = $spice_graphics->findnodes('./listen');
+        ok($listen, "SPICE graphics has a listen element");
+    }
     remove_domain($domain);
 
 }
