@@ -442,6 +442,9 @@
                     $scope.$apply(function () {
                         $scope.showmachine = data;
                         $scope.showmachine.requests = data.requests;
+                        if ($scope.showmachine.screenshot) {
+                            $scope.screenshot_waiting = false;
+                        }
                         if ($scope.lock_info) {
                             $scope.showmachine.is_active=data.is_active;
                             $scope.showmachine.is_hibernated=data.is_hibernated;
@@ -746,11 +749,12 @@
           $scope.reload_page_msg = false;
           $scope.fail_page_msg = false;
           $scope.screenshot = function(machineId) {
-                  $scope.reload_page_msg = true;
-                  setTimeout(function () {
-                    $scope.reload_page_msg = false;
-                  }, 2000);
-                  $http.get('/machine/screenshot/'+machineId+'.json');
+              $scope.screenshot_waiting=true;
+                  $http.get('/machine/screenshot/'+machineId+'.json')
+                    .catch(function(error) {
+                        $scope.screenshot_waiting = false;
+                    });
+              $scope.showmachine.screenshot='';
           };
 
           $scope.reload_page_copy_msg = false;
