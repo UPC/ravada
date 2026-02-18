@@ -1,5 +1,6 @@
 name: PR Workflow
 on: pull_request
+DOCKER_API_VERSION: 1.44
 jobs:
   test:
     runs-on: ubuntu-latest
