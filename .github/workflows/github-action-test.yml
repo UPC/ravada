@@ -1,9 +1,10 @@
 name: PR Workflow
 on: pull_request
-docker_api_version: 1.44
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      DOCKER_API_VERSION: "1.44"
     steps:
       - uses: actions/checkout@v2
       - name: tmpfs run user
