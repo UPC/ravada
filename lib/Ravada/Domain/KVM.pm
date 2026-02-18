@@ -2577,17 +2577,13 @@ sub _set_controller_display_spice($self, $number, $data) {
 
     my $ip = (delete $data->{ip} or $self->_vm->listen_ip);
 
-    $graphic->setAttribute(listen => $ip);
-    my $listen = $graphic->addNewChild(undef,'listen');
-    $listen->setAttribute(type => 'address');
-    $listen->setAttribute(address => $ip);
-    _set_graphics_spice_defaults($graphic);
+    _set_graphics_spice_defaults($graphic, $ip);
     _add_spice_related($devices);
 
     $self->reload_config($doc);
 }
 
-sub _set_graphics_spice_defaults($graphic) {
+sub _set_graphics_spice_defaults($graphic, $ip=$self->_vm->listen_ip) {
     my %defaults = (
         image => "compression=auto_glz"
         ,jpeg => "compression=auto"
@@ -2602,6 +2598,10 @@ sub _set_graphics_spice_defaults($graphic) {
         my $item = $graphic->addNewChild(undef, $name);
         $item->setAttribute($attrib => $value);
     }
+    $graphic->setAttribute(listen => $ip);
+    my $listen = $graphic->addNewChild(undef,'listen');
+    $listen->setAttribute(type => 'address');
+    $listen->setAttribute(address => $ip);
 
 }
 
