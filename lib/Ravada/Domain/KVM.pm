@@ -2333,19 +2333,19 @@ sub _set_hw_usb($self,$numero, $data={}) {
             $controller->setAttribute(bus => 'usb');
             $controller->setAttribute(type => $tipo );
         }
-        _add_spice_display($devices) if $tipo eq 'spicevmc' && $missing;
+        $self->_add_spice_display($devices) if $tipo eq 'spicevmc' && $missing;
     }
     $self->reload_config($doc);
 }
 
-sub _add_spice_display($devices) {
+sub _add_spice_display($self, $devices) {
     my ($display) = $devices->findnodes('./graphics[@type="spice"]');
     return if $display;
 
     my $graphic = $devices->addNewChild(undef,'graphics');
     $graphic->setAttribute(type => 'spice');
 
-    _set_graphics_spice_defaults($graphic);
+    _set_graphics_spice_defaults($graphic, $self->_vm->listen_ip);
 }
 
 sub _set_hw_usb_controller($self, $number=undef, $data={model => 'qemu-xhci'}) {
@@ -2583,7 +2583,7 @@ sub _set_controller_display_spice($self, $number, $data) {
     $self->reload_config($doc);
 }
 
-sub _set_graphics_spice_defaults($graphic, $ip=$self->_vm->listen_ip) {
+sub _set_graphics_spice_defaults($graphic, $ip) {
     my %defaults = (
         image => "compression=auto_glz"
         ,jpeg => "compression=auto"
