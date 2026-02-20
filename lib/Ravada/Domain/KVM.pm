@@ -3719,6 +3719,9 @@ sub _change_hardware_network($self, $index, $data) {
     my $network = delete $data->{network};
     my $isolated = delete $data->{port}->{isolated};
 
+    die "Error: wrong isolated '$isolated'. It must be 'yes' or 'no'"
+    if defined $isolated && !( $isolated eq 'yes' || $isolated eq 'no');
+
     die "Error: Unknown arguments in port ".Dumper($data->{port}) if keys %{$data->{port}};
 
     delete $data->{port};

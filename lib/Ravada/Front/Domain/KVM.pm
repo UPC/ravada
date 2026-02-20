@@ -316,8 +316,9 @@ sub _get_controller_network($self) {
 
         my ($port_xml) = $interface->findnodes('port');
         my @port = ( port => { isolated => 'no' });
+
         @port = ( port => { isolated => $port_xml->getAttribute('isolated') })
-        if $port_xml;
+        if $port_xml && $port_xml->getAttribute('isolated');
 
         $count++;
         push @ret,({
