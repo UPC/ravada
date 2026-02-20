@@ -2572,13 +2572,14 @@ sub _set_controller_display_spice($self, $number, $data) {
     $graphic->setAttribute(type => 'spice');
 
     my $port = ( delete $data->{port} or 'auto');
-    $graphic->setAttribute( port => $port )     if $port ne 'auto';
-    $graphic->setAttribute( autoport => 'yes')  if $port eq 'auto';
 
     my $ip = (delete $data->{ip} or $self->_vm->listen_ip);
 
     _set_graphics_spice_defaults($graphic, $ip);
     _add_spice_related($devices);
+
+    $graphic->setAttribute( port => $port )     if $port ne 'auto';
+    $graphic->setAttribute( autoport => 'yes')  if $port eq 'auto';
 
     $self->reload_config($doc);
 }
@@ -2599,6 +2600,7 @@ sub _set_graphics_spice_defaults($graphic, $ip) {
         $item->setAttribute($attrib => $value);
     }
     $graphic->setAttribute(listen => $ip);
+    $graphic->setAttribute( autoport => 'yes');
     my $listen = $graphic->addNewChild(undef,'listen');
     $listen->setAttribute(type => 'address');
     $listen->setAttribute(address => $ip);

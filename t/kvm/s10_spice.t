@@ -154,6 +154,9 @@ sub test_remove_spice($domain) {
 sub test_add_usb_spicevmc($vm) {
     my $domain = create_domain($vm);
 
+    my $doc = XML::LibXML->load_xml(string => $domain->domain->get_xml_description());
+    my ($spice_graphics0) = $doc->findnodes("/domain/devices/graphics[\@type='spice']");
+
     my $req = Ravada::Request->remove_hardware(
         uid => user_admin->id
         ,id_domain => $domain->id
@@ -170,10 +173,11 @@ sub test_add_usb_spicevmc($vm) {
     wait_request(debug => 0);
 
     # After adding USB (spicevmc), ensure a SPICE graphics device is present again
-    my $doc = XML::LibXML->load_xml(string => $domain->domain->get_xml_description());
+    $doc = XML::LibXML->load_xml(string => $domain->domain->get_xml_description());
     my ($spice_graphics) = $doc->findnodes("/domain/devices/graphics[\@type='spice']");
     ok($spice_graphics, "SPICE graphics device exists after adding USB spicevmc");
     if ($spice_graphics) {
+        is($spice_graphics->toString, $spice_graphics0->toString);
         is($spice_graphics->getAttribute('type'), 'spice', "graphics type is 'spice'");
         my $autoport = $spice_graphics->getAttribute('autoport');
         ok(defined($autoport) && $autoport eq 'yes', "SPICE graphics autoport is 'yes'");
