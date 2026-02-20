@@ -59,7 +59,6 @@
                             <%=l 'isolated port' %>
                         </span>
                         <a href="#"
-                            alt="<%=l 'What is this ?' %>"
                             ng-hide="show_info_isolated"
                             ng-click="show_info_isolated=!show_info_isolated"><%=l '?' %></a>
                         <span ng-show="show_info_isolated"
