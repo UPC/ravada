@@ -159,8 +159,32 @@ sub test_access($vm_name) {
 
     is($user->allowed_access($base->id),0);
 
+    test_view_all($base, $user);
     test_clone($base);
     test_clone_request($base);
+}
+
+sub test_view_all($base, $user) {
+    my $user2 = create_user();
+    my $name = new_domain_name();
+    my $req = Ravada::Request->create_domain(
+        name => $name
+        ,id_owner => $user2->id
+        ,id_base => $base->id
+    );
+    my $clone;
+    for ( 1 .. 60 ) {
+        ($clone) = grep { $_->{name} eq $name } $base->clones();
+        last if $clone;
+        sleep 1;
+    }
+    die "Error: $name not created" if !$clone;
+
+    $t->get_ok("/machine/view/".$clone->{id}.".html")->status_is(403);
+    user_admin->grant($user,'view_all');
+    $t->get_ok("/machine/view/".$clone->{id}.".html")->status_is(200);
+    user_admin->revoke($user,'view_all');
+
 }
 
 sub  _test_user_grants($user, $expected_code) {
