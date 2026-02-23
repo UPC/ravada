@@ -1068,6 +1068,14 @@ sub test_view_all($vm) {
         is($req->error,'', $req->command) or exit;
     }
 
+    my $list = rvd_front->list_machines($user);
+
+    my ($found) = grep { $_->{name} eq $domain->name} @$list;
+    is($found->{can_start},0);
+    is($found->{can_view},1);
+    is($found->{can_shutdown},0);
+    is($found->{can_hibernate},0);
+    is($found->{can_manage},0);
     $domain->remove(user_admin);
 }
 
@@ -1206,6 +1214,8 @@ for my $vm_name (vm_names()) {
     diag("Testing VM $vm_name");
 
     _import_base($vm);
+
+    test_view_all($vm);
 
     test_clone_all($vm_name);
     test_can_screenshot_all($vm);

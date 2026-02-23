@@ -278,6 +278,7 @@ sub _init_available_actions($user, $m) {
         $m->{can_view} = 0;
         $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin
         || $user->_machine_shared($m->{id})
+        || $user->can_view_all()
         ;
 
         $m->{can_manage} = ( $user->can_manage_machine($m->{id}) or 0);
