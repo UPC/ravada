@@ -3734,6 +3734,14 @@ sub _change_hardware_network($self, $index, $data) {
      my $driver = lc(delete $data->{driver} or '');
      my $bridge = delete $data->{bridge};
     my $network = delete $data->{network};
+    my $isolated = delete $data->{port}->{isolated};
+
+    die "Error: wrong isolated '$isolated'. It must be 'yes' or 'no'"
+    if defined $isolated && !( $isolated eq 'yes' || $isolated eq 'no');
+
+    die "Error: Unknown arguments in port ".Dumper($data->{port}) if keys %{$data->{port}};
+
+    delete $data->{port};
 
     die "Error: Unknown arguments ".Dumper($data) if keys %$data;
 
@@ -3759,6 +3767,24 @@ sub _change_hardware_network($self, $index, $data) {
 
         my ($model_xml) = $interface->findnodes('model') or die "No model";
         my ($source_xml) = $interface->findnodes('source') or die "No source";
+
+        if (defined $isolated) {
+            my ($port_xml) = $interface->findnodes('port');
+            if (!$port_xml || $port_xml->getAttribute('isolated') ne $isolated) {
+
+                if ($isolated eq 'no') {
+                    $interface->removeChild($port_xml) if $port_xml;
+                } else {
+
+                    if (!defined $port_xml) {
+                        $port_xml = $interface->addNewChild(undef,'port');
+                    }
+                    $port_xml->setAttribute('isolated' => $isolated);
+
+                }
+                $changed++;
+            }
+        }
 
         $source_xml->removeAttribute('bridge')          if $network;
         $source_xml->removeAttribute('network')         if $bridge;

@@ -313,6 +313,13 @@ sub _get_controller_network($self) {
         } else {
             $name .="o$count";
         }
+
+        my ($port_xml) = $interface->findnodes('port');
+        my @port = ( port => { isolated => 'no' });
+
+        @port = ( port => { isolated => $port_xml->getAttribute('isolated') })
+        if $port_xml && $port_xml->getAttribute('isolated');
+
         $count++;
         push @ret,({
                      type => $type
@@ -320,6 +327,7 @@ sub _get_controller_network($self) {
                   ,driver => $model->getAttribute('type')
                   ,bridge => $source->getAttribute('bridge')
                  ,network => $source->getAttribute('network')
+                 ,@port
                  ,_can_edit => 1
                  ,_can_remove => 1
         });

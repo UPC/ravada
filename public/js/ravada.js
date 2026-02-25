@@ -358,6 +358,8 @@
                                ,'id_owner'
             ];
 
+            $scope.isolated_options=['yes','no'];
+
 
             $scope.getUnixTimeFromDate = function(date) {
                 date = (date instanceof Date) ? date : date ? new Date(date) : new Date();
