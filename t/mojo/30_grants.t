@@ -185,6 +185,8 @@ sub test_view_all($base, $user) {
     $t->get_ok("/machine/view/".$clone->{id}.".html")->status_is(200);
     user_admin->revoke($user,'view_all');
 
+    remove_domain_and_clones_req($clone);
+
 }
 
 sub  _test_user_grants($user, $expected_code) {
