@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '2.4.2';
+our $VERSION = '2.4.5';
 
 use utf8;
 
