@@ -18,15 +18,15 @@ repository <http://infoteleco.upc.edu/img/debian/>`__.
 
 Install the ravada package.
 
-- ravada_2.4.4_debian-13_all.deb
+- ravada_2.4.5_debian-13_all.deb
 
 When you run dpkg now it may show some errors, it is ok, keep reading.
 
 .. prompt:: bash $
 
-     wget http://infoteleco.upc.edu/img/debian/ravada_2.4.4_debian-13_all.deb
+     wget http://infoteleco.upc.edu/img/debian/ravada_2.4.5_debian-13_all.deb
      sudo apt update
-     sudo apt install ./ravada_2.4.4_debian-13_all.deb
+     sudo apt install ./ravada_2.4.5_debian-13_all.deb
 
 Debian KVM
 ~~~~~~~~~~
