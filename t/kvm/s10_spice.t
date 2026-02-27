@@ -151,6 +151,43 @@ sub test_remove_spice($domain) {
     like($info->{hardware}->{display}->[0]->{driver},qr'spice');
 }
 
+sub test_add_usb_spicevmc($vm) {
+    my $domain = create_domain($vm);
+
+    my $doc = XML::LibXML->load_xml(string => $domain->domain->get_xml_description());
+    my ($spice_graphics0) = $doc->findnodes("/domain/devices/graphics[\@type='spice']");
+
+    my $req = Ravada::Request->remove_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,name => 'display'
+        ,index => 0
+    );
+    wait_request(debug => 0);
+
+    my $req_add =Ravada::Request->add_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,name => 'usb'
+    );
+    wait_request(debug => 0);
+
+    # After adding USB (spicevmc), ensure a SPICE graphics device is present again
+    $doc = XML::LibXML->load_xml(string => $domain->domain->get_xml_description());
+    my ($spice_graphics) = $doc->findnodes("/domain/devices/graphics[\@type='spice']");
+    ok($spice_graphics, "SPICE graphics device exists after adding USB spicevmc");
+    if ($spice_graphics) {
+        is($spice_graphics->toString, $spice_graphics0->toString);
+        is($spice_graphics->getAttribute('type'), 'spice', "graphics type is 'spice'");
+        my $autoport = $spice_graphics->getAttribute('autoport');
+        ok(defined($autoport) && $autoport eq 'yes', "SPICE graphics autoport is 'yes'");
+        my ($listen) = $spice_graphics->findnodes('./listen');
+        ok($listen, "SPICE graphics has a listen element");
+    }
+    remove_domain($domain);
+
+}
+
 #######################################################
 
 if ($>)  {
@@ -177,6 +214,7 @@ SKIP: {
 
     $TLS = 1 if check_libvirt_tls() && $vm_name eq 'KVM';
 
+    test_add_usb_spicevmc($vm);
     my $domain = test_spice($vm_name);
     test_remove_spice($domain);
 }

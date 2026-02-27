@@ -809,7 +809,7 @@ sub test_new_machine_empty($t, $vm_name) {
     }
 }
 
-sub test_new_machine_default($t, $vm_name, $empty_iso_file=undef) {
+sub _new_machine($t,$vm_name, $empty_iso_file=1) {
     my $name = new_domain_name();
 
     my $iso_name = 'Alpine%64 bits';
@@ -821,6 +821,7 @@ sub test_new_machine_default($t, $vm_name, $empty_iso_file=undef) {
             ,disk => 1
             ,ram => 1
             ,submit => 1
+            ,start => 0
     };
     $args->{iso_file} = '' if $empty_iso_file;
 
@@ -832,6 +833,10 @@ sub test_new_machine_default($t, $vm_name, $empty_iso_file=undef) {
 
     wait_request();
 
+    return _wait_for_domain($name);
+}
+
+sub _wait_for_domain($name) {
     my $domain;
     for ( 1 .. 10 ) {
         $domain = rvd_front->search_domain($name);
@@ -839,6 +844,13 @@ sub test_new_machine_default($t, $vm_name, $empty_iso_file=undef) {
         sleep 1;
         wait_request();
     }
+    return $domain;
+}
+
+sub test_new_machine_default($t, $vm_name, $empty_iso_file=undef) {
+
+    my $domain = _new_machine($t, $vm_name, $empty_iso_file);
+    ok($domain, "Expected domain to be created for backend '$vm_name'") or exit;
 
     my $disks = $domain->info(user_admin)->{hardware}->{disk};
 
@@ -855,6 +867,37 @@ sub test_new_machine_default($t, $vm_name, $empty_iso_file=undef) {
 
     my ($iso) = grep { $_->{file} =~ /iso$/ } @$disks;
     ok($iso,"Expecting an ISO cdrom disk volume");
+
+    remove_domain_and_clones_req($domain); #remove and wait
+}
+
+sub _wait_screenshot($domain) {
+    my $sth = connector->dbh->prepare("SELECT screenshot from domains where id=?");
+
+    for ( 1 .. 60 ) {
+        $sth->execute($domain->id);
+        my ($screenshot) = $sth->fetchrow;
+        return $screenshot if $screenshot;
+        sleep 1;
+    }
+}
+sub test_screenshot($t,$vm_name) {
+
+    my $base = _new_machine($t, $vm_name);
+    die if !$base;
+    mojo_request($t,"force_shutdown", {id_domain => $base->id });
+    mojo_request($t,"prepare_base", {id_domain => $base->id });
+    my $new_name= new_domain_name();
+    mojo_request($t,"clone", {id_domain => $base->id, name => $new_name, start => 1 });
+    my $domain = _wait_for_domain($new_name);
+    Ravada::Request->start_domain( uid => user_admin->id, id_domain => $domain->id);
+    $t->get_ok("/machine/screenshot/".$domain->id.".json")->status_is(200);
+    my $screenshot_clone = _wait_screenshot($domain);
+    $t->get_ok("/machine/copy_screenshot/".$domain->id.".json")->status_is(200);
+    my $screenshot_base = _wait_screenshot($base);
+    ok($screenshot_base);
+    ok(substr($screenshot_base,0,10), substr($screenshot_clone,0,10));
+    remove_domain_and_clones_req($base); #remove and wait
 }
 
 sub test_new_machine_advanced_options($t, $vm_name, $swap=undef ,$data=undef) {
@@ -1202,6 +1245,7 @@ for my $vm_name (@{rvd_front->list_vm_types} ) {
 
     _init_mojo_client();
 
+    test_screenshot($t, $vm_name);
     test_new_machine($t);
     my $base0 = test_create_base($t, $vm_name, $name);
     push @bases,($base0->name);

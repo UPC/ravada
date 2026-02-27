@@ -358,6 +358,8 @@
                                ,'id_owner'
             ];
 
+            $scope.isolated_options=['yes','no'];
+
 
             $scope.getUnixTimeFromDate = function(date) {
                 date = (date instanceof Date) ? date : date ? new Date(date) : new Date();
@@ -442,6 +444,9 @@
                     $scope.$apply(function () {
                         $scope.showmachine = data;
                         $scope.showmachine.requests = data.requests;
+                        if ($scope.showmachine.screenshot) {
+                            $scope.screenshot_waiting = false;
+                        }
                         if ($scope.lock_info) {
                             $scope.showmachine.is_active=data.is_active;
                             $scope.showmachine.is_hibernated=data.is_hibernated;
@@ -746,11 +751,12 @@
           $scope.reload_page_msg = false;
           $scope.fail_page_msg = false;
           $scope.screenshot = function(machineId) {
-                  $scope.reload_page_msg = true;
-                  setTimeout(function () {
-                    $scope.reload_page_msg = false;
-                  }, 2000);
-                  $http.get('/machine/screenshot/'+machineId+'.json');
+              $scope.screenshot_waiting=true;
+                  $http.get('/machine/screenshot/'+machineId+'.json')
+                    .catch(function(error) {
+                        $scope.screenshot_waiting = false;
+                    });
+              $scope.showmachine.screenshot='';
           };
 
           $scope.reload_page_copy_msg = false;
@@ -1597,9 +1603,16 @@
             }
         }
         $scope.subscribe_request= function(url, id_request) {
+            $scope.id_request = id_request;
             already_subscribed_to_domain = false;
             var ws = new WebSocket(url);
             ws.onopen = function(event) { ws.send('request/'+id_request) };
+
+            ws.onclose = function(event) {
+                $timeout(function() {
+                    $scope.ws_connection_lost = true;
+                }, 5*1000);
+            };
 
             ws.onmessage = function(event) {
                 var data = JSON.parse(event.data);
@@ -1616,6 +1629,7 @@
                 }
             }
         }
+
         $scope.refresh_ports = function(url, id_domain ) {
             var id_request = $scope.request.id;
             $http.post('/request/open_exposed_ports/'
@@ -1639,10 +1653,23 @@
                     });
             });
         }
+
+        $scope.subscribe_all = function(url) {
+             $scope.ws_connection_lost = false;
+             $scope.subscribe_request(url, $scope.id_request);
+        };
+
         $scope.subscribe_domain_info= function(url, id_domain) {
             already_subscribed_to_domain = true;
             var ws = new WebSocket(url);
             ws.onopen = function(event) { ws.send('machine_info/'+id_domain) };
+
+            ws.onclose = function(event) {
+                $timeout(function() {
+                    $scope.ws_connection_lost = true;
+                }, 5*1000);
+            };
+
             ws.onmessage = function(event) {
                 var data = JSON.parse(event.data);
                 $scope.$apply(function () {
