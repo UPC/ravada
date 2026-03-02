@@ -1651,7 +1651,7 @@ sub update_settings_global($self, $arg, $user, $reload, $orig_settings = $self->
             my $field2 = dclone($arg->{$field});
             $self->update_settings_global($field2, $user, $reload, $orig_settings);
         }
-        confess "Error: invalid field $field" if $field !~ /^\w[\w\-]+$/;
+        confess "Error: invalid field $field" if $field !~ /^\w[\w\s\-]+$/;
         my ( $value, $id )
                    = ($arg->{$field}->{value}
                     , $arg->{$field}->{id}

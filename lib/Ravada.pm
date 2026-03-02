@@ -252,7 +252,10 @@ sub _add_internal_network($self) {
         next if $net =~ /dev virbr/;
         my ($address) = $net =~ m{(^[\d\.]+/\d+)};
         next if !$address || $done{address}++;
-        $sth->execute("internal$n",$address, ++$n+1);
+        eval {
+            $sth->execute("internal$n",$address, ++$n+1);
+        };
+        warn $@ if $@;
 
     }
 }
@@ -2648,6 +2651,10 @@ sub _sql_insert_defaults($self){
                 ,name => 'backend'
             }
             ,{
+                id_parent => 0
+                ,name => 'display'
+            }
+            ,{
                 id_parent => $id_frontend
                 ,name => 'fallback'
                 ,value => $conf->{fallback}
@@ -2822,7 +2829,16 @@ sub _sql_insert_defaults($self){
                 ,name => 'startup_ram'
                 ,value => 1
             }
-
+            ,{
+                id_parent => '/display'
+                ,name => 'rdp'
+                ,value => undef
+            }
+            ,{
+                id_parent => '/display/rdp'
+                ,name => 'session bpp'
+                ,value => 16
+            }
 
         ]
     );

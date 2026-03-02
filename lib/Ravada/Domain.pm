@@ -2224,11 +2224,22 @@ sub _display_file_rdp($self,$display) {
     $error .= "Error: No Port detected for display.\n" if !$display->{port};
     return $error if $error;
 
+    my %valid_bpp = map { $_ =>  1 } (8,15,16,24,32);
+    my $bpp;
+
+    $bpp = $display->{"session bpp"} if exists $display->{"session bpp"};
+
+    $bpp = Ravada::setting(undef,"/display/rdp/session bpp")
+    if !defined $bpp;
+
+    $bpp = 16 if !defined $bpp || !$valid_bpp{$bpp};
+
+
     my $ret = "screen mode id:i:2
 use multimon:i:0
 desktopwidth:i:1280
 desktopheight:i:1024
-session bpp:i:32
+session bpp:i:$bpp
 winposstr:s:0,1,14,5,1280,1000
 compression:i:1
 keyboardhook:i:2
