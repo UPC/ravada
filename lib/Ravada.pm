@@ -3006,6 +3006,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','show_clones' , 'int not null default 1');
     $self->_upgrade_table('domains','config_no_hd' , 'text');
     $self->_upgrade_table('domains','networking' , 'varchar(32)');
+    $self->_upgrade_table('domains','ports_exposed','int');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 

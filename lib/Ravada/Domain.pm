@@ -229,6 +229,7 @@ around 'remove_controller' => \&_around_remove_hardware;
 around 'change_hardware' => \&_around_change_hardware;
 
 around 'name' => \&_around_name;
+around 'ip' => \&_around_ip;
 
 ##################################################
 #
@@ -332,6 +333,7 @@ sub _around_start($orig, $self, @arg) {
     if ( !$self->is_active ) {
         $self->_unlock_host_devices(0);
         $self->_fetch_networking_mode();
+        $self->_data('ports_exposed',0);
     }
 
     $self->_start_preconditions(@arg);
@@ -3474,6 +3476,7 @@ sub _post_shutdown {
         }
     }
 
+    $self->_data('ports_exposed',0);
     if (defined $timeout && $timeout && !$self->is_removed && $is_active) {
         if ($timeout<2) {
             sleep $timeout;
@@ -3521,6 +3524,8 @@ sub _post_shutdown {
     $self->needs_restart(0) if $self->is_known()
                                 && $self->needs_restart()
                                 && !$is_active;
+
+    $self->_data('ports_exposed',0);
 }
 
 sub _schedule_compact($self) {
@@ -4176,6 +4181,7 @@ sub open_exposed_ports($self, $remote_ip=undef) {
         $self->_open_exposed_port($expose->{internal_port}, $expose->{name}
             ,$expose->{restricted}, $remote_ip);
     }
+    $self->_data('ports_exposed', 2);
 }
 
 sub _close_exposed_port($self,$internal_port_req=undef) {
@@ -4203,6 +4209,7 @@ sub _close_exposed_port($self,$internal_port_req=undef) {
 
     $self->_close_exposed_port_nat($iptables, %port);
     $self->_close_exposed_port_client($iptables, %port);
+    $self->_data('ports_exposed',0);
 
     $sth->finish;
 }
@@ -6775,6 +6782,26 @@ sub _around_remove_hardware($orig, $self, $hardware, $index=undef, $options=unde
     }
     $self->_post_change_hardware( $hardware, $index);
 
+}
+
+sub _around_ip($orig, $self, @args) {
+    my $ip = $self->$orig(@args);
+
+    if (!$self->readonly() && $self->list_ports()) {
+        if ($ip && !$self->_data('ports_exposed')) {
+            $self->_data('ports_exposed' => 1);
+            my $req = Ravada::Request->open_exposed_ports(
+                uid => Ravada::Utils::user_daemon->id
+                ,id_domain => $self->id
+                ,retry => 20
+                ,_force => 1
+            );
+        }
+        if (!$ip && $self->_data('ports_exposed')) {
+            $self->_data('ports_exposed' => 0);
+        }
+    }
+    return $ip;
 }
 
 sub _hardware_enabled($self, $name, $index, $options ) {
