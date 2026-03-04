@@ -4522,7 +4522,7 @@ sub _post_start {
             ,id_domain => $self->id
             ,retry => 20
             ,remote_ip => $remote_ip
-    ) if $is_active && $remote_ip && $self->list_ports();
+    ) if $remote_ip && $self->list_ports();
 
     if ($self->run_timeout) {
         my $req = Ravada::Request->shutdown_domain(
