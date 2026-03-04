@@ -7127,6 +7127,7 @@ sub _cmd_remove_expose($self, $request) {
 sub _cmd_open_exposed_ports($self, $request) {
     my $domain = Ravada::Domain->open($request->id_domain) or return;
     return if !$domain->list_ports();
+    $domain->_data('ports_exposed' => 1);
 
     my $uid = $request->args('uid');
     my $user = Ravada::Auth::SQL->search_by_id( $uid )

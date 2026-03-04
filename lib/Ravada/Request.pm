@@ -293,6 +293,7 @@ our %CMD_VALIDATE = (
     ,compact => \&_validate_compact
     ,spinoff => \&_validate_compact
     ,prepare_base => \&_validate_compact
+    ,open_exposed_ports => \&_validate_open_exposed_ports
 );
 
 sub _init_connector {
@@ -1127,6 +1128,25 @@ sub _validate_clone($self
         ,"Error: ".$base->name." is not public.")
         if !$base->is_public;
 }
+
+sub _validate_open_exposed_ports($self) {
+
+    my $id_domain = $self->defined_arg('id_domain');
+    return if !$id_domain;
+
+    my $domain_f = Ravada::Front::Domain->open($id_domain);
+    $domain_f->_data('ports_exposed' => 1);
+}
+
+sub _validate_close_exposed_ports($self) {
+
+    my $id_domain = $self->defined_arg('id_domain');
+    return if !$id_domain;
+
+    my $domain_f = Ravada::Front::Domain->open($id_domain);
+    $domain_f->_data('ports_exposed' => 0);
+}
+
 
 sub _last_insert_id {
     _init_connector();
