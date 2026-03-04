@@ -2381,6 +2381,7 @@ sub info($self, $user) {
         ,bundle => ($self->bundle() or undef)
         ,is_volatile => $self->_data('is_volatile')
         ,networking => $self->_data('networking')
+        ,ports_exposed => $self->_data('ports_exposed')
     };
 
     $info->{alias} = ( $self->_data('alias') or $info->{name} );
