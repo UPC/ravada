@@ -1138,7 +1138,15 @@ sub _validate_open_exposed_ports($self) {
     my $id_domain = $self->defined_arg('id_domain');
     return if !$id_domain;
 
-    my $domain_f = Ravada::Front::Domain->open($id_domain);
+    my $domain_f;
+    eval { $domain_f = Ravada::Front::Domain->open($id_domain) };
+    if ($@) {
+        my ($line) = $@ =~ m{(.*)}m;
+        chomp $line;
+        $self->error($line);
+        $self->status('done');
+        return;
+    }
     $domain_f->_data('ports_exposed' => 1);
 }
 
@@ -1147,7 +1155,16 @@ sub _validate_close_exposed_ports($self) {
     my $id_domain = $self->defined_arg('id_domain');
     return if !$id_domain;
 
-    my $domain_f = Ravada::Front::Domain->open($id_domain);
+    my $domain_f;
+    eval { $domain_f = Ravada::Front::Domain->open($id_domain) };
+    if ($@) {
+        my ($line) = $@ =~ m{(.*)}m;
+        chomp $line;
+        $self->error($line);
+        $self->status('done');
+        return;
+    }
+
     $domain_f->_data('ports_exposed' => 0);
 }
 

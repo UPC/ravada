@@ -4168,14 +4168,16 @@ Performs an iptables open of all the exposed ports of the domain
 
 sub open_exposed_ports($self, $remote_ip=undef) {
     my @ports = $self->list_ports();
-    return if !@ports;
-    return if !$self->is_active;
-    return if $self->_data('networking') eq 'isolated';
+    if ( !@ports || !$self->is_active || $self->_data('networking') eq 'isolated' ) {
+        $self->_data('ports_exposed', 0);
+        return;
+    }
 
     my $ip = $self->ip;
     if ( ! $ip ) {
         die "Error: No ip in domain ".$self->name.". Retry.\n";
     }
+    $self->_data('ports_exposed', 1);
 
     $self->display_info(Ravada::Utils::user_daemon);
     for my $expose ( @ports ) {

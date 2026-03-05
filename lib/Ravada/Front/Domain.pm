@@ -11,7 +11,6 @@ Ravada::Front::Domain - Frontent domain information for Ravada
 
 use Carp qw(cluck confess croak);
 use Data::Dumper;
-use Hash::Util qw(unlock_hash);
 use JSON::XS;
 use Moose;
 
@@ -281,7 +280,7 @@ sub ip($self) {
         return $net->{address} if exists $net->{address} && $net->{address};
     }
 
-    return undef;
+    return '';
 }
 
 1;
