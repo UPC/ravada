@@ -4212,7 +4212,7 @@ sub _close_exposed_port($self,$internal_port_req=undef) {
 
     $self->_close_exposed_port_nat($iptables, %port);
     $self->_close_exposed_port_client($iptables, %port);
-    $self->_data('ports_exposed',0);
+    $self->_data('ports_exposed',0) if $self->is_known();
 
     $sth->finish;
 }
