@@ -348,7 +348,15 @@ sub shutdown {
     for my $display (@{$hardware->{'display'}}) {
         $display->{port} = 'auto';
     }
+    for my $if (@{$hardware->{'network'}}) {
+        $if->{address} = '';
+    }
+
     $self->_store(hardware => $hardware);
+
+    my $info = $self->_value('info');
+    $info->{ip} = '';
+    $self->_store(info => $info);
 }
 
 sub force_shutdown {

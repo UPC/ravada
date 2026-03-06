@@ -229,6 +229,7 @@ around 'remove_controller' => \&_around_remove_hardware;
 around 'change_hardware' => \&_around_change_hardware;
 
 around 'name' => \&_around_name;
+around 'ip' => \&_around_ip;
 
 ##################################################
 #
@@ -332,6 +333,7 @@ sub _around_start($orig, $self, @arg) {
     if ( !$self->is_active ) {
         $self->_unlock_host_devices(0);
         $self->_fetch_networking_mode();
+        $self->_data('ports_exposed',0);
     }
 
     $self->_start_preconditions(@arg);
@@ -2379,6 +2381,7 @@ sub info($self, $user) {
         ,bundle => ($self->bundle() or undef)
         ,is_volatile => $self->_data('is_volatile')
         ,networking => $self->_data('networking')
+        ,ports_exposed => $self->_data('ports_exposed')
     };
 
     $info->{alias} = ( $self->_data('alias') or $info->{name} );
@@ -3474,6 +3477,7 @@ sub _post_shutdown {
         }
     }
 
+    $self->_data('ports_exposed',0);
     if (defined $timeout && $timeout && !$self->is_removed && $is_active) {
         if ($timeout<2) {
             sleep $timeout;
@@ -3521,6 +3525,8 @@ sub _post_shutdown {
     $self->needs_restart(0) if $self->is_known()
                                 && $self->needs_restart()
                                 && !$is_active;
+
+    $self->_data('ports_exposed',0);
 }
 
 sub _schedule_compact($self) {
@@ -4162,20 +4168,23 @@ Performs an iptables open of all the exposed ports of the domain
 
 sub open_exposed_ports($self, $remote_ip=undef) {
     my @ports = $self->list_ports();
-    return if !@ports;
-    return if !$self->is_active;
-    return if $self->_data('networking') eq 'isolated';
+    if ( !@ports || !$self->is_active || $self->_data('networking') eq 'isolated' ) {
+        $self->_data('ports_exposed', 0);
+        return;
+    }
 
     my $ip = $self->ip;
     if ( ! $ip ) {
         die "Error: No ip in domain ".$self->name.". Retry.\n";
     }
+    $self->_data('ports_exposed', 1);
 
     $self->display_info(Ravada::Utils::user_daemon);
     for my $expose ( @ports ) {
         $self->_open_exposed_port($expose->{internal_port}, $expose->{name}
             ,$expose->{restricted}, $remote_ip);
     }
+    $self->_data('ports_exposed', 2);
 }
 
 sub _close_exposed_port($self,$internal_port_req=undef) {
@@ -4203,6 +4212,7 @@ sub _close_exposed_port($self,$internal_port_req=undef) {
 
     $self->_close_exposed_port_nat($iptables, %port);
     $self->_close_exposed_port_client($iptables, %port);
+    $self->_data('ports_exposed',0) if $self->is_known();
 
     $sth->finish;
 }
@@ -4514,7 +4524,7 @@ sub _post_start {
             ,id_domain => $self->id
             ,retry => 20
             ,remote_ip => $remote_ip
-    ) if $is_active && $remote_ip && $self->list_ports();
+    ) if $remote_ip && $self->list_ports();
 
     if ($self->run_timeout) {
         my $req = Ravada::Request->shutdown_domain(
@@ -6775,6 +6785,26 @@ sub _around_remove_hardware($orig, $self, $hardware, $index=undef, $options=unde
     }
     $self->_post_change_hardware( $hardware, $index);
 
+}
+
+sub _around_ip($orig, $self, @args) {
+    my $ip = $self->$orig(@args);
+
+    if (!$self->readonly() && $self->list_ports()) {
+        if ($ip && !$self->_data('ports_exposed')) {
+            $self->_data('ports_exposed' => 1);
+            my $req = Ravada::Request->open_exposed_ports(
+                uid => Ravada::Utils::user_daemon->id
+                ,id_domain => $self->id
+                ,retry => 20
+                ,_force => 1
+            );
+        }
+        if (!$ip && $self->_data('ports_exposed')) {
+            $self->_data('ports_exposed' => 0);
+        }
+    }
+    return $ip;
 }
 
 sub _hardware_enabled($self, $name, $index, $options ) {

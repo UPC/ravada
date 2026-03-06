@@ -203,6 +203,9 @@ our %CMD_SEND_MESSAGE = map { $_ => 1 }
             create_network change_network remove_network
     );
 
+our %CMD_DO_NOT_SEND_ERROR = map { $_ => 1 }
+    qw(refresh_machine_ports);
+
 our %CMD_NO_DUPLICATE = map { $_ => 1 }
 qw(
     clone
@@ -293,6 +296,8 @@ our %CMD_VALIDATE = (
     ,compact => \&_validate_compact
     ,spinoff => \&_validate_compact
     ,prepare_base => \&_validate_compact
+    ,open_exposed_ports => \&_validate_open_exposed_ports
+    ,close_exposed_ports => \&_validate_close_exposed_ports
 );
 
 sub _init_connector {
@@ -1128,6 +1133,42 @@ sub _validate_clone($self
         if !$base->is_public;
 }
 
+sub _validate_open_exposed_ports($self) {
+
+    my $id_domain = $self->defined_arg('id_domain');
+    return if !$id_domain;
+
+    my $domain_f;
+    eval { $domain_f = Ravada::Front::Domain->open($id_domain) };
+    if ($@) {
+        my ($line) = $@ =~ m{(.*)}m;
+        chomp $line;
+        $self->error($line);
+        $self->status('done');
+        return;
+    }
+    $domain_f->_data('ports_exposed' => 1);
+}
+
+sub _validate_close_exposed_ports($self) {
+
+    my $id_domain = $self->defined_arg('id_domain');
+    return if !$id_domain;
+
+    my $domain_f;
+    eval { $domain_f = Ravada::Front::Domain->open($id_domain) };
+    if ($@) {
+        my ($line) = $@ =~ m{(.*)}m;
+        chomp $line;
+        $self->error($line);
+        $self->status('done');
+        return;
+    }
+
+    $domain_f->_data('ports_exposed' => 0);
+}
+
+
 sub _last_insert_id {
     _init_connector();
     return Ravada::Utils::last_insert_id($$CONNECTOR->dbh);
@@ -1175,7 +1216,8 @@ sub status {
     }
 
     $self->_send_message($status, $message)
-        if $CMD_SEND_MESSAGE{$self->command} || $self->error ;
+        if $CMD_SEND_MESSAGE{$self->command}
+            || ( $self->error && !$CMD_DO_NOT_SEND_ERROR{$self->command});
 
     if ($status eq 'done' && $date_changed && $date_changed eq $self->date_changed) {
         sleep 1;
