@@ -96,3 +96,47 @@ In the next list you have the recommended software to do a RDP connection with 3
 
 In this `link <https://docs.microsoft.com/en-us/windows-server/remote/remote-desktop-services/clients/remote-desktop-clients>`__ are other RDP clients, depending on differents Operating Systems.
 
+Troubleshooting
+===============
+
+RDP port appears down
+---------------------
+
+- Make sure the service is running in the virtual machine
+- Check there is not a firewall in the virtual machine that blocks RDP
+- Review the previous steps and make sure everything is installed and running
+
+If you check the service is running but the port keeps showing as *down* when
+starting the machine, check the host iptables.
+
+::
+
+    -A INPUT -s 192.168.122.0/24 -i virbr0 -j ACCEPT
+    -A OUTPUT -s 192.168.122.0/24 -o virbr0 -j ACCEPT
+
+
+Linux: Authentication Required to Create Managed Color Device
+-------------------------------------------------------------
+
+When the user logs in with RDP in a Linux Machine it gets a warning and requires
+authentication for the *Managed Color Device*.
+
+To disable this message create the file /etc/polkit-1/localauthority.conf.d/02-allow-colord.conf
+
+::
+
+ polkit.addRule(function(action, subject) {
+ if ((action.id == "org.freedesktop.color-manager.create-device" ||
+ action.id == "org.freedesktop.color-manager.create-profile" ||
+ action.id == "org.freedesktop.color-manager.delete-device" ||
+ action.id == "org.freedesktop.color-manager.delete-profile" ||
+ action.id == "org.freedesktop.color-manager.modify-device" ||
+ action.id == "org.freedesktop.color-manager.modify-profile") &&
+ subject.isInGroup("{users}")) {
+ return polkit.Result.YES;
+ }
+ });
+
+And reboot.
+
+`More information about polkit and xRDP <https://c-nergy.be/blog/?p=12073>`__
