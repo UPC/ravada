@@ -1080,7 +1080,6 @@ sub _do_prepare_base($self, $with_cd, $req=undef) {
         my $base = $volume->prepare_base($req);
         push @base_img,([$base, $volume->info->{target}]);
     }
-    $self->after_prepare_base();
     return @base_img;
 }
 

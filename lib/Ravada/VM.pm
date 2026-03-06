@@ -1986,9 +1986,9 @@ sub queue_command($self, $command , $id_domain=undef, $id_req=undef ) {
     ."@$command > $file_queue.out 2> $file_queue.err"
     );
     if ($self->is_local()) {
-        chmod(oct(744),"$file_queue.sh") or die "$! chmod $file_queue";
+        chmod(oct(700),"$file_queue.sh") or die "$! chmod $file_queue";
     } else {
-        my ( $out, $err)  = $self->run_command("chmod",'744',"$file_queue.sh");
+        my ( $out, $err)  = $self->run_command("chmod",'700',"$file_queue.sh");
         die $err if $err;
     }
 
