@@ -1954,6 +1954,13 @@ sub _dir_queue {
     return $dir;
 }
 
+sub _shell_quote {
+    return join(' ', map {
+        (my $a = $_) =~ s/'/'\\''/g;
+        "'$a'"
+    } @_);
+}
+
 sub _new_file_queue {
 
     return _dir_queue."/".$$.".".time().".".int(rand(100));
@@ -1983,7 +1990,7 @@ sub queue_command($self, $command , $id_domain=undef, $id_req=undef ) {
     my $file_queue = _new_file_queue();
     $self->write_file("$file_queue.sh",
     "#!/bin/sh\n"
-    ."@$command > $file_queue.out 2> $file_queue.err"
+    ._shell_quote(@$command)." > $file_queue.out 2> $file_queue.err"
     );
     if ($self->is_local()) {
         chmod(oct(744),"$file_queue.sh") or die "$! chmod $file_queue";
