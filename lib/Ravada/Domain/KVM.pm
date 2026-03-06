@@ -2333,8 +2333,19 @@ sub _set_hw_usb($self,$numero, $data={}) {
             $controller->setAttribute(bus => 'usb');
             $controller->setAttribute(type => $tipo );
         }
+        $self->_add_spice_display($devices) if $tipo eq 'spicevmc' && $missing;
     }
     $self->reload_config($doc);
+}
+
+sub _add_spice_display($self, $devices) {
+    my ($display) = $devices->findnodes('./graphics[@type="spice"]');
+    return if $display;
+
+    my $graphic = $devices->addNewChild(undef,'graphics');
+    $graphic->setAttribute(type => 'spice');
+
+    _set_graphics_spice_defaults($graphic, $self->_vm->listen_ip);
 }
 
 sub _set_hw_usb_controller($self, $number=undef, $data={model => 'qemu-xhci'}) {
@@ -2561,16 +2572,19 @@ sub _set_controller_display_spice($self, $number, $data) {
     $graphic->setAttribute(type => 'spice');
 
     my $port = ( delete $data->{port} or 'auto');
-    $graphic->setAttribute( port => $port )     if $port ne 'auto';
-    $graphic->setAttribute( autoport => 'yes')  if $port eq 'auto';
 
     my $ip = (delete $data->{ip} or $self->_vm->listen_ip);
 
-    $graphic->setAttribute(listen => $ip);
-    my $listen = $graphic->addNewChild(undef,'listen');
-    $listen->setAttribute(type => 'address');
-    $listen->setAttribute(address => $ip);
+    _set_graphics_spice_defaults($graphic, $ip);
+    _add_spice_related($devices);
 
+    $graphic->setAttribute( port => $port )     if $port ne 'auto';
+    $graphic->setAttribute( autoport => 'yes')  if $port eq 'auto';
+
+    $self->reload_config($doc);
+}
+
+sub _set_graphics_spice_defaults($graphic, $ip) {
     my %defaults = (
         image => "compression=auto_glz"
         ,jpeg => "compression=auto"
@@ -2585,9 +2599,12 @@ sub _set_controller_display_spice($self, $number, $data) {
         my $item = $graphic->addNewChild(undef, $name);
         $item->setAttribute($attrib => $value);
     }
-    _add_spice_related($devices);
+    $graphic->setAttribute(listen => $ip);
+    $graphic->setAttribute( autoport => 'yes');
+    my $listen = $graphic->addNewChild(undef,'listen');
+    $listen->setAttribute(type => 'address');
+    $listen->setAttribute(address => $ip);
 
-    $self->reload_config($doc);
 }
 
 sub _set_controller_display_vnc($self, $number, $data) {
@@ -3717,6 +3734,14 @@ sub _change_hardware_network($self, $index, $data) {
      my $driver = lc(delete $data->{driver} or '');
      my $bridge = delete $data->{bridge};
     my $network = delete $data->{network};
+    my $isolated = delete $data->{port}->{isolated};
+
+    die "Error: wrong isolated '$isolated'. It must be 'yes' or 'no'"
+    if defined $isolated && !( $isolated eq 'yes' || $isolated eq 'no');
+
+    die "Error: Unknown arguments in port ".Dumper($data->{port}) if keys %{$data->{port}};
+
+    delete $data->{port};
 
     die "Error: Unknown arguments ".Dumper($data) if keys %$data;
 
@@ -3742,6 +3767,24 @@ sub _change_hardware_network($self, $index, $data) {
 
         my ($model_xml) = $interface->findnodes('model') or die "No model";
         my ($source_xml) = $interface->findnodes('source') or die "No source";
+
+        if (defined $isolated) {
+            my ($port_xml) = $interface->findnodes('port');
+            if (!$port_xml || $port_xml->getAttribute('isolated') ne $isolated) {
+
+                if ($isolated eq 'no') {
+                    $interface->removeChild($port_xml) if $port_xml;
+                } else {
+
+                    if (!defined $port_xml) {
+                        $port_xml = $interface->addNewChild(undef,'port');
+                    }
+                    $port_xml->setAttribute('isolated' => $isolated);
+
+                }
+                $changed++;
+            }
+        }
 
         $source_xml->removeAttribute('bridge')          if $network;
         $source_xml->removeAttribute('network')         if $bridge;

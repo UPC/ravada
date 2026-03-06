@@ -821,7 +821,11 @@ sub _verify_connection {
                         ." ".($domain->remote_ip or '')." "
         if $VERBOSE;
     for ( 1 .. $TIME_CONNECTION ) {
-        my $status = $domain->client_status(1);
+        my $status = 'disconnected';
+        eval {
+            $status = $domain->client_status(1);
+        };
+        warn "Error checking ".$domain_f->name." $@" if $@;
         if ( $status && $status ne 'disconnected' ) {
             print "\n\t".$status." ".$domain->remote_ip
                             ." Shutdown dismissed.\n";
