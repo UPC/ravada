@@ -2057,6 +2057,7 @@ sub _remove_file_os($self, @files) {
     my %done;
     for my $file (@files) {
         next if $done{$file};
+        $done{$file} = 1;
 
         die "Error: unsecure filename '$file'"
         if $file =~ m{[`'\(\)\[]};
