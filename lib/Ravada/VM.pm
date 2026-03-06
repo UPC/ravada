@@ -1956,7 +1956,8 @@ sub _dir_queue {
 
 sub _shell_quote {
     return join(' ', map {
-        (my $a = $_) =~ s/'/'\\''/g;
+        my $a = defined($_) ? $_ : '';
+        $a =~ s/'/'"'"'/g;
         "'$a'"
     } @_);
 }
