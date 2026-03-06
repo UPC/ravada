@@ -1,5 +1,6 @@
 package Ravada::Volume::QCOW2;
 
+use Carp qw(cluck);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
 use Moose;
@@ -19,31 +20,39 @@ has 'capacity' => (
 
 our $QEMU_IMG = "qemu-img";
 
-sub prepare_base($self) {
+sub prepare_base($self, $req=undef) {
+
+    my $file_img = $self->file;
+    my $base_img = $self->base_filename();
+    confess $base_img if $base_img !~ /\.ro/;
+
+    confess "Error: '$base_img' already exists" if -e $base_img;
+    confess if $file_img =~ /\.iso$/i;
+
     my $format;
     eval {
         $format = $self->_qemu_info('file format')
     };
-    confess $@ if $@;
-
-    my $base_img = $self->base_filename();
-
-    confess "Error: '$base_img' already exists" if -e $base_img;
 
     if ($format && $format eq 'qcow2') {
         $self->_copy($base_img, '0400');
     } else {
-        $self->_convert($base_img);
+        $self->_convert($base_img, $req);
     }
 
     return $base_img;
 
 }
 
-sub _convert($self, $dst) {
+sub _convert($self, $dst, $req=undef) {
     my $file_img = $self->file;
     my $base_img = $self->base_filename();
     my @cmd = _cmd_convert($file_img,$base_img);
+
+    if (defined $req) {
+        my $id_req = $self->vm->queue_command(\@cmd, $self->domain->id, $req->id);
+        return;
+    }
     my ($out, $err) = $self->vm->run_command( @cmd );
     warn $out  if $out;
     confess "$?: $err"   if $err;
@@ -127,13 +136,6 @@ sub _copy_sys($self, $dst, $mode=undef) {
 }
 
 sub clone($self, $file_clone) {
-    my $n = 10;
-    for (;;) {
-        my @stat = stat($self->file);
-        last if time-$stat[9] || $n--<0;
-        sleep 1;
-        die "Error: ".$self->file." looks active" if $n-- <0;
-    }
     confess if $self->file =~ /ISO$/i;
     confess if $file_clone =~ /ISO$/i;
 
@@ -150,7 +152,7 @@ sub clone($self, $file_clone) {
         last if !$err || $err !~ /Failed to get .*lock/;
         sleep 1;
     }
-    confess $self->vm->name." ".$err if $err;
+    die $self->vm->name." ".$err if $err;
 
     my $vol;
     for ( 1 .. 3 ) {

@@ -142,6 +142,7 @@ sub _clean_hw($name, @hw) {
                 $item->{file} = '';
             } elsif ($name eq 'filesystem') {
                 $item->{_id} = '';
+                delete $item->{id_domain};
             } elsif ($name eq 'network') {
                 delete $item->{hwaddr};
             }
