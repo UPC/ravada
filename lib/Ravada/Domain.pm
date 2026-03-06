@@ -997,7 +997,7 @@ sub prepare_base($self, @args) {
     my @base_img = $self->_do_prepare_base($with_cd, $request);
 
     die "Error: No information files returned from prepare_base"
-        if !scalar (\@base_img);
+        if !scalar(@base_img);
 
     my $pending_post = 0;
     if ($request) {
