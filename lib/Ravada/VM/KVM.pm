@@ -1394,7 +1394,7 @@ sub _iso_name($self, $iso, $req=undef, $verbose=1) {
 }
 
 sub _fill_url($iso) {
-    return if $iso->{url} =~ m{.*/[^/]+\.[^/]+$};
+    return if $iso->{url} =~ m{.*/[^/]+\.iso$};
     if ($iso->{file_re}) {
         $iso->{url} .= "/" if $iso->{url} !~ m{/$};
         $iso->{url} .= $iso->{file_re};
@@ -1720,7 +1720,7 @@ sub _search_url_file($self, $url_re, $file_re=undef) {
         }
     } else {
         # this failed on http://cdimage.ubuntu.com/ubuntu-mate/releases/24.04.*/release
-        $url_re =~ s{(.*)/.*\..*$}{$1} if $url_re =~ /\.iso/;
+        $url_re =~ s{(.*)/.*\..*$}{$1} if $url_re =~ /\.iso$/;
     }
 
     $file_re .= '$' if $file_re !~ m{\$$};
