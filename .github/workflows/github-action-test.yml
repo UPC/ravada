@@ -3,6 +3,8 @@ on: pull_request
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      DOCKER_API_VERSION: "1.44"
     steps:
       - uses: actions/checkout@v2
       - name: tmpfs run user
@@ -19,7 +21,7 @@ jobs:
         run: sudo apt update
       - name: Install auth packages
         run: |
-          sudo apt-get -y install perl libtest-perl-critic-perl liblist-moreutils-perl libyaml-perl libipc-run3-perl libmojolicious-perl libmojolicious-plugin-i18n-perl libxml-libxml-perl libdbix-connector-perl libmoose-perl libproc-pid-file-perl libimage-magick-perl libdatetime-perl libdatetime-format-dateparse-perl libjson-xs-perl libauthen-passphrase-perl libpbkdf2-tiny-perl libfile-rsync-perl libmoosex-types-netaddr-ip-perl libnet-dns-perl libnet-openssh-perl libio-interface-perl libsys-virt-perl libdbd-sqlite3-perl liblocale-maketext-lexicon-perl qemu-utils make cpanminus libnet-ldap-perl librrds-perl rrdtool
+          sudo apt-get -y install perl libtest-perl-critic-perl liblist-moreutils-perl libyaml-perl libipc-run3-perl libmojolicious-perl libmojolicious-plugin-i18n-perl libxml-libxml-perl libdbix-connector-perl libmoose-perl libproc-pid-file-perl libimage-magick-perl libdatetime-perl libdatetime-format-dateparse-perl libjson-xs-perl libauthen-passphrase-perl libpbkdf2-tiny-perl libfile-rsync-perl libmoosex-types-netaddr-ip-perl libnet-dns-perl libnet-openssh-perl libio-interface-perl libsys-virt-perl libdbd-sqlite3-perl liblocale-maketext-lexicon-perl qemu-utils make cpanminus libnet-ldap-perl librrds-perl rrdtool bridge-utils
       - name: Install LDAP server
         run: sudo apt-get install 389-ds-base
       - name: Configure LDAP server
@@ -49,7 +51,7 @@ jobs:
       - name: Test pod coverage
         run: prove -l t/pod_coverage.t
       - name: Install test packages
-        run: sudo apt install libsys-statistics-linux-perl libtest-moose-more-perl
+        run: sudo apt install libtest-moose-more-perl
       - name: Test Auth
         run: prove -j4  -lr t/40_auth_sql.t t/60_user_sql.t t/65_user_ldap.t t/66_group_ldap.t t/front/60_ldap.t t/front/70_ldap_access.t t/front/80_access.t t/user
       - name: Test Templates
@@ -58,3 +60,7 @@ jobs:
         run: prove -lr t/vm/60_new_args.t t/30_request.t
       - name: Test create from ISO
         run: prove -lr t/request/25_create_from_iso.t t/vm/d10_not_download.t
+      - name: Test hardware
+        run: prove -lr t/request/30_hardware.t
+      - name: Test Volumes
+        run: prove -lr t/20_volumes.t

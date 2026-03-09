@@ -63,6 +63,7 @@ our %VALID_ARG = (
     ,open_iptables => $args_manage_iptables
       ,remove_base => $args_remove_base
      ,prepare_base => $args_prepare
+     ,post_prepare_base => { id_domain => 1, uid => 1 }
      ,spinoff => { id_domain => 1, uid => 1 }
      ,pause_domain => $args_manage
     ,resume_domain => {%$args_manage, remote_ip => 1 }
@@ -78,9 +79,9 @@ our %VALID_ARG = (
     ,force_reboot_domain => { id_domain => 1, uid => 1, at => 2, id_vm => 2 }
     ,shutdown_start =>{ name => 2, id_domain => 2, uid => 1, timeout => 2
         , at => 2 , id_vm => 2 }
-    ,screenshot => { id_domain => 1 }
+    ,screenshot => { id_domain => 1, uid => 1 }
     ,domain_autostart => { id_domain => 1 , uid => 1, value => 2 }
-    ,copy_screenshot => { id_domain => 1 }
+    ,copy_screenshot => { id_domain => 1, uid => 1 }
     ,start_domain => {%$args_manage, remote_ip => 2, name => 2, id_domain => 2, enable_host_devices => 2 }
     ,start_clones => { id_domain => 1, uid => 1, remote_ip => 1, sequential => 2 }
     ,shutdown_clones => { id_domain => 1, uid => 1, timeout => 2 }
@@ -88,10 +89,12 @@ our %VALID_ARG = (
     ,dettach => { uid => 1, id_domain => 1 }
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
     ,hybernate=> {uid => 1, id_domain => 1}
+    ,hibernate=> {uid => 1, id_domain => 1}
     ,download => {uid => 2, id_iso => 1, id_vm => 2, vm => 2, verbose => 2, delay => 2, test => 2}
     ,refresh_storage => { id_vm => 2, uid => 1 }
     ,list_storage_pools => { id_vm => 1 , uid => 1, data => 2 }
     ,active_storage_pool => { uid => 1, id_vm => 1, name => 1, value => 1}
+    ,remove_storage_pool => { uid => 1, id_vm => 1, name => 1}
     ,check_storage => { uid => 1 }
     ,create_storage_pool => { uid => 1, id_vm => 1, name => 1, directory => 1 }
     ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2, migrate => 2 }
@@ -182,12 +185,14 @@ our %VALID_ARG = (
     ,change_network => { uid => 1, data => 1 }
 
     ,remove_clones => { uid => 1, id_domain => 1 }
+
+    ,wait_job => { uid => 1, id_job=> 1, id_vm => 1, file => 1, id_domain => 2 }
 );
 
 $VALID_ARG{shutdown} = $VALID_ARG{shutdown_domain};
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
-    qw( create start shutdown force_shutdown reboot prepare_base remove remove_base rename_domain screenshot download
+    qw( create start shutdown force_shutdown reboot prepare_base remove remove_base rename_domain download
             clone
             set_base_vm remove_base_vm
             domain_autostart hibernate hybernate
@@ -210,6 +215,7 @@ qw(
     rsync_back
     cleanup
     list_host_devices
+    list_storage_pools
     refresh_machine
     refresh_machine_ports
     refresh_vms
@@ -219,6 +225,8 @@ qw(
     manage_pools
     screenshot
     prepare_base
+    wait_job
+    download
 );
 
 our $TIMEOUT_SHUTDOWN = 120;
@@ -578,7 +586,7 @@ sub _check_args {
     my $args = { @_ };
 
     my $valid_args = $VALID_ARG{$sub};
-    for (qw(at after_request after_request_ok retry _no_duplicate _force uid)) {
+    for (qw(at after_request after_request_ok retry _no_duplicate _force uid check_requests)) {
         $valid_args->{$_}=2 if !exists $valid_args->{$_};
     }
 
@@ -1048,26 +1056,24 @@ sub _check_downloading($self) {
 
     $iso_file = '' if $iso_file && $iso_file eq '<NONE>';
 
-    return if !$id_iso && !$iso_file;
+    return if !$id_iso;
 
     my $sth = $$CONNECTOR->dbh->prepare(
-        "SELECT id,downloading,device,has_cd,name,url "
+        "SELECT id,downloading,has_cd,name,url "
         ." FROM iso_images "
-        ." WHERE (id=? or device=?) "
+        ." WHERE id=? "
     );
-    $sth->execute($id_iso,$iso_file);
-    my ($id_iso2,$downloading, $device, $has_cd, $iso_name, $iso_url)
+    $sth->execute($id_iso);
+    my ($id_iso2,$downloading, $has_cd, $iso_name, $iso_url)
         = $sth->fetchrow;
-
-    return if !$downloading && $device;
-
-    my $req_download = $self->_search_request('download', id_iso => $id_iso2);
 
     return $self->_status_error("done"
         ,"Error: ISO file required for $iso_name")
-    if $has_cd && !$device && !$iso_file && !$iso_url && !$device;
+    if $has_cd && !$iso_file && !$iso_url;
 
-    if ($has_cd && !$device && !$iso_file && !$req_download) {
+    my $req_download = $self->_search_request('download', id_iso => $id_iso2);
+
+    if ($has_cd && !$req_download) {
         $req_download = Ravada::Request->download(
             id_iso => $id_iso2
             ,uid => Ravada::Utils::user_daemon->id
@@ -1990,6 +1996,9 @@ sub remove($status, %args) {
 }
 
 sub _data($self, $field, $value=undef) {
+    confess if $field eq 'after_request' && defined $value
+    && $value == $self->id;
+
     if (defined $value
         && (
           !exists $self->{_data}->{$field}
@@ -2051,6 +2060,33 @@ sub refresh($self) {
     delete $self->{_data};
 }
 
+=head2 error_check_request
+
+Returns errors from requested jobs created from this request
+
+=cut
+
+sub error_check_request($self) {
+    my $check_request = $self->defined_arg('check_requests');
+    return if !$check_request;
+
+    my $error;
+    for my $id_req ( @$check_request ) {
+        my $req = Ravada::Request->open($id_req);
+        next if !$req->error;
+        if ($error) {
+            chomp $error;
+            $error .= "\n";
+        }
+        $error .= $req->error;
+    }
+    return 0 if !$error;
+
+    $self->error($error);
+    return 1;
+
+}
+
 sub AUTOLOAD {
     my $self = shift;
 
@@ -2065,7 +2101,7 @@ sub AUTOLOAD {
     }
 
     confess "ERROR: Unknown field $name "
-        if !exists $self->{$name} && !exists $FIELD{$name} && !exists $FIELD_RO{$name};
+        if ref($self) && !exists $self->{$name} && !exists $FIELD{$name} && !exists $FIELD_RO{$name};
 
     confess "Can't locate object method $name via package $self"
         if !ref($self);

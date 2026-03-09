@@ -28,6 +28,7 @@ use Net::Domain qw(hostfqdn);
 use Storable qw(dclone);
 
 use Ravada::HostDevice;
+use Ravada::Request;
 use Ravada::Utils;
 
 no warnings "experimental::signatures";
@@ -55,6 +56,7 @@ our $ARP = `which arp`;
 chomp $ARP;
 
 our $FREE_PORT = 5950;
+our $QUEUE_AT_TIME = 0;
 
 # domain
 requires 'create_domain';
@@ -757,7 +759,7 @@ sub _import_base($self, $domain) {
     }
     return if !@img;
     $domain->_prepare_base_db(@img);
-    $domain->_post_prepare_base( Ravada::Utils::user_daemon());
+    $domain->_after_prepare_base( Ravada::Utils::user_daemon());
 }
 
 
@@ -1213,8 +1215,8 @@ sub _insert_vm_db {
     return if !$self->store();
 
     my $sth = $$CONNECTOR->dbh->prepare(
-        "INSERT INTO vms (name, vm_type, hostname, public_ip)"
-        ." VALUES(?, ?, ?, ?)"
+        "INSERT INTO vms (name, vm_type, hostname, public_ip, is_active, enabled)"
+        ." VALUES(?, ?, ?, ?, 1, 1)"
     );
     my %args = @_;
     my $name = ( delete $args{name} or $self->name);
@@ -1793,7 +1795,7 @@ sub _around_list_networks($orig, $self) {
         $sth_delete->execute($id);
     }
 
-    $self->_check_networks() if $first_time;
+    $self->_check_networks() if $first_time && $self->vm;
 
     return @list;
 }
@@ -1935,7 +1937,7 @@ sub run_command($self, @command) {
         my ($exec_command,$args) = $exec =~ /(.*?) (.*)/;
         $exec_command = $exec if !defined $exec_command;
         $exec = $self->_which($exec_command);
-        confess "Error: $exec_command not found" if !$exec;
+        die "Error: $exec_command not found\n" if !$exec;
         $command[0] = $exec;
         $command[0] .= " $args" if $args;
     }
@@ -1960,6 +1962,136 @@ sub run_command($self, @command) {
 
 
     return ($out, $err);
+}
+
+sub _dir_queue {
+    my $dir = "/run/user";
+    if ($<) {
+        $dir .= "/".$<;
+    }
+    $dir .="/rvd_queue";
+    mkdir $dir or die "$! on mkdir $dir"
+    if ! -e $dir;
+
+    return $dir;
+}
+
+sub _shell_quote {
+    return join(' ', map {
+        my $a = defined($_) ? $_ : '';
+        $a =~ s/'/'"'"'/g;
+        "'$a'"
+    } @_);
+}
+
+sub _new_file_queue {
+
+    return _dir_queue."/".$$.".".time().".".int(rand(100));
+}
+
+=head2 queue_command
+
+    Creates an entry in at to run a command.
+
+    Arguments:
+
+=over
+
+=item $self
+
+=item $command : array ref of command exec and args
+
+=item $id_domain : optional name of the domain
+
+=item $id_req : optional name of parent request
+
+=back
+
+=cut
+
+sub queue_command($self, $command , $id_domain=undef, $id_req=undef ) {
+    my $file_queue = _new_file_queue();
+    $self->write_file("$file_queue.sh",
+    "#!/bin/sh\n"
+    ._shell_quote(@$command)." > $file_queue.out 2> $file_queue.err"
+    );
+    if ($self->is_local()) {
+        chmod(oct(700),"$file_queue.sh") or die "$! chmod $file_queue";
+    } else {
+        my ( $out, $err)  = $self->run_command("chmod",'700',"$file_queue.sh");
+        die $err if $err;
+    }
+
+    my ($out,$err) = $self->run_command("at"
+            ,"-M" # never send mail
+            ,"-f","$file_queue.sh"
+            ,$self->_queue_at_time()
+        );
+
+    warn "out='$out'" if $out;
+    my ($job) = $err =~ m{^job (\d+) at}m;
+    die $err if !$job;
+    if ($err && $err =~ /warning: commands will be executed/) {
+        $err = '';
+    }
+
+    my @args;
+    push @args,( id_domain => $id_domain)   if $id_domain;
+    push @args,( after_request => $id_req)  if $id_req;
+    my $req = Ravada::Request->wait_job(
+        uid => Ravada::Utils::user_daemon->id
+        ,id_job => $job
+        ,id_vm => $self->id
+        ,file => $file_queue
+        ,retry => 30
+        ,@args
+    );
+    return $req->id;
+}
+
+sub _queue_at_time($self) {
+    return ("now","+",$QUEUE_AT_TIME,"minutes");
+}
+
+sub _wait_job($self, $job,$file_queue) {
+    my ($outq, $errq) = $self->run_command("atq");
+    my ($found_job) = $outq =~ m{^($job.*) }m;
+    return ($found_job) if $found_job;
+    sleep 1 if !$self->file_exists("$file_queue.out");
+
+    my ($out, $err) = ( '', '');
+    if ($self->file_exists("$file_queue.out")) {
+        $out = $self->read_file("$file_queue.out");
+    } else {
+        warn "Warning: missing $file_queue.out";
+    }
+    if ($self->file_exists("$file_queue.err")) {
+        $err = $self->read_file("$file_queue.err");
+    } else {
+        warn "Warning: missing $file_queue.err";
+    }
+
+    $self->remove_file("$file_queue.out","$file_queue.err","$file_queue.sh");
+    return ($out,$err);
+}
+
+sub _remove_file_os($self, @files) {
+    my %done;
+    for my $file (@files) {
+        next if $done{$file};
+        $done{$file} = 1;
+
+        die "Error: unsecure filename '$file'"
+        if $file =~ m{[`'\(\)\[]};
+
+        if ($self->is_local) {
+            next if ! -e $file;
+            unlink $file or die "$! $file";
+        } else {
+            $self->run_command("/bin/rm", $file);
+        }
+
+    }
 }
 
 =head2 run_command_cache
@@ -3069,28 +3201,33 @@ sub _create_pool_backup($self, $dir) {
 }
 
 sub _follow_link($self, $file) {
-    my ($dir, $name) = $file =~ m{(.*)/(.*)};
+
+    return $self->{_is_link}->{$file}
+    if exists $self->{_is_link}->{$file}
+        && defined $self->{_is_link}->{$file};
+
+    my ($out,$err) = $self->run_command("stat","-c",'"%N"', $file);
+    chomp $out;
+    my ($link) = $out =~ m{ -> ['"](.+?)['"]+};
     my $file2 = $file;
+    if ($link) {
+        if ($link !~ m{^/}) {
+            my ($path) = $file =~ m{(.*/)};
+            $path = "/" if !$path;
+            $link = "$path$link";
+        }
+        $self->{_is_link}->{$file} = $link;
+        $file2 = $link;
+    }
+
+    my ($dir, $name) = $file2 =~ m{(.*)/(.*)};
     if ($dir) {
         my $dir2 = $self->_follow_link($dir);
         $file2 = "$dir2/$name";
     }
+    $self->{_is_link}->{$file} = $file2 unless exists $self->{_is_link}->{$file};
+    return $file2;
 
-    if (!defined $self->{_is_link}->{$file2} ) {
-        my ($out,$err) = $self->run_command("stat","-c",'"%N"', $file2);
-        chomp $out;
-        my ($link) = $out =~ m{ -> '(.+)'};
-        if ($link) {
-            if ($link !~ m{^/}) {
-                my ($path) = $file2 =~ m{(.*/)};
-                $path = "/" if !$path;
-                $link = "$path$link";
-            }
-            $self->{_is_link}->{$file2} = $link;
-        }
-    }
-    $self->{_is_link}->{$file2} = $file2 if !exists $self->{_is_link}->{$file2};
-    return $self->{_is_link}->{$file2};
 }
 
 sub _is_link_remote($self, $vol) {
@@ -3261,6 +3398,14 @@ sub _migrate_domains($self, $id_node) {
             ,shutdown => 1
         );
     }
+}
+
+sub _set_iso_downloading($self, $iso,$value) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "UPDATE iso_images SET downloading=?"
+        ." WHERE id=?"
+    );
+    $sth->execute($value,$iso->{id});
 }
 
 1;

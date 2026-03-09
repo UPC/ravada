@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '2.4.0';
+our $VERSION = '2.4.2';
 
 use utf8;
 
@@ -21,7 +21,6 @@ use Time::HiRes qw(gettimeofday tv_interval);
 use YAML;
 use MIME::Base64;
 use Socket qw( inet_aton inet_ntoa );
-use Image::Magick::Q16;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -187,7 +186,12 @@ sub _clean_tls($self) {
     $sth->execute();
 }
 
-sub _install($self) {
+sub _install($self, %args) {
+    my $add_user_admin=1;
+    $add_user_admin = delete $args{add_user_admin}
+    if exists $args{add_user_admin};
+    confess "ERROR: Unknown arguments ".join(",",sort keys %args) if keys %args;
+
     my $pid = Proc::PID::File->new(name => $self->pid_name);
     $pid->file({dir => "/run/user/$>"}) if $>;
     if ( $pid->alive ) {
@@ -208,6 +212,7 @@ sub _install($self) {
     $self->_upgrade_timestamps();
     $self->_update_data();
     $self->_init_user_daemon();
+    $self->_init_user_admin() if $add_user_admin;
     $self->_sql_insert_defaults();
 
     $self->_do_create_constraints();
@@ -215,7 +220,7 @@ sub _install($self) {
 
     $pid->release();
 
-    print "\n" if $FIRST_TIME_RUN;
+    print "\n" if $FIRST_TIME_RUN && $ENV{TERM};
 
 }
 
@@ -247,7 +252,10 @@ sub _add_internal_network($self) {
         next if $net =~ /dev virbr/;
         my ($address) = $net =~ m{(^[\d\.]+/\d+)};
         next if !$address || $done{address}++;
-        $sth->execute("internal$n",$address, ++$n+1);
+        eval {
+            $sth->execute("internal$n",$address, ++$n+1);
+        };
+        warn $@ if $@;
 
     }
 }
@@ -290,7 +298,7 @@ sub _do_create_constraints($self) {
 
         warn "INFO: creating constraint $name \n"
         if $name && !$FIRST_TIME_RUN && $0 !~ /\.t$/;
-        print "+" if $FIRST_TIME_RUN && !$CAN_FORK;
+        print "+" if $FIRST_TIME_RUN && !$CAN_FORK && $ENV{TERM};
 
         $self->_clean_db_leftovers();
 
@@ -322,6 +330,32 @@ sub _init_user_daemon {
     }
 
 }
+
+sub _init_user_admin {
+    my $self = shift;
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT count(*) FROM users WHERE is_admin=1 AND name <> ?"
+    );
+    $sth->execute($USER_DAEMON_NAME);
+    my ($count) = $sth->fetchrow;
+    $sth->finish;
+    return if $count;
+
+    my $user_admin = Ravada::Auth::SQL->new(name => 'admin');
+    return if $user_admin->id;
+
+    Ravada::Auth::SQL::add_user(
+        name => 'admin'
+        ,password => 'admin'
+        ,is_admin => 1
+        ,change_password => 1
+        ,password_expiration_date => time+600
+    );
+    warn "INFO: created default admin user 'admin'\n"
+        if $0 !~ /\.t$/;
+}
+
 sub _update_user_grants {
     my $self = shift;
     $self->_init_user_daemon();
@@ -377,7 +411,7 @@ sub _update_isos {
                     name => 'Ubuntu Mate 24.04 Noble Numbat 64 bits'
             ,description => 'Ubuntu Mate 24.04 Noble Nubat m64 bits'
                    ,arch => 'x86_64'
-                    ,xml => 'focal_fossa-amd64.xml'
+                    ,xml => 'noble-amd64.xml'
              ,xml_volume => 'focal_fossa64-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/24.04.*/release/ubuntu-mate-24.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
@@ -445,7 +479,7 @@ sub _update_isos {
                     name => 'Ubuntu 22.04 Jammy Jellyfish'
             ,description => 'Ubuntu 22.04 Jammy Jellyfish 64 bits'
                    ,arch => 'x86_64'
-                    ,xml => 'focal_fossa-amd64.xml'
+                    ,xml => 'noble-amd64.xml'
              ,xml_volume => 'focal_fossa64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/22.04/'
                 ,file_re => '^ubuntu-22.04.*-desktop-amd64.iso'
@@ -457,23 +491,10 @@ sub _update_isos {
 
         }
 
-        ,bionic=> {
-                    name => 'Ubuntu 18.04 Bionic Beaver'
-            ,description => 'Ubuntu 18.04 Bionic Beaver 64 bits'
-                   ,arch => 'x86_64'
-                    ,xml => 'bionic-amd64.xml'
-             ,xml_volume => 'bionic64-volume.xml'
-                    ,url => 'http://releases.ubuntu.com/18.04/'
-                ,file_re => '^ubuntu-18.04.*desktop-amd64.iso'
-                ,sha256_url => '$url/SHA256SUMS'
-          ,min_disk_size => '9'
-                ,min_ram => 1
-            ,arch => 'x86_64'
-        }
         ,ubuntu_noble => {
                     name => 'Ubuntu 24.04 Noble Nombat'
             ,description => 'Ubuntu 24.04 Noble Nombat 64 bits'
-                    ,xml => 'focal_fossa-amd64.xml'
+                    ,xml => 'noble-amd64.xml'
              ,xml_volume => 'focal_fossa64-volume.xml'
                     ,url => 'http://releases.ubuntu.com/24.04/'
                 ,file_re => '^ubuntu-24.04.*-desktop-amd64.iso'
@@ -493,7 +514,7 @@ sub _update_isos {
            ,arch => 'x86_64'
             ,xml => 'xenial64-amd64.xml'
      ,xml_volume => 'xenial64-volume.xml'
-            ,url => 'https://mirrors.edge.kernel.org/linuxmint/stable/20.*'
+            ,url => 'https://mirrors.edge.kernel.org/linuxmint/stable/20.*/'
         ,file_re => 'linuxmint-20.2-mate-64bit.iso'
         ,sha256_url => '$url/sha256sum.txt'
             ,min_disk_size => '15'
@@ -504,7 +525,7 @@ sub _update_isos {
            ,arch => 'x86_64'
             ,xml => 'xenial64-amd64.xml'
      ,xml_volume => 'xenial64-volume.xml'
-            ,url => 'https://mirrors.edge.kernel.org/linuxmint/stable/22.*'
+            ,url => 'https://mirrors.edge.kernel.org/linuxmint/stable/22.*/'
         ,file_re => 'linuxmint-22.*-mate-64bit.iso'
         ,sha256_url => '$url/sha256sum.txt'
             ,min_disk_size => '15'
@@ -541,7 +562,7 @@ sub _update_isos {
             name => 'Kubuntu 24.04 Noble Nombat'
             ,description => 'Kubuntu 22.04 Noble Nombat 64 bits'
             ,arch => 'x86_64'
-            ,xml => 'focal_fossa-amd64.xml'
+            ,xml => 'noble-amd64.xml'
             ,xml_volume => 'focal_fossa64-volume.xml'
             ,sha256_url => '$url/SHA256SUMS'
             ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/24.04.*/release/'
@@ -705,7 +726,7 @@ sub _update_isos {
             name =>'Debian 12 Bookworm 64 bits'
             ,arch => 'x86_64'
             ,description => 'Debian 12 Bookworm 64 bits (netinst)'
-            ,url => 'https://cdimage.debian.org/debian-cd/12[\.\d]+/amd64/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/12[\.\d]+/amd64/iso-cd/'
             ,file_re => 'debian-12.[\d\.]+-amd64-netinst.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,xml => 'jessie-amd64.xml'
@@ -718,7 +739,7 @@ sub _update_isos {
             name =>'Debian 12 Bookworm 32 bits'
             ,arch => 'i686'
             ,description => 'Debian 12 Bookworm 32 bits (netinst)'
-            ,url => 'https://cdimage.debian.org/debian-cd/12[\.\d]+/i386/iso-cd/'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/12[\.\d]+/i386/iso-cd/'
             ,file_re => 'debian-12.[\d\.]+-i386-netinst.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,xml => 'jessie-amd64.xml'
@@ -727,7 +748,19 @@ sub _update_isos {
             ,min_ram => 3
             ,options => { machine => 'pc-i440fx'}
         }
-
+        ,debian_trixie_64 => {
+            name =>'Debian 13 Trixie 64 bits'
+            ,arch => 'x86_64'
+            ,description => 'Debian 13 Trixie 64 bits (netinst)'
+            ,url => 'https://cdimage.debian.org/debian-cd/13[\.\d]+/amd64/iso-cd/'
+            ,file_re => 'debian-13.[\d\.]+-amd64-netinst.iso'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '11'
+            ,min_ram => 3
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+        }
         ,devuan_beowulf_amd64=> {
             name =>'Devuan 10 Beowulf 64 bits'
             ,description => 'Devuan Beowulf Desktop Live (amd64)'
@@ -925,7 +958,7 @@ sub _update_table_isos_url($self, $data) {
         $sth->execute($entry->{name});
         my $row = $sth->fetchrow_hashref();
         if (keys %$entry == 1) {
-            if ($row->{id} && !$row->{device}) {
+            if ($row->{id}) {
                 warn "INFO: removing old $entry->{name}\n";
                 $sth_delete->execute($row->{id});
             }
@@ -948,7 +981,8 @@ sub _update_table_isos_url($self, $data) {
 sub _scheduled_fedora_releases($self,$data) {
 
     return if !exists $VALID_VM{KVM} ||!$VALID_VM{KVM} || $>;
-    my $vm = $self->search_vm('KVM') or return; # TODO move ISO downloads off KVM
+
+    my $vm = Ravada::VM::KVM->new(host => 'localhost');
 
     my @now = localtime(time);
     my $year = $now[5]+1900;
@@ -1496,7 +1530,31 @@ sub _update_data {
     $self->_add_domain_drivers_cpu();
     $self->_add_domain_drivers_usb_controller();
 
+    $self->_remove_duplicated_group_access();
     $self->_add_indexes();
+}
+
+sub _remove_duplicated_group_access($self) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT * FROM group_access "
+    );
+    my $sth_del = $CONNECTOR->dbh->prepare(
+        "DELETE FROM group_access WHERE id=?"
+    );
+    $sth->execute();
+    my %found;
+    while (my $row = $sth->fetchrow_hashref ) {
+        my $key = ( $row->{id_domain} or '')
+                    .":".($row->{id_group} or '')
+                    .":".($row->{group} or '')
+                    .":".($row->{type} or '')
+                ;
+        if ($found{$key}++) {
+            warn "INFO: removing duplicated group_access ".Dumper($row);
+            $sth_del->execute($row->{id});
+        }
+    }
+
 }
 
 sub _install_grants($self) {
@@ -1509,9 +1567,9 @@ sub _install_grants($self) {
         }
     }
     $self->_rename_grants();
-    $self->_alias_grants();
     $self->_add_grants();
-    $self->_enable_grants();
+    $self->_alias_grants();
+    $self->_enable_all_grants();
     $self->_update_user_grants();
     exit if $CAN_FORK;
 }
@@ -1662,8 +1720,8 @@ sub _add_indexes_generic($self) {
             "unique (name)"
         ]
         ,domains_bundle => [
-            "index(id_domain)"
-            ,"unique (id_bundle, id_domain)"
+            "unique (id_domain)"
+            ,"index (id_bundle)"
         ]
         ,vm_which => [
             "index(id_vm)"
@@ -1696,7 +1754,7 @@ sub _add_indexes_generic($self) {
 
             $self->_clean_index_conflicts($table, $name);
 
-            print "+" if $FIRST_TIME_RUN;
+            print "+" if $FIRST_TIME_RUN && $ENV{TERM};
             if ($table eq 'domain_displays' && $name =~ /port/) {
                 my $sth_clean=$CONNECTOR->dbh->prepare(
                     "UPDATE domain_displays set port=NULL"
@@ -1715,7 +1773,11 @@ sub _add_indexes_generic($self) {
             confess "$table -> $name" if $FIRST_TIME_RUN;
             my $sql = "alter table $table drop index $name";
             warn Dumper($known2);
-            $CONNECTOR->dbh->do($sql);
+            eval {
+                $CONNECTOR->dbh->do($sql);
+            };
+            die $@ if ($@ && $@ !~ /Cannot drop index/);
+            warn $@ if $@ && $ENV{TERM};
         }
     }
 }
@@ -1805,6 +1867,7 @@ sub _alias_grants($self) {
         remove_clone => 'remove_clones'
         ,shutdown_clone => 'shutdown_clones'
         ,reboot_clone => 'reboot_clones'
+        ,hibernate_clone => 'hibernate_clones'
     );
 
     my $sth_old = $CONNECTOR->dbh->prepare("SELECT id FROM grant_types_alias"
@@ -1812,7 +1875,7 @@ sub _alias_grants($self) {
     );
     while (my ($old, $new) =  each(%alias)) {
         $sth_old->execute($old, $new);
-        return if $sth_old->fetch;
+        next if $sth_old->fetch;
         my $sth = $CONNECTOR->dbh->prepare(
                  "INSERT INTO grant_types_alias (name,alias)"
                  ." VALUES(?,?) "
@@ -1822,14 +1885,18 @@ sub _alias_grants($self) {
 }
 
 sub _add_grants($self) {
+    $self->_add_grant('clone',1,"can clone public virtual machines.");
+    $self->_add_grant('change_settings',1,"can change the settings of owned virtual machines.");
     $self->_add_grant('rename', 0,"can rename any virtual machine owned by the user.");
     $self->_add_grant('rename_all', 0,"can rename any virtual machine.");
+    $self->_add_grant('remove',1,"can remove any virtual machine owned by the user.");
     $self->_add_grant('rename_clones', 0,"can rename clones from virtual machines owned by the user.");
     $self->_add_grant('shutdown', 1,"can shutdown own virtual machines.");
     $self->_add_grant('reboot', 1,"can reboot own virtual machines.");
     $self->_add_grant('reboot_all', 0,"can reboot all virtual machines.");
     $self->_add_grant('reboot_clones', 0,"can reboot clones own virtual machines.");
     $self->_add_grant('screenshot', 1,"can get a screenshot of own virtual machines.");
+    $self->_add_grant('screenshot_clones', 0,"can get a screenshot from clones of own virtual machines.");
     $self->_add_grant('start_many',0,"can have an unlimited amount of machines started.");
     $self->_add_grant('expose_ports',0,"can expose virtual machine ports.");
     $self->_add_grant('expose_ports_clones',0,"Can expose ports from clones of own virtual machines.");
@@ -1842,41 +1909,55 @@ sub _add_grants($self) {
     $self->_add_grant('quota_disk',0,'disk space limit',1);
     $self->_add_grant('create_networks',0,'can create virtual networks.');
     $self->_add_grant('manage_all_networks',0,'can manage all the virtual networks.');
+    $self->_add_grant('hibernate',1,'can hibernate own virtual machines.');
 }
 
 sub _add_grant($self, $grant, $allowed, $description, $is_int = 0, $default_admin=1) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id, description,is_int FROM grant_types WHERE name=?"
+        "SELECT id, description,is_int,default_user FROM grant_types WHERE name=?"
     );
     $sth->execute($grant);
-    my ($id, $current_description, $current_int) = $sth->fetchrow();
+    my ($id, $current_description, $current_int, $current_du) = $sth->fetchrow();
     $sth->finish;
     $current_int = 0 if !$current_int;
 
-    if ($id && ( $current_description ne $description || $current_int != $is_int) ) {
+    if ($id && ( $current_description ne $description || $current_int != $is_int
+                        || !defined $current_du || $current_du != $allowed )) {
         my $sth = $CONNECTOR->dbh->prepare(
-            "UPDATE grant_types SET description = ?,is_int=? WHERE id = ?;"
+            "UPDATE grant_types SET description = ?,is_int=?,default_user=? "
+            ." WHERE id = ?;"
         );
-        $sth->execute($description, $is_int, $id);
+        $sth->execute($description, $is_int, $allowed, $id);
         $sth->finish;
     }
     return if $id;
 
-    $sth = $CONNECTOR->dbh->prepare("INSERT INTO grant_types (name, description, is_int, default_admin)"
-        ." VALUES (?,?,?,?)");
-    $sth->execute($grant, $description, $is_int, $default_admin);
+    $sth = $CONNECTOR->dbh->prepare("INSERT INTO grant_types"
+        ." (name, description, is_int, default_admin, default_user,enabled)"
+        ." VALUES (?,?,?,?,?,1)");
+    $sth->execute($grant, $description, $is_int, $default_admin,$allowed);
     $sth->finish;
 
     $sth = $CONNECTOR->dbh->prepare("SELECT id FROM grant_types WHERE name=?");
     $sth->execute($grant);
     my ($id_grant) = $sth->fetchrow;
     $sth->finish;
+    $self->_insert_grant_all_users($id_grant, $allowed, $default_admin);
+}
+
+sub _insert_grant_all_users($self, $id_grant, $allowed, $default_admin) {
 
     my $sth_insert = $CONNECTOR->dbh->prepare(
         "INSERT INTO grants_user (id_user, id_grant, allowed) VALUES(?,?,?) ");
 
-    $sth = $CONNECTOR->dbh->prepare("SELECT id,name,is_admin FROM users WHERE is_temporary = 0");
-    $sth->execute;
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT u.id,u.name,u.is_admin "
+        ." FROM users u"
+        ."  LEFT join grants_user gu ON u.id=gu.id_user AND gu.id_grant=?"
+        ." WHERE is_temporary = 0 "
+        ."   AND gu.id is NULL"
+    );
+    $sth->execute($id_grant);
 
     while (my ($id_user, $name, $is_admin) = $sth->fetchrow ) {
         my $allowed_current = $allowed;
@@ -1887,69 +1968,20 @@ sub _add_grant($self, $grant, $allowed, $description, $is_int = 0, $default_admi
     }
 }
 
-sub _null_grants($self) {
-    my $sth = $CONNECTOR->dbh->prepare("SELECT count(*) FROM grant_types "
-            ." WHERE enabled = NULL "
-        );
-    $sth->execute;
-    my ($count) = $sth->fetchrow;
-
-    warn "No null grants found" if !$count && $self->{_null_grants}++;
-    return $count;
-}
-
-sub _enable_grants($self) {
-
-    return if $self->_null_grants();
-
-    my @grants = (
-        'change_settings',  'change_settings_all',  'change_settings_clones'
-        ,'clone',           'clone_all',            'create_base', 'create_machine'
-        ,'expose_ports','expose_ports_clones','expose_ports_all'
-        ,'grant'
-        ,'manage_users'
-        ,'rename', 'rename_all', 'rename_clones'
-        ,'remove',          'remove_all',   'remove_clone',     'remove_clone_all'
-        ,'screenshot'
-        ,'shutdown',        'shutdown_all',    'shutdown_clone'
-        ,'reboot',          'reboot_all',      'reboot_clones'
-        ,'screenshot'
-        ,'start_many'
-        ,'view_groups',     'manage_groups'
-        ,'start_limit',     'start_many'
-        ,'view_all'
-        ,'create_disk', 'quota_disk'
-        ,'create_networks','manage_all_networks'
+sub _enable_all_grants($self) {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,name,default_user,default_admin FROM grant_types "
+        ." WHERE enabled is null OR enabled=0"
+        ." ORDER BY name"
     );
-
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM grant_types");
-    $sth->execute;
-    my %grant_exists;
-    while (my ($id, $name) = $sth->fetchrow ) {
-        $grant_exists{$name} = $id;
-    }
-
-    $sth = $CONNECTOR->dbh->prepare(
-        "UPDATE grant_types set enabled=1 WHERE name=?"
+    $sth->execute();
+    my $sth_enable = $CONNECTOR->dbh->prepare(
+        "UPDATE grant_types set enabled=1 WHERE id=?"
     );
-    my %done;
-    for my $name ( sort @grants ) {
-        die "Duplicate grant $name "    if $done{$name};
-        confess "Permission $name doesn't exist at table grant_types"
-                ."\n".Dumper(\%grant_exists)
-            if !$grant_exists{$name};
-
-        $sth->execute($name);
-
+    while ( my ($id_grant,$name,$default_user,$default_admin) = $sth->fetchrow()) {
+        $sth_enable->execute($id_grant);
+        $self->_insert_grant_all_users($id_grant,$default_user,$default_admin);
     }
-    $self->_disable_other_grants(@grants);
-}
-
-sub _disable_other_grants($self, @grants) {
-    my $query = "UPDATE grant_types set enabled=0 WHERE  enabled=1 AND "
-    .join(" AND ",map { "name <> ? " } @grants );
-    my $sth = $CONNECTOR->dbh->prepare($query);
-    $sth->execute(@grants);
 }
 
 sub _update_old_qemus($self) {
@@ -2026,7 +2058,7 @@ sub _upgrade_table($self, $table, $field, $definition) {
             ." $row->{COLUMN_SIZE} to ".($new_size or '')."\n"
             ." $row->{TYPE_NAME} -> $new_type \n"
             ." in $table\n$definition\n"  if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
-        print "-" if $FIRST_TIME_RUN;
+        print "-" if $FIRST_TIME_RUN && $ENV{TERM};
         $dbh->do("alter table $table change $field $field $definition");
 
         $self->_create_constraints($table, [$field, $constraint]) if $constraint;
@@ -2051,7 +2083,7 @@ sub _upgrade_table($self, $table, $field, $definition) {
     if ( $sqlite_trigger && !$self->_exists_trigger($dbh, "Update$field") ) {
         $self->_sqlite_trigger($dbh,$table, $field, $sqlite_trigger);
     }
-    print "-" if $FIRST_TIME_RUN;
+    print "-" if $FIRST_TIME_RUN && $ENV{TERM};
     return 1;
 }
 
@@ -2108,7 +2140,7 @@ sub _create_table {
     warn "INFO: creating table $table\n"
     if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
 
-    print "." if $FIRST_TIME_RUN;
+    print "." if $FIRST_TIME_RUN && $ENV{TERM};
 
     my $file_sql = "$DIR_SQL/$table.sql";
     open my $in,'<',$file_sql or die "$! $file_sql";
@@ -2196,9 +2228,10 @@ sub _sql_create_tables($self) {
             id => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
             ,source => 'char(120) NOT NULL'
+            ,target => 'char(120) NOT NULL default ""'
             ,chroot => 'integer(4) not null default 0'
             ,subdir_uid => 'integer not null default 1000'
-
+            ,enabled => 'integer(4) not null default 1'
             }
         ]
         ,[
@@ -2287,6 +2320,7 @@ sub _sql_create_tables($self) {
             log_active_domains => {
             'id' => 'integer NOT NULL PRIMARY KEY AUTO_INCREMENT'
             ,'active','integer not null default 0'
+            ,'id_base' => 'integer DEFAULT NULL references `domains`(`id`) ON DELETE CASCADE'
             ,'date_changed'
                     => 'timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
 
@@ -2305,7 +2339,6 @@ sub _sql_create_tables($self) {
             ,'md5' => 'varchar(32) DEFAULT NULL'
             ,'md5_url' => 'varchar(255) DEFAULT NULL'
             ,'sha256_url' => 'varchar(255) DEFAULT NULL'
-            ,'device' => 'varchar(255) DEFAULT NULL'
             ,'min_disk_size' => 'int(11) DEFAULT NULL'
             ,'rename_file' => 'varchar(80) DEFAULT NULL'
             ,'sha256' => 'varchar(255) DEFAULT NULL'
@@ -2904,7 +2937,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms','connection_args',"text DEFAULT NULL");
     $self->_upgrade_table('vms','cached_active_time',"int DEFAULT 0");
     $self->_upgrade_table('vms','public_ip',"varchar(128) DEFAULT NULL");
-    $self->_upgrade_table('vms','is_active',"int DEFAULT 0");
+    $self->_upgrade_table('vms','is_active',"int DEFAULT 1");
     $self->_upgrade_table('vms','enabled',"int DEFAULT 1");
     $self->_upgrade_table('vms','display_ip',"varchar(128) DEFAULT NULL");
     $self->_upgrade_table('vms','nat_ip',"varchar(128) DEFAULT NULL");
@@ -2940,6 +2973,7 @@ sub _upgrade_tables {
     }
     $self->_upgrade_table('users','external_auth','char(32) DEFAULT NULL');
     $self->_upgrade_table('users','date_created','timestamp DEFAULT CURRENT_TIMESTAMP');
+    $self->_upgrade_table('users','password_expiration_date','int default null');
 
     $self->_upgrade_table('networks','requires_password','int(11)');
     $self->_upgrade_table('networks','n_order','int(11) not null default 0');
@@ -2976,11 +3010,8 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
     $self->_upgrade_table('domains','balance_policy','int default 0');
 
-    if ($self->_upgrade_table('domains','screenshot','MEDIUMBLOB')) {
+    $self->_upgrade_table('domains','screenshot','MEDIUMBLOB');
 
-    $self->_upgrade_screenshots();
-
-    }
     $self->_upgrade_table('domains','shared_storage','varchar(254)');
     $self->_upgrade_table('domains','post_shutdown','int not null default 0');
     $self->_upgrade_table('domains','post_hibernated','int not null default 0');
@@ -3001,6 +3032,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('vms','security','varchar(255) default NULL');
     $self->_upgrade_table('grant_types','enabled','int not null default 1');
     $self->_upgrade_table('grant_types','default_admin','int not null default 1');
+    $self->_upgrade_table('grant_types','default_user','int not null default 0');
 
     $self->_upgrade_table('vms','mac','char(18)');
     $self->_upgrade_table('vms','tls','text');
@@ -3529,7 +3561,7 @@ sub _add_extra_iso($domain, $request, $previous_request) {
     if $previous_request;
 
     my $req = Ravada::Request->refresh_storage(id_vm => $domain->_vm->id
-                                        ,uid => Ravada::Utils->user_daemon->id
+                                        ,uid => Ravada::Utils::user_daemon->id
                                         ,@after_request);
 
     @after_request = ( after_request => $req->id ) if $req;
@@ -3758,6 +3790,7 @@ sub list_domains {
     my @domains;
 
     for my $row (@$domains_data) {
+        next if !$self->_vm_active($row->{id_vm});
         my $domain =  Ravada::Domain->open($row->{id});
         next if !$domain;
         my $is_active;
@@ -4381,6 +4414,12 @@ sub _execute {
     $request->status('working','') unless $request->status() eq 'waiting';
     $request->start_time(time);
     $request->error('');
+
+    if ( $request->error_check_request() ) {
+        $request->status('done');
+        return;
+    }
+
     if ($dont_fork || !$CAN_FORK) {
         $self->_do_execute_command($sub, $request);
         return;
@@ -4591,7 +4630,14 @@ sub _cmd_screenshot {
     my $request = shift;
 
     my $id_domain = $request->args('id_domain');
+    my $uid = $request->args('uid');
+
     my $domain = $self->search_domain_by_id($id_domain);
+    my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    die "Error: user ".$user->name." not allowed to screenshot "
+    .$domain->name if !$user->can_do_domain('screenshot',$domain);
+
     if (!$domain->can_screenshot) {
         die "I can't take a screenshot of the domain ".$domain->name;
     } else {
@@ -4613,29 +4659,6 @@ sub _cmd_copy_screenshot {
         die "I don't have the screenshot of the domain ".$domain->name;
     } else {
         $base->_data(screenshot => $domain->_data('screenshot'));
-    }
-}
-
-sub _upgrade_screenshots($self) {
-
-    my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id, name, file_screenshot FROM domains WHERE file_screenshot like '%' "
-    );
-    $sth->execute();
-
-    my $sth_update = $CONNECTOR->dbh->prepare(
-        "UPDATE domains set screenshot = ? WHERE id=?"
-    );
-    while ( my ($id, $name, $file_path)= $sth->fetchrow ) {
-        next if ! -e $file_path;
-        warn "INFO: converting screenshot from $name";
-        my $file= new Image::Magick::Q16;
-        $file->Read($file_path);
-        my @blobs = $file->ImageToBlob(magick => 'png');
-        eval {
-            $sth_update->execute(encode_base64($blobs[0]), $id);
-        };
-        warn $@;
     }
 }
 
@@ -5340,7 +5363,7 @@ sub _cmd_prepare_base {
     $self->_remove_unnecessary_downs($domain);
     return if $domain->is_base();
 
-    $domain->prepare_base(user => $user, with_cd => $with_cd);
+    $domain->prepare_base(user => $user, with_cd => $with_cd, request => $request);
     $domain->is_public(1) if $request->defined_arg('publish');
 
 }
@@ -5422,19 +5445,17 @@ sub _cmd_download {
 
     my $iso = $vm->_search_iso($id_iso);
     my $device_cdrom;
-    $device_cdrom = $vm->search_volume_path_re(qr($iso->{device_re})) if $iso->{device_re};
+    $device_cdrom = $vm->search_volume_path_re(qr($iso->{file_re}))
+    if exists $iso->{file_re} && $iso->{file_re};
 
-    if ($device_cdrom) {
-        my $sth = $CONNECTOR->dbh->prepare(
-            "UPDATE iso_images SET device = ? "
-            ." WHERE id=?"
-        );
-        $sth->execute($device_cdrom,$id_iso);
+    if ($device_cdrom && !$test) {
         $request->status('done',"$iso->{name} already downloaded");
-        return if !$test;
+        $vm->_set_iso_downloading($iso,0);
+        return;
     }
 
     if ($vm->is_local) {
+        $iso->{filename} = undef if !exists $iso->{filename};
         $vm->_iso_name($iso, $request, $verbose);
     } else {
         $self->_download_local_and_rsync($request, $vm, $iso);
@@ -5591,12 +5612,41 @@ sub _apply_clones($self, $request) {
     }
 
     for my $clone ($domain->clones) {
+        if ( $request->command eq 'change_hardware' ) {
+            next if !$self->_fix_clone_args($args, $clone->{id})
+        }
+
         Ravada::Request->new_request(
             $request->command
             ,%$args
             ,id_domain => $clone->{id}
         );
     }
+}
+
+sub _fix_clone_args($self, $args, $id_clone) {
+    return 1 if $args->{hardware} ne 'filesystem';
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,source FROM domain_filesystems "
+        ." WHERE id_domain=? AND target=?"
+    );
+    my $target;
+    if (exists $args->{data}->{target} && defined $args->{data}->{target}) {
+        $target = $args->{data}->{target};
+        $target = $target->{dir} if ref($target) eq 'HASH';
+    } else {
+        # If target is not defined, skip setting _id
+        return;
+    }
+
+    $sth->execute($id_clone, $target);
+    my ($id, $source) = $sth->fetchrow();
+    return if !defined $id;
+    $args->{data}->{_id}=$id;
+    $args->{data}->{source}=$source;
+    delete $args->{data}->{id_domain};
+    return $id;
 }
 
 sub _cmd_shutdown {
@@ -5843,9 +5893,10 @@ sub _cmd_refresh_storage($self, $request=undef) {
         push @id_vm,$self->_list_vms_id();
     }
     for my $id (@id_vm) {
+        next if !$self->_vm_active($id);
         my $vm;
         $vm = Ravada::VM->open($id);
-        next if !$vm || !$vm->vm;
+        next if !$vm || !$vm->vm || !$vm->enabled || !$vm->is_active;
         $vm->refresh_storage();
     }
 }
@@ -5883,10 +5934,29 @@ sub _check_mounted($path, $fstab, $mtab) {
     die "Error: partition $partition not mounted. Retry.\n";
 }
 
+sub _vm_active($self, $id_vm) {
+    my $sth = $self->connector->dbh->prepare(
+        "SELECT id FROM vms "
+        ." WHERE is_active=1 AND enabled=1"
+        ."   AND id = ? "
+    );
+    $sth->execute($id_vm);
+    my ($found) = $sth->fetchrow;
+    return $found;
+}
+
 sub _cmd_check_storage($self, $request) {
     my $contents = "a" x 160;
-    for my $vm ( $self->list_vms ) {
+    for my $id_vm ( $self->_list_vms_id ) {
+        next if !$self->_vm_active($id_vm);
+        my $vm;
+        eval { $vm = Ravada::VM->open($id_vm) };
+        if ($@) {
+            warn $@;
+            next;
+        }
         next if !$vm || !$vm->is_local;
+        next if !$vm->enabled || !$vm->is_active;
         my %fstab = _list_mnt($vm,"s");
         my %mtab = _list_mnt($vm,"m");
 
@@ -6010,16 +6080,32 @@ sub _cmd_refresh_vms($self, $request=undef) {
 
 sub _log_active_domains($self, $list) {
     my $active = 0;
+
+    my %active;
     for my $key (keys %$list) {
-            $active++ if $list->{$key}==1;
+            next unless exists $list->{$key}->{active}
+            && $list->{$key}->{active} && $list->{$key}->{active}==1;
+
+            $active++;
+            next if !defined $list->{$key}->{id_base};
+
+            $active{$list->{$key}->{id_base}} = 0
+            if !exists $active{$list->{$key}->{id_base}};
+
+            $active{$list->{$key}->{id_base}}++;
     }
 
     my $sth2 = $CONNECTOR->dbh->prepare(
         "INSERT INTO log_active_domains "
-        ." (active,date_changed) "
-        ." values(?,?)"
+        ." (active, id_base, date_changed) "
+        ." values(?,?,?)"
     );
-    $sth2->execute(scalar($active),Ravada::Utils::date_now());
+    my $now = Ravada::Utils::date_now();
+    $sth2->execute($active,undef, $now );
+
+    for my $id_base ( keys %active ) {
+        $sth2->execute($active{$id_base}, $id_base, $now);
+    }
 }
 
 sub _cmd_shutdown_node($self, $request) {
@@ -6102,6 +6188,10 @@ sub _cmd_list_storage_pools($self, $request) {
 
     my $data = $request->defined_arg('data');
 
+    $request->output(encode_json([]));
+
+    return if !$vm->vm;
+
     $request->output(encode_json([ $vm->list_storage_pools($data) ]));
 }
 
@@ -6133,7 +6223,7 @@ sub _cmd_list_cpu_models($self, $request) {
     my $id_domain = $request->args('id_domain');
 
     my $domain = Ravada::Domain->open($id_domain);
-    return [] if !$domain->_vm->can_list_cpu_models();
+    return [] if !$domain->_vm || !$domain->_vm->can_list_cpu_models();
 
     my $info = $domain->get_info();
     my $vm = $domain->_vm->vm;
@@ -6341,7 +6431,7 @@ sub _refresh_active_domains($self, $request=undef) {
             for my $domain_data (sort { $b->{date_changed} cmp $a->{date_changed} }
                                 @domains) {
                 $request->output("checking $domain_data->{name}") if $request;
-                next if $active_domain{$domain_data->{id}};
+                next if $active_domain{$domain_data->{id}}->{active};
                 my $domain;
                 eval { $domain = Ravada::Domain->open($domain_data->{id}) };
                 if ( $@ ) {
@@ -6360,15 +6450,49 @@ sub _refresh_active_domains($self, $request=undef) {
     return \%active_domain;
 }
 
+sub _check_vm_ssh($hostname) {
+    my $ssh;
+    for ( 1 .. 3 ) {
+        $ssh = Net::OpenSSH->new($hostname
+            ,timeout => 2
+            ,batch_mode => 1
+            ,forward_X11 => 0
+            ,forward_agent => 0
+            ,kill_ssh_on_timeout => 1
+        );
+        last if !$ssh->error;
+        # warn "RETRYING ssh ".$self->host." ".join(" ",$ssh->error);
+        sleep 1;
+    }
+    return $ssh;
+}
+
 sub _refresh_down_nodes($self, $request = undef ) {
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id FROM vms "
+        "SELECT id, is_active, hostname FROM vms "
     );
     $sth->execute();
-    while ( my ($id) = $sth->fetchrow()) {
+    while ( my ($id, $is_active, $hostname) = $sth->fetchrow()) {
+        if ($hostname ne 'localhost' && $hostname ne '127.0.0.1') {
+            my $ssh = _check_vm_ssh($hostname);
+            if (!$ssh || $ssh->error) {
+                if ($is_active) {
+                    my $sth = $CONNECTOR->dbh->prepare(
+                        "UPDATE vms set is_active=0 "
+                        ." WHERE id=?"
+                    );
+                    $sth->execute($id);
+                }
+                next;
+            }
+        }
+
         my $vm;
         eval { $vm = Ravada::VM->open($id) };
         warn $@ if $@;
+        if (!$vm || !$vm->vm) {
+            $vm->_data('is_active' => 0 );
+        }
         $vm->is_active(1) if $vm;
     }
 }
@@ -6520,7 +6644,9 @@ sub _refresh_active_domain($self, $domain, $active_domain) {
     }
     $domain->_set_data(status => $status);
     $domain->info(Ravada::Utils::user_daemon)             if $is_active;
-    $active_domain->{$domain->id} = $is_active;
+    my %data = ( active => $is_active , id_base => $domain->_data('id_base') );
+    lock_hash(%data);
+    $active_domain->{$domain->id} = \%data;
 
     $domain->_post_shutdown()
     if $domain->_data('status') eq 'shutdown' && !$domain->_data('post_shutdown')
@@ -6722,6 +6848,7 @@ sub _domain_just_started($self, $domain) {
 sub _shutdown_disconnected($self) {
     for my $dom ( $self->list_domains_data(status => 'active') ) {
         next if !$dom->{shutdown_disconnected};
+        next if $dom->{is_pool} && $dom->{comment} eq 'daemon';
         my $domain = Ravada::Domain->open($dom->{id}) or next;
         my $is_active = $domain->is_active;
         my ($req_shutdown) = grep { $_->command eq 'shutdown'
@@ -6770,6 +6897,7 @@ sub _req_method {
       ,shutdown => \&_cmd_shutdown
       ,reboot => \&_cmd_reboot
      ,hybernate => \&_cmd_hybernate
+     ,hibernate => \&_cmd_hybernate
     ,set_driver => \&_cmd_set_driver
     ,screenshot => \&_cmd_screenshot
     ,add_disk => \&_cmd_add_disk
@@ -6784,6 +6912,7 @@ sub _req_method {
    ,refresh_vms => \&_cmd_refresh_vms
   ,ping_backend => \&_cmd_ping_backend
   ,prepare_base => \&_cmd_prepare_base
+  ,post_prepare_base => \&_cmd_post_prepare_base
  ,rename_domain => \&_cmd_rename_domain
  ,open_iptables => \&_cmd_open_iptables
  ,list_vm_types => \&_cmd_list_vm_types
@@ -6814,6 +6943,7 @@ sub _req_method {
 ,list_storage_pools => \&_cmd_list_storage_pools
 ,active_storage_pool => \&_cmd_active_storage_pool
 ,create_storage_pool => \&_cmd_create_storage_pool
+,remove_storage_pool => \&_cmd_remove_storage_pool
 
 # Domain ports
 ,expose => \&_cmd_expose
@@ -6853,6 +6983,7 @@ sub _req_method {
     ,remove_network => \&_cmd_remove_network
     ,change_network => \&_cmd_change_network
 
+    ,wait_job => \&_cmd_wait_job
     );
     return $methods{$cmd};
 }
@@ -7383,6 +7514,9 @@ sub _cmd_create_network($self, $request) {
 
     my $id = $request->args('id_vm') or die "Error: missing id_vm";
     my $vm = Ravada::VM->open($id);
+
+    die "Error: node $id not avaiable.\n" if !$vm || !$vm->vm;
+
     $request->output(encode_json({}));
     my $id_net = $vm->create_network($request->args('data'),$request->args('uid')
                     , $request);
@@ -7473,7 +7607,26 @@ sub _cmd_create_storage_pool($self, $request) {
     my $vm = Ravada::VM->open($request->args('id_vm'));
     $vm->create_storage_pool($request->arg('name'), $request->arg('directory'));
 
+    Ravada::Request->refresh_storage(id_vm => $vm->id
+        ,uid => Ravada::Utils::user_daemon->id
+        ,_force => 1
+    );
 }
+
+sub _cmd_remove_storage_pool($self, $request) {
+    my $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+    die "Error: ".$user->name." not authorized to manage storage pools"
+        if !$user->is_admin;
+
+    my $vm = Ravada::VM->open($request->args('id_vm'));
+    $vm->remove_storage_pool($request->arg('name'));
+
+    Ravada::Request->refresh_storage(id_vm => $vm->id
+        ,uid => Ravada::Utils::user_daemon->id
+        ,_force => 1
+    );
+}
+
 
 sub _cmd_move_volume($self, $request) {
 
@@ -7512,6 +7665,7 @@ sub _cmd_move_volume($self, $request) {
     if ($volume !~ /\.iso$/) {
         $vm->remove_file($volume);
     }
+    $vm->refresh_storage();
 }
 
 sub _cmd_backup($self, $request) {
@@ -7536,6 +7690,50 @@ sub _cmd_restore_backup($self, $request) {
 
     $self->restore_backup($file,0);
     $request->output();
+}
+
+sub _cmd_wait_job($self, $request) {
+
+    my $id_vm = $request->args('id_vm');
+    my $vm = Ravada::VM->open($id_vm);
+
+    die "Error: VM $id_vm not found" if !$vm;
+
+    die "Warning: VM ".$vm->name." unreachable. Retry"
+    if !$vm->enabled || !$vm->ping;
+
+    my $job = $request->args('id_job');
+    my $file = $request->args('file');
+
+    my ($out, $err) = $vm->_wait_job($job, $file);
+
+    if ($out =~ /^$job/) {
+        $request->status('retry');
+        $request->at_time(time+10);
+    }
+
+    $request->error($err);
+    $request->output($out);
+
+}
+
+sub _cmd_post_prepare_base($self, $request) {
+    my $id_domain = $request->id_domain   or confess "Missing request id_domain";
+    my $uid = $request->args('uid')     or confess "Missing argument uid";
+
+    my $domain = $self->search_domain_by_id($id_domain);
+    die "Unknown domain id '$id_domain'\n" if !$domain;
+
+    my $user = Ravada::Auth::SQL->search_by_id( $uid)
+        or confess "Error: Unknown user id $uid in request ".Dumper($request);
+
+    die "User ".$user->name." [".$user->id."] not allowed to prepare base "
+                .$domain->name."\n"
+            unless $user->is_admin || (
+                $domain->id_owner == $user->id && $user->can_create_base());
+
+    $domain->post_prepare_base();
+
 }
 
 =head2 set_debug_value

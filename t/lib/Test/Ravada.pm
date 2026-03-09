@@ -73,6 +73,7 @@ create_domain
     delete_request_not_done
     fast_forward_requests
 
+    remove_old_storage_pools_req
     remove_old_domains_req
     remove_domain_and_clones_req
     remove_domain
@@ -109,6 +110,7 @@ create_domain
     wait_ip
 
     config_host_devices
+    qemu_fix_xml_file
 
     check_leftovers
 
@@ -168,6 +170,7 @@ my $FH_FW;
 my $FH_NODE;
 my %LOCKED_FH;
 my $FILE_DB;
+my @FILES_TMP;
 
 my ($MOJO_USER, $MOJO_PASSWORD);
 
@@ -278,10 +281,6 @@ sub add_ubuntu_minimal_iso {
         ,arch => 'i686'
         ,md5 => 'c7b21dea4d2ea037c3d97d5dac19af99'
     });
-    my $device = "/var/lib/libvirt/images/".$info{$distro}->{rename_file};
-    if ( -e $device ) {
-        $info{$distro}->{device} = $device;
-    }
     $RVD_BACK->_update_table('iso_images','name',\%info);
 }
 
@@ -360,7 +359,7 @@ sub create_domain_v2(%args) {
         $iso_name = 'Alpine%64';
     }
     if ($iso_name) {
-        my $id_iso2 = search_id_iso($iso_name)
+        my $id_iso2 = search_id_iso($iso_name, $vm)
             or confess "Error: iso '$iso_name' not found";
         croak "Error: id_iso '$id_iso' && iso '$iso_name' not match"
         if $id_iso && $id_iso != $id_iso2;
@@ -435,11 +434,6 @@ sub create_domain($vm_name, $user=$USER_ADMIN, $id_iso='Alpine%64', $swap=undef)
     $id_iso = 'Alpine%64' if !defined $id_iso;
     $user = $USER_ADMIN if !defined $user;
 
-    if ( $id_iso && $id_iso !~ /^\d+$/) {
-        my $iso_name = $id_iso;
-        $id_iso = search_id_iso($iso_name);
-        warn "I can't find iso $iso_name" if !defined $id_iso;
-    }
     my $vm;
     if (ref($vm_name)) {
         $vm = $vm_name;
@@ -449,6 +443,11 @@ sub create_domain($vm_name, $user=$USER_ADMIN, $id_iso='Alpine%64', $swap=undef)
         ok($vm,"Expecting VM $vm_name, got ".$vm->type) or return;
     }
 
+    if ( $id_iso && $id_iso !~ /^\d+$/) {
+        my $iso_name = $id_iso;
+        $id_iso = search_id_iso($iso_name, $vm);
+        warn "I can't find iso $iso_name" if !defined $id_iso;
+    }
     confess "ERROR: Domains can only be created at localhost"
         if $vm->host ne 'localhost';
 
@@ -468,7 +467,10 @@ sub create_domain($vm_name, $user=$USER_ADMIN, $id_iso='Alpine%64', $swap=undef)
 
     my $domain;
     eval { $domain = $vm->import_domain($name, $user) };
-    die $@ if $@ && $@ !~ /Domain.* not found/i;
+    die $@ if $@
+        && ( $@ !~ /Domain.* not found/i
+            && ( ref($@) eq 'Sys::Virt::Error' && $@->code != 42 )
+        );
 
     return $domain if $domain;
 
@@ -556,6 +558,13 @@ sub rvd_back($config=undef, $init=1, $sqlite=1) {
         my $sth = $CONNECTOR->dbh->table_info('%',undef,'users','TABLE');
         my $info = $sth->fetchrow_hashref();
         $sth->finish;
+
+        if ($info) {
+            my $sth = $CONNECTOR->dbh->column_info(undef,undef,'users','password_expiration_date');
+            my $row = $sth->fetchrow_hashref;
+            $info = undef if !$row;
+        }
+
         if (!$info) {
             $rvd->_install();
             $rvd->_update_isos();
@@ -795,7 +804,7 @@ sub _discover() {
                         id_owner => user_admin->id
                         ,vm => $vm_type
                         ,name => $name
-                        ,id_iso => search_id_iso('Alpine%64')
+                        ,id_iso => search_id_iso('Alpine%64', $domain->_vm)
                     );
                     wait_request();
                 }
@@ -1749,7 +1758,7 @@ sub remove_qemu_pools($vm=undef) {
         next if $name !~ /^($base_pool|$base)/;
         eval {$pool->build(Sys::Virt::StoragePool::BUILD_NEW); $pool->create() };
         warn $@ if $@ && $@ !~ /already active/;
-        if ($pool->is_active) {
+        if ($pool->is_active && !_pool_is_link($pool)) {
             diag("Removing ".$vm->name." storage_pool ".$pool->get_name);
             for my $vol ( $pool->list_volumes ) {
                 diag("Removing ".$pool->get_name." vol ".$vol->get_name);
@@ -1780,6 +1789,14 @@ sub remove_qemu_pools($vm=undef) {
             remove_tree($dir,{ safe => 1, verbose => 1}) or die "$! $dir";
         }
     }
+}
+
+sub _pool_is_link($pool) {
+    my $xml = XML::LibXML->load_xml(string => $pool->get_xml_description());
+    my ($path) = $xml->findnodes('/pool/target/path');
+    my $dir = $path->textContent();
+
+    return -l $dir;
 }
 
 sub _delete_qemu_pool($pool) {
@@ -1813,6 +1830,34 @@ sub _remove_old_entries($table) {
     );
     $sth->execute(base_domain_name.'%');
 
+}
+
+sub remove_old_storage_pools_req() {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms "
+    );
+    $sth->execute();
+    while ( my ($id_vm) = $sth->fetchrow ) {
+        my $req = Ravada::Request->list_storage_pools(
+            uid => user_admin->id
+            ,id_vm => $id_vm
+            ,data => 1
+        );
+        wait_request();
+        my $out = $req->output;
+        next if !$out;
+        my $sp_list = decode_json($out);
+        my $name = base_pool_name();
+        for my $sp (@$sp_list) {
+            next if $sp->{name} !~ /^$name/;
+            Ravada::Request->remove_storage_pool(
+                uid => user_admin->id
+                ,id_vm => $id_vm
+                ,name => $sp->{name}
+            );
+        }
+
+    }
 }
 
 sub remove_old_storage_pools_void() {
@@ -1857,6 +1902,10 @@ sub clean($ldap=undef, $file_remote_config=undef) {
     }
     unlink $FILE_CONFIG_TMP or die "$! $FILE_CONFIG_TMP"
         if $FILE_CONFIG_TMP && -e $FILE_CONFIG_TMP;
+
+    for my $file (@FILES_TMP) {
+        unlink $file or warn "$! $file" if -e $file;
+    }
     _clean_db();
     _clean_file_config();
     shutdown_nodes();
@@ -2027,17 +2076,32 @@ sub _remove_old_groups_ldap() {
     }
 }
 
-sub search_id_iso {
-    my $name = shift;
+sub search_id_iso($name, $vm=undef) {
     connector() if !$CONNECTOR;
     rvd_back();
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM iso_images "
+    my $sth = $CONNECTOR->dbh->prepare("SELECT * FROM iso_images "
         ." WHERE name like ?"
     );
     $sth->execute("$name%");
-    my ($id) = $sth->fetchrow;
-    die "There is no iso called $name%" if !$id;
-    return $id;
+    my $iso = $sth->fetchrow_hashref;
+    die "There is no iso called $name%" if !$iso || !$iso->{id};
+
+    if ($vm) {
+        my $iso = $vm->_search_iso($iso->{id});
+        my $device_cdrom = $vm->search_volume_path_re(qr($iso->{file_re}));
+        if (!$device_cdrom) {
+            my $req= Ravada::Request->download(
+                id_vm => $vm->id
+                ,id_iso => $iso->{id}
+                ,uid => user_admin->id
+                ,retry => 2
+            );
+            wait_request();
+        }
+
+    }
+
+    return $iso->{id};
 }
 
 sub _search_cd {
@@ -2365,7 +2429,7 @@ sub start_node($node) {
         }
         sleep 1;
     }
-    eval { $node2->run_command("hwclock","--hctosys") };
+    eval { $node2->run_command("true") };
     is($@,'',"Expecting no error setting clock on ".$node->name." ".($@ or ''));
 
 }
@@ -2944,6 +3008,7 @@ sub mangle_volume($vm,$name,@vol) {
             print $out ("c" x 20)."\n";
             close $out;
             _umount_qcow();
+            unload_nbd();
         } elsif ($file =~ /\.iso$/) {
             # do nothing
         } else {
@@ -3085,9 +3150,11 @@ sub _mangle_vol2($vm,$name,@vol) {
 
 
 sub _test_file_exists($vm, $vol, $name, $expected=1) {
+    _load_nbd($vm);
     _mount_qcow($vm,$vol);
     my $ok = -e $MNT_RVD."/".$name;
     _umount_qcow();
+    _unload_nbd();
     return 1 if $ok && $expected;
     return 1 if !$ok && !$expected;
     return 0;
@@ -3132,7 +3199,7 @@ sub _check_yaml($filename) {
 }
 
 sub _check_qcow2($filename) {
-    _check_file($filename,qr(: QEMU QCOW2));
+    _check_file($filename,qr(: QEMU QCOW));
 }
 
 sub test_volume_format(@volume) {
@@ -3352,5 +3419,44 @@ sub _search_domain_by_name($name) {
     return $id;
 }
 
+sub _new_tmp_file($extension) {
+    my $file;
+    for (;;) {
+        $file = _dir_db()."/".new_domain_name().".$extension";
+        push @FILES_TMP,($file);
+        last if !-e $file;
+    }
+    return $file;
+}
+
+sub qemu_fix_xml_file($file) {
+
+    open my $in,"<",$file or die "$! $file";
+    my $file_dst = _new_tmp_file("xml");
+    open my $out,">",$file_dst or die "$! $file_dst";
+
+    my $vm = rvd_back->search_vm('KVM');
+    my %types = $vm->list_machine_types();
+
+    my ( $arch,$machine);
+    while (my $line = <$in>) {
+        if ($line =~ /<type /) {
+            ($arch,$machine) = $line =~ /arch=['"](.*?)["'] machine=["'](.*?)["'"]/ if !defined $arch;
+            if (defined $machine && (my ($family) = $machine =~ /^(\w+-[\d\w]+)-/)) {
+                my ($new_machine) = grep { defined $_ && defined $machine && /^$machine/ } @{$types{$arch}};
+                ($new_machine) = grep { defined $_ && defined $family && /^$family/ } @{$types{$arch}} if !$new_machine;
+
+                if (defined $new_machine && defined $machine && $new_machine ne $machine) {
+                    $line =~ s/(.*machine=["']).*?(["'])/$1$new_machine$2/;
+                }
+            }
+        }
+        print $out $line;
+    }
+    close $in;
+    close $out or die "$! $file_dst";
+
+    return $file_dst;
+}
 
 1;

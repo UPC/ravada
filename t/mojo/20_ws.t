@@ -214,7 +214,7 @@ sub test_list_machines_non_admin($t, $bases) {
 }
 
 sub test_shutdown($user, $clone) {
-    if (!$clone->{status} eq 'active') {
+    if ($clone->{status} eq 'active') {
         my $req = Ravada::Request->shutdown(
             uid => $user->id
             ,id_domain => $clone->{id}

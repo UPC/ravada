@@ -33,6 +33,7 @@ sub _import_base($vm_name) {
     my $name = new_domain_name()."-".$vm_name."-$$";
     if ($vm_name eq 'KVM') {
         my $base0 = rvd_front->search_domain($BASE_NAME);
+        die "Error: $BASE_NAME not found" if !$base0;
         mojo_request_url_post($t,"/machine/copy",{id_base => $base0->id, new_name => $name, copy_ram => 0.128, copy_number => 1});
         for ( 1 .. 90 ) {
             $BASE= rvd_front->search_domain($name);

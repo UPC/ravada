@@ -333,12 +333,23 @@ sub _list_devices_node($rvd, $row) {
     if (%$devices) {
         $row->{_nodes} = [sort keys %{$devices}];
         for (@{$row->{_nodes}}) {
-            $row->{_n_devices} += scalar(@{$devices->{$_}});
+            my $current = $devices->{$_};
+            if (ref($current) eq 'ARRAY') {
+                $row->{_n_devices} += scalar(@{$devices->{$_}});
+            } elsif (ref($current) eq 'HASH') {
+                $row->{_n_devices} += scalar(@{$devices->{$_}->{list}});
+            }
         }
         $row->{_loading} = 0;
         for my $id_node ( keys %$devices ) {
             my @devs;
-            for my $name ( @{$devices->{$id_node}} ) {
+            my $current = $devices->{$id_node};
+            my $error =  '';
+            if (ref($current) eq 'HASH') {
+                $current = $devices->{$id_node}->{list};
+                $error = ($devices->{$id_node}->{error} or '');
+            }
+            for my $name ( @$current ) {
                 my $dev = { name => $name };
 
                 $dev->{domain} = $attached{"$id_node.$name"}
@@ -346,7 +357,7 @@ sub _list_devices_node($rvd, $row) {
 
                 push @devs,($dev);
             }
-            $ret{$id_node} = \@devs;
+            $ret{$id_node} = {error => $error , list => \@devs};
         }
     } else {
         $row->{_nodes} = [];
@@ -576,9 +587,10 @@ sub _list_next_bookings_today($rvd, $args) {
 
 sub _log_active_domains($rvd, $args) {
 
-    my ($unit, $time) = $args->{channel} =~ m{/(\w+)/(\d+)};
+    my ($unit, $time, $id_base) = $args->{channel} =~ m{/(\w+)/(\d+)/(.*)};
+    ($unit, $time) = $args->{channel} =~ m{/(\w+)/(\d+)} if !defined $unit;
 
-    return Ravada::Front::Log::list_active_recent($unit,$time);
+    return Ravada::Front::Log::list_active_recent($unit,$time, $id_base);
 }
 
 sub _list_networks($rvd, $args) {
@@ -720,14 +732,13 @@ sub _send_answer($self, $ws_client, $channel, $key = $ws_client) {
     $channel =~ s{/.*}{};
     my $exec = $SUB{$channel} or die "Error: unknown channel $channel";
 
-    my $old_ret;
+    my $old_ret = $self->clients->{$key}->{ret};
     if (exists $TABLE_CHANNEL{$channel} && $TABLE_CHANNEL{$channel}
             && defined $self->clients->{$key}->{TIME0}->{$channel}
             && time < $self->clients->{$key}->{TIME0}->{$channel}+60) {
         my ($old_count, $old_changed) = $self->_old_info($key);
         my ($new_count, $new_changed) = $self->_new_info($key);
 
-        $old_ret = $self->clients->{$key}->{ret};
 
         return $old_ret if defined $new_count && defined $new_changed
         && $old_count eq $new_count && $old_changed eq $new_changed;
@@ -782,7 +793,7 @@ sub manage_action($self, $ws, $channel, $action, $args) {
             return;
         }
     }
-    warn "Warning: unknown action for $channel / $action";
+    $self->clients->{$ws}->{channel} = "$channel/$action/$args";
 }
 
 sub subscribe($self, %args) {

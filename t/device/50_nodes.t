@@ -115,7 +115,7 @@ sub _create_host_devices($node,$number, $type=undef) {
         for my $n (0 .. scalar(@$node)-1) {
             next if !defined $node->[$n];
             my $curr_node = $node->[$n];
-            my $devices = $devices_nodes{$curr_node->id};
+            my $devices = $devices_nodes{$curr_node->id}->{list};
             $found=0 unless scalar(@$devices) >= $number->[0];
         }
         $MOCK_DEVICES=0;
@@ -447,7 +447,7 @@ sub check_hd_from_node($domain, $devices_node) {
     my ($locked) = @locked;
 
     my $vm = Ravada::VM->open($id_vm);
-    my $devices = $devices_node->{$vm->id};
+    my $devices = $devices_node->{$vm->id}->{list};
 
     my ($match) = grep { $_ eq $locked->{name} } @$devices;
     ok($match,"Expecting $locked->{name} in ".Dumper($devices)) or confess;

@@ -168,10 +168,6 @@ before 'remove' => \&_pre_remove_domain;
 #\&_allow_remove;
  after 'remove' => \&_after_remove_domain;
 
-around 'prepare_base' => \&_around_prepare_base;
-#before 'prepare_base' => \&_pre_prepare_base;
-# after 'prepare_base' => \&_post_prepare_base;
-
 #before 'start' => \&_start_preconditions;
 # after 'start' => \&_post_start;
 around 'start' => \&_around_start;
@@ -179,15 +175,14 @@ around 'start' => \&_around_start;
 before 'pause' => \&_allow_shutdown;
  after 'pause' => \&_post_pause;
 
-before 'hybernate' => \&_allow_shutdown;
+before 'hybernate' => \&_allow_hibernate;
  after 'hybernate' => \&_post_hibernate;
 
-before 'hibernate' => \&_allow_shutdown;
+before 'hibernate' => \&_allow_hibernate;
  after 'hibernate' => \&_post_hibernate;
 
 before 'resume' => \&_allow_manage;
  after 'resume' => \&_post_resume;
-
 before 'shutdown' => \&_pre_shutdown;
 after 'shutdown' => \&_post_shutdown;
 
@@ -231,6 +226,9 @@ around 'remove_controller' => \&_around_remove_hardware;
 around 'change_hardware' => \&_around_change_hardware;
 
 around 'name' => \&_around_name;
+
+before 'post_prepare_base' => \&_before_post_prepare_base;
+after 'post_prepare_base' => \&_after_post_prepare_base;
 
 ##################################################
 #
@@ -830,6 +828,31 @@ sub _allow_remove($self, $user) {
 
 }
 
+sub _allow_hibernate($self, @args){
+
+    my %args;
+    if (scalar(@args) == 1 ) {
+        $args{user} = shift @args;
+    } else {
+        %args = @args;
+    }
+    my $user = $args{user} || confess "ERROR: Missing user arg";
+
+    return if $self->id_base && $user->can_hibernate_clone_all();
+
+    if ( $self->id_base() && $user->can_hibernate_clones()) {
+        my $base = Ravada::Domain->open($self->id_base)
+            or die "ERROR: Base domain id: ".$self->id_base." not found";
+        return if $base->id_owner == $user->id;
+    } elsif ($user->can_hibernate_all) {
+        return;
+    }
+
+    confess "User ".$user->name." [".$user->id."] not allowed to hibernate ".$self->name
+        ." owned by ".($self->id_owner or '<UNDEF>')
+            if !$user->can_hibernate($self->id);
+}
+
 sub _allow_shutdown {
     my $self = shift;
     my %args;
@@ -950,8 +973,7 @@ sub _around_list_volumes_info($orig, $self, $attribute=undef, $value=undef) {
     return @volumes;
 }
 
-sub _around_prepare_base($orig, $self, @args) {
-    #sub _around_prepare_base($orig, $self, $user, $request = undef) {
+sub prepare_base($self, @args) {
     my ($user, $request, $with_cd, $overwrite);
     if(ref($args[0]) =~/^Ravada::/) {
         ($user, $request) = @args;
@@ -966,15 +988,42 @@ sub _around_prepare_base($orig, $self, @args) {
     $self->_pre_prepare_base($user, $request);
 
     $self->pre_prepare_base();
-    my @base_img = $self->$orig($with_cd, $overwrite);
+    my @base_img = $self->_do_prepare_base($with_cd, $overwrite, $request);
 
     die "Error: No information files returned from prepare_base"
-        if !scalar (\@base_img);
+        if !scalar(@base_img);
 
+    my $pending_post = 0;
+    if ($request) {
+        my $id_req = $request->id;
+        my @jobs;
+        for my $req ($self->list_requests) {
+            if ($req->command eq 'wait_job') {
+                $req->after_request($id_req);
+                $id_req = $req->id;
+                push @jobs,($req->id);
+            }
+        }
+        my $req_post = Ravada::Request->post_prepare_base(
+            uid => $user->id
+            ,id_domain => $self->id
+            ,after_request => $id_req
+            ,check_requests => \@jobs
+        );
+        my $sth = $self->_dbh->prepare(
+            "UPDATE requests set after_request=? "
+            ." WHERE after_request=?"
+            ."   AND command <> 'wait_job'"
+            ."   AND id <> ?"
+        );
+        $sth->execute($req_post->id, $request->id, $req_post->id);
+        $pending_post++;
+    }
     $self->_prepare_base_db(@base_img);
     $self->_set_base_vm_db($self->_vm->id, 1);
 
-    $self->_post_prepare_base($user, $request);
+    $self->_after_prepare_base($user, $request);
+    $self->is_base(0) if $pending_post;
 }
 
 =head2 pre_prepare_base
@@ -1004,7 +1053,7 @@ Prepares the virtual machine as a base:
 
 =cut
 
-sub prepare_base($self, $with_cd, $overwrite=undef) {
+sub _do_prepare_base($self, $with_cd, $overwrite, $req=undef) {
     my @base_img;
 
     for my $volume ($self->list_volumes_info()) {
@@ -1029,21 +1078,64 @@ sub prepare_base($self, $with_cd, $overwrite=undef) {
             if !$volume->info->{target};
 
         next if !defined $volume->file || !length($volume->file);
-        my $base = $volume->prepare_base();
+        my $base = $volume->prepare_base($req);
         push @base_img,([$base, $volume->info->{target}]);
     }
-    $self->post_prepare_base();
     return @base_img;
 }
 
-=head2 post_prepare_base
+=head2 after_prepare_base
 
 Placeholder for optional method implemented in subclasses. This will
 run after preparing the base files.
 
 =cut
 
-sub post_prepare_base($self) {}
+sub after_prepare_base($self) {}
+
+sub _before_post_prepare_base($self) {
+    $self->_data('is_base' => 0 );
+    $self->_clone_volumes_base();
+    $self->_data('is_base' => 1 );
+}
+
+sub post_prepare_base($self) { }
+
+sub _after_post_prepare_base($self) {
+    $self->after_prepare_base();
+}
+
+sub _clone_volumes_base($self) {
+
+    my %base;
+    for my $file_data ( $self->list_files_base_target ) {
+        my ($file_base,$target) = @$file_data;
+        $base{$target} = $file_base;
+    }
+    for my $volume ($self->list_volumes_info()) {
+        next if !$volume->info->{target} && $volume->info->{device} eq 'cdrom';
+        confess "Undefined info->target ".Dumper($volume)
+            if !$volume->info->{target};
+
+        next if !defined $volume->file || !length($volume->file);
+
+        next if $volume->backing_file
+        && exists $base{$volume->info->{target}}
+        && $volume->backing_file eq $base{$volume->info->{target}};
+
+        my $file = $volume->file;
+        my $file_base = $base{$volume->info->{target}};
+        next if !$file_base;
+
+        my $base = Ravada::Volume->new(
+            file => $file_base
+            ,is_base => 1
+            ,domain => $self
+        );
+        $base->clone(file => $volume->file);
+
+    }
+}
 
 sub _pre_prepare_base($self, $user, $request = undef ) {
 
@@ -1098,12 +1190,10 @@ sub _check_free_space_prepare_base($self) {
     }
 };
 
-sub _post_prepare_base {
+sub _after_prepare_base {
     my $self = shift;
 
     my ($user) = @_;
-
-    $self->is_base(1);
 
     if ($self->id_base && !$self->description()) {
         my $base = Ravada::Domain->open($self->id_base);
@@ -1126,6 +1216,8 @@ Makes volumes indpendent from base
 
 sub spinoff {
     my $self = shift;
+
+    $self->_check_has_clones();
 
     $self->_do_force_shutdown() if $self->is_active;
 
@@ -1174,7 +1266,7 @@ sub _check_has_clones {
     return if !$self->is_known();
 
     my @clones = $self->clones;
-    confess "Domain ".$self->name." has ".scalar @clones." clones : ".Dumper(\@clones)
+    die "Domain ".$self->name." has ".scalar @clones." clones.\n"
         if $#clones>=0;
 }
 
@@ -1323,6 +1415,7 @@ sub _access_denied_error($self,$user) {
 }
 
 sub _allowed_start($self, $user) {
+    return if !defined $user;
     return if $user->is_admin || $user->can_view_all;
 
     $self->_access_denied_error($user);
@@ -1754,17 +1847,28 @@ sub _execute_request($self, $field, $value) {
 
 sub _log_active_domains($self) {
     my $sth = $self->_dbh->prepare(
-        "SELECT count(*) FROM domains "
+        "SELECT id_base FROM domains "
         ." WHERE status='active'"
     );
     $sth->execute();
-    my ($active) = $sth->fetchrow;
+    my $active=0;
+    my %active_base;
+
+    while ( my ($id_base) = $sth->fetchrow ) {
+        $active++;
+        $active_base{$id_base}++ if $id_base;
+
+    }
     my $sth2 = $self->_dbh->prepare(
         "INSERT INTO log_active_domains "
-        ." ( active) "
-        ." values(?)"
+        ." ( id_base, active) "
+        ." values(?,?)"
     );
-    $sth2->execute(scalar($active));
+    $sth2->execute(undef, $active);
+
+    for my $id_base ( keys %active_base ) {
+        $sth2->execute($id_base, $active_base{$id_base});
+    }
 
 }
 
@@ -1870,7 +1974,7 @@ sub _data_extra($self, $field, $value=undef) {
 sub _assert_update($self, $table, $field, $value) {
     return if $table =~ /extra$/;
     if ($field eq 'is_base' && !$value && $self->clones ) {
-        confess "Error: You can set $field=$value if there are clones";
+        confess "Error: You can not set $field=$value if there are clones";
     }
 }
 
@@ -2099,6 +2203,7 @@ sub _prepare_base_db {
     for my $file_img (@file_img) {
         my $target;
         ($file_img, $target) = @$file_img if ref $file_img;
+        next if !$file_img;
         $sth->execute($self->id, $file_img, $target );
     }
     $sth->finish;
@@ -2178,6 +2283,10 @@ sub display($self, $user) {
 }
 
 sub _display_file_rdp($self,$display) {
+    my $error = '';
+    $error .= "Error: No IP detected for display.\n"   if !$display->{ip};
+    $error .= "Error: No Port detected for display.\n" if !$display->{port};
+    return $error if $error;
 
     my $ret = "screen mode id:i:2
 use multimon:i:0
@@ -2331,6 +2440,7 @@ sub info($self, $user) {
         ,id_vm => $self->_data('id_vm')
         ,auto_compact => ($self->auto_compact or 0)
         ,date_changed => $self->_data('date_changed')
+        ,bundle => ($self->bundle() or undef)
         ,is_volatile => $self->_data('is_volatile')
         ,networking => $self->_data('networking')
     };
@@ -3054,10 +3164,14 @@ sub _do_remove_base($self, $user) {
 
         my $backing_file = $vol->backing_file;
         next if !$backing_file;
-        $vol->block_commit();
-        $self->_vm->remove_file($vol->file);
-        $self->_vm->copy_file($backing_file, $vol->file,mode => '0700');
-        $self->_vm->remove_file($backing_file);
+        #        confess "Error: no backing file for ".$vol->file if !$backing_file;
+        my $vol_backing = Ravada::Volume->new(
+            file => $backing_file
+            ,domain => $self
+        );
+        $vol_backing->_copy($vol->file, 0600);
+        $vol_backing->remove();
+
     }
 
     for my $file ($self->list_files_base) {
@@ -3087,6 +3201,7 @@ sub _post_remove_base {
     my $self = shift;
     $self->_remove_base_db(@_);
     $self->_post_remove_base_domain();
+    $self->_vm->refresh_storage();
 
 }
 
@@ -5818,6 +5933,7 @@ sub list_vms($self, $check_host_devices=0, $only_available=0) {
         eval { $vm = Ravada::VM->open($id_vm) };
         push @vms,($vm) if $vm;
     }
+    return $self->_vm if !@vms && !@host_devices && $self->is_base();
     return @vms;
 
 }
@@ -6293,7 +6409,7 @@ sub _post_change_hardware($self, $hardware, $index, $data=undef) {
     $self->info(Ravada::Utils->user_daemon) if $self->is_known();
 
     $self->needs_restart(1) if $self->is_known && $self->_data('status') eq 'active' && $hardware ne 'memory' && $hardware !~ /cpu/;
-    $self->post_prepare_base() if $self->is_base();
+    $self->after_prepare_base() if $self->is_base();
 
     $self->_backup_config_no_hd() if $self->is_known;
 }
@@ -6394,9 +6510,12 @@ sub _add_info_filesystem($self, $data) {
     if exists $data->{source} && !defined $data->{source}
     || (ref($data->{source}) && !keys %{$data->{source}});
 
+    $self->_fix_filesystem_data($data);
+
     my $data2 = dclone($data);
     $data2->{id_domain} = $self->id;
     $data2->{source} = $data2->{source}->{dir} if ref($data2->{source});
+    $data2->{target} = $data2->{target}->{dir} if ref($data2->{target});
 
     my $sql = "INSERT INTO domain_filesystems ("
     .join(",",sort keys %$data2)
@@ -6418,6 +6537,7 @@ sub _remove_info_filesystem($self, $id_filesystem) {
 
 sub _change_info_filesystem($self, $data) {
     return if !keys %$data;
+    $self->_fix_filesystem_data($data);
 
     my $data2 = dclone($data);
     unlock_hash(%$data);
@@ -6427,55 +6547,98 @@ sub _change_info_filesystem($self, $data) {
 
     unlock_hash(%$data2);# it is local to this sub, so we may change it
     $data2->{source} = $data2->{source}->{dir} if ref($data2->{source});
-    delete $data2->{target};
+    $data2->{target} = $data2->{target}->{dir} if ref($data2->{target});
 
     my $id = delete $data2->{_id};
     confess "Missing _id in data2 ".Dumper($data2) if !defined $id;
     for my $key (keys %$data2) {
         delete $data2->{$key} if $key =~ /^_/;
     }
+    return if !keys %$data2;
+
+    # check the filesystem exists for this domain
+    my $sth = $self->_dbh->prepare("SELECT * FROM domain_filesystems "
+                                    ." WHERE id=? AND id_domain=?");
+    $sth->execute($id, $self->id);
+    my $row = $sth->fetchrow_hashref();
+    die "Error: filesystem $id not found for domain=".$self->id if !$row;
 
     my $sql = "UPDATE domain_filesystems SET "
         .join(",", map { "$_=?" } sort keys %$data2)
         ;
 
     my @values = map { $data2->{$_} } sort keys %$data2;
-    my $sth = $self->_dbh->prepare("$sql WHERE id=?");
+    $sth = $self->_dbh->prepare("$sql WHERE id=?");
     $sth->execute(@values,$id);
 }
 
-sub _load_info_filesystem($self, $list) {
+sub _load_info_filesystem($self, @list) {
     my $sth = $self->_dbh->prepare(
         "SELECT * FROM domain_filesystems "
-        ." WHERE id_domain=? AND source=?"
+        ." WHERE id_domain=? "
     );
-    for my $item (@$list) {
-        unlock_hash(%$item);
+    $sth->execute($self->id);
+    my @fs;
+    while ( my $row =$sth->fetchrow_hashref ) {
+        my $found;
+        for my $item (@list) {
+            my $source = $item->{source}->{dir};
+            if ($source eq $row->{source}){
+                $found=$item;
+                last;
+            }
+        }
+        $row->{_id}=delete $row->{id};
+        for my $field(keys %$found) {
+            $row->{$field}=$found->{$field} if !exists $row->{$field};
+        }
+        $row->{source}->{dir} = delete $row->{source};
+        $row->{target}->{dir} = delete $row->{target};
+        push @fs,($row);
+    }
+    # check if there are items in hardware not in the db
+    for my $item (@list) {
 
-        my $source = $item->{source};
-        $source = $item->{source}->{dir} if ref($item->{source});
+        my $source = $item->{source}->{dir};
 
-        $sth->execute($self->id,$source);
-        my $info = $sth->fetchrow_hashref();
+        my ($info) = grep { $_->{source}->{dir} eq $source} @fs;
+        if ( ! $info || !$info->{_id} ) {
+            unlock_hash(%$item);
 
-        if ( !$info->{id} ) {
             my $data = {
-                source => $source
+                source => {dir => $source }
             };
             $self->_add_info_filesystem($data);
-            $sth->execute($self->id,$source);
-            $info = $sth->fetchrow_hashref();
+            # Re-query the database to fetch the newly created record
+            my $sth_info = $self->_dbh->prepare(
+                "SELECT * FROM domain_filesystems WHERE id_domain=? AND source=?"
+            );
+            $sth_info->execute($self->id, $source);
+            my $info_new = $sth_info->fetchrow_hashref;
+            $item->{_id} = $info_new->{id};
+            for my $field(keys %$info_new) {
+                $item->{$field}=$info_new->{$field} if !exists $item->{$field};
+            }
+            lock_hash(%$item);
+            push @fs,($item);
         }
-
-        $item->{chroot} = delete $info->{chroot};
-        $item->{subdir_uid} = delete $info->{subdir_uid};
-        $item->{_id} = $info->{id};
-        lock_hash(%$item);
     }
+    for my $fs (@fs) {
+        unlock_hash(%$fs);
+        $fs->{_can_edit} = 1;
+        $fs->{_can_remove} = 1;
+        lock_hash(%$fs);
+        $self->_fix_filesystem_data($fs);
+    }
+
+    return @fs;
 }
 
 sub _create_filesystem($self, $source, $uid, $gid=0) {
     return if !defined $source;
+
+    confess "Error: unsupported in remote nodes"
+    if !$self->_vm->is_local();
 
     my @stat = stat($source);
     if (!@stat) {
@@ -6486,7 +6649,9 @@ sub _create_filesystem($self, $source, $uid, $gid=0) {
         if !S_ISDIR($mode) && !S_ISLNK($mode);
     }
     if (defined $uid &&( !@stat || $stat[4] != $uid)) {
-        chown $uid,undef,$source or die "$! chown $uid, $gid, $source";
+        confess Dumper([$uid,$source, $gid])
+        if !defined $uid || !defined $source || !defined $gid;
+        chown $uid,$gid,$source or die "$! chown $uid, $gid, $source";
     }
 
 }
@@ -6517,13 +6682,17 @@ sub _chroot_filesystems($self) {
         my $data = $self->_search_filesystem_index($row->{source});
         unlock_hash(%$data);
         my $source = $row->{source}."/".$self->name;
-        $data->{source}->{dir} = $source;
+        if (ref($data->{source})eq 'HASH') {
+            $data->{source}->{dir} = $source;
+        } else {
+            $data->{source} = $source;
+        }
         my $index = delete $data->{_index};
         lock_hash(%$data);
 
+        $self->_create_filesystem($source,$row->{subdir_uid});
         $self->change_hardware('filesystem',$index, $data);
 
-        $self->_create_filesystem($source,$row->{subdir_uid});
     }
     $sth->finish;
 }
@@ -6535,7 +6704,9 @@ sub _search_filesystem_index($self, $source) {
         unlock_hash(%$fs);
         $fs->{_index} = $n;
         lock_hash(%$fs);
-        return $fs if $fs->{source}->{dir} eq $source;
+        my $fs_source = $fs->{source};
+        $fs_source = $fs->{source}->{dir} if ref($fs_source) eq 'HASH';
+        return $fs if $fs_source eq $source;
     }
     return;
 }
@@ -6640,6 +6811,27 @@ sub _add_hardware_disk($orig, $self, $index, $data) {
     }
 }
 
+sub _fix_filesystem_data($self,$data) {
+    return if exists $data->{target};
+
+    my $target = $data->{source};
+    if (ref($data->{source})) {
+        return if exists $data->{target} && exists $data->{target}->{dir}
+        && defined $data->{target}->{dir} && length($data->{target}->{dir});
+        $target = $data->{source}->{dir};
+    }
+    $target =~ s{^/}{};
+    $target =~ s{/$}{};
+    $target =~ s{/}{_}g;
+
+    if (ref($data->{source})) {
+        $data->{target}->{dir}=$target;
+    } else {
+        $data->{target}=$target;
+    }
+
+}
+
 sub _around_add_hardware($orig, $self, $hardware, $index, $data=undef) {
     confess "Error: minimal add hardware index>=0 , got '$index'" if defined $index && $index <0;
 
@@ -6647,6 +6839,7 @@ sub _around_add_hardware($orig, $self, $hardware, $index, $data=undef) {
     die "Error: Virtual Machines with host devices can not be modified while running"
     if $self->is_active && $self->list_host_devices_locked;
 
+    $self->_fix_filesystem_data($data) if $hardware eq 'filesystem';
     my $data_orig = undef;
     $data_orig = dclone($data ) if ref($data);
 
@@ -6660,7 +6853,7 @@ sub _around_add_hardware($orig, $self, $hardware, $index, $data=undef) {
             $self->_add_info_filesystem($data_orig);
         }
     }
-    if (!$hardware eq 'disk' && $self->is_known() && !$self->is_base ) {
+    if ($hardware ne 'disk' && $self->is_known() && !$self->is_base ) {
         # disk is changed in main node, then redefined already
         $self->_redefine_instances();
     }
@@ -6726,7 +6919,9 @@ sub _around_remove_hardware($orig, $self, $hardware, $index=undef, $options=unde
             $self->_delete_db_display_by_driver($driver);
         }
     } else {
-        $orig->($self, $hardware, $index, %$options)
+        if ( $self->_hardware_enabled($hardware, $index, $options)) {
+            $orig->($self, $hardware, $index, %$options)
+        }
     }
 
     $self->_remove_info_filesystem($id_filesystem)
@@ -6737,6 +6932,23 @@ sub _around_remove_hardware($orig, $self, $hardware, $index=undef, $options=unde
     }
     $self->_post_change_hardware( $hardware, $index);
 
+}
+
+sub _hardware_enabled($self, $name, $index, $options ) {
+    if ( $name eq 'filesystem') {
+        my $sth = $self->_dbh->prepare("SELECT id,enabled "
+            ." FROM domain_filesystems "
+            ." WHERE id_domain=?"
+            ." ORDER BY id" 
+        );
+        $sth->execute($self->id);
+        my $count=0;
+        while (my ($id, $enabled) = $sth->fetchrow)  {
+            return $enabled if $count++ == $index;
+        }
+    } else {
+        return 1;
+    }
 }
 
 =head2 Access restrictions
@@ -6870,6 +7082,14 @@ sub _allow_group_access($self, %args) {
     $type = 'ldap' if !$type || $type eq 'group';
 
     confess "Error: unknown args ".Dumper(\%args) if keys %args;
+
+    if ($type eq 'local') {
+        $group = Ravada::Auth::Group::_search_name_by_id($id_group)
+        if !$group;
+        my %groups = map { $_ => 1 } $self->list_access_groups($type);
+        return if defined $group && $groups{$group};
+    }
+
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO group_access "
         ."( id_domain, id_group, name, type)"
@@ -6890,15 +7110,16 @@ sub list_access_groups($self, $type) {
         ."   AND type=?"
     );
     $sth->execute($self->id, $type);
-    my @groups;
+    my %groups;
     my $sth_gname = $$CONNECTOR->dbh->prepare("SELECT name FROM groups_local WHERE id=?");
     while ( my $row = $sth->fetchrow_hashref ) {
         if (!$row->{name} && $row->{id_group}) {
             $sth_gname->execute($row->{id_group});
             ($row->{name}) = $sth_gname->fetchrow;
         }
-        push @groups,($row->{name});
+        $groups{$row->{name}}++;
     }
+    my @groups = sort keys %groups;
     return @groups;
 }
 
@@ -8348,6 +8569,20 @@ sub bundle($self) {
     $sth->execute($self->id);
     my $bundle = $sth->fetchrow_hashref;
     return if !keys %$bundle;
+
+    $sth = $self->_dbh->prepare("SELECT d.id, d.alias, d.name, d.is_base, d.is_public "
+        ." FROM domains_bundle db, domains d"
+        ." WHERE db.id_domain=d.id "
+        ."   AND db.id_bundle=?"
+    );
+    $sth->execute($bundle->{id} );
+
+    my @domains;
+    while (my $domain = $sth->fetchrow_hashref ) {
+        push @domains, ($domain);
+    }
+    $bundle->{members}=\@domains;
+
     lock_hash(%$bundle);
     return $bundle;
 

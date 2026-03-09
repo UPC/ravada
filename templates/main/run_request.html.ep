@@ -11,7 +11,7 @@
         ng-init="subscribe_request('<%= url_for('ws_subscribe')->to_abs %>',<%= $request->id %>);auto_view=<%= $auto_view %>;timeout=<%= $timeout %>"
     >
     <div class="jumbotron" ng-cloak="">
-
+%=       include "/main/connection_lost"
              <div class="card-header">
         <div>
         <div style="display: inline-block">
@@ -52,6 +52,21 @@
             <ul>
                 <li><b><%=l 'Internal IP' %>:</b><span ng-show="domain.ip"> {{domain.ip}}</span>
                     <span ng-hide="domain.ip"><i><%=l 'waiting for network to come up' %></i></span>
+                    <span ng-show="domain.hardware && domain.hardware.network[0]
+                                    && domain.hardware.network[0].port.isolated == 'yes'">
+                        <span class="badge badge-pill badge-warning"
+                            ng-click="show_info_isolated=!show_info_isolated">
+                            <%=l 'isolated port' %>
+                        </span>
+                        <a href="#"
+                            ng-hide="show_info_isolated"
+                            ng-click="show_info_isolated=!show_info_isolated"><%=l '?' %></a>
+                        <span ng-show="show_info_isolated"
+                            ng-click="show_info_isolated=!show_info_isolated"
+                            class="info">
+                                <%=l 'Prevents this machine from seeing other isolated machines in the same network' %>
+                        </span>
+                    </span>
                 </li>
                 <li ng-show="domain.interfaces"><b><%=l 'Hardware address' %></b> {{domain.interfaces[0].hwaddr}} </li>
                 <li><b><%=l 'Max Memory' %>:</b> {{domain.max_mem}}</li>
@@ -74,8 +89,8 @@
                 ng-show="domain.ports.length">
                 <h3 ng-show="domain.ports.length"><%=l 'Open ports' %>
                 </h3>
-                <div>
-                <button
+                <div class="ml-4">
+                <button class="btn btn-light border border-dark"
                      ng-show="request_open_ports && domain.requests==0"
                      ng-click="reload_ports()"
                      ><%=l 'reopen' %></button>

@@ -272,6 +272,50 @@ sub test_current_max_live($vm) {
     $domain->remove(user_admin);
 }
 
+sub test_change_cpu_mode($vm) {
+    return if $vm->type ne 'KVM';
+
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
+    my $info = $domain->info(user_admin);
+    my $vcpu = $info->{hardware}->{cpu}->[0]->{vcpu};
+
+    my $cpu = $info->{hardware}->{cpu}->[0]->{cpu};
+    $cpu->{mode} = 'host-passthrough';
+
+    my @args= (
+        hardware => 'cpu'
+        ,id_domain => $domain->id
+        ,uid => user_admin->id
+    );
+    my $req = Ravada::Request->change_hardware(
+        @args
+        ,'data' => {
+                      '_can_edit' => 1,
+                      'vcpu' => $vcpu
+                      ,'cpu' => $cpu
+         },
+    );
+    wait_request(debug => 0);
+
+    my $domain2 = Ravada::Domain->open($domain->id);
+    my $info2 = $domain2->info(user_admin);
+    my $cpu2 = $info2->{hardware}->{cpu}->[0]->{cpu};
+    ok($cpu2->{migratable});
+
+    $cpu2->{mode} = 'host-model';
+    my $req2 = Ravada::Request->change_hardware(
+        @args
+        ,'data' => {
+                      '_can_edit' => 1,
+                      'vcpu' => $vcpu
+                      ,'cpu' => $cpu2
+         },
+    );
+    wait_request(debug => 0);
+
+    remove_domain($domain);
+}
+
 sub test_current_max($vm) {
     return if $vm->type ne 'KVM';
 
@@ -538,6 +582,7 @@ for my $vm_name ( vm_names() ) {
             $BASE = import_domain($vm, $BASE_NAME, 1);
         }
 
+        test_change_cpu_mode($vm);
         test_current_max($vm);
 
         test_change_vcpu_feature($vm);

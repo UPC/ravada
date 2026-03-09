@@ -1516,7 +1516,7 @@ sub test_req_expose($vm_name) {
     ok(!$req->{_duplicated}) or exit;
     for ( 1 .. 30 ) {
         wait_request(request => $req, debug => 0);
-        last if $req->status eq 'done' && ! $req->error =~ /retry/i;
+        last if $req->status eq 'done' && $req->error !~ /retry/i;
         sleep 1;
     }
 

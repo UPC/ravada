@@ -1,0 +1,97 @@
+<div class="alert alert-primary border border-primary mt-4 mb-4">
+        <%=l 'All the virtual machines in the bundle will share the same private virtual network' %>
+</div>
+
+<div ng-hide="showmachine.bundle">
+    <div class="row" ng-hide="!bundles || !bundles.length">
+        <ul class="no-bullets">
+            <li><input type="radio" ng-model="bundle_option" name="bundle_option"
+                id="bundle_option_join" value="join"/>
+                <label for="bundle_option_join"><%=l 'join bundle' %></label>
+            </li>
+            <li><input type="radio" ng-model="bundle_option" name="bundle_option"
+                id="bundle_option_create" value="create"/>
+                <label for="bundle_option_create"><%=l 'create bundle' %></label>
+            </li>
+        </ul>
+    </div>
+    <div class="row mt-2" ng-show="bundle_option=='join'">
+        <div class="col-md-2">
+        <button ng-click="join_bundle(join_bundle_id)"><%=l 'join bundle' %></button>
+        </div>
+        <div class="col-md-2">
+        <select ng-model="join_bundle_id" ng-options="bundle.id as bundle.name for bundle in bundles">
+        </select>
+        </div>
+    </div>
+    <div class="row" ng-show="bundle_option=='create' || (bundles && !bundles.length)">
+        <input type="text" placeholder="<%=l 'new bundle' %>" ng-model="new_bundle"/>
+        <button ng-click="create_bundle()"><%=l 'create' %></button>
+    </div>
+
+</div>
+
+<div ng-show="showmachine.bundle">
+    <h3><%=l 'Bundle' %> {{showmachine.bundle.name}}</h3>
+
+    <div class="row mt-2"
+        ng-show="bases_no_bundle && bases_no_bundle.length"
+    >
+        <div class="col-sm-11">
+            <i><%=l 'Add more bases to the bundle' %></i>
+        </div>
+        <div class="col-sm-11">
+            <select ng-model="bundle_new_base">
+                <option ng-value="base" ng-repeat="base in bases_no_bundle | orderBy :'name'">
+                    {{base.name}}
+                </option>
+            </select>
+            <button class="button ml-2" ng-click="add_to_bundle()"
+                ng-disabled="!bundle_new_base || bundle_new_base.id==showmachine.id || domain_in_bundle(bundle_new_base.id)"
+            >
+                <%=l 'Add' %>
+            </button>
+        </div>
+        <div class="col-sm-11">
+            <div class="alert alert-warning border border-danger"
+            ng-show="bundle_new_base &&( bundle_new_base.id==showmachine.id || domain_in_bundle(bundle_new_base.id))">
+                <%=l 'Virtual machine already added to bundle:' %>
+                <b>{{bundle_new_base.name}}</b>
+            </div>
+        </div>
+    </div>
+
+    <div ng-repeat="member in showmachine.bundle.members | orderBy: 'name'"
+        ng-hide="member._hide || member.id==showmachine.id"
+        class="row">
+
+        <div class="col-sm-11">
+            <button class="badge"
+                ng-click="remove_from_bundle(member)"
+            >x</button>
+                <a href="/machine/manage/{{member.id}}.html">
+                    {{member.name}}
+                </a>
+                <button ng-show="!member.is_base || !member.is_public" class="badge badge-warning"
+                    ng-click="member._show_warning=!member._show_warning"
+                >
+                    <%=l 'warning' %>
+
+                    <span ng-show="!member._show_warning" class="badge badge-light border border-secondary"
+                    >+</span>
+                </button>
+                <span class="info" ng-show="!member.is_base && member._show_warning">
+                    <%=l 'This virtual machine is not base' %>
+                </span>
+                <span class="info" ng-show="!member.is_public && member._show_warning">
+                    <%=l 'This virtual machine is not public' %>
+                </span>
+
+        </div>
+    </div>
+
+    <hr/>
+    <button ng-hide="showmachine.bundle.members.length>1"
+        ng-click="remove_bundle()"
+    ><%=l 'Remove' %></button>
+</div>

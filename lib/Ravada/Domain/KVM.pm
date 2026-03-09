@@ -17,6 +17,7 @@ use Hash::Util qw(lock_keys lock_hash);
 use IPC::Run3 qw(run3);
 use MIME::Base64;
 use Moose;
+use Storable qw(dclone);
 use Sys::Virt::Stream;
 use Sys::Virt::Domain;
 use Sys::Virt;
@@ -537,14 +538,14 @@ sub pre_prepare_base($self) {
     $self->_detect_disks_driver();
 }
 
-=head2 post_prepare_base
+=head2 after_prepare_base
 
 Task to run after preparing a base virtual machine
 
 =cut
 
 
-sub post_prepare_base {
+sub after_prepare_base {
     my $self = shift;
 
     $self->_set_volumes_backing_store();
@@ -2343,8 +2344,19 @@ sub _set_hw_usb($self,$numero, $data={}) {
             $controller->setAttribute(bus => 'usb');
             $controller->setAttribute(type => $tipo );
         }
+        $self->_add_spice_display($devices) if $tipo eq 'spicevmc' && $missing;
     }
     $self->reload_config($doc);
+}
+
+sub _add_spice_display($self, $devices) {
+    my ($display) = $devices->findnodes('./graphics[@type="spice"]');
+    return if $display;
+
+    my $graphic = $devices->addNewChild(undef,'graphics');
+    $graphic->setAttribute(type => 'spice');
+
+    _set_graphics_spice_defaults($graphic, $self->_vm->listen_ip);
 }
 
 sub _set_hw_usb_controller($self, $number=undef, $data={model => 'qemu-xhci'}) {
@@ -2441,6 +2453,7 @@ sub _set_controller_filesystem($self, $number, $data) {
     die "Error: missing source->{dir} in ".Dumper($data) if !ref($data->{source}) || !exists $data->{source}->{dir};
 
     my $source = delete $data->{source}->{dir} or die "Error: missing source";
+    my $target = delete $data->{target}->{dir} or confess "Error: missing target";
 
     die "Error: source '$source' doesn't exist"
     if !$self->_vm->file_exists($source);
@@ -2458,11 +2471,6 @@ sub _set_controller_filesystem($self, $number, $data) {
     $driver->setAttribute('type' => 'virtiofs');
     my $source_xml = $fs->addNewChild(undef,'source');
     $source_xml->setAttribute('dir' => $source);
-
-    my $target = $source;
-    $target =~ s{^/}{};
-    $target =~ s{/$}{};
-    $target =~ s{/}{_}g;
 
     my $target_xml = $fs->addNewChild(undef,'target');
     $target_xml->setAttribute('dir' => $target);
@@ -2575,16 +2583,19 @@ sub _set_controller_display_spice($self, $number, $data) {
     $graphic->setAttribute(type => 'spice');
 
     my $port = ( delete $data->{port} or 'auto');
-    $graphic->setAttribute( port => $port )     if $port ne 'auto';
-    $graphic->setAttribute( autoport => 'yes')  if $port eq 'auto';
 
     my $ip = (delete $data->{ip} or $self->_vm->listen_ip);
 
-    $graphic->setAttribute(listen => $ip);
-    my $listen = $graphic->addNewChild(undef,'listen');
-    $listen->setAttribute(type => 'address');
-    $listen->setAttribute(address => $ip);
+    _set_graphics_spice_defaults($graphic, $ip);
+    _add_spice_related($devices);
 
+    $graphic->setAttribute( port => $port )     if $port ne 'auto';
+    $graphic->setAttribute( autoport => 'yes')  if $port eq 'auto';
+
+    $self->reload_config($doc);
+}
+
+sub _set_graphics_spice_defaults($graphic, $ip) {
     my %defaults = (
         image => "compression=auto_glz"
         ,jpeg => "compression=auto"
@@ -2599,9 +2610,12 @@ sub _set_controller_display_spice($self, $number, $data) {
         my $item = $graphic->addNewChild(undef, $name);
         $item->setAttribute($attrib => $value);
     }
-    _add_spice_related($devices);
+    $graphic->setAttribute(listen => $ip);
+    $graphic->setAttribute( autoport => 'yes');
+    my $listen = $graphic->addNewChild(undef,'listen');
+    $listen->setAttribute(type => 'address');
+    $listen->setAttribute(address => $ip);
 
-    $self->reload_config($doc);
 }
 
 sub _set_controller_display_vnc($self, $number, $data) {
@@ -3305,6 +3319,9 @@ sub _change_hardware_filesystem($self, $index, $data) {
     if !ref($data->{source}) || !exists $data->{source}->{dir}
     || !defined $data->{source}->{dir};
 
+    # store original data to add filesystem when re-enabled
+    my $data0 = dclone($data);
+
     my $source = delete $data->{source}->{dir};
     my $target;
     $target = delete $data->{target}->{dir} if exists $data->{target};
@@ -3313,6 +3330,8 @@ sub _change_hardware_filesystem($self, $index, $data) {
     if !keys %{$data->{source}};
     delete $data->{target}
     if !keys %{$data->{target}};
+    my $enabled = delete $data->{enabled};
+    delete $data->{id_domain};
 
     confess "Error: extra arguments ".Dumper($data)
     if keys %$data;
@@ -3327,18 +3346,28 @@ sub _change_hardware_filesystem($self, $index, $data) {
     my $doc = XML::LibXML->load_xml(string => $self->xml_description);
     my $count = 0;
     my $changed = 0;
+    my $found = 0;
 
     my ($devices) = $doc->findnodes('/domain/devices');
     for my $fs ($devices->findnodes('filesystem')) {
         next if $count++ != $index;
-        my ($xml_source) = $fs->findnodes("source");
-        my ($xml_target) = $fs->findnodes("target");
-        $xml_source->setAttribute(dir => $source);
-        $xml_target->setAttribute(dir => $target) if $target;
+        $found++;
+        if (defined $enabled && !$enabled) {
+            $devices->removeChild($fs);
+        } else {
+            my ($xml_source) = $fs->findnodes("source");
+            my ($xml_target) = $fs->findnodes("target");
+            $xml_source->setAttribute(dir => $source);
+            $xml_target->setAttribute(dir => $target) if $target;
+        }
         $changed++;
     }
 
-    $self->reload_config($doc) if $changed;
+    if ($changed) {
+        $self->reload_config($doc);
+    } elsif(!$found) {
+        $self->_set_controller_filesystem($index, $data0);
+    }
 }
 
 sub _default_cpu($self) {
@@ -3462,6 +3491,9 @@ sub _change_hardware_cpu($self, $index, $data) {
 
     _change_xml($domain, 'cpu', $data->{cpu});
 
+    if ($data->{cpu}->{mode} && $data->{cpu}->{mode} ne 'host-passthrough') {
+        $cpu->removeAttribute('migratable');
+    }
     if ( $feature ) {
         _change_xml_list($cpu, 'feature', $feature, 'name');
     }
@@ -3719,6 +3751,14 @@ sub _change_hardware_network($self, $index, $data) {
      my $driver = lc(delete $data->{driver} or '');
      my $bridge = delete $data->{bridge};
     my $network = delete $data->{network};
+    my $isolated = delete $data->{port}->{isolated};
+
+    die "Error: wrong isolated '$isolated'. It must be 'yes' or 'no'"
+    if defined $isolated && !( $isolated eq 'yes' || $isolated eq 'no');
+
+    die "Error: Unknown arguments in port ".Dumper($data->{port}) if keys %{$data->{port}};
+
+    delete $data->{port};
 
     die "Error: Unknown arguments ".Dumper($data) if keys %$data;
 
@@ -3744,6 +3784,24 @@ sub _change_hardware_network($self, $index, $data) {
 
         my ($model_xml) = $interface->findnodes('model') or die "No model";
         my ($source_xml) = $interface->findnodes('source') or die "No source";
+
+        if (defined $isolated) {
+            my ($port_xml) = $interface->findnodes('port');
+            if (!$port_xml || $port_xml->getAttribute('isolated') ne $isolated) {
+
+                if ($isolated eq 'no') {
+                    $interface->removeChild($port_xml) if $port_xml;
+                } else {
+
+                    if (!defined $port_xml) {
+                        $port_xml = $interface->addNewChild(undef,'port');
+                    }
+                    $port_xml->setAttribute('isolated' => $isolated);
+
+                }
+                $changed++;
+            }
+        }
 
         $source_xml->removeAttribute('bridge')          if $network;
         $source_xml->removeAttribute('network')         if $bridge;

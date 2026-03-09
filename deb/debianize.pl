@@ -7,19 +7,32 @@ use Carp qw(confess);
 use Cwd qw(getcwd);
 use Data::Dumper;
 use File::Path qw(remove_tree make_path);
+use Getopt::Long;
 use IPC::Run3;
 use lib './lib';
-use Ravada;
 use File::Copy;
 
-my $VERSION = Ravada::version();
+my $VERSION = find_version();
 my $DIR_SRC = getcwd;
 my $DIR_DST;
 my $DEBIAN = "DEBIAN";
+my $FORCE;
+my $help;
+my $usage = "$0 [--help] [--force]\n";
+
+GetOptions(
+    force => \$FORCE
+    ,help => \$help
+) or die $usage;
+
+if ($help) {
+    print $usage;
+    exit;
+}
 
 my %COPY_RELEASES = (
-    'ubuntu-19.04'=> ['ubuntu-18.10','ubuntu-19.10']
-    ,'debian-10' => ['debian-11']
+    'ubuntu-20.04'=> ['ubuntu-22.04','ubuntu-24.04']
+    ,'debian-10' => ['debian-11','debian-12','debian-13']
 );
 my %DIR = (
     templates => '/usr/share/ravada'
@@ -30,6 +43,7 @@ my %DIR = (
     ,'blib/man3' => 'usr/share/man'
     ,"debian/" => "./DEBIAN"
     ,'etc/systemd/' => 'lib/systemd/system/'
+    ,'plugins' => '/usr/share/ravada'
 );
 
 for ( qw(css fallback fonts img js favicon.ico )) {
@@ -38,6 +52,8 @@ for ( qw(css fallback fonts img js favicon.ico )) {
 
 my %FILE = (
     'etc/rvd_front.conf.example' => 'etc/rvd_front.conf'
+    ,'etc/fallback.conf' => 'usr/share/ravada'
+    ,'etc/get_fallback.pl' => 'usr/share/ravada'
     ,'script/rvd_back' => 'usr/sbin/rvd_back'
     ,'script/rvd_front' => 'usr/sbin/rvd_front'
     ,'CHANGELOG.md'   => 'usr/share/doc/ravada/changelog'
@@ -54,6 +70,15 @@ my @REMOVE= qw(
 );
 
 ########################################################################
+
+sub find_version {
+    my @cmd=("perldoc","-m","lib/Ravada.pm");
+    my ($in, $out, $err);
+    run3(\@cmd, \$in, \$out, \$err);
+
+    my ($version) = $out =~ /VERSION\s*=\s*'(.*)'/m;
+    return $version;
+}
 
 sub clean {
     remove_tree($DIR_DST);
@@ -150,6 +175,10 @@ sub create_deb {
 
     mkdir "ravada_release" if !-e "ravada_release";
     my $deb = "ravada_release/ravada_${VERSION}_${dist}_all.deb";
+    if ( -e $deb && -s $deb && !$FORCE ) {
+        warn "$deb already created.\n";
+        return;
+    }
     my @cmd = ('dpkg-deb','-b','-Zgzip',"$DIR_DST/",$deb);
     my ($in, $out, $err);
     run3(\@cmd, \$in, \$out, \$err);
@@ -197,6 +226,13 @@ sub change_mod {
     for my $file ( 'rvd_front.service', 'rvd_back.service') {
         my $path = "$DIR_DST/lib/systemd/system/$file";
         chmod 0644,$path or die "$! $path";
+    }
+    my $dir = "$DIR_DST/usr/share/ravada/plugins";
+    opendir my $ls,$dir or die "$! $dir";
+    while (my $file = readdir $ls) {
+        next if $file =~ /^\./;
+        my $path = "$dir/$file";
+        chmod 0755,$path or die "$! $path";
     }
 }
 
@@ -267,6 +303,10 @@ sub chmod_ravada_conf {
     chmod 0600,"$DIR_DST/etc/ravada.conf" or die $!;
 }
 
+sub chmod_fallback {
+    chmod 0700,"$DIR_DST/usr/share/ravada/get_fallback.pl" or die $!;
+}
+
 sub tar {
     my $dist = shift;
     my @cmd = ('tar','czvf',"ravada_$VERSION.orig.tar.gz"
@@ -282,6 +322,7 @@ sub make_pl {
     my @cmd = ('perl','Makefile.PL');
     my ($in, $out, $err);
     run3(\@cmd, \$in, \$out, \$err);
+    $err =~ s/^Warning.*//ms;
     die $err if $err;
 
     @cmd = ('make');
@@ -356,15 +397,21 @@ sub get_fallback {
 }
 
 sub copy_identical_releases {
+    my $cur = getcwd();
+    my $dst = "$DIR_SRC/../ravada_release";
+    chdir $dst or die "$! $dst";
+    print "Creating copied releases:\n";
     for my $source (sort keys %COPY_RELEASES ) {
+        print "  $source : ".join(" , ", @{$COPY_RELEASES{$source}})."\n";
         for my $copy (@{$COPY_RELEASES{$source}}) {
-            my $file_source = "$DIR_SRC/../ravada_release/ravada_${VERSION}_${source}_all.deb";
+            my $file_source = "ravada_${VERSION}_${source}_all.deb";
             die "Error: No $file_source" if !-e $file_source;
-            my $file_copy = "$DIR_SRC/../ravada_release/ravada_${VERSION}_${copy}_all.deb";
-            copy($file_source, $file_copy) or die "Error: $!\n$file_source -> $file_copy";
+            my $file_copy = "ravada_${VERSION}_${copy}_all.deb";
+            unlink $file_copy;
+            symlink($file_source, $file_copy) or die "Error: $!\n$file_source -> $file_copy";
         }
     }
-    exit;
+    chdir $cur;
 }
 
 #########################################################################
@@ -383,7 +430,6 @@ set_version();
 remove_not_needed();
 remove_use_lib();
 change_version();
-change_mod();
 gzip_docs();
 gzip_man();
 chown_files($DEBIAN,0644);
@@ -399,11 +445,13 @@ chown_files('usr/sbin',0755,0755);
 #chown_files('usr/share/ravada/templates');
 chown_files('etc');
 chmod_ravada_conf();
+chmod_fallback();
 chown_files('lib');
 #chown_files('lib/systemd');
 chown_files('var/lib/ravada');
 chown_files('usr/share/perl5');
 #chown_files('usr/share/man');
+change_mod();
 create_md5sums();
 tar($dist);
 #chown_pms();

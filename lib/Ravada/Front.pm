@@ -12,7 +12,7 @@ Ravada::Front - Web Frontend library for Ravada
 use Carp qw(carp);
 use DateTime;
 use DateTime::Format::DateParse;
-use Hash::Util qw(lock_hash lock_keys unlock_hash);
+use Hash::Util qw(unlock_keys lock_hash lock_keys);
 use IPC::Run3 qw(run3);
 use JSON::XS;
 use Moose;
@@ -93,7 +93,11 @@ Returns a list of the base domains as a listref
 
 sub list_bases($self, %args) {
     $args{is_base} = 1;
-    my $query = "SELECT name, id, is_base, id_owner FROM domains "
+    my $query = "SELECT name, d.id, is_base, id_owner,is_public "
+    ."                    ,db.id_bundle"
+    ." FROM domains d "
+    ." LEFT JOIN domains_bundle db "
+    ."   ON d.id=db.id_domain "
         ._where(%args)
         ." ORDER BY name";
 
@@ -227,6 +231,7 @@ sub _get_clone_info($user, $base, $clone = Ravada::Front::Domain->open($base->{i
         && $user->can_screenshot) {
         my $req = Ravada::Request->screenshot(
             id_domain => $clone->id
+            ,uid => $user->id
         );
     }
     return $c;
@@ -271,9 +276,13 @@ sub _init_available_actions($user, $m) {
         $m->{can_reboot} = $m->{can_shutdown} && $m->{can_start};
 
         $m->{can_view} = 0;
-        $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin
-        || $user->_machine_shared($m->{id})
-        ;
+        if ( $m->{id_owner} == $user->id
+            || $user->is_admin
+            || $user->_machine_shared($m->{id})
+            || $user->can_view_all()) {
+                $m->{can_view} = 1;
+                $m->{can_start} = 1;
+        }
 
         $m->{can_manage} = ( $user->can_manage_machine($m->{id}) or 0);
         eval {
@@ -782,6 +791,7 @@ sub list_iso_images {
         _get_device_re($row);
         lock_keys(%$row);
 
+        $row->{min_swap_size} = 0 if !$row->{min_swap_size};
         push @iso,($row);
     }
     $sth->finish;
@@ -1820,12 +1830,26 @@ sub list_storage_pools($self, $uid, $id_vm, $active=undef) {
 
     my $key="list_storage_pools_$id_vm";
 
-    my $cache = ($self->_cache_get($key) or []);
+    my $req_active_sp;
+    for my $command ( 'active_storage_pool','create_storage_pool') {
+        $req_active_sp = Ravada::Request::done_recently(
+            undef,60, $command
+        );
+        last if $req_active_sp;
+    }
+    my $cache = [];
+    my $force = 0;
+    if ($req_active_sp) {
+        $force = 1;
+    } else {
+        $cache = ($self->_cache_get($key) or []);
+    }
 
     my $req = Ravada::Request->list_storage_pools(
         id_vm => $id_vm
         ,uid => $uid
         ,data => 1
+        ,_force => $force
     );
     return _filter_active($cache, $active) if !$req;
 
@@ -2038,6 +2062,10 @@ sub upload_users_json($self, $data_json, $type='openid') {
         if (!ref($g)) {
             $g = { name => $g0 };
         }
+        if (!exists $g->{name} or !defined $g->{name} || !length($g->{name})) {
+                push @error, ("Missing group name in ".Dumper($g));
+                next;
+        }
         $found++;
         my $group = Ravada::Auth::Group->new(name => $g->{name});
         my $members = delete $g->{members};
@@ -2156,6 +2184,23 @@ Arguments : id_bundle, id_domain
 sub add_to_bundle ($self, $id_bundle, $id_domain){
     my $sth = $self->_dbh->prepare(
         "INSERT INTO domains_bundle (id_bundle, id_domain ) VALUES(?,?)"
+    );
+    $sth->execute($id_bundle, $id_domain);
+
+}
+
+=head2 remove_from_bundle
+
+Removes a domain from a bundle
+
+Arguments : id_bundle, id_domain
+
+=cut
+
+sub remove_from_bundle ($self, $id_bundle, $id_domain){
+    my $sth = $self->_dbh->prepare(
+        "DELETE FROM domains_bundle "
+        ." WHERE id_bundle=? AND id_domain=? "
     );
     $sth->execute($id_bundle, $id_domain);
 

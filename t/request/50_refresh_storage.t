@@ -22,7 +22,7 @@ sub test_request {
     my $vm_name = shift;
     my $id_vm = shift;
 
-    my $file = "a.iso";
+    my $file = new_domain_name().".iso";
 
     my $vm = rvd_back->search_vm($vm_name);
 
@@ -36,7 +36,7 @@ sub test_request {
 
     # check there are no files
     @files = $vm->search_volume_path($file);
-    ok(!scalar @files) or next;
+    ok(!scalar @files) or return;
 
     my $file_out = $vm->dir_img."/$file";
     unlink $file_out or die "$! $file_out"
@@ -50,8 +50,8 @@ sub test_request {
     my $request;
 
     eval {
-        my @args = ( uid => user_admin->id );
-        push @args, (id_vm => $id_vm ) if $id_vm;
+        my @args = ( uid => user_admin->id, _force => 1 );
+        push @args,( id_vm => $id_vm ) if $id_vm;
         $request = Ravada::Request->refresh_storage(@args);
     };
     is($@,'');
@@ -61,11 +61,14 @@ sub test_request {
     is($request->status,'done');
     is($request->error,'');
 
-    $request->status('requested');
-    wait_request(debug => 0);
-
-    @files = $vm->search_volume_path($file);
-    ok(scalar @files,"Expecting $file exists on storage pool ".$vm->dir_img);
+    for (1 .. 3 ) {
+        @files = $vm->search_volume_path($file);
+        last if scalar(@files);
+        $request->status('requested');
+        wait_request(debug => 0);
+    }
+    ok(scalar @files,"Expecting $file exists on storage pool") or exit;
+    $vm->remove_file($file);
 }
 
 #########################################################

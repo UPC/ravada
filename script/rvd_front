@@ -330,7 +330,7 @@ any '/login_openid' => sub($c) {
             app->log->error("Access denied with openid from "._remote_ip($c));
             app->log->error("Access denied error: ".($error or 'unknown')._remote_ip($c));
         }
-        return access_denied($c);
+        return access_denied($c,"Access denied: user not found or insufficient permissions.");
     }
     $c->session('logoutURL' => $RAVADA->setting('/frontend/openid/logout_url'));
     $c->session('OIDC_CLAIM_at_hash' => $header{'OIDC_CLAIM_at_hash'});
@@ -3045,6 +3045,122 @@ del '/v1/booking_entry/:id/:mode' => sub($c) {
     my $error = ($@ or '');
     return $c->render(json => { error => $error } );
 };
+
+del '/v2/bundle/(:id_bundle)' => sub($c) {
+
+    return access_denied_json($c) if !$USER->is_admin;
+
+    my $sth = $RAVADA->_dbh->prepare("SELECT name FROM bundles WHERE id=?");
+    $sth->execute($c->stash('id_bundle'));
+    my ($name) = $sth->fetchrow;
+
+    $sth = $RAVADA->_dbh->prepare(
+        "DELETE FROM domains_bundle "
+        ." WHERE id_bundle=?"
+    );
+    $sth->execute($c->stash('id_bundle'));
+
+    $sth = $RAVADA->_dbh->prepare(
+        "DELETE FROM bundles "
+        ." WHERE id=?"
+    );
+    $sth->execute($c->stash('id_bundle'));
+
+    $USER->send_message('Bundle removed: '.$name);
+
+    return $c->render(json => { error => '' });
+
+};
+
+post '/v2/bundle/create' => sub($c) {
+
+    return access_denied_json($c) if !$USER->is_admin;
+
+    my $arg = decode_json($c->req->body);
+    my $name = delete $arg->{name};
+    my $id_domain = delete $arg->{id_domain};
+
+    my $error='';
+    $error = "Warning: Unknown args ".Dumper($arg)
+    if keys %$arg;
+
+    my $id_bundle;
+    eval {
+        $id_bundle = $RAVADA->create_bundle($name);
+        if ($id_bundle) {
+            $RAVADA->bundle_private_network($id_bundle, 1);
+            $RAVADA->add_to_bundle($id_bundle, $id_domain) if $id_domain;
+        }
+    };
+    my $error2 = ($@ or '');
+
+    $error .= " ".$error2 if $error2;
+    $USER->send_message($error or 'Bundle created '.$name);
+    return $c->render(json => { error => $error
+            , bundle => { id => $id_bundle ,name => $name } });
+
+};
+
+post '/v2/bundle/add_domain' => sub($c) {
+
+    return access_denied_json($c) if !$USER->is_admin;
+
+    my $arg = decode_json($c->req->body);
+    my $id_bundle = delete $arg->{id_bundle};
+    my $id_domain = delete $arg->{id_domain};
+
+    my $error='';
+    $error = "Warning: Unknown args ".Dumper($arg)
+    if keys %$arg;
+
+    eval {
+        $RAVADA->add_to_bundle($id_bundle, $id_domain);
+    };
+    my $error2 = ($@ or '');
+
+    $error .= " ".$error2 if $error2;
+    $USER->send_message($error) if $error;
+    return $c->render(json => { error => $error });
+
+};
+
+post '/v2/bundle/remove_domain' => sub($c) {
+
+    return access_denied_json($c) if !$USER->is_admin;
+
+    my $arg = decode_json($c->req->body);
+    my $id_bundle = delete $arg->{id_bundle};
+    my $id_domain = delete $arg->{id_domain};
+
+    my $error='';
+    $error = "Warning: Unknown args ".Dumper($arg)
+    if keys %$arg;
+
+    eval {
+        $RAVADA->remove_from_bundle($id_bundle, $id_domain);
+    };
+    my $error2 = ($@ or '');
+
+    $error .= " ".$error2 if $error2;
+    $USER->send_message($error) if $error;
+    return $c->render(json => { error => $error });
+
+};
+
+get '/v2/bundle/list' => sub($c) {
+    return access_denied_json($c) if !$USER->is_admin;
+
+    my $sth = $RAVADA->_dbh->prepare(
+        "SELECT id,name FROM bundles ORDER by name"
+    );
+    $sth->execute;
+    my @list;
+    while (my $row = $sth->fetchrow_hashref) {
+        push @list, ($row);
+    };
+    return $c->render(json => \@list);
+};
+
 ###################################################
 
 ## user_settings
@@ -3458,6 +3574,7 @@ sub login($c, $status=200) {
     if (!@error) {
         if (defined $login && defined $password) {
             eval { $auth_ok = Ravada::Auth::login($login, $password)};
+            push @error,($@) if $@ && $@ !~ /Login failed/;
         } elsif (($c->param('ticket')) || ($c->param('submit') && $c->param('submit') eq 'sso')) {
             eval { $auth_ok = Ravada::Auth::login_external($ticket, $c->session('ticket')) };
             if ($auth_ok && !$@) {
@@ -3478,7 +3595,7 @@ sub login($c, $status=200) {
     }
 
 
-    sleep 5 if scalar(@error) && !$ENV{mode} && !$ENV{mode} eq 'development';
+    sleep 5 if scalar(@error) && ( !$ENV{MOJO_MODE} || $ENV{MOJO_MODE} ne 'development');
     $status = 403 if @error;
 
     $c->stash('login' => $login);
@@ -4235,7 +4352,7 @@ sub change_password {
     my $old_password = $c->param('old_password');
 
     if ($old_password) {
-        return $c->render(template => 'bootstrap/change_password', error => [ "Old password do not match!" ]) if (! $USER->compare_password($old_password));
+        return $c->render(template => 'bootstrap/change_password', error => [ "Old password does not match!" ]) if (! $USER->compare_password($old_password));
 
         my $new_password = $c->param('new_password');
         return $c->render(template => 'bootstrap/change_password', error => [ "New password length is less than 6!" ]) if (length($new_password) < 6);
@@ -4521,8 +4638,13 @@ sub screenshot_machine {
 
     my $domain = _search_requested_machine($c);
 
+    my $force = 0;
+    $force = 1 if $USER->is_operator;
+
     my $req = Ravada::Request->screenshot(
         id_domain => $domain->id
+        ,uid => $USER->id
+        ,_force => $force
     );
     $c->render(json => { request => $req->id});
 }
@@ -4530,11 +4652,14 @@ sub screenshot_machine {
 sub copy_screenshot {
     my $c = shift;
     return login($c)    if !_logged_in($c);
+    return access_denied_json($c) if !$USER->is_admin;
 
     my $domain = _search_requested_machine($c);
 
     my $req = Ravada::Request->copy_screenshot (
         id_domain => $domain->id
+        ,uid => $USER->id
+        ,_force => 1
     );
     $c->render(json => { request => $req->id});
 }
@@ -4750,11 +4875,11 @@ sub machine_change_hardware($c, $id, $options) {
 
     my $info = $domain->get_info();
     my %change_mem;
-    if (int($info->{max_mem}/1024) != $max_mem && $USER->is_admin) {
+    if (defined $max_mem && int($info->{max_mem}/1024) != $max_mem && $USER->is_admin) {
         $change_mem{max_mem} = $max_mem*1024;
     }
 
-    if (int($info->{memory}/1024) != $memory) {
+    if (defined $memory && int($info->{memory}/1024) != $memory) {
         $change_mem{memory} = $memory*1024;
     }
     Ravada::Request->change_hardware(
@@ -4769,11 +4894,12 @@ sub machine_change_hardware($c, $id, $options) {
 
     my %change_cpu;
 
-    if ($info->{max_virt_cpu} != $max_virt_cpu && $USER->is_admin) {
+    if (defined $max_virt_cpu 
+            && $info->{max_virt_cpu} != $max_virt_cpu && $USER->is_admin) {
         $change_cpu{max_virt_cpu} = $max_virt_cpu;
     }
 
-    if ($info->{n_virt_cpu} != $n_virt_cpu) {
+    if (defined $n_virt_cpu && $info->{n_virt_cpu} != $n_virt_cpu) {
         $change_cpu{n_virt_cpu} = $n_virt_cpu;
     }
     Ravada::Request->change_hardware(
@@ -4828,7 +4954,6 @@ sub machine_set_options($c, $id, $options) {
         machine_set_value($c, $id, $key => $options->{$key}, $value_text);
     }
 
-    return $c->render(json => $change);
 }
 
 sub _privileged_machine_field($field) {
@@ -5021,6 +5146,7 @@ sub _insert_fields($c, $table, $arg) {
 
 sub _update_fields($c, $table, $arg) {
     my $id = delete $arg->{id};
+    delete $arg->{bases};
     return _insert_fields($c, $table, $arg) if !$id;
 
     my $sth = $RAVADA->_dbh->prepare("SELECT * FROM $table WHERE id=?");

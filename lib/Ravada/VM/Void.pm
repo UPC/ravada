@@ -582,21 +582,7 @@ sub _search_volume_path_re_remote($self,$pattern) {
 }
 
 sub remove_file($self, @files) {
-    my %done;
-    for my $file (@files) {
-        next if $done{$file};
-
-        die "Error: unsecure filename '$file'"
-        if $file =~ m{[`'\(\)\[]};
-
-        if ($self->is_local) {
-            next if ! -e $file;
-            unlink $file or die "$! $file";
-        } else {
-            $self->run_command("/bin/rm", $file);
-        }
-
-    }
+    $self->_remove_file_os(@files);
 }
 
 sub import_domain($self, $name, $user, $backing_file) {
@@ -756,7 +742,7 @@ sub _iso_name($self, $iso, $request=undef, $verbose=0) {
     return '' if !$iso->{has_cd};
 
     my $name = ($iso->{device} or $iso->{rename_file} or $iso->{file_re});
-    confess Dumper($iso) if !$name;
+    return if !$name;
     $name =~ s/(.*)\.\*(.*)/$1$2/;
     $name =~ s/(.*)\.\+(.*)/$1.$2/;
     $name =~ s/(.*)\[\\d.*?\]\+(.*)/${1}1$2/;
@@ -764,12 +750,6 @@ sub _iso_name($self, $iso, $request=undef, $verbose=0) {
     confess $name if $name =~ m{[*+\\]};
 
     $name = $self->_storage_path($self->default_storage_pool_name)."/".$name unless $name =~ m{^/};
-
-    my $sth = $$CONNECTOR->dbh->prepare(
-        "UPDATE iso_images "
-        ." SET device=? WHERE id=?"
-    );
-    $sth->execute($name, $iso->{id});
 
     open my $out,">",$name or die "$! $name";
     print $out "...\n";
@@ -836,8 +816,6 @@ sub active_storage_pool($self, $name, $value) {
 sub get_cpu_model_names($self,$arch='x86_64') {
     return qw(486 qemu32 qemu64);
 }
-
-sub has_networking { return 1 };
 
 sub _check_duplicated_network($self, $field, $data) {
     my @networks = $self->list_virtual_networks();

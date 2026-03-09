@@ -14,7 +14,7 @@ has 'clone_base_after_prepare' => (
     ,default => sub { 0 }
 );
 
-sub prepare_base($self) {
+sub prepare_base($self, $req=undef) {
     $self->clone_base_after_prepare(0);
     return $self->file;
 }
