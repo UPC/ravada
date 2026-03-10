@@ -71,6 +71,10 @@ sub _convert($self, $dst, $req=undef) {
 
 }
 
+sub copy($self, @args) {
+    return $self->_copy(@args);
+}
+
 sub _copy($self, $dst, $mode=undef) {
     my $src = $self->file;
 
@@ -104,7 +108,7 @@ sub _copy($self, $dst, $mode=undef) {
     $doc->findnodes('/volume/key/text()')->[0]->setData($dst);
     $doc->findnodes('/volume/target/path/text()')->[0]->setData( $dst);
     $doc->findnodes('/volume/target/permissions/mode/text()')->[0]
-        ->setData( $mode ) if $mode;
+        ->setData( sprintf("%o",$mode) ) if $mode;
 
     my $vol_dst;
     my $err;
@@ -123,17 +127,6 @@ sub _copy($self, $dst, $mode=undef) {
     _refresh_sp($self->vm,$vol_dst);
 
     return $vol_dst;
-}
-
-sub _copy_sys($self, $dst, $mode=undef) {
-    my $file = $self->file;
-    if ($self->vm) {
-        my ($out, $err) = $self->vm->run_command("cp",$file,$dst);
-        die $err if $err;
-    } else {
-        copy($file,$dst);
-    }
-    $self->_chmod($mode, $dst) if $mode;
 }
 
 sub clone($self, $file_clone) {
@@ -319,6 +312,11 @@ sub compact($self, $keep_backup=1) {
     if !$keep_backup;
 
     return int(100*($du_backup-$du)/$du_backup)." % compacted. ";
+}
+
+sub delete($self) {
+    my $vol = $self->vm->search_volume($self->file);
+    $vol->delete();
 }
 
 1;

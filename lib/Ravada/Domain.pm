@@ -3165,15 +3165,18 @@ sub _do_remove_base($self, $user) {
         my $backing_file = $vol->backing_file;
         next if !$backing_file;
         #        confess "Error: no backing file for ".$vol->file if !$backing_file;
+        my $file = $vol->file;
+        $vol->block_commit();
+        $vol->delete();
+
         my $vol_backing = Ravada::Volume->new(
             file => $backing_file
             ,domain => $self
         );
-        $vol_backing->_copy($vol->file, 0600);
-        $vol_backing->remove();
+        $vol_backing->copy($file, 0o600);
+        $vol_backing->delete();
 
     }
-
     for my $file ($self->list_files_base) {
         next if $file =~ /\.iso$/i;
         next if ! $self->_vm->file_exists($file);
@@ -3202,7 +3205,6 @@ sub _post_remove_base {
     $self->_remove_base_db(@_);
     $self->_post_remove_base_domain();
     $self->_vm->refresh_storage();
-
 }
 
 sub _post_spinoff($self) {

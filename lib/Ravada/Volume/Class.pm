@@ -35,7 +35,7 @@ sub _post_prepare_base($self, $base_file) {
     return $base_file if ! $self->clone_base_after_prepare;
     return $base_file if !$self->vm->file_exists($base_file);
 
-    $self->_chmod(oct(400),$base_file);
+    $self->_chmod(0o400,$base_file);
 
     $self->vm->refresh_storage_pools();
     $self->vm->remove_file($self->file);
@@ -134,5 +134,17 @@ sub backup($self) {
     }
     return $vol_backup;
 }
+
+sub _copy_sys($self, $dst, $mode=undef) {
+    my $file = $self->file;
+    if ($self->vm) {
+        my ($out, $err) = $self->vm->run_command("cp",$file,$dst);
+        die $err if $err;
+    } else {
+        copy($file,$dst);
+    }
+    $self->_chmod($mode, $dst) if $mode;
+}
+
 
 1;
