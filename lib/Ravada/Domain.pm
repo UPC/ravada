@@ -1314,7 +1314,7 @@ sub _check_tmp_volumes($self) {
             , is_base => 1
             , vm => $vm
         );
-        $vol_base->clone(file => $vol->file);
+        $vol_base->clone(file => $vol->file, domain => $self);
     }
 }
 
@@ -3166,13 +3166,16 @@ sub _do_remove_base($self, $user) {
         next if !$backing_file;
         #        confess "Error: no backing file for ".$vol->file if !$backing_file;
         my $file = $vol->file;
-        $vol->block_commit();
-        $vol->delete();
-
         my $vol_backing = Ravada::Volume->new(
             file => $backing_file
             ,domain => $self
         );
+
+        $vol_backing->_chmod(0o700);
+        $vol->block_commit();
+        $vol->delete();
+
+
         $vol_backing->copy($file, 0o600);
         $vol_backing->delete();
 
@@ -3428,6 +3431,11 @@ sub _copy_volumes($self, $copy) {
         my $dst = $copy_volumes{$target};
         $self->_vm->remove_file($dst) if $self->_vm->file_exists($dst);
         $self->_vm->copy_file($volumes{$target}, $copy_volumes{$target});
+        my $vol = Ravada::Volume->new(
+            vm => $self->_vm
+            ,file => $dst
+        );
+        $vol->_chmod(0o600)
     }
 }
 

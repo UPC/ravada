@@ -49,6 +49,8 @@ sub test_create_domain {
         .($domain->name or '<UNDEF>')
         ." for VM $vm_name"
     );
+    $domain->add_volume(type => 'swap', size => 1024*1024, format => 'qcow2');
+    $domain->add_volume(type => 'data', size => 1024*1024, format => 'qcow2');
 
     return $domain;
 }
@@ -1108,6 +1110,7 @@ sub test_remove_base_level($vm_name) {
     my @clones;
     for ( 1 .. 3 ) {
         my $clone = $base->clone(name => new_domain_name, user => user_admin);
+        _check_volume_mode_domain($clone);
         push @clones,($clone);
     }
 
@@ -1121,6 +1124,7 @@ sub test_remove_base_level($vm_name) {
     for ( 1 .. 3 ) {
         for my $base2 ($base, @clones ) {
             my $clone = $base2->clone(name => new_domain_name, user => user_admin);
+            _check_volume_mode_domain($clone);
             push @clones2,($clone);
         }
     }
@@ -1181,7 +1185,7 @@ sub _do_test_remove_base($domain, $base=undef) {
     ok(!$domain->is_base,"Domain ".$domain->name." should be base") or return;
 
     for my $file (@files) {
-        die $file if $file !~ m{^[0-9a-z_/\-\.]+$};
+        die $file if $file !~ m{^[0-9a-zA-Z_/\-\.]+$};
         if ($file =~ /\.iso$/) {
             ok(-e $file,"Expecting file base '$file' removed" );
         } else {
@@ -1199,8 +1203,15 @@ sub _do_test_remove_base($domain, $base=undef) {
     }
 }
 
+sub _check_volume_mode_domain($domain) {
+    for my $file ( $domain->list_volumes) {
+        _check_volume_mode($file);
+    }
+}
+
 sub _check_volume_mode($file) {
     my $mode = stat($file)->mode;
+    my $fail = 0;
     if ($file =~ /\.iso$/) {
         ok($mode & S_IRUSR); # user can read
 
@@ -1210,11 +1221,12 @@ sub _check_volume_mode($file) {
         ok($mode & S_IRUSR); # User can read
         ok($mode & S_IWUSR); # User can write
 
-        ok(!($mode & S_IRGRP));   # Group can not read
-        ok(!($mode & S_IROTH));  # Others can not read
-        ok(!($mode & S_IWGRP));   # Group can not write
-        ok(!($mode & S_IWOTH));  # Others can not write
+        ok(!($mode & S_IRGRP)) || $fail++;   # Group can not read
+        ok(!($mode & S_IROTH)) || $fail++;  # Others can not read
+        ok(!($mode & S_IWGRP)) || $fail++;   # Group can not write
+        ok(!($mode & S_IWOTH)) || $fail++;  # Others can not write
     }
+    confess $file if $fail;
 
 }
 

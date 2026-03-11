@@ -250,7 +250,7 @@ sub spinoff($self) {
 sub block_commit($self) {
     my @cmd = ($QEMU_IMG,'commit','-q','-d');
     my ($out, $err) = $self->vm->run_command(@cmd, $self->file);
-    warn $err   if $err;
+    die $err   if $err;
 }
 
 sub _qemu_info($self, $field=undef) {
@@ -316,7 +316,11 @@ sub compact($self, $keep_backup=1) {
 
 sub delete($self) {
     my $vol = $self->vm->search_volume($self->file);
-    $vol->delete();
+    if ($vol) {
+        $vol->delete();
+    } else {
+        $self->vm->remove_file($self->file);
+    }
 }
 
 1;

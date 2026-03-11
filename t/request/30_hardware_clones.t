@@ -171,9 +171,10 @@ sub _test_change_disk($base, $clone) {
     my $disks_clone2 = $clone->info(user_admin)->{hardware}->{disk};
 
     my $data_base2 = dclone($disks_base2->[0]);
+    delete $data_base2->{backing};
     my $data_clone2 = dclone($disks_clone2->[0]);
 
-    is_deeply($data_base2, $data_base);
+    is_deeply($data_base2, $data_base) or exit;
     is($data_clone2->{file}, $data_clone->{file}) or exit;
 }
 

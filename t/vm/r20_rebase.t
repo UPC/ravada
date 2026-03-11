@@ -250,7 +250,7 @@ sub test_prepare_remove($vm) {
 
 sub test_rebase_clone($vm) {
     my $base0 = create_domain($vm);
-    $base0->add_volume( format => 'qcow2' );
+    $base0->add_volume( format => 'qcow2', size => $VOL_SIZE );
 
     Ravada::Request->prepare_base(
         id_domain => $base0->id

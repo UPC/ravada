@@ -91,6 +91,7 @@ sub _new_clone_filename($self,$name0) {
 sub _around_clone($orig, $self, %args) {
     my $name = delete $args{name};
     my $file_clone = ( delete $args{file} or $self->_new_clone_filename($name));
+    my $domain = (delete $args{domain} or $self->domain);
 
     confess "Error: unkonwn args ".Dumper(\%args) if keys %args;
     confess "Error: empty clone filename" if !defined $file_clone || !length($file_clone);
@@ -102,12 +103,18 @@ sub _around_clone($orig, $self, %args) {
         if $self->domain;
 
         confess "Error: file $file_clone already exists in domain $id_domain_file.$we"
-        if !$self->domain || $self->domain->id != $id_domain_file;
+        if !$domain || $domain->id != $id_domain_file;
     }
 
+    my @domain =();
+    if ($domain) {
+        push @domain , ( domain => $domain );
+    } else {
+        push @domain ,( vm => $self->vm )
+    }
     my $ret = $self->new(
         file => $orig->($self, $file_clone)
-        ,vm => $self->vm
+        ,@domain
     );
     $self->_chmod(oct(600), $file_clone);
 
