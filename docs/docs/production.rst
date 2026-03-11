@@ -85,8 +85,6 @@ You should at least enable systemd time syncronizer or install another tool like
 
 .. prompt:: bash $
 
-    .. prompt:: bash $
-
     sudo apt install systemd-timesyncd
     sudo systemctl enable systemd-timesyncd
     sudo systemctl restart systemd-timesyncd
@@ -107,7 +105,7 @@ Follow one of these guides to configure `Apache <apache.html>`__
 or `nginx <nginx_as_reverse_proxy.html>`__
 as a frontend to Ravada with SSL support.
 
-Firewall
+Firewall(Opcional)
 --------
 
 Ravada uses ``iptables`` to restrict the access to the virtual machines.
