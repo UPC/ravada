@@ -70,7 +70,7 @@ sub test_files_base {
     my @files = $domain->list_files_base();
 
     ok(scalar @files == $n_expected,"Expecting $n_expected files base , got "
-            .scalar @files);
+            .scalar @files) or confess;
     return;
 }
 
@@ -778,7 +778,7 @@ sub _test_compare_list($display1, $display2, $domain=undef) {
 sub test_prepare_base {
     my $vm_name = shift;
     my $domain = shift;
-    my $n_volumes = (shift or 1);
+    my $n_volumes = (shift or 3);
 
     test_files_base($domain,0);
     $domain->shutdown_now($USER)    if $domain->is_active();
@@ -1959,6 +1959,8 @@ for my $vm_name ( vm_names() ) {
             $BASE = create_domain($vm);
         }
         flush_rules() if !$<;
+        my $domaina = test_create_domain($vm_name);
+        test_prepare_base($vm_name, $domaina);
 
         test_remove_base($vm_name);
         test_remove_base_level($vm_name);# if $ENV{TEST_LONG};
@@ -2019,13 +2021,13 @@ for my $vm_name ( vm_names() ) {
         $domain = undef;
 
         my $domain2 = test_create_domain_swap($vm_name);
-        test_prepare_base($vm_name, $domain2 , 2);
+        test_prepare_base($vm_name, $domain2 , 4);
         $domain2->remove( user_admin );
 
         $domain2 = test_create_domain_swap($vm_name);
         $domain2->start( user_admin );
         $domain2->shutdown_now( user_admin );
-        test_prepare_base($vm_name, $domain2 , 2);
+        test_prepare_base($vm_name, $domain2 , 4);
         $domain2->remove( user_admin );
 
         NEXT:
