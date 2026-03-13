@@ -1042,7 +1042,7 @@ sub backup($rvd_back) {
 
 sub _wait_request(@reqs) {
     my $t0 = time;
-    for (;;) {
+    for ( 0 .. $TIME_CONNECTION ) {
         last if !@reqs;
         my $pending = 0;
         my @reqs2;
