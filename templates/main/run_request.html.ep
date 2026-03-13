@@ -110,9 +110,9 @@
             <table border="0">
                 <tr ng-repeat="port in domain.ports">
                     <td align="right">
-                    <span ng-show="!port.is_active" class="badge badge-danger"><%=l 'down' %></span>
-                    <span ng-show="port.is_active" class="badge badge-info"><%=l 'up' %>
-                    </span>
+                    <span ng-show="!port.is_active || domain.ports_exposed == 0" class="badge badge-danger"><%=l 'down' %></span>
+                    <span ng-show="port.is_active && domain.ports_exposed == 1" class="badge badge-light border border-info"><%=l 'starting' %></span>
+                    <span ng-show="port.is_active && domain.ports_exposed == 2" class="badge badge-info"><%=l 'up' %></span>
                     </td>
                     <td align="left">
                     <b>{{port.name}}</b>

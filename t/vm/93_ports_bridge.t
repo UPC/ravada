@@ -84,6 +84,8 @@ sub test_bridge($vm) {
     wait_request(debug => 0);
 
     my $internal_ip = _wait_ip($domain);
+    $domain->ip;
+    wait_request(debug => 0);
 
     my $ip_info = $domain->ip_info();
     ok($ip_info->{type} eq 'bridge');
