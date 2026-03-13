@@ -192,10 +192,6 @@ sub test_queue_move($vm) {
 
     remove_domain($domain);
     $vm->remove_storage_pool($sp);
-<<<<<<< HEAD
-=======
-
->>>>>>> develop
 }
 
 sub test_queue_change_hw($vm) {
