@@ -513,4 +513,6 @@ sub xml_description($self) {
         return $self->_data_extra('xml');
 }
 
+sub can_hybernate { 1 };
+
 1;

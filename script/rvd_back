@@ -767,13 +767,6 @@ sub start_domain {
         if !$found;
 }
 
-sub _client_status($domain_f) {
-    my $domain = Ravada::Domain->open($domain_f->id) or return '';
-    my $status = $domain->client_status(1);
-    return 'disconnected' if!defined $status || $status eq '';
-    return $status;
-}
-
 sub shutdown_domain(@domains) {
 
     my $down = 0;
@@ -815,27 +808,29 @@ sub shutdown_domain(@domains) {
 }
 
 sub _verify_connection {
-    my $domain_f = shift;
-    my $domain = Ravada::Domain->open($domain_f->id);
+
+    my $domain = shift;
+
     print "Verifying connection for ".$domain->name
-                        ." ".($domain->remote_ip or '')." "
-        if $VERBOSE;
-    for ( 1 .. $TIME_CONNECTION ) {
-        my $status = 'disconnected';
-        eval {
-            $status = $domain->client_status(1);
-        };
-        warn "Error checking ".$domain_f->name." $@" if $@;
-        if ( $status && $status ne 'disconnected' ) {
-            print "\n\t".$status." ".$domain->remote_ip
-                            ." Shutdown dismissed.\n";
-            return 1;
-        }
-        print "." if $VERBOSE && !($_ % 5);
-        sleep 1;
-     }
-     print "\n" if $VERBOSE;
+    ." ".($domain->remote_ip or '')." "
+    if $VERBOSE;
+
+    my $req = Ravada::Request->refresh_machine(
+        uid => Ravada::Utils::user_daemon->id
+        ,id_domain => $domain->id
+    );
+    _wait_request($req);
+
+    $domain = Ravada::Front::Domain->open($domain->id);
+    my $status = $domain->client_status();
+    if ( $status && $status ne 'disconnected' ) {
+        print "\n\t".$status." ".$domain->remote_ip
+        ." Shutdown dismissed.\n" if $VERBOSE;
+        return 1;
+    }
+    print "\n" if $VERBOSE;
     return 0;
+
 }
 
 sub _dump_ldap_entry($ldap_entry) {
@@ -1047,18 +1042,18 @@ sub backup($rvd_back) {
 
 sub _wait_request(@reqs) {
     my $t0 = time;
-    for (;;) {
+    for ( 0 .. $TIME_CONNECTION ) {
         last if !@reqs;
         my $pending = 0;
         my @reqs2;
         for my $req (@reqs) {
             if ($req->status eq 'done') {
-                print "Finished ".$req->command;
+                print "Finished ".$req->command if ($req->error || $req->output);
+
                 if ($req->error) {
                     warn $req->error."\n";
                 }
                 print "\n\t".$req->output if $req->output;
-                print "\n";
             } else {
                 push @reqs2,($req);
             }
@@ -1120,7 +1115,8 @@ sub _list_domains($rvd_back
     my %name = map { $_ => 1 } @ARGV ;
 
     my @domains;
-    for my $domain ($rvd_back->list_domains) {
+    for my $domain0 ($rvd_back->list_domains_data) {
+        my $domain = Ravada::Front::Domain->open($domain0->{id});
 
         next if $domain->is_base;
 
@@ -1130,11 +1126,12 @@ sub _list_domains($rvd_back
             || ( $hibernated && $domain->is_hibernated )
             || ( $disconnected && $domain->is_active
                 && !$domain->autostart
-                && _client_status($domain) eq 'disconnected')
+                && $domain->client_status() eq 'disconnected')
         ) {
 
             delete $name{$domain->name};
-            if ( $disconnected && $domain->client_status() eq 'disconnected') {
+            if ( $disconnected ) {
+                next if $domain->client_status() ne 'disconnected';
                 next if _verify_connection($domain);
             }
             next if $all && $HIBERNATE_DOMAIN && !$domain->is_active;
@@ -1146,7 +1143,7 @@ sub _list_domains($rvd_back
                 next;
             }
 
-            if ($SHUTDOWN_DOMAIN && $domain->status eq 'down' && $VERBOSE) {
+            if ($SHUTDOWN_DOMAIN && !$domain->is_active && $VERBOSE) {
                 print $domain->name." already down.\n";
                 next;
             }
