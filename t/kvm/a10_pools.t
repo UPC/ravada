@@ -23,7 +23,7 @@ my $USER = create_user("foo","bar", 1);
 
 #########################################################################
 
-sub create_pool($vm_name, $dir="/var/tmp/".new_pool_name()) {
+sub create_pool($vm_name, $dir="/var/tmp/$</".new_pool_name()) {
 
     my $vm = rvd_back->search_vm($vm_name) or return;
 

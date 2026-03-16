@@ -63,7 +63,10 @@ sub test_hybernate_clone {
 sub test_hybernate_clone_swap {
     my ($vm_name, $domain) = @_;
 
+    $domain->remove_base(user_admin);
+
     $domain->add_volume_swap( size => 1024*512);
+    $domain->add_volume_swap( size => 1024*512, format => 'qcow2');
     test_hybernate_clone($vm_name,$domain);
 }
 

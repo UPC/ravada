@@ -883,6 +883,9 @@ sub _around_add_volume {
         if scalar @_ % 2;
     my %args = @_;
 
+    die "Error: volumes can not be added to bases.\n"
+    if $self->is_base();
+
     my $file = ($args{file} or $args{path});
     confess if $args{id_iso} && !$file;
     my $name = $args{name};

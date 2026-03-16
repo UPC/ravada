@@ -251,11 +251,11 @@ sub _add_internal_network($self) {
     for my $net (split /\n/,$out) {
         next if $net =~ /dev virbr/;
         my ($address) = $net =~ m{(^[\d\.]+/\d+)};
-        next if !$address || $done{address}++;
+        next if !$address || $done{$address}++;
         eval {
             $sth->execute("internal$n",$address, ++$n+1);
         };
-        warn $@ if $@;
+        warn $@ if $@ && $@ !~ /UNIQUE constraint/;
 
     }
 }

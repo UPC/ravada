@@ -142,7 +142,9 @@ sub create_domain {
                 ,is_base => 1
                 ,vm => $domain_base->_vm
             );
-            my $vol_clone = $vol_base->clone(name => "$args{name}-$target");
+            my $vol_clone = $vol_base->clone(name => "$args{name}-$target"
+                ."-".Ravada::Utils::random_name()
+            );
             $domain->add_volume(name => $vol_clone->name
                               , target => $target
                                 , file => $vol_clone->file
