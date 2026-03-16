@@ -55,6 +55,15 @@ sub test_create_domain {
     return $domain;
 }
 
+sub _remove_base($domain) {
+    return if !$domain->is_base;
+    for my $clone0 ( $domain->clones ) {
+        my $clone = Ravada::Domain->open($clone0->{id});
+        $clone->remove(user_admin);
+    }
+    $domain->remove_base($USER);
+}
+
 sub test_add_volume {
     my $vm = shift;
     my $domain = shift;
@@ -62,6 +71,7 @@ sub test_add_volume {
     my $swap = shift;
 
     $domain->shutdown_now($USER) if $domain->is_active;
+    _remove_base($domain) if $domain->is_base;
 
     my @volumes = $domain->list_volumes();
 
