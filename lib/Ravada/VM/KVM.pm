@@ -1280,7 +1280,7 @@ sub _domain_create_from_base {
         , id_vm => $self->id
     );
     $domain->_set_spice_password($spice_password);
-    $domain->_set_volumes_backing_store();
+    $domain->_set_volumes_backing_store() if !$volatile;
     $domain->xml_description();
     return $domain;
 }
