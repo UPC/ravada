@@ -85,7 +85,7 @@ Add a new user for the ravada web. Use ``rvd_back`` to create it.
 
 It is possible to change the password in case you either do not remember or simply want to change it.
 
-When asked for the name of the user introduce the one you want to change its password.
+When prompted for the username, enter the name of the user whose password you want to change.
 
 .. prompt:: bash $
 
