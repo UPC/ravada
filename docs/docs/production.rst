@@ -106,7 +106,7 @@ or `nginx <nginx_as_reverse_proxy.html>`__
 as a frontend to Ravada with SSL support.
 
 Firewall (Optional)
---------
+-------------------
 
 Ravada uses ``iptables`` to restrict the access to the virtual machines.
 These iptables rules grants acess to the admin workstation to all the
