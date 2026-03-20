@@ -12,7 +12,7 @@ use feature qw(signatures);
 
 our $QEMU_IMG = "/usr/bin/qemu-img";
 
-sub prepare_base($self) {
+sub prepare_base($self, $uid=undef) {
     my $base_file = $self->base_filename();
 
     my $data = $self->_load();

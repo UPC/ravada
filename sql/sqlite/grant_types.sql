@@ -5,5 +5,6 @@ CREATE TABLE `grant_types` (
 ,  `enabled` integer default NULL
 ,  `is_int` integer default 0
 ,  `default_admin` integer default 1
+,  `default_user` integer default 0
 ,    UNIQUE(`name`)
 );

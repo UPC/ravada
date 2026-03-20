@@ -139,7 +139,7 @@ sub list_volumes($self, $attribute=undef, $value=undef)
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT * FROM volumes "
         ." WHERE id_domain=?"
-        ." ORDER BY id"
+        ." ORDER BY n_order"
     );
     $sth->execute($self->id);
     my @volumes;

@@ -230,7 +230,7 @@ ravadaApp.directive("solShowMachine", swMach)
       */
       $scope.iso_download=function(iso) {
             iso.downloading=1;
-            $http.get('/iso/download/'+iso.id+'.json').then(function() {
+            $http.get('/iso/download/'+$scope.node.id+"/"+iso.id+'.json').then(function() {
             });
       };
       $scope.name_duplicated = false;
@@ -288,7 +288,7 @@ ravadaApp.directive("solShowMachine", swMach)
             && $scope.id_iso.options['machine']) {
             var types = $scope.machine_types[$scope.backend][$scope.id_iso.arch];
             var option = $scope.id_iso.options['machine'];
-            if (typeof(types) != undefined) {
+            if (types && typeof(types) != undefined ) {
                 for (var i=0; i<types.length
                     ;i++) {
                     var current = types[i];

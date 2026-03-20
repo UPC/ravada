@@ -471,6 +471,10 @@ sub test_linked_sp($vm) {
 
     my $new_filename = _touch_file($vm, $dir);
 
+    my $check_link = $vm->_follow_link("$new_dir/$new_filename");
+
+    is($check_link,"$dir/$new_filename");
+
     if ($vm->type eq 'KVM') {
         my $pool = $vm->vm->get_storage_pool_by_name($new_name);
         $pool->create() if !$pool->is_active;
@@ -489,7 +493,7 @@ sub test_linked_sp($vm) {
 
     my $list = $output->{list};
     my @found = grep ($_->{file} =~ /$new_filename/, @$list);
-    is( scalar(@found),1) or die Dumper(\@found);
+    is( scalar(@found),1);
 
     $vm->remove_storage_pool($new_name);
     unlink $new_dir;

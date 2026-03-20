@@ -21,7 +21,6 @@ WriteMakefile(
     ,'Image::Magick' => 0
       ,'MooseX::Types::NetAddr::IP' => 0
 	,'IO::Interface' => 0
-	,'Sys::Statistics::Linux' => 0
     ,'Test::Pod::Coverage' => 0
     ,'Locale::Maketext::Lexicon' => 0
     ,'Mojolicious::Plugin::I18N' => 0

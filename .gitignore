@@ -21,3 +21,4 @@ t/vm/b10*
 public/fallback
 .cache/
 public/img/version-*svg
+.vscode

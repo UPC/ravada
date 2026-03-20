@@ -15,7 +15,7 @@ requires 'spinoff';
 around 'prepare_base' => \&_around_prepare_base;
 around 'clone' => \&_around_clone;
 
-sub _around_prepare_base($orig, $self) {
+sub _around_prepare_base($orig, $self, $req=undef) {
     confess "Error: unknown VM " if !defined $self->vm;
 
     confess "Error: missing file ".$self->domain->name if !$self->file;
@@ -24,10 +24,18 @@ sub _around_prepare_base($orig, $self) {
     my $storage_pool = ($self->vm->base_storage_pool or $self->vm->default_storage_pool_name);
     $self->vm->_check_free_disk($self->capacity, $storage_pool);
 
-    my $base_file = $orig->($self);
-    confess "No base file returned by ".ref($self)."->prepare_base" if !$base_file;
+    my $base_file = $orig->($self,$req);
+    return if !$base_file;
+
+        $self->_post_prepare_base($base_file);
+}
+
+sub _post_prepare_base($self, $base_file) {
 
     return $base_file if ! $self->clone_base_after_prepare;
+    return $base_file if !$self->vm->file_exists($base_file);
+
+    $self->_chmod(oct(400),$base_file);
 
     $self->vm->refresh_storage_pools();
     $self->vm->remove_file($self->file);
@@ -44,6 +52,21 @@ sub _around_prepare_base($orig, $self) {
 
     return $base_file;
 }
+
+sub _chmod($self, $mode, $file=$self->file) {
+
+    my $vm = $self->vm;
+
+    if ($vm && !$vm->is_local) {
+        my $mode_o = sprintf("%o",$mode);
+        my ($out,$err) = $vm->run_command("chmod",$mode_o,$file);
+        die $err if $err;
+    } else {
+        confess if !-e $file;
+        chmod $mode,$file or die "$! chmod $mode $file";
+    }
+}
+
 
 sub _domain_file($self, $file) {
     my $sth = $self->_dbh->prepare("SELECT id_domain FROM volumes WHERE file=? "
@@ -82,10 +105,13 @@ sub _around_clone($orig, $self, %args) {
         if !$self->domain || $self->domain->id != $id_domain_file;
     }
 
-    return $self->new(
+    my $ret = $self->new(
         file => $orig->($self, $file_clone)
         ,vm => $self->vm
     );
+    $self->_chmod(oct(600), $file_clone);
+
+    return $ret;
 }
 
 sub copy_file($self, $src, $dst) {

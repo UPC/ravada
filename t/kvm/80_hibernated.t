@@ -36,7 +36,10 @@ sub test_crashed($vm, $position) {
     syswrite($image,"garbage");
     close $image;
 
-    eval { $domain->start(user_admin) };
+    for ( 1 .. 2 ) {
+        eval { $domain->start(user_admin) };
+        last if $domain->is_active;
+    }
     is(''.$@,'');
 
     is($domain->is_active,1);

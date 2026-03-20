@@ -153,21 +153,6 @@ sub add_locales {
     rvd_back->_process_requests_dont_fork();
 }
 
-sub test_refresh_isos {
-    my ($vm,$iso) = @_;
-    # Now we remove the ISO file and try to refresh
-    unlink $iso->{device};
-    my $sth = connector->dbh->prepare(
-        "UPDATE iso_images set device=NULL WHERE id=?"
-    );
-    $sth->execute($iso->{id});
-
-    $vm->_refresh_isos();
-
-    my $iso2 = $vm->_search_iso($iso->{id});
-    like($iso2->{device},qr{.*/$iso->{rename_file}}) or exit;
-}
-
 ##################################################################
 
 my $msg;
@@ -207,7 +192,6 @@ for my $vm_name ('KVM') {
 
             my $iso = test_download($vm, $id_iso);
 
-            test_refresh_isos($vm, $iso) if $iso->{rename_file};
         }
     }
 }

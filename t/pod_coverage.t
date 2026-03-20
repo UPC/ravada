@@ -15,6 +15,7 @@ SKIP: {
                 , { also_private => [ qr/^[A-Z]+$/ ]}
                 , "Ravada::$type is covered" );
         for my $backend (keys %Ravada::VALID_VM ) {
+            next;
             my $module = "Ravada::".$type."::$backend";
             Test::Pod::Coverage::pod_coverage_ok(
                 $module

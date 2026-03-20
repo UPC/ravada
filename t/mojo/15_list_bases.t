@@ -116,6 +116,7 @@ sub test_list_machines_group($vm_name) {
     $base->grant_access( group => $group->name, type => 'group.local');
 
     mojo_login($t, $user->name,$$);
+    is($user->can_clone(),1);
 
     test_list_fail($base);
 

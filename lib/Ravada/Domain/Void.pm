@@ -576,6 +576,7 @@ sub _create_volume($self, $file, $format, $data=undef) {
     } else {
         confess "Error: unknown format '$format'";
     }
+    $self->_vm->run_command("chmod",'0600',$file);
 }
 
 sub remove_volume($self, $file) {
