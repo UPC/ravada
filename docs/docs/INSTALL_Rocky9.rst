@@ -186,7 +186,7 @@ When asked if this user is admin answer *yes*.
     
 It is possible to change the password in case you either do not remember or simply want to change it.
 
-When asked for the name of the user introduce the one you want to change its password.
+When prompted for the username, enter the user whose password you want to change.
 
 .. prompt:: bash $
 
