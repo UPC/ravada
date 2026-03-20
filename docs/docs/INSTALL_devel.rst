@@ -83,6 +83,14 @@ Add a new user for the ravada web. Use ``rvd_back`` to create it.
     cd ravada
     sudo PERL5LIB=./lib ./script/rvd_back --add-user admin
 
+It is possible to change the password in case you either do not remember or simply want to change it.
+
+When asked for the name of the user introduce the one you want to change its password.
+
+.. prompt:: bash $
+
+   sudo sudo rvd_back --change-password --change-password
+
 
 Firewall(Optional)
 ------------------
