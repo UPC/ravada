@@ -89,7 +89,7 @@ When asked for the name of the user introduce the one you want to change its pas
 
 .. prompt:: bash $
 
-   sudo sudo rvd_back --change-password
+   sudo PERL5LIB=./lib ./script/rvd_back --change-password
 
 
 Firewall(Optional)
