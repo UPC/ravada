@@ -107,7 +107,7 @@ When prompted for the username, enter the name of the user whose password you wa
 
 .. prompt:: bash $
 
-        sudo rvd_back --change-password
+     sudo /usr/sbin/rvd_back --change-password
 
 Client
 ------
