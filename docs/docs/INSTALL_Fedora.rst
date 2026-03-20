@@ -123,6 +123,14 @@ When asked if this user is admin answer *yes*.
 
     sudo /usr/sbin/rvd_back --add-user admin
 
+It is possible to change the password in case you either do not remember or simply want to change it.
+
+When prompted for the username, enter the name of the user whose password you want to change.
+
+.. prompt:: bash $
+
+   sudo rvd_back --change-password
+
 Firewall (Optional)
 -------------------
 
