@@ -105,7 +105,7 @@ Follow one of these guides to configure `Apache <apache.html>`__
 or `nginx <nginx_as_reverse_proxy.html>`__
 as a frontend to Ravada with SSL support.
 
-Firewall(Opcional)
+Firewall (Optional)
 --------
 
 Ravada uses ``iptables`` to restrict the access to the virtual machines.
