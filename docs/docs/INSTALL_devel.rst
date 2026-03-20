@@ -89,7 +89,7 @@ When prompted for the username, enter the name of the user whose password you wa
 
 .. prompt:: bash $
 
-   sudo PERL5LIB=./lib ./script/rvd_back --change-password
+    sudo PERL5LIB=./lib ./script/rvd_back --change-password
 
 
 Firewall(Optional)
