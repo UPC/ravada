@@ -1207,6 +1207,7 @@ sub _after_prepare_base {
     $self->autostart(0,$user);
 
     $self->_vm->refresh_storage_pools();
+    $self->after_prepare_base();
 };
 
 =pod

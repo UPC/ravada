@@ -67,7 +67,9 @@ sub test_display_conflict($vm) {
         my $display = $domain->info(user_admin)->{hardware}->{display};
         last if defined $display->[0]->{port}
             && defined $display->[1]->{port}
-            && $display->[0]->{port} ne $display->[1]->{port};
+            && $display->[0]->{port} ne $display->[1]->{port}
+            && $display->[0]->{is_active}
+            && $display->[1]->{is_active};
         Ravada::Request->refresh_machine(uid => user_admin->id
             ,id_domain=> $domain->id
             ,_force => 1
@@ -78,7 +80,7 @@ sub test_display_conflict($vm) {
     my $display = $domain->info(user_admin)->{hardware}->{display};
     isnt($display->[0]->{port}, $display->[1]->{port}) or die Dumper($display);
     is($display->[0]->{is_active},1);
-    is($display->[1]->{is_active},1);
+    is($display->[1]->{is_active},1) or die $domain->name;
 
     my $port3;
     for ( 1 .. 10 ) {

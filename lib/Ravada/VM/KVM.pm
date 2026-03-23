@@ -300,6 +300,7 @@ sub search_volume($self,$file,$refresh=0) {
         }
         eval { $vol = $pool->get_volume_by_name($name) };
         die $@ if $@ && $@ !~ /^libvirt error code: 50,/;
+        $vol = undef if $vol && $vol->get_path ne $file;
     }
 
     return $vol if $vol;
@@ -1231,6 +1232,7 @@ sub _domain_create_from_base {
 
     my $base = $args{base};
     $base = $self->_search_domain_by_id($args{id_base}) if $args{id_base};
+    $base->_set_volumes_backing_store();
 
     confess "Unknown base id: $args{id_base}" if !$base;
     my $volatile;

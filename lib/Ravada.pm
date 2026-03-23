@@ -907,6 +907,7 @@ sub _update_isos {
           ,xml_volume => 'jessie-volume.xml'
           ,min_disk_size => '0'
           ,has_cd => 0
+          ,arch => 'i686'
         }
        ,empty_64bits => {
           name => 'Empty Machine 64 bits'
@@ -1726,6 +1727,9 @@ sub _add_indexes_generic($self) {
         ,vm_which => [
             "index(id_vm)"
             ,"unique(id_vm,command,path)"
+        ]
+        ,file_base_images => [
+            "unique(id_domain,target)"
         ]
     );
     my $if_not_exists = '';

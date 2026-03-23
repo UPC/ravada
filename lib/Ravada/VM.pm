@@ -1161,10 +1161,12 @@ sub _get_name_by_id($id) {
 sub _clean($self) {
     my $name = $self->{_data}->{name};
     my $id = $self->{_data}->{id};
+    my $is_active = $self->{_data}->{is_active};
     delete $self->{_data};
     delete $self->{$FIELD_TIMEOUT};
     $self->{_data}->{name} = $name  if $name;
     $self->{_data}->{id} = $id      if $id;
+    $self->{_data}->{is_active} = $is_active;
     return $self;
 }
 

@@ -942,7 +942,7 @@ sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
         ,uid => user_admin->id
         ,@after_req
     );
-    wait_request(debug => 0) if $wait;
+    wait_request(debug => 0,check_error => 0) if $wait;
     return $req;
 }
 

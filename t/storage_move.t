@@ -243,6 +243,11 @@ sub test_move_volume($vm, $domain=undef) {
         ,format => "raw"
         ,size => 1024*10
     );
+    $domain->add_volume( name => new_domain_name().".qcow2"
+        ,format => "qcow2"
+        ,size => 1024*10
+    );
+
     my ($sp, $dir) = _create_storage_pool($vm);
 
     test_fail_nonvol($domain, $sp);
@@ -270,6 +275,7 @@ sub test_move_volume($vm, $domain=undef) {
         wait_request( debug => 0);
         is($req->status,'done');
         is($req->error, '');
+        ok(-e "$dir/$filename", "Expecting $dir/$filename") or exit;
         if ($vol =~ /iso$/) {
             ok( -e $vol) or die "Expecting $vol not removed";
         } else {
