@@ -706,7 +706,12 @@ sub create_storage_pool($self, $name, $dir, $vm=$self->vm) {
 }
 
 sub remove_storage_pool($self, $name) {
-    my $sp = $self->vm->get_storage_pool_by_name($name);
+    my $sp;
+    eval { $sp = $self->vm->get_storage_pool_by_name($name) };
+
+    return if $@ && ref($@) eq 'Sys::Virt::Error'
+        && $@->code == 49; # Missing storage pool
+    die $@ if $@;
     return if !$sp;
 
     $sp->destroy if $sp->is_active;
