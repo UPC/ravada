@@ -761,28 +761,6 @@ sub _update_isos {
             ,min_ram => 3
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
-        ,devuan_beowulf_amd64=> {
-            name =>'Devuan 10 Beowulf 64 bits'
-            ,description => 'Devuan Beowulf Desktop Live (amd64)'
-            ,arch => 'x86_64'
-            ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_beowulf/desktop-live/'
-            ,file_re => 'devuan_beowulf_.*_amd64_desktop-live.iso'
-            ,sha256_url => '$url/SHASUMS.txt'
-            ,xml => 'jessie-amd64.xml'
-            ,xml_volume => 'jessie-volume.xml'
-            ,min_disk_size => '10'
-        }
-        ,devuan_beowulf_i386=> {
-            name =>'Devuan 10 Beowulf 32 bits'
-            ,description => 'Devuan Beowulf Desktop Live (i386)'
-            ,arch => 'i686'
-            ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_beowulf/desktop-live/'
-            ,file_re => 'devuan_beowulf_.*_i386_desktop-live.iso'
-            ,sha256_url => '$url/SHASUMS.txt'
-            ,xml => 'jessie-i386.xml'
-            ,xml_volume => 'jessie-volume.xml'
-            ,min_disk_size => '10'
-        }
         ,devuan_daedalus_amd64=> {
             name =>'Devuan 12 Daedalus 64 bits'
             ,description => 'Devuan Daedalus Desktop Live (amd64)'

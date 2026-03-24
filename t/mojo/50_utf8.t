@@ -266,7 +266,7 @@ $t->ua->inactivity_timeout(900);
 $t->ua->connect_timeout(60);
 remove_old_domains_req(0); # 0=do not wait for them
 
-for my $vm_name (sort @{rvd_front->list_vm_types} ) {
+for my $vm_name (reverse sort @{rvd_front->list_vm_types} ) {
     test_utf8($t, $vm_name);
 }
 

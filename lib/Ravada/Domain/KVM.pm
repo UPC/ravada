@@ -2914,6 +2914,7 @@ sub _check_machine($self,$doc, $node) {
     my ($machine_bare) = $machine =~ /(.*)-\d+\.\d+$/;
     my %machine_types = $node->list_machine_types;
     my $new_machine = $machine;
+    return $new_machine if !defined $machine_bare;
 
     my $arch = $os_type->getAttribute('arch');
     for my $try ( @{$machine_types{$arch}} ) {
