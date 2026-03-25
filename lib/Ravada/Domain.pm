@@ -1026,7 +1026,11 @@ sub prepare_base($self, @args) {
     $self->_set_base_vm_db($self->_vm->id, 1);
 
     $self->_after_prepare_base($user, $request);
-    $self->is_base(0) if $pending_post;
+    if ( $pending_post ) {
+        $self->is_base(0) 
+    } else {
+        $self->is_base(1) 
+    }
 }
 
 =head2 pre_prepare_base
@@ -1106,6 +1110,7 @@ sub post_prepare_base($self) { }
 
 sub _after_post_prepare_base($self) {
     $self->after_prepare_base();
+    $self->is_base(1) 
 }
 
 sub _clone_volumes_base($self) {
@@ -2921,10 +2926,8 @@ sub is_base {
         $sth->execute($value, $self->id );
         $sth->finish;
 
-        if (!$value) {
-            $sth =$$CONNECTOR->dbh->prepare("UPDATE bases_vm SET enabled=? WHERE id_domain=?");
-            $sth->execute(0, $self->id);
-        }
+        $sth =$$CONNECTOR->dbh->prepare("UPDATE bases_vm SET enabled=? WHERE id_domain=?");
+        $sth->execute($value, $self->id);
         return $value;
     }
     my $ret = $self->_data('is_base');

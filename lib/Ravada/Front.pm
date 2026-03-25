@@ -1230,6 +1230,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'list_storage_pools'
                 || $command eq 'list_cpu_models'
                 || $command eq 'list_networks'
+                || $command eq 'rsync_back'
                 ;
         next if ( $command eq 'force_shutdown'
                 || $command eq 'force_reboot'

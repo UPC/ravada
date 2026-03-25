@@ -1144,6 +1144,12 @@ sub _validate_clone($self
                 , $id_base= $self->args('id_domain')
                 , $uid=$self->args('uid')) {
 
+    my $number = $self->defined_arg('number');
+    if (defined $number && ($number !~ /^\d+$/ || $number<1) )  {
+        $self->error("Error: $number clones requested");
+        $self->status('done');
+        return;
+    }
     my $base = Ravada::Front::Domain->open($id_base);
 
     if ( !$uid ) {

@@ -25,7 +25,7 @@ $Ravada::Domain::TTL_REMOVE_VOLATILE=3;
 
 ####################################################################
 
-sub _prepare_dir_mdev() {
+sub _prepare_dir_mdev($n) {
 
     my $dir = "/run/user/";
 
@@ -37,7 +37,7 @@ sub _prepare_dir_mdev() {
 
     my $uuid="3913694f-ca45-a946-efbf-94124e5c09";
 
-    for (1 .. 2 ) {
+    for (1 .. $n ) {
         open my $out, ">","$dir/$uuid$_$_ " or die $!;
         print $out "\n";
         close $out;
@@ -50,10 +50,12 @@ sub _check_mdev($vm, $hd) {
     my $n_dev = $hd->list_available_devices();
     return _check_used_mdev($vm, $hd) if $n_dev;
 
-    my $dir = _prepare_dir_mdev();
+    my $n_devs = 2;
+    my $dir = _prepare_dir_mdev($n_devs);
     $hd->_data('list_command' => "ls $dir");
 
     $MOCK_MDEV=1 unless $vm->type eq 'Void';
+    is($hd->list_available_devices,$n_devs) or die Dumper($hd);
     return $hd->list_available_devices;;
 }
 
@@ -721,6 +723,9 @@ sub test_change_hd_in_clone($domain) {
     $hd1 = _create_mdev($domain->_vm) if !$hd1;
     isnt($hd1->id, $hd0->id);
 
+    $hd0->_data('list_filter'=>'');
+    confess Dumper($hd0) if $hd0->list_devices <2;
+
     _filter_hds($hd0, $hd1);
 
     die "Error: no available devices in ".$hd0->name
@@ -730,8 +735,10 @@ sub test_change_hd_in_clone($domain) {
     if scalar($hd1->list_available_devices) < 1;
 
     my @args = ( uid => user_admin->id ,id_domain => $domain->id);
-    Ravada::Request->clone(@args, number => scalar($hd0->list_available_devices)-1);
+    my $req = Ravada::Request->clone(@args
+        , number => scalar($hd0->list_available_devices)-1 );
     wait_request(debug => 0);
+    is($req->error,'') or exit;
 
     _req_start($domain->clones);
 
@@ -748,7 +755,7 @@ sub test_change_hd_in_clone($domain) {
     my @clone_hd = $clone->list_host_devices;
     is($clone_hd[0]->id,$hd0->id);
 
-    my $req = Ravada::Request->remove_host_device(
+    $req = Ravada::Request->remove_host_device(
         uid => user_admin->id
         ,id_domain => $clone->id
         ,id_host_device => $hd0->id
