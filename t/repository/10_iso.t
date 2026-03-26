@@ -67,6 +67,7 @@ sub test_download($iso_name) {
             , id_vm => $vm->id
             #            , delay => 4
             , test => 1
+            , _force => 1
     );
     is($req1->status, 'requested');
 

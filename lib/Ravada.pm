@@ -1708,6 +1708,7 @@ sub _add_indexes_generic($self) {
         ]
         ,file_base_images => [
             "unique(id_domain,target)"
+            ,"unique(id_domain,file_base_img)"
         ]
     );
     my $if_not_exists = '';
@@ -2423,6 +2424,7 @@ sub _sql_create_tables($self) {
                 ,id_domain => 'integer NOT NULL references `domains` (`id`) ON DELETE CASCADE'
                 ,file_base_img => ' varchar(255) DEFAULT NULL'
                 ,target =>  'varchar(64) DEFAULT NULL'
+                ,n_order => 'int not null'
             }
         ]
         ,

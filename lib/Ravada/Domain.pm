@@ -415,11 +415,11 @@ sub _around_start($orig, $self, @arg) {
         next if $error && ref($error) && $error->code == 1
         && $error !~ /internal error.*unexpected address/
         && $error !~ /process exited while connecting to monitor/
+        && $error !~ /QEMU unexpectedly closed the monitor/
         && $error !~ /Could not run .*swtpm/i
         && $error !~ /virtiofs/
         && $error !~ /child process/i
         ;
-
         if ($error && $self->is_known && $self->id_base && !$self->is_local && $self->_vm->enabled) {
             $self->_request_set_base();
             next;
@@ -2206,14 +2206,15 @@ sub _prepare_base_db {
     }
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO file_base_images "
-        ." (id_domain , file_base_img, target )"
-        ." VALUES(?,?,?)"
+        ." (id_domain , file_base_img, target, n_order )"
+        ." VALUES(?,?,?,?)"
     );
+    my $n_order=0;
     for my $file_img (@file_img) {
         my $target;
         ($file_img, $target) = @$file_img if ref $file_img;
         next if !$file_img;
-        $sth->execute($self->id, $file_img, $target );
+        $sth->execute($self->id, $file_img, $target, $n_order++ );
     }
     $sth->finish;
 
@@ -3071,7 +3072,9 @@ sub list_files_base {
 
     my $sth = $$CONNECTOR->dbh->prepare("SELECT file_base_img, target "
         ." FROM file_base_images "
-        ." WHERE id_domain=?");
+        ." WHERE id_domain=?"
+        ." ORDER BY n_order"
+    );
     $sth->execute($self->id);
 
     my @files;

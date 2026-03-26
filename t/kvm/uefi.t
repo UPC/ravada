@@ -107,6 +107,10 @@ sub test_machine_types($vm) {
                 my $iso = $vm->_search_iso($id_iso);
                 diag("$arch $machine $iso->{name}");
 
+                # it can not be selected by the user, so we don't test it
+                # pc-i440fx and UEFI will not work
+                next if $arch eq 'x86_64' && $machine =~ /pc-i440/ && $iso->{options}->{bios} =~ /UEFI/;
+
                 my $name = new_domain_name();
 
                 my $options = dclone($iso->{options});

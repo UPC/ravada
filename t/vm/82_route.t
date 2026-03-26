@@ -62,7 +62,7 @@ sub test_slim_route($vm) {
         eval {
             $domain->start(user => user_admin, remote_ip => $remote_ip);
         };
-        like($@, qr/binding socket to/) if$vm->type ne 'Void';
+        like($@, qr/binding socket to/) or die $domain->name if $vm->type ne 'Void';
         my $display = $domain->info(user_admin)->{hardware}->{display};
         for my $dp (@$display) {
             unlike($dp->{listen_ip}, qr/^192.168.12/);

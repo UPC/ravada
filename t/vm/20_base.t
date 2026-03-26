@@ -912,14 +912,16 @@ sub test_prepare_base_with_cd {
         ,id_owner => user_admin->id
     );
     my @volumes_clone = $clone->list_volumes_info;
+    my %dupe;
     for my $vol (@volumes_clone) {
         like(ref $vol->domain, qr/^Ravada::Domain/);
         like(ref $vol->vm, qr/^Ravada::VM/);
+        die "Duplicated vol ".$vol->file if $dupe{$vol->file}++;
     }
 
     my ($cd_clone ) = grep { defined $_->file && $_->file =~ /\.iso$/ } @volumes_clone;
     ok($cd_clone,"Expecting a CD in clone ".Dumper([ map { delete $_->{domain}; delete $_->{vm}; $_ } @volumes_clone])) or exit;
-    is($cd_clone->info->{target}, $cd_base->[1]) or exit;
+    is($cd_clone->info->{target}, $cd_base->[1]) or die Dumper($clone->name, $cd_clone->info());
 
     $clone->remove(user_admin);
     $domain->remove(user_admin);
