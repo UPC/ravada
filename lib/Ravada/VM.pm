@@ -1944,6 +1944,7 @@ sub run_command($self, @command) {
         $command[0] .= " $args" if $args;
     }
     return $self->_run_command_local(@command) if $self->is_local();
+    confess "@command" if !$exec;
 
     my $ssh = $self->_ssh or confess "Error: Error connecting to ".$self->host;
 

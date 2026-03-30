@@ -3633,6 +3633,7 @@ sub remove_domain {
             my $domain = Ravada::Front::Domain->open($id);
             my @volumes = $domain->list_volumes();
             my $vm = Ravada::VM->open($domain->_data('id_vm'));
+            die "No vm ".$domain->_data('id_vm') if !$vm || !$vm->vm;
             for my $vol (@volumes) {
                 next if $vol->file =~ /\.iso$/;
                 $vm->remove_file($vol->file)

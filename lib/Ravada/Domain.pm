@@ -1077,8 +1077,14 @@ sub _do_prepare_base($self, $with_cd, $overwrite, $req=undef) {
                 .$self->_vm->name;
         }
     }
+    my @vols_info = $self->list_volumes_info();
+    my %dupe;
+    for my $volume (@vols_info) {
+        my $target = $volume->info->{target};
 
-    for my $volume ($self->list_volumes_info()) {
+        die "Error: target duplicated ".Dumper([$self->name, \@vols_info])
+        if $dupe{$target}++;
+
         next if !$volume->info->{target} && $volume->info->{device} eq 'cdrom';
         next if $volume->info->{device} eq 'cdrom' && (!$with_cd || !$volume->file);
         confess "Undefined info->target ".Dumper($volume)
@@ -2214,7 +2220,10 @@ sub _prepare_base_db {
         my $target;
         ($file_img, $target) = @$file_img if ref $file_img;
         next if !$file_img;
-        $sth->execute($self->id, $file_img, $target, $n_order++ );
+        eval {
+            $sth->execute($self->id, $file_img, $target, $n_order++ );
+        };
+        confess Dumper([$self->name,\@file_img,$@]) if $@;
     }
     $sth->finish;
 
@@ -3640,7 +3649,11 @@ sub _id_vm_local($self) {
         ."  AND ( hostname='127.0.0.1'"
         ."      OR hostname='localhost') "
     );
-    $sth->execute($self->_vm->type);
+    my $type = $self->_data('vm');
+    $type = $self->_vm->type if defined $self->_vm;
+    $sth->execute($type);
+    my ($id_vm_local) = $sth->fetchrow;
+    return $id_vm_local;
 }
 
 sub _schedule_compact($self) {
@@ -6008,7 +6021,6 @@ sub _bases_vm($self) {
     my %base;
     while (my ($id_vm, $hostname) = $sth->fetchrow) {
         $base{$id_vm} = 0;
-        $base{$id_vm} = 1 if $self->is_base && $hostname =~ /localhost|127/;
     }
     $sth->finish;
 
