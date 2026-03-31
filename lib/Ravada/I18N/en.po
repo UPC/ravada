@@ -2203,3 +2203,6 @@ msgstr "Show the base when the user already created a clone"
 
 msgid "Show Clones"
 msgstr "Show Clones"
+
+msgid "starting"
+msgstr "starting"
