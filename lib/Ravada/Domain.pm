@@ -3078,7 +3078,7 @@ sub list_files_base {
     return if $@ && $@ =~ /No DB info/i;
     die $@ if $@;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT file_base_img, target "
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT file_base_img, target, n_order "
         ." FROM file_base_images "
         ." WHERE id_domain=?"
         ." ORDER BY n_order"
@@ -3086,9 +3086,12 @@ sub list_files_base {
     $sth->execute($self->id);
 
     my @files;
-    while ( my ($img, $target) = $sth->fetchrow) {
-        push @files,($img)          if !$with_target;
-        push @files,[$img,$target]  if $with_target;
+    while ( my ($img, $target, $n_order) = $sth->fetchrow) {
+        if ($with_target) {
+            push @files,[$img,$target, $n_order];
+        } else {
+            push @files,($img);
+        }
     }
     $sth->finish;
     return @files;
@@ -8509,12 +8512,13 @@ sub _restore_base_volumes_metadata($self, $data) {
 
     my $sth = $$CONNECTOR->dbh->prepare(
         "INSERT INTO file_base_images "
-        ." (id_domain , file_base_img, target )"
-        ." VALUES(?,?,?)"
+        ." (id_domain , file_base_img, target,n_order )"
+        ." VALUES(?,?,?,?)"
     );
 
+    my $count=0;
     for my $vol ( @{$data->{base_volumes}}) {
-        $sth->execute($self->id, $vol->[0], $vol->[1]);
+        $sth->execute($self->id, $vol->[0], $vol->[1],( $vol->[2] or $count++) );
     }
     unlock_hash(%$data);
     delete $data->{base_volumes};
