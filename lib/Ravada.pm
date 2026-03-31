@@ -6320,6 +6320,16 @@ sub _cmd_migrate($self, $request) {
     }
 
     $self->_remove_unnecessary_downs($domain);
+    if (!$domain->_vm->is_local && !$node->is_local) {
+        my $req_pre = Ravada::Request->migrate(
+            uid => Ravada::Utils->user_daemon->id
+            ,id_domain => $domain->id
+            ,id_node => $domain->_id_vm_local() 
+        );
+        $request->after_request_ok($req_pre->id);
+        $request->retry(10) if !defined $request->retry();
+        die "Can not migrate from remote to remote. Retry.\n";
+    }
     $domain->migrate($node, $request);
 
     my @remote_ip;

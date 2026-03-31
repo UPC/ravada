@@ -589,8 +589,7 @@ sub _start_checks($self, @args) {
     # If not specific id_manager we go to the last id_vmanager unless it was localhost
     # If the last VManager was localhost it will try to balance here.
     $id_vm = $self->_data('id_vm')
-    if !$id_vm && defined $self->_data('id_vm')
-    && $self->_data('id_vm') != $vm_local->id;
+    if !$id_vm && defined $self->_data('id_vm');
 
     # check the requested id_vm is suitable
     if ($id_vm) {
