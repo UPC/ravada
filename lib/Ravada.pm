@@ -404,6 +404,15 @@ sub _update_isos {
                     ,md5_url => ''
                     ,md5 => '1d6bdf5cbc6ca98c31f02d23e418dd96'
         },
+	arch_2603 => {
+                    name => 'Arch Linux 26.03'
+            ,description => 'Arch Linux 2026.03.01 64 bits'
+                   ,arch => 'x86_64'
+                    ,xml => 'bionic-amd64.xml'
+             ,xml_volume => 'bionic64-volume.xml'
+                    ,url => 'https://archive.archlinux.org/iso/2026.03.01/'
+                    ,file_re => 'archlinux-2026.03.01-x86_64.iso'
+        },
 	mate_noble => {
                     name => 'Ubuntu Mate 24.04 Noble Numbat 64 bits'
             ,description => 'Ubuntu Mate 24.04 Noble Nubat m64 bits'
@@ -555,9 +564,33 @@ sub _update_isos {
         ,sha256_url => '$url/alpine-standard-3.16.*.iso.sha256'
             ,min_disk_size => '1'
         }
+	,alpine323_64 => {
+            name => 'Alpine 3.23 64 bits'
+            ,description => 'Alpine Linux 3.23 64 bits ( Minimal Linux Distribution )'
+            ,arch => 'x86_64'
+            ,xml => 'alpine-amd64.xml'
+            ,xml_volume => 'alpine323_64-volume.xml'
+            ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.23/releases/x86_64/'
+            ,file_re => 'alpine-standard-3.23.*-x86_64.iso'
+            ,sha256_url => '$url/alpine-standard-3.23.*.iso.sha256'
+            ,min_disk_size => '2'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+        }
+        ,alpine323_32 => {
+            name => 'Alpine 3.23 32 bits'
+            ,description => 'Alpine Linux 3.23 32 bits ( Minimal Linux Distribution )'
+            ,arch => 'i686'
+            ,xml => 'alpine-i386.xml'
+            ,xml_volume => 'alpine323_32-volume.xml'
+            ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.23/releases/x86/'
+            ,options => { machine => 'pc-i440fx' }
+            ,file_re => 'alpine-standard-3.23.*-x86.iso'
+            ,sha256_url => '$url/alpine-standard-3.23.*.iso.sha256'
+            ,min_disk_size => '1'
+        }
 	      ,kubuntu_64_noble => {
             name => 'Kubuntu 24.04 Noble Nombat'
-            ,description => 'Kubuntu 22.04 Noble Nombat 64 bits'
+            ,description => 'Kubuntu 24.04 Noble Nombat 64 bits'
             ,arch => 'x86_64'
             ,xml => 'noble-amd64.xml'
             ,xml_volume => 'focal_fossa64-volume.xml'
@@ -605,6 +638,16 @@ sub _update_isos {
             ,xml_volume => 'bionic64-volume.xml'
             ,url => 'https://download.opensuse.org/distribution/leap/15.4/iso/'
             ,file_re => 'openSUSE-Leap-15.\d-NET-x86_64-Current.iso'
+
+        }
+	,suse_16 => {
+            name => "openSUSE Leap 16"
+            ,description => "openSUSE Leap 16 64 bits"
+            ,arch => 'x86_64'
+            ,xml => 'bionic-amd64.xml'
+            ,xml_volume => 'bionic64-volume.xml'
+            ,url => 'https://download.opensuse.org/distribution/leap/16.0/iso/'
+            ,file_re => 'openSUSE-Leap-16.\d-NET-x86_64-Current.iso'
 
         }
         ,xubuntu_noble => {
@@ -672,6 +715,17 @@ sub _update_isos {
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
             ,arch => 'i686'
+        }
+	,debian_stretch_64 => {
+            name =>'Debian 9 Stretch 64 bits'
+            ,description => 'Debian 9 Stretch 64 bits (XFCE desktop)'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/^9\.1\d+.*\d$/amd64/iso-cd/'
+            ,file_re => 'debian-9.[\d\.]+-amd64-xfce-CD-1.iso'
+            ,md5_url => '$url/MD5SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+            ,arch => 'x86_64'
         }
         ,debian_buster_64=> {
             name =>'Debian 10 Buster 64 bits'
@@ -758,28 +812,6 @@ sub _update_isos {
             ,min_ram => 3
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
-        ,devuan_beowulf_amd64=> {
-            name =>'Devuan 10 Beowulf 64 bits'
-            ,description => 'Devuan Beowulf Desktop Live (amd64)'
-            ,arch => 'x86_64'
-            ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_beowulf/desktop-live/'
-            ,file_re => 'devuan_beowulf_.*_amd64_desktop-live.iso'
-            ,sha256_url => '$url/SHASUMS.txt'
-            ,xml => 'jessie-amd64.xml'
-            ,xml_volume => 'jessie-volume.xml'
-            ,min_disk_size => '10'
-        }
-        ,devuan_beowulf_i386=> {
-            name =>'Devuan 10 Beowulf 32 bits'
-            ,description => 'Devuan Beowulf Desktop Live (i386)'
-            ,arch => 'i686'
-            ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_beowulf/desktop-live/'
-            ,file_re => 'devuan_beowulf_.*_i386_desktop-live.iso'
-            ,sha256_url => '$url/SHASUMS.txt'
-            ,xml => 'jessie-i386.xml'
-            ,xml_volume => 'jessie-volume.xml'
-            ,min_disk_size => '10'
-        }
         ,devuan_daedalus_amd64=> {
             name =>'Devuan 12 Daedalus 64 bits'
             ,description => 'Devuan Daedalus Desktop Live (amd64)'
@@ -801,17 +833,37 @@ sub _update_isos {
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
         }
-
-        ,parrot_xfce_amd64 => {
-            name => 'Parrot Home Edition XFCE'
-            ,description => 'Parrot Home Edition XFCE 64 Bits'
+	 ,devuan_excalibur_amd64=> {
+            name =>'Devuan 13 Excalibur 64 bits'
+            ,description => 'Devuan Excalibur Desktop Live (amd64)'
+            ,arch => 'x86_64'
+            ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_excalibur/desktop-live/'
+            ,file_re => 'devuan_excalibur_.*_amd64_desktop-live.iso'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+            ,options => { machine => 'pc-q35'}
+        }
+        ,devuan_excalibur_i386=> {
+            name =>'Devuan 13 Excalibur 32 bits'
+            ,description => 'Devuan Excalibur Desktop Live (i386)'
+            ,arch => 'i686'
+            ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_excalibur/desktop-live/'
+            ,file_re => 'devuan_excalibur_.*_i386_desktop-live.iso'
+            ,xml => 'jessie-i386.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+        }
+	,parrot_xfce_amd64 => {
+            name => 'Parrot Home Edition XFCE 7.1'
+            ,description => 'Parrot Home Edition XFCE 7.1 64 Bits'
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://download.parrot.sh/parrot/iso/6.*/'
-            ,file_re => 'Parrot-home-6.*_amd64.iso'
-            ,sha256_url => ''
-            ,min_disk_size => '11'
+            ,url => 'https://download.parrot.sh/parrot/iso/7.1/'
+            ,file_re => 'Parrot-home-7\.1.*_amd64\.iso'
+            ,sha256_url => '$url/signed-hashes.txt'
+            ,min_disk_size => '15'
         }
         ,kali_64 => {
             name => "Kali Linux $year"
