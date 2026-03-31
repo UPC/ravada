@@ -2,6 +2,7 @@
 
 use warnings;
 use strict;
+use Term::ReadKey;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -365,9 +366,12 @@ sub add_user {
     my $ravada = Ravada->new( %CONFIG);
 
     print "$login password: ";
+    ReadMode('noecho');
     my $password = <STDIN>;
     chomp $password;
+    ReadMode('restore');
 
+    print "\n";
     print "is admin ? : [y/n] ";
     my $is_admin_q = <STDIN>;
     my $is_admin = 0;
@@ -412,8 +416,11 @@ sub add_user_ldap {
     my $ravada = Ravada->new( %CONFIG);
 
     print "password : ";
+    ReadMode('noecho');
     my $password = <STDIN>;
     chomp $password;
+    ReadMode('restore');
+    print "\n";
 
     Ravada::Auth::LDAP::add_user_posix(name => $login, password => $password);
 }
@@ -530,8 +537,11 @@ sub change_password {
     die "ERROR: Unknown user '$login'\n" if !$user->id;
 
     print "password : ";
+    ReadMode('noecho');
     my $password = <STDIN>;
     chomp $password;
+    ReadMode('restore');
+    print "\n";
     $user->change_password($password);
 }
 
@@ -888,8 +898,11 @@ sub test_ldap {
     }
 
     print "\nType the password if you want to check the user connection or CTRL-C to stop\npassword: ";
+    ReadMode('noecho');
     my $password = <STDIN>;
     chomp $password;
+    ReadMode('restore');
+    print "\n";
     my $ok= Ravada::Auth::LDAP->new(name => $name, password => $password);
     if ($ok) {
         if (!$ok->{_ldap_entry}) {
