@@ -6299,7 +6299,23 @@ sub _cmd_migrate($self, $request) {
     die "Error: user ".$user->name." not allowed to migrate domain ".$domain->name
     unless $user->is_operator;
 
+    return if $domain->_vm->id == $request->args('id_node');
+
     my $node = Ravada::VM->open($request->args('id_node'));
+
+    if (!$node->is_local && !$domain->is_local ) {
+        my $req_migrate = Ravada::Request->migrate(
+            uid => $uid
+            ,id_domain => $id_domain
+            ,id_node => $domain->_id_vm_local()
+            ,shutdown => $request->defined_arg('shutdown')
+        );
+        die "Error: could not migrate ".$domain->name." to local " if !$req_migrate;
+
+        $request->after_request_ok($req_migrate->id);
+        $request->retry(10) if !defined $req_migrate->retry();
+        die "Virtual Machine ".$domain->name." migrating to local. Retry.\n";
+    }
     $self->_migrate_base($domain, $node, $uid, $request) if $domain->id_base;
 
     if ($domain->is_active) {

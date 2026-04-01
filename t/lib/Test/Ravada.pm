@@ -448,8 +448,6 @@ sub create_domain($vm_name, $user=$USER_ADMIN, $id_iso='Alpine%64', $swap=undef)
         $id_iso = search_id_iso($iso_name, $vm);
         warn "I can't find iso $iso_name" if !defined $id_iso;
     }
-    confess "ERROR: Domains can only be created at localhost"
-        if $vm->host ne 'localhost';
 
 =pod
     // TODO: use create v2 from now on
