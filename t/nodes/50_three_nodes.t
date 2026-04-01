@@ -13,6 +13,26 @@ no warnings "experimental::signatures";
 use feature qw(signatures);
 
 ##################################################################################
+sub test_remote_standalone( @nodes ) {
+    for my $node0 (@nodes) {
+        my $domain = create_domain($node0);
+        for my $node1 (@nodes) {
+            diag("Migrate from ".$domain->_vm->name." to ".$node1->name);
+            my $req = Ravada::Request->migrate(
+                uid => user_admin->id
+                ,id_domain => $domain->id
+                ,id_node => $node1->id
+                ,shutdown => 1
+                ,start => 1
+            );
+            wait_request( debug => 1);
+            my $domain_f = Ravada::Front::Domain->open($domain->id);
+            is($domain_f->_data('id_vm'),$node1->id);
+        }
+        remove_domain($domain);
+    }
+}
+
 
 sub test_remove_n($vm, @nodes ) {
     my $domain = create_domain($vm);
@@ -21,14 +41,27 @@ sub test_remove_n($vm, @nodes ) {
 
     my $n=1;
     for my $node ( @nodes ) {
-        $domain->set_base_vm(vm => $node, user => user_admin);
+        Ravada::Request->set_base_vm(
+            id_vm=> $node->id
+            ,uid => user_admin->id
+            ,id_domain => $domain->id
+        );
+        wait_request();
         is($domain->list_instances, ++$n);
     }
 
     for my $node1 ( @nodes ) {
         my $clone = $domain->clone(user => user_admin, name => new_domain_name);
-        $clone->migrate($node1);
-        $clone->start(user_admin);
+        diag("Migrate clone ".$clone->name." from ".$clone->_vm->name
+                ." to ".$node1->name);
+        my $req = Ravada::Request->migrate(
+            uid => user_admin->id
+            ,id_domain => $clone->id
+            ,id_node => $node1->id
+            ,shutdown => 1
+            ,start => 1
+        );
+        wait_request();
         for my $node2 ( @nodes ) {
             next if $node2->id == $node1->id;
             diag("Migrating ".$clone->name." from ".$node1->name." to ".$node2->name);
@@ -69,14 +102,32 @@ sub test_remove($vm, $node1, $node2) {
         , name => new_domain_name
     );
     is($clone1->list_instances,1);
-    $clone1->migrate($node1);
+
+    Ravada::Request->migrate(
+        uid => user_admin->id
+        ,id_domain => $clone1->id
+        ,id_node => $node1->id
+    );
+    wait_request();
+
     is($clone1->list_instances,2);
 
     my $clone2 = $domain->clone( user => user_admin
         , name => new_domain_name
     );
-    $clone2->migrate($node1);
-    $clone2->migrate($node2);
+    Ravada::Request->migrate(
+        uid => user_admin->id
+        ,id_domain => $clone2->id
+        ,id_node => $node1->id
+    );
+    wait_request();
+    Ravada::Request->migrate(
+        uid => user_admin->id
+        ,id_domain => $clone2->id
+        ,id_node => $node2->id
+    );
+    wait_request();
+
     is($clone2->list_instances,3);
 
     my @name = ( $clone1->name, $clone2->name, $domain->name);
@@ -156,6 +207,10 @@ for my $vm_name ( 'Void', 'KVM') {
 
         my $node_shared = remote_node_shared($vm_name)  or next;
 
+        test_remote_standalone($node1, $node2, $node_shared);
+
+        test_remove_n($node1, $node2, $node_shared);
+        # create on local first
         test_remove_n($vm, $node1, $node2, $node_shared);
 
         test_remove($vm, $node1, $node2);

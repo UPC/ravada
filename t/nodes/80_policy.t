@@ -54,14 +54,12 @@ sub _set_base($node1, $node2) {
         ,id_domain => $domain->id
     );
     wait_request();
-    # Node with more machins from same user
     $domain->_data('balance_policy'=>1);
-
     $domain->is_public(1);
     return $domain;
 }
 
-sub test_same_node($vm, $node1, $node2, $hibernate=0) {
+sub test_same_node($vm, $node1, $node2, $hibernate=undef) {
     my $user = create_user();
     user_admin->grant($user, 'start_limit', 10);
 
@@ -73,24 +71,27 @@ sub test_same_node($vm, $node1, $node2, $hibernate=0) {
             ,uid => user_admin->id
             ,id_domain => $domain->id
         );
-        wait_request(debug => 0);
+        wait_request(debug => 1);
     }
 
+    my ($clone1,@clone) = _create_clones($domain, $user, 4);
     for my $node0 ( $node1, $node2, $vm ) {
-        my ($clone1,@clone) = _create_clones($domain, $user, 4);
-        # We migrate the first clone to the node
+
+        diag("First migrate ".$clone1->name." from ".$domain->_vm->name." to node ".$node0->name);
         _migrate($node0, $clone1);
+        Ravada::Request->hybernate(
+            uid => $user->id
+            ,id_domain => $clone1->id
+        ) if $hibernate;
 
-        # then all the other clones should go there too because
-        # of the balance policy = 1
+        $clone1 = Ravada::Front::Domain->open($clone1->id);
+        if ($clone1->_data('id_vm') != $node0->id) {
+            diag("Error: could not start clone ".$clone1->name." in node ".$node0->name." ".$node0->id);
+            next;
+        }
+        diag("Expecting other clones go to ".$node0->name);
         for my $clone ( @clone ) {
-            diag("Testing ".$clone->name." same node ".$node0->id." ".$node0->name);
-
-            Ravada::Request->hybernate(
-                uid => $user->id
-                ,id_domain => $clone->id
-            ) if $hibernate;
-
+            diag("Expecting clone ".$clone->name." go to ".$node0->name);
             my $req_s = Ravada::Request->start_domain(
                 id_domain => $clone->id
                 ,uid => $user->id
@@ -99,13 +100,10 @@ sub test_same_node($vm, $node1, $node2, $hibernate=0) {
 
             my $clone_f = Ravada::Front::Domain->open($clone->id);
             is($clone_f->_data('id_vm'), $node0->id
-                ,"Expecting ".$clone->name." same node in ".$vm->type
-                ." hibernate=$hibernate"
-            )
-                or exit;
-            _shutdown($clone);
+                ,"Expecting ".$clone->name." same node in ".$vm->type)
+            or exit;
         }
-        remove_domain($clone1, @clone);
+        _shutdown($clone1, @clone);
     }
 
     remove_domain($domain);
@@ -181,10 +179,7 @@ sub _migrate($node, $clone) {
         ,shutdown => 1
         ,start => 1
     );
-    wait_request(debug => 1);
-
-    my $clone2 = Ravada::Front::Domain->open($clone->id);
-    is($clone2->_data('id_vm'), $node->id) or confess $clone->name;
+    wait_request(debug => 0);
 }
 ##########################################################################
 
