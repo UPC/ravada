@@ -173,8 +173,6 @@ sub _migrate($node, $clone) {
 
     my $clone_f = Ravada::Front::Domain->open($clone->id);
 
-    return if $clone_f->_data('id_vm') == $node->id;
-
     delete_request('migrate');
     my $req = Ravada::Request->migrate(
         id_node => $node->id
