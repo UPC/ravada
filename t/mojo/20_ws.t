@@ -449,9 +449,9 @@ sub test_domain_requests($t, $base) {
     my $is_base = $base->is_base();
     if (!$is_base) {
         Ravada::Request->shutdown_domain(uid => user_admin->id
-            ,id_domain => $base->{id});
+            ,id_domain => $base->id);
         Ravada::Request->prepare_base(uid => user_admin->id
-            ,id_domain => $base->{id});
+            ,id_domain => $base->id);
     }
 
     my $is_public = $base->is_public(1);
@@ -474,9 +474,27 @@ sub test_domain_requests($t, $base) {
     my $list= decode_json($list0);
     isa_ok($list,'ARRAY');
     ok(exists $list->[0]->{id});
+    ok(exists $list->[0]->{command});
     ok(exists $list->[0]->{id_domain});
+
+    my $message = $t->websocket_ok("/ws/subscribe")->send_ok("list_domain_requests/".$clone->{id})
+        ->message_ok;
+
+    for ( 1 .. 5 ) {
+        sleep 1;
+        $message = $message->message_ok;
+        last if $t->message->[1] eq '[]';
+    }
+
+    is($t->message->[1],'[]');
+    $message->finish_ok();
+
     $base->is_public($is_public);
     user_admin->make_admin($user->id);
+
+    Ravada::Request->remove(uid => user_admin->id
+        ,name => $clone->{name});
+    wait_request();
 
     mojo_request($t, "remove_base", { id_domain => $base->id })
     if !$is_base;
