@@ -214,7 +214,7 @@ sub test_list_machines_non_admin($t, $bases) {
 }
 
 sub test_shutdown($user, $clone) {
-    if ($clone->{status} eq 'active') {
+    if ($clone->{status} && $clone->{status} eq 'active') {
         my $req = Ravada::Request->shutdown(
             uid => $user->id
             ,id_domain => $clone->{id}
@@ -444,6 +444,44 @@ sub test_node_info($vm_name) {
 
 }
 
+sub test_domain_requests($t, $base) {
+    my $user = create_user();
+    my $is_base = $base->is_base();
+    if (!$is_base) {
+        Ravada::Request->shutdown_domain(uid => user_admin->id
+            ,id_domain => $base->{id});
+        Ravada::Request->prepare_base(uid => user_admin->id
+            ,id_domain => $base->{id});
+    }
+
+    my $is_public = $base->is_public(1);
+    mojo_login($t, $user->name,"$$");
+
+    $t->websocket_ok("/ws/subscribe")->send_ok("list_domain_requests/".$base->id)->message_ok->finish_ok;
+    is($t->message->[1],'[]');
+
+    mojo_request($t, "clone", { id_domain => $base->id });
+    my ($clone) = grep { $_->{id_owner} == $user->id } $base->clones;
+    Ravada::Request->start_domain(uid => $user->id
+        ,id_domain => $clone->{id});
+    Ravada::Request->shutdown_domain(uid => $user->id
+        ,name => $clone->{name});
+    Ravada::Request->prepare_base(uid => user_admin->id
+        ,id_domain => $clone->{id});
+
+    $t->websocket_ok("/ws/subscribe")->send_ok("list_domain_requests/".$clone->{id})->message_ok->finish_ok;
+    my $list0 = $t->message->[1];
+    my $list= decode_json($list0);
+    isa_ok($list,'ARRAY');
+    ok(exists $list->[0]->{id});
+    ok(exists $list->[0]->{id_domain});
+    $base->is_public($is_public);
+    user_admin->make_admin($user->id);
+
+    mojo_request($t, "remove_base", { id_domain => $base->id })
+    if !$is_base;
+
+}
 ########################################################################################
 
 init('/etc/ravada.conf',0);
@@ -499,6 +537,8 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
     test_bases_non_admin($t, \@bases);
     test_list_machines_non_admin($t,\@bases);
     test_bases_access($t,\@bases);
+
+    test_domain_requests($t, $bases[0]);
 
     remove_old_domains_req();
     while( list_machines_user($t) ) {

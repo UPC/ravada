@@ -2068,11 +2068,11 @@ sub AUTOLOAD {
         );
     }
 
-    confess "ERROR: Unknown field $name "
-        if !exists $self->{$name} && !exists $FIELD{$name} && !exists $FIELD_RO{$name};
-
     confess "Can't locate object method $name via package $self"
         if !ref($self);
+
+    confess "ERROR: Unknown field $name "
+        if !exists $self->{$name} && !exists $FIELD{$name} && !exists $FIELD_RO{$name};
 
     my $value = shift;
     $name =~ tr/[a-z][A-Z]_/_/c;
