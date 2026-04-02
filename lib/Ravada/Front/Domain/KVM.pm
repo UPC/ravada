@@ -136,22 +136,19 @@ sub _get_controller_video($self) {
 
 sub _get_controller_filesystem($self) {
     my @fs = $self->_get_controller_generic('filesystem');
-    for my $fs ( @fs ) {
-        my $name = $fs->{target}->{dir};
+    my @fs_info = $self->_load_info_filesystem(@fs);
+    for my $fs ( @fs_info ) {
         unlock_hash(%$fs);
+
+        my $name = $fs->{target}->{dir};
         $fs->{_name} = $name;
-        delete $fs->{accessmode};
-        delete $fs->{driver};
-        delete $fs->{type};
-        $fs->{_can_edit} = 1;
-        $fs->{_can_remove} = 1;
+
+        delete $fs->{$_} for ('accessmode','driver','type');
 
         lock_hash(%$fs);
     }
 
-    $self->_load_info_filesystem(\@fs);
-
-    return @fs;
+    return @fs_info;
 }
 
 sub _get_controller_sound($self) {
@@ -197,12 +194,6 @@ sub _get_controller_cpu($self) {
     $item->{vcpu}->{current} = $item->{vcpu}->{'#text'}
     if exists $item->{vcpu}->{'#text'} && ! defined $item->{vcpu}->{'current'};
 
-    if ($self->is_active) {
-        my $info = $self->get_info();
-        $item->{vcpu}->{current} = $info->{n_virt_cpu}
-        if exists $info->{n_virt_cpu};
-
-    }
     if (exists $item->{cpu}->{feature} && ref($item->{cpu}->{feature}) ne 'ARRAY') {
         $item->{cpu}->{feature} = [ $item->{cpu}->{feature} ];
     }
@@ -322,6 +313,13 @@ sub _get_controller_network($self) {
         } else {
             $name .="o$count";
         }
+
+        my ($port_xml) = $interface->findnodes('port');
+        my @port = ( port => { isolated => 'no' });
+
+        @port = ( port => { isolated => $port_xml->getAttribute('isolated') })
+        if $port_xml && $port_xml->getAttribute('isolated');
+
         $count++;
         push @ret,({
                      type => $type
@@ -329,6 +327,7 @@ sub _get_controller_network($self) {
                   ,driver => $model->getAttribute('type')
                   ,bridge => $source->getAttribute('bridge')
                  ,network => $source->getAttribute('network')
+                 ,@port
                  ,_can_edit => 1
                  ,_can_remove => 1
         });
@@ -513,5 +512,7 @@ sub _os_type_machine($self) {
 sub xml_description($self) {
         return $self->_data_extra('xml');
 }
+
+sub can_hybernate { 1 };
 
 1;

@@ -51,6 +51,7 @@ for my $vm_name ('KVM') {
              id_iso => $id_iso
             , id_vm => $vm->id
             , delay => 4
+            , test => 1
         );
         is($req1->status, 'requested');
 
@@ -75,6 +76,7 @@ for my $vm_name ('KVM') {
              id_iso => $id_iso
             , id_vm => $vm->id
             , delay => 2
+            , test => 1
         );
         is($req2->status, 'requested');
 

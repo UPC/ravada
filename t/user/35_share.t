@@ -134,6 +134,7 @@ sub test_machine_info_shared($user, $clone) {
 
 ##############################################################
 
+init();
 clean();
 for my $vm_name ( vm_names() ) {
 

@@ -133,4 +133,5 @@ wait_request();
 remove_volatile_clones(@$bases);
 
 remove_old_domains_req(0);
+end();
 done_testing();

@@ -2,6 +2,7 @@
 
 use warnings;
 use strict;
+use Term::ReadKey;
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -84,6 +85,8 @@ my $TIME_CONNECTION = 10;
 my $TYPE;
 my $CREATE;
 
+my $CHANGE_NETWORK_FORWARD;
+
 my $USAGE = "$0 "
         ." [--debug] [--config=$FILE_CONFIG_DEFAULT] [--add-user=name] [--add-user-ldap=name]"
         ." [--add-user-file=filename]"
@@ -94,6 +97,7 @@ my $USAGE = "$0 "
         ." [--remove-user=name]"
         ." [--clean-db-leftovers]"
         ." [--log=pathname]"
+        ." [--set-network-forward=(nat|none)]"
         ."\n"
         ." --add-user : adds a new db user\n"
         ." --add-user-ldap : adds a new LDAP user\n"
@@ -124,6 +128,8 @@ my $USAGE = "$0 "
         ." --restore file1 file2 ... fileN\n"
         ." --migrate node machine1 machine2 ... machineN\n"
         ."\n"
+        ."Operations on networks:\n"
+        ." --change-network-forward=[nat|none]"
         ."Operations modifiers:\n"
         ." --all : execute on all virtual machines\n"
         ."          For hibernate, it is executed on all the actives\n"
@@ -196,6 +202,8 @@ GetOptions (       help => \$help
         ,"time-connection=s" => \$TIME_CONNECTION
         ,"type=s" => \$TYPE
         ,"create" => \$CREATE
+
+        ,"change-network-forward=s" => \$CHANGE_NETWORK_FORWARD
 ) or exit;
 
 $START = 1 if $DEBUG || $FILE_CONFIG || $NOFORK;
@@ -227,6 +235,9 @@ die "ERROR: Missing the machine name or id\n$USAGE"
 die "ERROR: Supply either --all or --disconnected or --active\n"
 if ( $ALL && ( $DISCONNECTED || $ACTIVE ))
     || ( $DISCONNECTED && ( $ALL || $ACTIVE ));
+
+die "ERROR: Network forward mode must be nat or none.\n"
+if $CHANGE_NETWORK_FORWARD && $CHANGE_NETWORK_FORWARD !~ /^(nat|none)$/;
 
 my %CONFIG;
 %CONFIG = ( config => $FILE_CONFIG )    if $FILE_CONFIG;
@@ -334,10 +345,12 @@ sub start {
         $Ravada::CONNECTOR->dbh;
 		$ravada->set_debug_value();
         $ravada->_wait_pids();
-        autostart_machines($ravada);
+        $ravada->_clean_tls();
+        Ravada::Request->refresh_vms(uid =>Ravada::Utils::user_daemon->id);
+        Ravada::Request->refresh_storage(uid =>Ravada::Utils::user_daemon->id);
         Ravada::Request->update_iso_urls(uid =>Ravada::Utils::user_daemon->id);
-        Ravada::Request->refresh_storage();
         Ravada::Request->list_host_devices(uid =>Ravada::Utils::user_daemon->id);
+        autostart_machines($ravada);
 
     }
     clean_old_requests();
@@ -353,9 +366,12 @@ sub add_user {
     my $ravada = Ravada->new( %CONFIG);
 
     print "$login password: ";
+    ReadMode('noecho');
     my $password = <STDIN>;
     chomp $password;
+    ReadMode('restore');
 
+    print "\n";
     print "is admin ? : [y/n] ";
     my $is_admin_q = <STDIN>;
     my $is_admin = 0;
@@ -373,6 +389,11 @@ sub add_user_file($ADD_USER_FILE) {
     my $ravada = Ravada::Front->new();
     die "Error: File $ADD_USER_FILE does not exist\n"
     if !-e $ADD_USER_FILE;
+
+    if ($ADD_USER_FILE =~ /json$/) {
+        return upload_group_members_json($ADD_USER_FILE);
+    }
+
 
     open my $in,"<",$ADD_USER_FILE or die "$! $ADD_USER_FILE\n";
     my $users = join("",<$in>);
@@ -395,8 +416,11 @@ sub add_user_ldap {
     my $ravada = Ravada->new( %CONFIG);
 
     print "password : ";
+    ReadMode('noecho');
     my $password = <STDIN>;
     chomp $password;
+    ReadMode('restore');
+    print "\n";
 
     Ravada::Auth::LDAP::add_user_posix(name => $login, password => $password);
 }
@@ -412,14 +436,24 @@ sub add_group_ldap {
 sub remove_group_ldap {
     my $login = shift;
 
+    die "Error: I will not remove all the groups"
+    if $login eq '*';
+
     my $ravada = Ravada->new( %CONFIG);
     my $ldap = Ravada::Auth::LDAP::_init_ldap_admin();
-    my $group = Ravada::Auth::LDAP::search_group( name => $login )
-        or die "Error: LDAP group '$login' not found\n";
+    my @group = Ravada::Auth::LDAP::search_group( name => $login );
+    die "Error: LDAP group '$login' not found\n" unless @group;
 
-    $group->delete()->update($ldap);
+    for my $group ( @group ) {
+        if ($ENV{TERM} && scalar(@group)>1) {
+            print "Remove LDAP group ".$group->dn." ? (y/N)";
+            my $ok = <STDIN>;
+            next unless $ok =~ /y/i;
+        }
+        $group->delete()->update($ldap);
 
-    print "LDAP group ".$group->dn." removed.\n";
+        print "LDAP group ".$group->dn." removed.\n";
+    }
     exit 0;
 }
 
@@ -440,7 +474,7 @@ sub add_user_group {
     _show_ldap_group_membership($login);
 
     print "Add user to LDAP group: ";
-    my $new_group = <stdin>;
+    my $new_group = <STDIN>;
     chomp $new_group;
 
     my @groups = Ravada::Auth::LDAP::search_group( name => '*' );
@@ -503,8 +537,11 @@ sub change_password {
     die "ERROR: Unknown user '$login'\n" if !$user->id;
 
     print "password : ";
+    ReadMode('noecho');
     my $password = <STDIN>;
     chomp $password;
+    ReadMode('restore');
+    print "\n";
     $user->change_password($password);
 }
 
@@ -740,13 +777,6 @@ sub start_domain {
         if !$found;
 }
 
-sub _client_status($domain_f) {
-    my $domain = Ravada::Domain->open($domain_f->id) or return '';
-    my $status = $domain->client_status(1);
-    return 'disconnected' if!defined $status || $status eq '';
-    return $status;
-}
-
 sub shutdown_domain(@domains) {
 
     my $down = 0;
@@ -788,23 +818,29 @@ sub shutdown_domain(@domains) {
 }
 
 sub _verify_connection {
-    my $domain_f = shift;
-    my $domain = Ravada::Domain->open($domain_f->id);
+
+    my $domain = shift;
+
     print "Verifying connection for ".$domain->name
-                        ." ".($domain->remote_ip or '')." "
-        if $VERBOSE;
-    for ( 1 .. $TIME_CONNECTION ) {
-        my $status = $domain->client_status(1);
-        if ( $status && $status ne 'disconnected' ) {
-            print "\n\t".$status." ".$domain->remote_ip
-                            ." Shutdown dismissed.\n";
-            return 1;
-        }
-        print "." if $VERBOSE && !($_ % 5);
-        sleep 1;
-     }
-     print "\n" if $VERBOSE;
+    ." ".($domain->remote_ip or '')." "
+    if $VERBOSE;
+
+    my $req = Ravada::Request->refresh_machine(
+        uid => Ravada::Utils::user_daemon->id
+        ,id_domain => $domain->id
+    );
+    _wait_request($req);
+
+    $domain = Ravada::Front::Domain->open($domain->id);
+    my $status = $domain->client_status();
+    if ( $status && $status ne 'disconnected' ) {
+        print "\n\t".$status." ".$domain->remote_ip
+        ." Shutdown dismissed.\n" if $VERBOSE;
+        return 1;
+    }
+    print "\n" if $VERBOSE;
     return 0;
+
 }
 
 sub _dump_ldap_entry($ldap_entry) {
@@ -862,8 +898,11 @@ sub test_ldap {
     }
 
     print "\nType the password if you want to check the user connection or CTRL-C to stop\npassword: ";
+    ReadMode('noecho');
     my $password = <STDIN>;
     chomp $password;
+    ReadMode('restore');
+    print "\n";
     my $ok= Ravada::Auth::LDAP->new(name => $name, password => $password);
     if ($ok) {
         if (!$ok->{_ldap_entry}) {
@@ -982,6 +1021,8 @@ sub backup($rvd_back) {
     die "Error: please provide the virtual machine name to backup.\n"
     unless scalar(@ARGV);
 
+    my @reqs;
+    my %dupe;
     for my $name (@ARGV) {
         my $dom;
         if ( $name =~ /^\d+$/ ) {
@@ -989,31 +1030,96 @@ sub backup($rvd_back) {
         } else {
             $dom = $rvd_back->search_domain($name);
         }
+        if (!$dom) {
+            warn "Error: Unknown domain $name\n";
+            next;
+        }
+        if ($dupe{$dom->name}++) {
+            warn "Warning: Backup of ".$dom->name." duplicated, requested only one.\n";
+        }
         if ($dom->is_active) {
             warn "Error: $name is active, not backing up.\n";
             next;
         }
-        print $dom->backup()."\n";
+        print "Requesting backup of ".$dom->name."\n";
+        my $req = Ravada::Request->backup(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_domain => $dom->id
+        );
+        push @reqs,($req);
     }
+
+    _wait_request(@reqs);
     exit 0;
 }
+
+sub _wait_request(@reqs) {
+    my $t0 = time;
+    for ( 0 .. $TIME_CONNECTION ) {
+        last if !@reqs;
+        my $pending = 0;
+        my @reqs2;
+        for my $req (@reqs) {
+            if ($req->status eq 'done') {
+                print "Finished ".$req->command if ($req->error || $req->output);
+
+                if ($req->error) {
+                    warn $req->error."\n";
+                }
+                print "\n\t".$req->output if $req->output;
+            } else {
+                push @reqs2,($req);
+            }
+        }
+        last if !@reqs2;
+        @reqs = @reqs2;
+        sleep 1;
+        if (time - $t0 > 10 ) {
+            print "Waiting for ".scalar(@reqs)." requests to finish\n";
+            $t0 = time;
+        }
+    }
+
+}
+
+sub _confirm_restore($name) {
+    if ($ENV{TERM}) {
+            print "Virtual Machine $name already exists."
+            ." All the data will be overwritten."
+            ." Are you sure you want to restore a backup ?";
+            my $answer = <STDIN>;
+            return 0 unless $answer =~ /^y/i;
+    }
+    return 1;
+}
+
 
 sub restore($rvd_back) {
     die "Error: please provide the file to restore.\n"
     unless scalar(@ARGV);
 
+    my @reqs;
     for my $item (@ARGV) {
         if ($item =~ m{/}) {
-            my $dom = $rvd_back->restore_backup($item,1);
-            if ($dom) {
-                print $dom->name." restored successfuly.\n";
-            } else {
-                print "backup for $item aborted.\n";
-            }
+
+            my ($name) = $item =~ m{.*/(.*?).\d{4}-\d\d-\d\d_\d\d-\d\d-};
+            my $dom = $rvd_back->search_domain($name);
+            next if $dom && !_confirm_restore($name);
+            my $id_domain;
+            $id_domain = $dom->id if $dom;
+
+            push @reqs,(Ravada::Request->restore_backup(
+                    id_domain => $id_domain
+                    ,file => $item
+                    ,uid => Ravada::Utils::user_daemon->id
+                ));
         } else {
             warn "Error: I can't find '$item'. Plese pass the path with the backed up filename.\n";
         }
     }
+
+    _wait_request(@reqs);
+    exit(0);
 }
 
 sub _list_domains($rvd_back
@@ -1022,7 +1128,8 @@ sub _list_domains($rvd_back
     my %name = map { $_ => 1 } @ARGV ;
 
     my @domains;
-    for my $domain ($rvd_back->list_domains) {
+    for my $domain0 ($rvd_back->list_domains_data) {
+        my $domain = Ravada::Front::Domain->open($domain0->{id});
 
         next if $domain->is_base;
 
@@ -1032,11 +1139,12 @@ sub _list_domains($rvd_back
             || ( $hibernated && $domain->is_hibernated )
             || ( $disconnected && $domain->is_active
                 && !$domain->autostart
-                && _client_status($domain) eq 'disconnected')
+                && $domain->client_status() eq 'disconnected')
         ) {
 
             delete $name{$domain->name};
-            if ( $disconnected && $domain->client_status() eq 'disconnected') {
+            if ( $disconnected ) {
+                next if $domain->client_status() ne 'disconnected';
                 next if _verify_connection($domain);
             }
             next if $all && $HIBERNATE_DOMAIN && !$domain->is_active;
@@ -1048,7 +1156,7 @@ sub _list_domains($rvd_back
                 next;
             }
 
-            if ($SHUTDOWN_DOMAIN && $domain->status eq 'down' && $VERBOSE) {
+            if ($SHUTDOWN_DOMAIN && !$domain->is_active && $VERBOSE) {
                 print $domain->name." already down.\n";
                 next;
             }
@@ -1099,7 +1207,7 @@ sub purge_nodes($rvd_back) {
             print "Found $name [$id_domain] unused in $vm_name.\n";
             print "Remove $vol\n";
             print "[y/N] ? ";
-            my $ok= <stdin>;
+            my $ok= <STDIN>;
             next if $ok !~ /y/i;
 
                 $vm->remove_file($vol);
@@ -1172,9 +1280,34 @@ sub show_volume($rvd_back) {
     }
 }
 
-sub upload_group_members($file) {
+sub upload_group_members_json($file) {
+    open my $in,"<",$file or die "$! $file\n";
+    my $users = join("",<$in>);
+    close $in;
+
+    my $ravada = Ravada::Front->new();
+
+    my ($result, $error)=$ravada->upload_users_json($users);
+    print Dumper($result)."\n" if $VERBOSE;
+    if (scalar (@$error)) {
+        print "Errors:\n" if $VERBOSE;
+        for (sort @$error) {
+            next if !$VERBOSE && /already a member/;
+            print "  - $_\n";
+        }
+    }
+
+}
+
+sub upload_group_members_file($file) {
+    if ($file =~ /json$/) {
+        return upload_group_members_json($file);
+    }
     if (!$GROUP) {
         ($GROUP) = $file =~ m{.*/(.*)\.};
+        ($GROUP) = $file =~ m{(.*)\.} unless $GROUP;
+
+        die "Error: I can't find a group name from $file\n" unless $GROUP;
     }
     my $ravada = Ravada::Front->new();
 
@@ -1192,14 +1325,79 @@ sub upload_group_members($file) {
 
     my ($found, $count, $error)=$ravada->upload_group_members($GROUP,$users);
 
-    print "Group $GROUP: $found found, $count added.\n";
+    print "Group $GROUP: $found found, $count added.\n" if $VERBOSE;
     if (scalar (@$error)) {
-        print "Errors:\n";
+        print "Errors:\n" if $VERBOSE;
         for (sort @$error) {
+            next if !$VERBOSE && /already a member/;
             print "  - $_\n";
         }
     }
 
+}
+
+sub upload_group_members_dir($dir) {
+
+    die "Error: group name will be taken from filename. Do not supply.\n" if $GROUP;
+
+    my $files_found=0;
+
+    opendir my $ls,$dir or die "$! $dir";
+    while ( my $file = readdir $ls ) {
+        next unless $file =~ /\.txt$/;
+        $files_found++;
+        $GROUP=undef;
+        upload_group_members_file("$dir/$file");
+    }
+    closedir $ls;
+
+    die "Error: no files found in '$dir'\n" unless $files_found;
+}
+
+sub upload_group_members($file) {
+    die "Error: '$file' does not exists\n" unless -e $file;
+
+    if ( -d $file ) {
+        upload_group_members_dir($file);
+    } else {
+        upload_group_members_file($file);
+    }
+}
+
+sub change_network_forward($rvd_back) {
+
+    my $sth = $rvd_back->_dbh->prepare(
+        "SELECT vn.id, vn.id_vm, vms.name FROM virtual_networks vn, vms "
+        ." WHERE vn.name=?"
+        ."   AND vn.id_vm=vms.id "
+    );
+
+    die "Error: No network names supplied.\n" if !@ARGV;
+
+    my $n_changed=0;
+    for my $name (@ARGV) {
+        $sth->execute($name);
+        my ($id_network , $id_vm, $vm_name) = $sth->fetchrow;
+        my ($id_network2 , $id_vm2, $vm_name2) = $sth->fetchrow;
+        if (!$id_network) {
+            warn "Error: network $name not found.\n";
+            next;
+        }
+        if ($id_network2) {
+            warn "Error: network $name found on node $vm_name and $vm_name2.\n";
+            next;
+        }
+        my $vm = Ravada::VM->open($id_vm);
+
+        my ($network) = grep { $_->{id} == $id_network } $vm->list_virtual_networks();
+        $network->{forward_mode} = $CHANGE_NETWORK_FORWARD;
+        Ravada::Request->change_network(
+            uid => Ravada::Utils::user_daemon->id
+            ,data => $network
+        );
+        $n_changed++;
+    }
+    print "$n_changed networks change requested.\n";
 }
 
 sub DESTROY {
@@ -1210,7 +1408,9 @@ sub DESTROY {
 {
 
 my $rvd_back = Ravada->new(%CONFIG);
-$rvd_back->_install();
+my %install_args;
+$install_args{add_user_admin} = 0 if $ADD_USER;
+$rvd_back->_install(%install_args);
 
 my @domains;
 @domains = _list_domains($rvd_back
@@ -1256,6 +1456,8 @@ purge_nodes($rvd_back)              if $PURGE_NODES;
 
 list_unused_vols($rvd_back)         if $LIST_UNUSED_VOLS;
 show_volume($rvd_back)              if $SHOW_VOLUME;
+
+change_network_forward($rvd_back)   if $CHANGE_NETWORK_FORWARD
 }
 
 

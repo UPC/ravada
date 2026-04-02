@@ -3,7 +3,7 @@
 </div>
 <div>
 %=  include "/main/vm_hardware_new"
-    <div ng-show="!showmachine || !showmachine.hardware">
+    <div ng-show="!showmachine || !showmachine.hardware || showmachine.requests>0 ">
         <i ng-show="!display.is_active" class="fas fa-sync-alt fa-spin"></i>
     </div>
     <div ng-repeat="name in hardware" ng-hide="show_new_disk||show_new_display||show_new_filesystem || showmachine.hardware[name].length == 0 || new_hardware">

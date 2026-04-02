@@ -9,6 +9,7 @@ use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use Moose;
 use Socket qw( inet_aton inet_ntoa );
+use Storable qw(dclone);
 use Sys::Hostname;
 use URI;
 use YAML qw(Dump Load);
@@ -92,7 +93,6 @@ sub create_domain {
     my $active = ( delete $args{active} or $volatile or $user->is_temporary or 0);
     my $listen_ip = delete $args{listen_ip};
     my $description = delete $args{description};
-    confess if $args{name} eq 'tst_vm_v20_volatile_clones_02' && !$listen_ip;
     my $remote_ip = delete $args{remote_ip};
     my $id = delete $args{id};
     my $storage = delete $args{storage};
@@ -125,6 +125,7 @@ sub create_domain {
     $domain->_set_default_info($listen_ip, $network);
     $domain->_store( autostart => 0 );
     $domain->_store( is_active => $active );
+    $domain->_store( is_volatile => ($volatile or 0 ));
     $domain->set_memory($args{memory}) if $args{memory};
 
     if ($args{id_base}) {
@@ -190,7 +191,7 @@ sub create_domain {
 
         $self->_add_cdrom($domain, %args);
         $domain->_set_default_drivers();
-        $domain->_set_default_info($listen_ip);
+        $domain->_set_default_info($listen_ip, $network);
         $domain->_store( is_active => $active );
 
     }
@@ -373,6 +374,7 @@ sub list_virtual_networks($self) {
 
         $net->{id_vm} = $self->id if !$net->{id_vm};
         $net->{is_active}=0 if !defined $net->{is_active};
+        $net->{forward_mode}='nat' if !$net->{forward_mode};
         push @list,($net);
     }
     if (!@list) {
@@ -382,6 +384,7 @@ sub list_virtual_networks($self) {
             , bridge => 'voidbr0'
             ,ip_address => '192.51.100.1'
             ,is_active => 1
+            ,forward_mode => 'nat'
         };
 
         my $file_out = $self->dir_img."/networks/".$net->{name}.".yml";
@@ -445,15 +448,20 @@ sub new_network($self, $name='net') {
     return $new;
 }
 
-sub create_network($self, $data, $id_owner=undef, $request=undef) {
+sub create_network($self, $data0, $id_owner=undef, $request=undef) {
 
-    $data->{internal_id} = $self->_new_net_id();
+    $data0->{internal_id} = $self->_new_net_id();
+
+    my $data = dclone($data0);
+
     my $file_out = $self->dir_img."/networks/".$data->{name}.".yml";
     die "Error: network $data->{name} already created"
     if $self->file_exists($file_out);
 
     $data->{bridge} = $self->_new_net_bridge()
     if !exists $data->{bridge} || ! defined $data->{bridge};
+
+    $data->{forward_mode} = 'nat' if !exists $data->{forward_mode};
 
     delete $data->{is_public};
 
@@ -464,6 +472,8 @@ sub create_network($self, $data, $id_owner=undef, $request=undef) {
     delete $data->{is_public};
     delete $data->{id};
     delete $data->{id_vm};
+    delete $data->{isolated};
+    delete $data->{id_owner};
 
     $self->write_file($file_out,Dump($data));
 

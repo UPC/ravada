@@ -4,7 +4,6 @@ use warnings;
 
 use  Carp qw(carp confess croak);
 use Data::Dumper;
-use Fcntl qw(:flock SEEK_END);
 use File::Path qw(make_path remove_tree);
 use YAML qw(DumpFile);
 use Hash::Util qw(lock_hash unlock_hash);
@@ -34,7 +33,7 @@ require Exporter;
 
 @EXPORT = qw(base_domain_name new_domain_name rvd_back remove_old_disks remove_old_domains create_user user_admin rvd_front init init_vm clean new_pool_name new_volume_name
 create_domain
-    create_domain_v2
+    create_domain_v2 create_base
     import_domain
     test_chain_prerouting
     find_ip_rule
@@ -73,6 +72,7 @@ create_domain
     delete_request_not_done
     fast_forward_requests
 
+    remove_old_storage_pools_req
     remove_old_domains_req
     remove_domain_and_clones_req
     remove_domain
@@ -82,6 +82,7 @@ create_domain
     mojo_create_domain
     mojo_login
     mojo_check_login
+    mojo_logout
     mojo_request
     mojo_request_url
     mojo_request_url_post
@@ -108,6 +109,7 @@ create_domain
     wait_ip
 
     config_host_devices
+    qemu_fix_xml_file
 
     end
 );
@@ -165,6 +167,7 @@ my $FH_FW;
 my $FH_NODE;
 my %LOCKED_FH;
 my $FILE_DB;
+my @FILES_TMP;
 
 my ($MOJO_USER, $MOJO_PASSWORD);
 
@@ -302,6 +305,12 @@ sub import_domain($vm, $name=$BASE_NAME, $import_base=1) {
     return $domain;
 }
 
+sub create_base($vm) {
+    my $domain = create_domain_v2(vm => $vm);
+    $domain->prepare_base(user_admin);
+    return $domain;
+}
+
 sub create_domain_v2(%args) {
     my %args0 = %args;
     my $vm_name = delete $args{vm_name};
@@ -428,7 +437,10 @@ sub create_domain($vm_name, $user=$USER_ADMIN, $id_iso='Alpine%64', $swap=undef)
 
     my $domain;
     eval { $domain = $vm->import_domain($name, $user) };
-    die $@ if $@ && $@ !~ /Domain.* not found/i;
+    die $@ if $@
+        && ( $@ !~ /Domain.* not found/i
+            && ( ref($@) eq 'Sys::Virt::Error' && $@->code != 42 )
+        );
 
     return $domain if $domain;
 
@@ -516,6 +528,13 @@ sub rvd_back($config=undef, $init=1, $sqlite=1) {
         my $sth = $CONNECTOR->dbh->table_info('%',undef,'users','TABLE');
         my $info = $sth->fetchrow_hashref();
         $sth->finish;
+
+        if ($info) {
+            my $sth = $CONNECTOR->dbh->column_info(undef,undef,'users','password_expiration_date');
+            my $row = $sth->fetchrow_hashref;
+            $info = undef if !$row;
+        }
+
         if (!$info) {
             $rvd->_install();
             $rvd->_update_isos();
@@ -599,7 +618,36 @@ sub init($config=undef, $sqlite = 1 , $flush=0) {
     $Ravada::VM::KVM::VERIFY_ISO = 0;
     $Ravada::VM::MIN_DISK_MB = 1;
 
+    _clean_old_users();
+    _clean_old_groups();
 }
+
+sub _clean_old_users() {
+    my $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM users WHERE name like ? ");
+    $sth->execute(base_domain_name().'%');
+    while ( my ($id,$name) = $sth->fetchrow ) {
+        next if $USER_ADMIN && $name eq $USER_ADMIN->name;
+        my $user = Ravada::Auth::SQL->search_by_id($id);
+        next if !$user;
+        $user->remove();
+    }
+}
+
+sub _clean_old_groups() {
+    my $sth = $CONNECTOR->dbh->table_info('%',undef,'groups_local','TABLE');
+    my $info = $sth->fetchrow_hashref();
+    $sth->finish;
+    return if !keys %$info;
+
+    $sth = $CONNECTOR->dbh->prepare("SELECT id,name FROM groups_local WHERE name like ? ");
+    $sth->execute(base_domain_name().'%');
+    while ( my ($id,$name) = $sth->fetchrow ) {
+        my $g = Ravada::Auth::Group->open($id);
+        next if !$g;
+        $g->remove();
+    }
+}
+
 
 sub _load_remote_config() {
     return {} if ! -e $FILE_CONFIG_REMOTE;
@@ -721,7 +769,7 @@ sub _discover() {
             if ($hostname ne 'localhost') {
                 my $domain = rvd_front->search_domain($name);
                 if (!$domain) {
-                    confess if $name !~ /\d+$/;
+                    confess if $name !~ /\d+$/ && $name !~ /tst_mojo_\d+/;
                     Ravada::Request->create_domain(
                         id_owner => user_admin->id
                         ,vm => $vm_type
@@ -803,6 +851,11 @@ sub remove_domain(@bases) {
 
         $base = Ravada::Domain->open($id)
         unless ref($base) =~ /^Ravada::/;
+
+        if (!defined $base) {
+            warn "I can't find base '$id'";
+            next;
+        }
 
         for my $clone ($base->clones) {
             my $d_clone = Ravada::Domain->open($clone->{id});
@@ -896,12 +949,16 @@ sub _remove_old_domains_vm($vm_name) {
     for my $domain ( sort { $b->name cmp $a->name }  @domains) {
         next if $domain->name !~ /^$base_name/i;
 
-        eval { $domain->shutdown_now($USER_ADMIN); };
-        warn "Error shutdown ".$domain->name." $@" if $@ && $@ !~ /No DB info/i;
+        eval { $domain->shutdown_now($USER_ADMIN) if $domain->is_active };
+        warn "Error shutdown ".$domain->name." $@" if $@ && $@ !~ /No DB info/i
+            && $@ !~ /libvirt error code: 55,/
+        ;
 
         $domain = $vm->search_domain($domain->name);
         eval {$domain->remove( $USER_ADMIN ) }  if $domain;
-        warn $@ if $@;
+        warn "Error shutdown ".$domain->name." $@" if $@ && $@ !~ /No DB info/i
+            && $@ !~ /libvirt error code: 55,/
+        ;
         if ( $@ && $@ =~ /No DB info/i ) {
             eval { $domain->domain->undefine($Sys::Virt::Domain::UNDEFINE_NVRAM) if $domain->domain };
         }
@@ -1025,15 +1082,21 @@ sub mojo_clean($wait=1) {
 
 sub mojo_check_login( $t, $user=$MOJO_USER , $pass=$MOJO_PASSWORD ) {
     $t->ua->get("/user.json");
-    return if $t->tx && $t->tx->res->code =~ /^(101|200|302)$/;
+    return $user if $t->tx && $t->tx->res->code =~ /^(101|200|302)$/;
     mojo_login($t, $user,$pass);
+    return $user;
+}
+
+sub mojo_logout($t) {
+    $t->ua->get($URL_LOGOUT);
+    $t->reset_session();
 }
 
 sub mojo_login( $t, $user, $pass ) {
-    $t->ua->get($URL_LOGOUT);
+    mojo_logout($t);
 
     $t->post_ok('/login' => form => {login => $user, password => $pass});
-    like($t->tx->res->code(),qr/^(200|302)$/) or die $t->tx->res->body;
+    like($t->tx->res->code(),qr/^(200|302)$/) or die Dumper([$user, $pass]);# $t->tx->res->body;
     #    ->status_is(302);
     $MOJO_USER = $user;
     $MOJO_PASSWORD = $pass;
@@ -1418,7 +1481,7 @@ sub wait_request {
                 $done{$req->{id}}++;
                 if ($check_error && $req->command ne 'set_time') {
                     if ($req->command =~ /remove/) {
-                        like($req->error,qr(^$|Unknown domain|Domain not found));
+                        like($req->error,qr(^$|Unknown domain|Domain not found)) or confess $req->command;
                     } elsif($req->command eq 'set_time') {
                         like($req->error,qr(^$|libvirt error code));
                     } else {
@@ -1573,7 +1636,10 @@ sub _qemu_storage_pool {
 sub remove_void_networks($vm=undef) {
     if (!defined $vm) {
         eval { $vm = rvd_back->search_vm('Void') };
+        die $@ if $@;
     }
+    return if $< != $>;
+
     my $dir_net = $vm->dir_img()."/networks";
     return if ! -e $dir_net;
     my $base = base_domain_name();
@@ -1597,12 +1663,12 @@ sub remove_networks_req() {
     $sth->execute(base_domain_name."%");
     while (my ($id, $id_vm, $name, $node) = $sth->fetchrow) {
         my $req = Ravada::Request->remove_network(
-            uid => user_admin()->id
+            uid => Ravada::Utils::user_daemon()->id
             ,id => $id
             ,id_vm => $id_vm
         );
     }
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 }
 
 sub remove_qemu_networks($vm=undef) {
@@ -1652,7 +1718,7 @@ sub remove_qemu_pools($vm=undef) {
         next if $name !~ /^($base_pool|$base)/;
         eval {$pool->build(Sys::Virt::StoragePool::BUILD_NEW); $pool->create() };
         warn $@ if $@ && $@ !~ /already active/;
-        if ($pool->is_active) {
+        if ($pool->is_active && !_pool_is_link($pool)) {
             diag("Removing ".$vm->name." storage_pool ".$pool->get_name);
             for my $vol ( $pool->list_volumes ) {
                 diag("Removing ".$pool->get_name." vol ".$vol->get_name);
@@ -1676,6 +1742,14 @@ sub remove_qemu_pools($vm=undef) {
             remove_tree($dir,{ safe => 1, verbose => 1}) or die "$! $dir";
         }
     }
+}
+
+sub _pool_is_link($pool) {
+    my $xml = XML::LibXML->load_xml(string => $pool->get_xml_description());
+    my ($path) = $xml->findnodes('/pool/target/path');
+    my $dir = $path->textContent();
+
+    return -l $dir;
 }
 
 sub _delete_qemu_pool($pool) {
@@ -1709,6 +1783,34 @@ sub _remove_old_entries($table) {
     );
     $sth->execute(base_domain_name.'%');
 
+}
+
+sub remove_old_storage_pools_req() {
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms "
+    );
+    $sth->execute();
+    while ( my ($id_vm) = $sth->fetchrow ) {
+        my $req = Ravada::Request->list_storage_pools(
+            uid => user_admin->id
+            ,id_vm => $id_vm
+            ,data => 1
+        );
+        wait_request();
+        my $out = $req->output;
+        next if !$out;
+        my $sp_list = decode_json($out);
+        my $name = base_pool_name();
+        for my $sp (@$sp_list) {
+            next if $sp->{name} !~ /^$name/;
+            Ravada::Request->remove_storage_pool(
+                uid => user_admin->id
+                ,id_vm => $id_vm
+                ,name => $sp->{name}
+            );
+        }
+
+    }
 }
 
 sub remove_old_storage_pools_void() {
@@ -1753,6 +1855,10 @@ sub clean($ldap=undef, $file_remote_config=undef) {
     }
     unlink $FILE_CONFIG_TMP or die "$! $FILE_CONFIG_TMP"
         if $FILE_CONFIG_TMP && -e $FILE_CONFIG_TMP;
+
+    for my $file (@FILES_TMP) {
+        unlink $file or warn "$! $file" if -e $file;
+    }
     _clean_db();
     _clean_file_config();
     shutdown_nodes();
@@ -1813,15 +1919,18 @@ sub _clean_remote_nodes {
     }
 }
 
-sub clean_remote_node {
-    my $node = shift;
+sub clean_remote_node(@node) {
 
-    start_node($node) if !$node->is_local();
-    _remove_old_domains_vm($node);
-    wait_request(debug => 0);
-    _remove_old_disks($node);
-    flush_rules_node($node)  if !$node->is_local() && $node->is_active;
-    remove_qemu_pools($node);
+    for my $node (@node) {
+        next if !$node;
+
+        start_node($node) if !$node->is_local();
+        _remove_old_domains_vm($node);
+        wait_request(debug => 0);
+        _remove_old_disks($node);
+        flush_rules_node($node)  if !$node->is_local() && $node->is_active;
+        remove_qemu_pools($node);
+    }
 }
 
 sub _remove_old_disks {
@@ -1991,39 +2100,6 @@ sub search_iptable_remote {
     return $found[0];
 }
 
-sub _lock_fh($fh) {
-    flock($fh, LOCK_EX);
-    seek($fh, 0, SEEK_END) or die "Cannot seek - $!\n";
-    print $fh,$$." ".localtime(time)." $0\n";
-    $fh->flush();
-    $LOCKED_FH{$fh} = $fh;
-}
-
-sub _unlock_fh($fh) {
-    flock($fh,LOCK_UN) or die "Cannot unlock - $!\n";
-    close $fh;
-}
-
-sub _lock_fw {
-    return if $FH_FW;
-    open $FH_FW,">>","/var/tmp/fw.lock" or die "$!";
-    _lock_fh($FH_FW);
-}
-
-sub _lock_node {
-    return if $FH_NODE;
-    open $FH_NODE,">>","/var/tmp/node.lock" or die "$!";
-    _lock_fh($FH_NODE);
-}
-
-
-sub _unlock_all {
-    for my $key (keys %LOCKED_FH) {
-        _unlock_fh($LOCKED_FH{$key});
-        delete $LOCKED_FH{$key};
-    }
-}
-
 sub _clean_iptables_ravada($node) {
     my ($out, $err) = $node->run_command("iptables-save","-t","filter");
     is($err,'');
@@ -2064,7 +2140,6 @@ sub _flush_forward($node=undef) {
 }
 
 sub flush_rules_node($node) {
-    _lock_fw();
     _clean_iptables_ravada($node);
     $node->create_iptables_chain($CHAIN);
     my ($out, $err) = $node->run_command("iptables","-F", $CHAIN);
@@ -2084,7 +2159,6 @@ sub flush_rules_node($node) {
 sub flush_rules {
     return if $>;
 
-    _lock_fw();
     my @cmd = ('iptables','-t','nat','-F','PREROUTING');
     my ($in,$out,$err);
     run3(\@cmd, \$in, \$out, \$err);
@@ -2293,7 +2367,7 @@ sub start_node($node) {
         }
         sleep 1;
     }
-    eval { $node2->run_command("hwclock","--hctosys") };
+    eval { $node2->run_command("true") };
     is($@,'',"Expecting no error setting clock on ".$node->name." ".($@ or ''));
 }
 
@@ -2443,7 +2517,6 @@ sub _clean_file_config {
 }
 
 sub remote_node($vm_name) {
-    _lock_node();
     my $remote_config = remote_config($vm_name);
     SKIP: {
         if (!keys %$remote_config) {
@@ -2457,7 +2530,6 @@ sub remote_node($vm_name) {
 }
 
 sub remote_node_2($vm_name) {
-    _lock_node();
     my $remote_config = _load_remote_config();
 
     my @nodes;
@@ -2634,7 +2706,6 @@ sub DESTROY {
     shutdown_nodes();
     remove_old_user_ldap() if $CONNECTOR;
     remove_old_users()      if $CONNECTOR;
-    _unlock_all();
 }
 
 sub _check_leftovers {
@@ -2747,7 +2818,6 @@ sub end($ldap=undef) {
     _check_iptables();
     clean($ldap);
     remove_old_users()      if $CONNECTOR;
-    _unlock_all();
     if ($FILE_DB) {
         _file_db();
         rmdir _dir_db();
@@ -3059,7 +3129,7 @@ sub _check_yaml($filename) {
 }
 
 sub _check_qcow2($filename) {
-    _check_file($filename,qr(: QEMU QCOW2));
+    _check_file($filename,qr(: QEMU QCOW));
 }
 
 sub test_volume_format(@volume) {
@@ -3126,7 +3196,7 @@ sub ping_backend() {
         $now[1]--;
         my $now2 = "".($now[5]+1900)."-$now[4]-$now[3] $now[2]:$now[1]";
         my $sth = rvd_back->connector->dbh->prepare(
-            "SELECT date_changed,status FROM requests ORDER BY date_changed DESC LIMIT 10"
+            "SELECT id,command,date_changed,status FROM requests ORDER BY date_changed DESC LIMIT 10"
         );
         $sth->execute();
         my $n = 100;
@@ -3135,7 +3205,8 @@ sub ping_backend() {
             return 1 if $date_changed =~ /^($now|$now2)/;
             last if $n--<0;
         }
-        rvd_front->ping_backend();
+        my $ping = rvd_front->ping_backend();
+        return $ping if $ping;
     }
 
     return rvd_front->ping_backend();
@@ -3223,31 +3294,44 @@ sub create_ram_fs($dir=undef,$size=1024*1024) {
 sub wait_ip($id_domain0, $seconds=60) {
 
     my $domain;
+    if (!ref($id_domain0) && $id_domain0 =~ /^\d+$/) {
+        $domain = Ravada::Front::Domain->open($id_domain0);
+    }
     for my $count ( 0 .. $seconds ) {
         my $id_domain = $id_domain0;
-        if (ref($id_domain0)) {
-            if (ref($id_domain0) =~ /Ravada/) {
-                $id_domain = $id_domain0->id;
+        $id_domain = $domain->id if $domain;
+        if (!$domain) {
+            if (ref($id_domain0)) {
+                if (ref($id_domain0) =~ /Ravada/) {
+                    $id_domain = $id_domain0->id;
+                } else {
+                    $id_domain = $id_domain0->{id};
+                }
             } else {
-                $id_domain = $id_domain0->{id};
+                if ($id_domain0 !~ /^\d+$/) {
+                    $id_domain = _search_domain_by_name($id_domain0);
+                    if ( !$id_domain ) {
+                        sleep 1;
+                        next;
+                    }
+                } else {
+                    $id_domain = $id_domain0;
+                }
             }
-        }
 
-        if ($id_domain0 !~ /^\d+$/) {
-            $id_domain = _search_domain_by_name($id_domain);
-            next if !$id_domain;
+            eval{ $domain = Ravada::Front::Domain->open($id_domain) };
+            warn $@ if $@ && $@ !~ /Unknown domain/;
         }
 
         Ravada::Request->refresh_machine(
             id_domain => $id_domain
             ,uid => user_admin->id
+            ,_force => 1
         );
+        wait_request();
 
         my $info;
-        eval {
-        $domain = Ravada::Front::Domain->open($id_domain);
         $info = $domain->info(user_admin);
-        };
         warn $@ if $@ && $@ !~ /Unknown domain/;
         return if $@ || ($count && !$domain->is_active);
         return $info->{ip} if exists $info->{ip} && $info->{ip};
@@ -3265,5 +3349,44 @@ sub _search_domain_by_name($name) {
     return $id;
 }
 
+sub _new_tmp_file($extension) {
+    my $file;
+    for (;;) {
+        $file = _dir_db()."/".new_domain_name().".$extension";
+        push @FILES_TMP,($file);
+        last if !-e $file;
+    }
+    return $file;
+}
+
+sub qemu_fix_xml_file($file) {
+
+    open my $in,"<",$file or die "$! $file";
+    my $file_dst = _new_tmp_file("xml");
+    open my $out,">",$file_dst or die "$! $file_dst";
+
+    my $vm = rvd_back->search_vm('KVM');
+    my %types = $vm->list_machine_types();
+
+    my ( $arch,$machine);
+    while (my $line = <$in>) {
+        if ($line =~ /<type /) {
+            ($arch,$machine) = $line =~ /arch=['"](.*?)["'] machine=["'](.*?)["'"]/ if !defined $arch;
+            if (defined $machine && (my ($family) = $machine =~ /^(\w+-[\d\w]+)-/)) {
+                my ($new_machine) = grep { defined $_ && defined $machine && /^$machine/ } @{$types{$arch}};
+                ($new_machine) = grep { defined $_ && defined $family && /^$family/ } @{$types{$arch}} if !$new_machine;
+
+                if (defined $new_machine && defined $machine && $new_machine ne $machine) {
+                    $line =~ s/(.*machine=["']).*?(["'])/$1$new_machine$2/;
+                }
+            }
+        }
+        print $out $line;
+    }
+    close $in;
+    close $out or die "$! $file_dst";
+
+    return $file_dst;
+}
 
 1;

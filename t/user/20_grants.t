@@ -18,6 +18,8 @@ use_ok('Ravada');
 my @VMS = vm_names();
 init();
 
+my $BASE;
+
 #########################################################3
 
 sub test_defaults {
@@ -26,38 +28,39 @@ sub test_defaults {
 
     ok($user->can_clone);
     ok($user->can_change_settings);
-#    ok($user->can_screenshot);
+    ok($user->can_screenshot);
 
     ok($user->can_remove);
 
     ok(!$user->can_remove_clones);
 
-#    ok(!$user->can_clone_all);
+    ok(!$user->can_clone_all);
     ok(!$user->can_change_settings_all);
     ok(!$user->can_change_settings_clones);
 
 
     is($user->can_screenshot, 1);
-#    ok(!$user->can_screenshot_all);
+    ok(!$user->can_screenshot_all);
     ok(!$user->can_grant);
 
     ok(!$user->can_create_base);
     ok(!$user->can_create_machine);
-#    ok(!$user->can_remove_all);
+    ok(!$user->can_remove_all);
     ok(!$user->can_remove_clone_all);
 
-#    ok(!$user->can_shutdown_clone);
+    ok(!$user->can_shutdown_clone);
     ok(!$user->can_shutdown_all);
 
-#    ok(!$user->can_hibernate_clone);
-#    ok(!$user->can_hibernate_all);
-#    ok(!$user->can_hibernate_clone_all);
+    ok(!$user->can_hibernate_clone);
+    ok(!$user->can_hibernate_all);
+    ok(!$user->can_hibernate_clone_all);
     
     ok(!$user->can_manage_users);
 
     for my $perm (user_admin->list_permissions) {
         $perm = $perm->[0];
-        if ( $perm =~ m{^(clone|change_settings|screenshot|remove|shutdown|reboot)$}) {
+        is(user_admin->can_do($perm),1);
+        if ( $perm =~ m{^(clone|change_settings|screenshot|remove|shutdown|reboot|hibernate)$}) {
             is($user->can_do($perm),1,$perm);
         } else {
             is($user->can_do($perm),undef,$perm);
@@ -200,6 +203,40 @@ sub test_remove_clone {
     $usera->remove();
 }
 
+sub test_remove_all {
+    my $vm_name = shift;
+
+    my $usera = create_user(new_domain_name(),"bar",'is admin');
+    my $domain = create_domain($vm_name, $usera);
+
+    my $user = create_user();
+
+    my $req = Ravada::Request->remove_domain(
+        uid => $user->id
+        ,name => $domain->name
+    );
+    wait_request(check_error=>0);
+    like($req->error,qr/(not allowed|can't remove domain)/);
+
+    my $domain2;
+    eval { $domain2= rvd_back->search_domain($domain->name) };
+    ok($domain2, "Expecting ".$domain->name." not removed");
+
+    $usera->grant($user,'remove_all');
+    is($user->can_remove_all, 1);
+    is($user->can_remove($domain->id),1);
+
+    $req->status('requested');
+    wait_request(check_error=>0);
+    is($req->error,'');
+
+    eval { $domain2 = rvd_back->search_domain($domain->name) };
+    ok(!$domain2, "Expecting ".$domain->name." removed");
+
+    $user->remove();
+    $usera->remove();
+}
+
 sub test_view_clones {
     my $vm_name = shift;
     my $user = create_user("oper_rm$$.".time,"bar");
@@ -233,9 +270,55 @@ sub test_view_clones {
     $user->remove();
 }
 
+sub test_list_clones($user, $action, $base, $clone) {
+    is($user->can_list_clones_from_own_base(),1);
+
+    my $list = rvd_front->list_machines($user);
+
+    my ($found_base) = grep { $_->{name} eq $base->name} @$list;
+    ok($found_base,"Expecting ".$base->name);
+    my ($found_clone) = grep { $_->{name} eq $clone->name} @$list;
+    ok($found_clone,"Expecting ".$clone->name);
+
+    is($found_clone->{can_manage},0);
+
+    is($user->can_do_domain( $action, $found_clone->{id}),1,"Expecting user can $action") or confess;
+
+    my $found_action=0;
+    for my $key (keys %$found_clone) {
+        next unless $key =~ /^can_/;
+        if ($key eq "can_$action"
+            || ( $action eq 'shutdown' && $key eq 'can_hibernate' && $user->can_shutdown($found_clone->{id}) )
+        ) {
+            $found_action++;
+            is($found_clone->{$key},1,"Expecting $key allowed");
+        } else {
+            is($found_clone->{$key},0,"Expecting $key not allowed")
+                or confess;
+        }
+    }
+    ok($found_action,"Expecting can_$action found in ".Dumper($found_clone));
+
+    return $found_clone;
+}
+
+sub test_list_requests($user) {
+
+    my $requests = rvd_front->list_requests;
+    my @found = grep { $_->{command} =~ /base/ } @$requests;
+    ok(!@found,"Expecting no other requests found") or die Dumper(\@found);
+    for my $req_data (@$requests) {
+        next if !exists $req_data->{uid} || $req_data->{uid} == $user->id;
+        my $req = Ravada::Request->open($req_data->{id});
+        die $req->uid." != ".$user->id;
+
+    }
+}
+
 sub test_shutdown_clone {
     my $vm_name = shift;
 
+    delete_request('prepare_base','remove_base');
     my $user = create_user("oper$$","bar");
     ok(!$user->is_operator);
     ok(!$user->is_admin);
@@ -262,6 +345,9 @@ sub test_shutdown_clone {
 
     $usera->grant($user,'shutdown_clones');
     is($user->can_shutdown_clones,1);
+
+    my $front_clone = test_list_clones($user,"shutdown", $domain, $clone);
+    test_list_requests($user);
 
     eval { $clone->shutdown_now($user); };
     is($@,'');
@@ -809,8 +895,20 @@ sub test_grant_grant {
     $usero->remove();
 }
 
-sub test_clone_all {
-    diag("TODO test clone all");
+sub test_clone_all($vm) {
+
+    my ($user, $base) = _create_base($vm);
+
+    $base->_data('id_owner', user_admin->id);
+    $base->_data('is_public',0);
+    my $req = Ravada::Request->clone(
+        uid => $user->id
+        ,id_domain => $base->id
+    );
+    wait_request(check_error=>0);
+    like($req->error,qr/not public/i) or exit;
+    remove_domain($base);
+    $user->remove();
 }
 
 sub test_start_many{
@@ -896,14 +994,17 @@ sub test_start_many_upgrade{
     $usera->remove();
 }
 
-sub test_view_all($vm) {
-    my $domain;
+sub _import_base($vm){
+    return if $BASE && $BASE->type eq $vm->type;
     if ($vm->type eq 'KVM') {
-        my $base = import_domain($vm);
-        $domain = $base->clone(name => new_domain_name, user => user_admin);
+        $BASE = import_domain($vm);
     } else {
-        $domain = create_domain($vm);
+        $BASE = create_domain($vm);
     }
+
+}
+sub test_view_all($vm) {
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
     $domain->expose(22);
     my $user = create_user();
     user_admin->grant($user,'view_all');
@@ -967,8 +1068,132 @@ sub test_view_all($vm) {
         is($req->error,'', $req->command) or exit;
     }
 
+    my $list = rvd_front->list_machines($user);
+
+    my ($found) = grep { $_->{name} eq $domain->name} @$list;
+    is($found->{can_start},1);
+    is($found->{can_view},1);
+    is($found->{can_shutdown},0);
+    is($found->{can_hibernate},0);
+    is($found->{can_manage},0);
+
+    user_admin->revoke($user,'view_all');
+
+    my $list2 = rvd_front->list_machines($user);
+
+    my ($found2) = grep { $_->{name} eq $domain->name} @$list2;
+
+    for my $field ( keys %$found ) {
+        next if $field !~ /^can/;
+        ok(!$found2->{$field},$field);
+    }
+
     $domain->remove(user_admin);
 }
+
+sub _create_base($vm) {
+    my $user = create_user();
+    my $base = $BASE->clone(
+        name => new_domain_name
+        , user => user_admin()
+    );
+    $base->is_public(1);
+    $base->_data(id_owner => $user->id);
+    $base->prepare_base(user_admin);
+    my $user2 = create_user();
+    my $clone = $base->clone(
+        name => new_domain_name
+        , user => $user2
+    );
+    $clone->start($user2);
+    return ($user, $base, $clone);
+}
+
+sub test_generic_clone($vm, $command, $status_fail, $status_ok) {
+    my ($user, $base, $clone) = _create_base($vm);
+    my $req = Ravada::Request->_new_request(
+        command => $command
+        ,args => {
+            uid => $user->id
+            ,id_domain => $clone->id
+        }
+    );
+    wait_request(check_error => 0);
+    like($req->error,qr/not allowed/);
+    is($clone->status,$status_fail);
+
+    user_admin->grant($user,$command.'_clones');
+    is($user->can_list_clones_from_own_base(),1);
+    $req->status('requested');
+    wait_request(check_error => 0);
+    is($req->status, 'done');
+    is($req->error,'');
+    delete $clone->{_data};
+    is($clone->status,$status_ok) or die $clone->name;
+
+    remove_domain($base);
+    $user->remove();
+}
+
+sub test_generic_all($vm, $command, $status_fail, $status_ok) {
+    my $domain = create_domain($vm);
+    $domain->start(user_admin);
+
+    my $user = create_user();
+    my $req = Ravada::Request->_new_request(
+        command => $command
+        ,args => {
+            uid => $user->id
+            ,id_domain => $domain->id
+        }
+    );
+    wait_request(check_error => 0);
+    like($req->error,qr/not allowed/,"Expecting $command not allowed")
+        or exit;
+    is($domain->status,$status_fail);
+
+    user_admin->grant($user,$command.'_all');
+    $req->status('requested');
+    wait_request(check_error => 0);
+    is($req->status, 'done');
+    is($req->error,'');
+    delete $domain->{_data};
+    is($domain->status,$status_ok);
+
+    remove_domain($domain);
+    $user->remove();
+}
+
+sub test_generic_clone_all($vm, $command, $status_fail, $status_ok) {
+    my ($user, $base, $clone) = _create_base($vm);
+    $clone->_data('id_owner'=> user_admin->id);
+    my $req = Ravada::Request->_new_request(
+        command => $command
+        ,args => {
+            uid => $user->id
+            ,id_domain => $clone->id
+        }
+    );
+    wait_request(check_error => 0);
+    like($req->error,qr/not allowed/);
+    is($clone->status,$status_fail);
+
+    user_admin->grant($user,$command.'_clone_all');
+    $req->status('requested');
+    wait_request(check_error => 0);
+    is($req->status, 'done');
+    is($req->error,'');
+    delete $clone->{_data};
+    is($clone->status,$status_ok) or die $clone->name;
+
+    remove_domain($base);
+    $user->remove();
+}
+
+sub test_can_screenshot_all($vm) {
+
+}
+
 
 ##########################################################
 
@@ -999,6 +1224,20 @@ for my $vm_name (vm_names()) {
     next if !$vm;
 
     diag("Testing VM $vm_name");
+
+    _import_base($vm);
+
+    test_view_all($vm);
+
+    test_clone_all($vm_name);
+    test_can_screenshot_all($vm);
+
+    test_generic_clone($vm,'hibernate','active','hibernated');
+    test_generic_all($vm,'hibernate','active','hibernated');
+    test_generic_clone_all($vm,'hibernate','active','hibernated');
+
+    test_generic_all($vm,'screenshot','active','active');
+
     test_view_all($vm);
     test_expose_ports($vm_name);
     test_change_settings($vm_name);
@@ -1008,7 +1247,7 @@ for my $vm_name (vm_names()) {
 
     test_remove($vm_name);
     test_remove_clone($vm_name);
-    #test_remove_all($vm_name);
+    test_remove_all($vm_name);
 
     test_remove_clone_all($vm_name);
 
@@ -1023,7 +1262,6 @@ for my $vm_name (vm_names()) {
     test_create_domain($vm_name);
     test_create_domain2($vm_name);
     test_view_clones($vm_name);
-    test_clone_all($vm_name);
 
 }
 end();

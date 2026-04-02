@@ -516,3 +516,14 @@ li.compact {
     padding: 0;
     margin: 0;
 }
+
+label.small_row {
+    font-size: 80%;
+    font-weight: 600;
+    display: inline-block;
+    margin-bottom: .5rem;
+}
+
+ul.no-bullets {
+  list-style-type: none; /* Remove bullets */
+}

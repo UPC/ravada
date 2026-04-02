@@ -77,9 +77,9 @@ our %VALID_ARG = (
     ,force_reboot_domain => { id_domain => 1, uid => 1, at => 2, id_vm => 2 }
     ,shutdown_start =>{ name => 2, id_domain => 2, uid => 1, timeout => 2
         , at => 2 , id_vm => 2 }
-    ,screenshot => { id_domain => 1 }
+    ,screenshot => { id_domain => 1, uid => 1 }
     ,domain_autostart => { id_domain => 1 , uid => 1, value => 2 }
-    ,copy_screenshot => { id_domain => 1 }
+    ,copy_screenshot => { id_domain => 1, uid => 1 }
     ,start_domain => {%$args_manage, remote_ip => 2, name => 2, id_domain => 2, enable_host_devices => 2 }
     ,start_clones => { id_domain => 1, uid => 1, remote_ip => 1, sequential => 2 }
     ,shutdown_clones => { id_domain => 1, uid => 1, timeout => 2 }
@@ -87,10 +87,12 @@ our %VALID_ARG = (
     ,dettach => { uid => 1, id_domain => 1 }
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
     ,hybernate=> {uid => 1, id_domain => 1}
+    ,hibernate=> {uid => 1, id_domain => 1}
     ,download => {uid => 2, id_iso => 1, id_vm => 2, vm => 2, verbose => 2, delay => 2, test => 2}
     ,refresh_storage => { id_vm => 2, uid => 2 }
     ,list_storage_pools => { id_vm => 1 , uid => 1, data => 2 }
     ,active_storage_pool => { uid => 1, id_vm => 1, name => 1, value => 1}
+    ,remove_storage_pool => { uid => 1, id_vm => 1, name => 1}
     ,check_storage => { uid => 1 }
     ,create_storage_pool => { uid => 1, id_vm => 1, name => 1, directory => 1 }
     ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2 }
@@ -135,6 +137,8 @@ our %VALID_ARG = (
     }
     ,compact => { uid => 1, id_domain => 1 , keep_backup => 2 }
       ,purge => { uid => 1, id_domain => 1 }
+      ,backup => { uid => 1, id_domain => 1, compress => 2}
+      ,restore_backup => { uid => 1, file => 1, id_domain => 2 }
 
     ,list_machine_types => { uid => 1, id_vm => 2, vm_type => 2}
     ,list_cpu_models => { uid => 1, id_domain => 1}
@@ -154,6 +158,7 @@ our %VALID_ARG = (
     ,list_host_devices => {
         uid => 1
         ,id_host_device => 2
+        ,id_node => 2
         ,_force => 2
     }
     ,remove_host_device => {
@@ -183,7 +188,7 @@ our %VALID_ARG = (
 $VALID_ARG{shutdown} = $VALID_ARG{shutdown_domain};
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
-    qw( create start shutdown force_shutdown reboot prepare_base remove remove_base rename_domain screenshot download
+    qw( create start shutdown force_shutdown reboot prepare_base remove remove_base rename_domain download
             clone
             set_base_vm remove_base_vm
             domain_autostart hibernate hybernate
@@ -192,11 +197,14 @@ our %CMD_SEND_MESSAGE = map { $_ => 1 }
             expose remove_expose
             rebase rebase_volumes
             shutdown_node reboot_node start_node
-            compact purge
+            compact purge backup
             start_domain
 
             create_network change_network remove_network
     );
+
+our %CMD_DO_NOT_SEND_ERROR = map { $_ => 1 }
+    qw(refresh_machine_ports);
 
 our %CMD_NO_DUPLICATE = map { $_ => 1 }
 qw(
@@ -206,6 +214,7 @@ qw(
     rsync_back
     cleanup
     list_host_devices
+    list_storage_pools
     refresh_machine
     refresh_machine_ports
     refresh_vms
@@ -240,7 +249,7 @@ our %COMMAND = (
                     , 'remove_base_vm'
                     , 'screenshot'
                     , 'cleanup'
-                    , 'compact','spinoff'
+                    , 'compact','spinoff','backup'
                 ]
         ,priority => 20
     }
@@ -256,6 +265,7 @@ our %COMMAND = (
         ,commands => ['shutdown','shutdown_now', 'enforce_limits', 'set_time'
             ,'remove_domain', 'remove', 'refresh_machine_ports'
             ,'connect_node','start_node','shutdown_node'
+            ,'post_login'
         ]
     }
 
@@ -288,6 +298,8 @@ our %CMD_VALIDATE = (
     ,compact => \&_validate_compact
     ,spinoff => \&_validate_compact
     ,prepare_base => \&_validate_compact
+    ,open_exposed_ports => \&_validate_open_exposed_ports
+    ,close_exposed_ports => \&_validate_close_exposed_ports
 );
 
 sub _init_connector {
@@ -838,7 +850,62 @@ sub _new_request {
     $request->_validate();
     $request->status('requested') if $request->status ne'done';
 
+    $self->lock_domain() if ! $args{at};
+
     return $request;
+}
+
+sub id_domain($self, $value=undef) {
+
+    return $self->_data('id_domain' => $value) if defined $value;
+
+    my $id_domain = $self->{_data}->{id_domain};
+    return $id_domain if defined $id_domain;
+    $id_domain = $self->defined_arg('id_domain');
+    $self->{_data}->{id_domain} = $id_domain;
+    return $id_domain;
+}
+
+=head2 lock_domain
+
+  Checks if that request belongs to a virtual machine and sets it as locked
+
+=cut
+
+sub lock_domain($self) {
+    my $id_domain = $self->id_domain;
+    if (!defined $id_domain) {
+        $id_domain = $self->defined_arg('id_domain');
+    }
+    return if !defined $id_domain;
+
+    my $sth = $self->_dbh->prepare(
+        "UPDATE domains set is_locked=? "
+        ." WHERE id=?"
+    );
+    $sth->execute($self->id, $id_domain);
+}
+
+=head2 unlock_domain
+
+  Checks if that request belongs to a virtual machine and unlocks it
+
+=cut
+
+sub unlock_domain($self) {
+    my $id_domain = $self->id_domain;
+    if (!defined $id_domain) {
+        $id_domain = $self->defined_arg('id_domain');
+    }
+    return if !defined $id_domain;
+
+    my $sth = $self->_dbh->prepare(
+        "UPDATE domains set is_locked=0 "
+        ." WHERE id=?"
+        ."   AND is_locked<>0"
+    );
+    $sth->execute($id_domain);
+
 }
 
 sub _validate($self) {
@@ -1068,6 +1135,42 @@ sub _validate_clone($self
         if !$base->is_public;
 }
 
+sub _validate_open_exposed_ports($self) {
+
+    my $id_domain = $self->defined_arg('id_domain');
+    return if !$id_domain;
+
+    my $domain_f;
+    eval { $domain_f = Ravada::Front::Domain->open($id_domain) };
+    if ($@) {
+        my ($line) = $@ =~ m{(.*)}m;
+        chomp $line;
+        $self->error($line);
+        $self->status('done');
+        return;
+    }
+    $domain_f->_data('ports_exposed' => 1);
+}
+
+sub _validate_close_exposed_ports($self) {
+
+    my $id_domain = $self->defined_arg('id_domain');
+    return if !$id_domain;
+
+    my $domain_f;
+    eval { $domain_f = Ravada::Front::Domain->open($id_domain) };
+    if ($@) {
+        my ($line) = $@ =~ m{(.*)}m;
+        chomp $line;
+        $self->error($line);
+        $self->status('done');
+        return;
+    }
+
+    $domain_f->_data('ports_exposed' => 0);
+}
+
+
 sub _last_insert_id {
     _init_connector();
     return Ravada::Utils::last_insert_id($$CONNECTOR->dbh);
@@ -1115,7 +1218,8 @@ sub status {
     }
 
     $self->_send_message($status, $message)
-        if $CMD_SEND_MESSAGE{$self->command} || $self->error ;
+        if $CMD_SEND_MESSAGE{$self->command}
+            || ( $self->error && !$CMD_DO_NOT_SEND_ERROR{$self->command});
 
     if ($status eq 'done' && $date_changed && $date_changed eq $self->date_changed) {
         sleep 1;
@@ -1889,6 +1993,68 @@ sub remove($status, %args) {
     }
 }
 
+sub _data($self, $field, $value=undef) {
+    if (defined $value
+        && (
+          !exists $self->{_data}->{$field}
+          || !defined $self->{_data}->{$field}
+          || $value ne $self->{_data}->{$field}
+        )
+    ) {
+        confess "ERROR: field $field is read only"
+            if $FIELD_RO{$field};
+
+        $self->{_data}->{$field} = $value;
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "UPDATE requests set $field=?"
+            ." WHERE id=?"
+        );
+        $sth->execute($value, $self->id);
+        $sth->finish;
+
+        return $value;
+    }
+    return $self->{_data}->{$field}
+    if exists $self->{_data}->{$field} && defined $self->{_data}->{$field};
+
+    $self->{_data} = $self->_select_db( );
+
+    return if !$self->{_data};
+    confess "No field $field "          if !exists$self->{_data}->{$field};
+
+    return $self->{_data}->{$field};
+
+}
+
+sub id($self) {
+    return $self->{id};
+}
+
+sub _select_db($self) {
+
+    _init_connector();
+
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM requests "
+            ." WHERE id=?");
+    $sth->execute($self->{id});
+    my $row = $sth->fetchrow_hashref;
+    $sth->finish;
+
+    return if !$row;
+
+    return $row;
+}
+
+=head2 refresh
+
+Refresh request status and data
+
+=cut
+
+sub refresh($self) {
+    delete $self->{_data};
+}
+
 sub AUTOLOAD {
     my $self = shift;
 
@@ -1902,37 +2068,17 @@ sub AUTOLOAD {
         );
     }
 
+    confess "ERROR: Unknown field $name "
+        if !exists $self->{$name} && !exists $FIELD{$name} && !exists $FIELD_RO{$name};
+
     confess "Can't locate object method $name via package $self"
         if !ref($self);
 
     my $value = shift;
     $name =~ tr/[a-z][A-Z]_/_/c;
 
-    confess "ERROR: Unknown field $name "
-        if !exists $self->{$name} && !exists $FIELD{$name} && !exists $FIELD_RO{$name};
-    if (!defined $value) {
-        my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM requests "
-            ." WHERE id=?");
-        $sth->execute($self->{id});
-        my $row = $sth->fetchrow_hashref;
-        $sth->finish;
-
-        return $row->{$name};
-    }
-
-    confess "ERROR: field $name is read only"
-        if $FIELD_RO{$name};
-
-    confess "Error: $name can't be a ref ".Dumper($value) if ref($value);
-    my $sth = $$CONNECTOR->dbh->prepare("UPDATE requests set $name=? "
-            ." WHERE id=?");
-    confess if $name eq 'error' && !defined $value;
-    eval {
-        $sth->execute($value, $self->{id});
-        $sth->finish;
-    };
-    warn "$name=$value\n$@" if $@;
-    return $value;
+    delete $self->{_data}->{$name} if $name eq 'error';
+    return $self->_data($name, $value);
 
 }
 

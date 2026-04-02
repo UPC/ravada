@@ -58,29 +58,73 @@ sub test_expose_port($vm) {
     my $remote_ip2 = '10.0.0.2';
     my $local_ip = $vm->ip;
 
+    is($domain->_data('ports_exposed'),undef);
     my $req = Ravada::Request->start_domain(
         uid => user_admin->id
         ,id_domain => $domain->id
         ,remote_ip => $remote_ip1
     );
-    my $internal_ip = _wait_ip2($vm->type, $domain) or die "Error: no ip for ".$domain->name;
     wait_request( request => $req);
+    delete $domain->{_data};
+
+    my $internal_ip = _wait_ip2($vm->type, $domain) or die "Error: no ip for ".$domain->name;
+    Ravada::Request->refresh_machine(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,_force => 1
+    );
+    wait_request( request => $req);
+
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    is($domain_f->ip(), $internal_ip);
+
+    delete $domain->{_data};
+    is($domain->_data('ports_exposed'),2);
 
     my ($port) = $domain->list_ports();
 
-    Ravada::Request->open_exposed_ports(
-        uid => user_admin->id
-        ,id_domain => $domain->id
-        ,remote_ip => $remote_ip2
-    );
-    wait_request();
+    is($req->error,'');
+    is($domain->_data('ports_exposed'),2);
 
     my @out_nat = split /\n/, `iptables-save -t nat`;
     my @prerouting= (grep /--to-destination $internal_ip:22/, @out_nat);
     is(scalar(@prerouting),1);
     my @out= split /\n/, `iptables-save`;
-    my @forward = (grep /-s $remote_ip2\/32 -d $internal_ip.* --dport 22.*-j ACCEPT/, @out);
-    is(scalar(@forward),1,"-s $remote_ip2\/32 -d $internal_ip.* --dport 22.*-j ACCEPT") or die Dumper([grep /FORWARD/,@out]);
+    my @forward = (grep /-s $remote_ip1\/32 -d $internal_ip.* --dport 22.*-j ACCEPT/, @out);
+    is(scalar(@forward),1,"-s $remote_ip1\/32 -d $internal_ip.* --dport 22.*-j ACCEPT") or die $domain->name." ". Dumper([grep /FORWARD/,@out]);
+
+    # test open from another ip
+    Ravada::Request->open_exposed_ports(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,remote_ip => $remote_ip2
+    );
+    wait_request(debug=>0);
+
+    @out_nat = split /\n/, `iptables-save -t nat`;
+    @prerouting= (grep /--to-destination $internal_ip:22/, @out_nat);
+    is(scalar(@prerouting),1);
+    @out= split /\n/, `iptables-save`;
+    @forward = (grep /-s $remote_ip2\/32 -d $internal_ip.* --dport 22.*-j ACCEPT/, @out);
+    is(scalar(@forward),1,"-s $remote_ip2\/32 -d $internal_ip.* --dport 22.*-j ACCEPT") or die $domain->name." ". Dumper([grep /FORWARD/,@out]);
+
+    # test shutdown ports closed
+    Ravada::Request->shutdown_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request();
+    delete $domain->{_data};
+    is($domain->_data('ports_exposed'),0) or die $domain->name;
+
+    @out_nat = split /\n/, `iptables-save -t nat`;
+    @prerouting= (grep /--to-destination $internal_ip:22/, @out_nat);
+    is(scalar(@prerouting),0);
+    @out= split /\n/, `iptables-save`;
+    @forward = (grep /-s $remote_ip2\/32 -d $internal_ip.* --dport 22.*-j ACCEPT/, @out);
+    is(scalar(@forward),0,"-s $remote_ip2\/32 -d $internal_ip.* --dport 22.*-j ACCEPT") or die $domain->name." ". Dumper([grep /FORWARD/,@out]);
+    is($domain->_data('ports_exposed'),0);
+
     remove_domain($domain0);
 }
 
@@ -114,6 +158,7 @@ SKIP: {
           diag($msg)      if !$vm;
           skip $msg,10    if !$vm;
 
+          diag("testing $vm_name");
           _import_base($vm);
           test_expose_port($vm);
       }

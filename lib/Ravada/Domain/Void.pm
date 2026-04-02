@@ -156,7 +156,7 @@ sub _set_display($self, $listen_ip=$self->_vm->listen_ip) {
     #    my $ip = ($self->_vm->nat_ip or $self->_vm->ip());
     my $port = 'auto';
     $port = $self->_new_free_port() if $self->is_active();
-    my $display_data = { driver => 'void', ip => $listen_ip, port =>$port
+    my $display_data = { driver => 'void', listen_ip => $listen_ip, port =>$port
         , is_builtin => 1
         , xistorra => 1
     };
@@ -348,7 +348,15 @@ sub shutdown {
     for my $display (@{$hardware->{'display'}}) {
         $display->{port} = 'auto';
     }
+    for my $if (@{$hardware->{'network'}}) {
+        $if->{address} = '';
+    }
+
     $self->_store(hardware => $hardware);
+
+    my $info = $self->_value('info');
+    $info->{ip} = '';
+    $self->_store(info => $info);
 }
 
 sub force_shutdown {
@@ -416,7 +424,7 @@ sub _set_ip_address($self) {
     for my $net (@{$hardware->{network}}) {
         next if !ref($net);
         next if exists $net->{address} && $net->{address};
-        next if $net->{type} ne 'nat';
+        next if $net->{type} ne 'nat' && $net->{type} ne 'bridge';
         $net->{address} = '198.51.100.'.int(rand(253)+2);
         $changed++;
     }
@@ -773,7 +781,7 @@ sub _set_default_info($self, $listen_ip=undef, $network=undef) {
         ,address => $info->{ip}
         ,type => 'nat'
         ,driver => 'virtio'
-        ,name => $net->{name}
+        ,network => $net->{name}
     };
     $self->_store(hardware => $hardware );
 
@@ -878,6 +886,23 @@ sub ip {
     return;
 }
 
+sub ip_info($self) {
+    my $hardware = $self->_value('hardware');
+    return if !exists $hardware->{network};
+        for my $network(@{$hardware->{network}}) {
+            $network->{addr} = delete $network->{address};
+            if ( ref($network) && exists $network->{addr} && $network->{addr} ) {
+                lock_hash(%$network);
+                return $network;
+            }
+
+        $self->_set_ip_address();
+    }
+
+    return;
+
+}
+
 sub clean_disk($self, $file) {
     open my $out,'>',$file or die "$! $file";
     close $out;
@@ -945,7 +970,7 @@ sub _new_network($self) {
         ,address => ''
         ,type => 'nat'
         ,driver => 'virtio'
-        ,name => "net".(scalar(@$list)+1)
+        ,network => "net".(scalar(@$list)+1)
     };
 }
 

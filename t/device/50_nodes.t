@@ -88,6 +88,7 @@ sub _create_mock_devices($vm, $n_devices, $type, $value="fff:fff") {
 
 sub _create_host_devices($node,$number, $type=undef) {
 
+    return if !scalar(@$node);
     my $vm = $node->[0];
 
     my $templates = Ravada::HostDevice::Templates::list_templates($vm->type);
@@ -112,8 +113,9 @@ sub _create_host_devices($node,$number, $type=undef) {
 
         $found=1;
         for my $n (0 .. scalar(@$node)-1) {
+            next if !defined $node->[$n];
             my $curr_node = $node->[$n];
-            my $devices = $devices_nodes{$curr_node->id};
+            my $devices = $devices_nodes{$curr_node->id}->{list};
             $found=0 unless scalar(@$devices) >= $number->[0];
         }
         $MOCK_DEVICES=0;
@@ -445,7 +447,7 @@ sub check_hd_from_node($domain, $devices_node) {
     my ($locked) = @locked;
 
     my $vm = Ravada::VM->open($id_vm);
-    my $devices = $devices_node->{$vm->id};
+    my $devices = $devices_node->{$vm->id}->{list};
 
     my ($match) = grep { $_ eq $locked->{name} } @$devices;
     ok($match,"Expecting $locked->{name} in ".Dumper($devices)) or confess;
@@ -646,6 +648,7 @@ for my $vm_name (vm_names() ) {
         diag("Testing host devices in $vm_name");
 
         my ($node1, $node2) = remote_node_2($vm_name);
+        next unless $node1 && $node2;
         clean_remote_node($node1, $node2);
 
         #        TODO: volatile clones

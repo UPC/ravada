@@ -6,6 +6,7 @@
          <div class="col-lg-2">
             <input type="text"
                 size="6"
+                ng-disabled="!is_admin"
                 ng-model="item.max_mem"/>
         </div>
     </div>
@@ -22,6 +23,10 @@
             <span class="info" ng-show="showmachine.is_active">
                 <%=l 'Current memory can be changed while running' %>
             </span>
+            <span class="error" ng-show="item.memory > item.max_mem">
+                    <%=l 'Current memory can not be more than max memory' %>
+            </span>
+
         </div>
     </div>
 </div>

@@ -162,6 +162,8 @@ sub _check_default_storage($self) {
 
 sub _check_networks($self, $vm=$self->vm) {
 
+    return if !defined $vm;
+
     my @found;
     for my $net ($vm->list_all_networks) {
         return if $net->is_active;
@@ -615,6 +617,7 @@ sub file_exists($self, $file) {
 }
 
 sub _file_exists_remote($self, $file) {
+    return 1 if $self->search_volume($file);
     $file = $self->_follow_link($file) unless $file =~ /which$/;
     return if !$self->vm;
     for my $pool ($self->vm->list_all_storage_pools ) {
@@ -664,8 +667,12 @@ Returns the directory where disk images are stored in this Virtual Manager
 sub dir_img {
     my $self = shift;
 
-    my $pool = $self->_load_storage_pool();
+    my $pool;
+    eval { $pool = $self->_load_storage_pool() };
+    warn $@ if $@;
+
     $pool = $self->_create_default_pool() if !$pool;
+
     my $xml = XML::LibXML->load_xml(string => $pool->get_xml_description());
 
     my $dir = $xml->findnodes('/pool/target/path/text()');
@@ -729,7 +736,7 @@ sub create_storage_pool($self, $name, $dir, $vm=$self->vm) {
         die $@ if $@;
         die "$error\n" if $error;
     }
-
+    return $pool;
 }
 
 sub remove_storage_pool($self, $name) {
@@ -742,12 +749,17 @@ sub remove_storage_pool($self, $name) {
 
 sub _create_default_pool($self, $vm=$self->vm) {
     my $dir = "/var/lib/libvirt/images";
+
+    if ($>) {
+        $dir = "/run/user/$</images";
+    }
     mkdir $dir if ! -e $dir;
 
     my $name = 'default';
 
+    my $pool;
     eval {
-    $self->create_storage_pool($name, $dir, $vm);
+    $pool=$self->create_storage_pool($name, $dir, $vm);
     };
     warn $@ if $@;
 }
@@ -1417,7 +1429,7 @@ sub _iso_name($self, $iso, $req=undef, $verbose=1) {
             $verified++;
         }
         return if $test;
-        die "WARNING: $device signature not verified ".Dumper($iso)    if !$verified;
+        warn "WARNING: $device signature not verified ".Dumper($iso)    if !$verified;
 
         $req->status("done","File $iso->{filename} downloaded") if $req;
         $downloaded = 1;
@@ -1597,8 +1609,9 @@ sub _download($self, $url) {
         last if $res;
     }
     die $@ if $@;
-    confess "ERROR ".$res->code." ".$res->message." : $url"
-        unless $res->code == 200 || $res->code == 301 || $res->code == 302;
+    confess "ERROR ".($res->code or '<UNDEF>')." ".$res->message." : $url"
+        unless defined $res->code
+        && ( $res->code == 200 || $res->code == 301 || $res->code == 302 );
 
     return $self->_cache_store($url,$res->body);
 }
@@ -2034,9 +2047,15 @@ sub _xml_add_uefi($self, $doc, $name) {
     my $ovmf = '/usr/share/OVMF/OVMF_CODE.fd';
 
     my ($type) = $doc->findnodes('/domain/os/type');
-    if ($type->getAttribute('arch') =~ /x86_64/
-            && $type->getAttribute('machine') =~ /pc-q35/) {
+    my $arch = $type->getAttribute('arch');
+    if ( $arch =~ /x86_64/ ) {
+
+        $type->setAttribute('machine' => $self->_find_machine_type($arch, qr/^pc-q35/))
+        if $type->getAttribute('machine') !~ /pc-q35/;
+
         $ovmf = '/usr/share/OVMF/OVMF_CODE_4M.fd';
+    } else {
+        die "Unsupported UEFI in this architecture ".$type->toString();
     }
     my ($text) = $loader->findnodes("text()");
     if ($text) {
@@ -2842,7 +2861,7 @@ sub active_storage_pool($self, $name, $value=1) {
         or die "Error: no storage pool '$name'\n";
 
     if ( $value ) {
-        $pool->create();
+        $pool->create() unless $pool->is_active();
     } else {
         $pool->destroy();
     }
@@ -2918,6 +2937,14 @@ sub free_disk($self, $pool_name = undef ) {
     return $info->{available};
 }
 
+sub _find_machine_type($self, $arch, $type_re) {
+    my %machine_types = $self->list_machine_types();
+    for my $type ( @{$machine_types{$arch}}) {
+        return $type if $type =~ $type_re;
+    }
+    confess "Error: machine type $type_re not found in architecture $arch";
+}
+
 sub list_machine_types($self) {
 
     my %todo = map { $_ => 1 }
@@ -2951,7 +2978,7 @@ sub list_machine_types($self) {
 
 sub _is_ip_nat($self, $ip0) {
     my $ip = NetAddr::IP->new($ip0);
-    for my $net ( $self->vm->list_networks ) {
+    for my $net ( $self->vm->list_all_networks ) {
         my $xml = XML::LibXML->load_xml(string
             => $net->get_xml_description());
         my ($xml_ip) = $xml->findnodes("/network/ip");
@@ -2982,24 +3009,26 @@ sub copy_file_storage($self, $file, $storage) {
     die "Error: '$file' too big to fit in $storage ".Ravada::Utils::number_to_size($vol_capacity)." > ".Ravada::Utils::number_to_size($pool_capacity)."\n"
     if $vol_capacity>$pool_capacity;
 
-    my ($format) = $doc->findnodes("/volume/target/format");
-    if ($format ne 'qcow2') {
+=pod
+    my ($format_node) = $doc->findnodes("/volume/target/format");
+    my $format;
+    $format = $format_node->getAttribute('type');
+    if (0 && defined $format && $format ne 'qcow2') {
         die "Error: I can't copy $format on remote nodes"
         unless $self->is_local;
 
         my $dst_file = $self->_storage_path($storage)."/".$name;
         copy($file,$dst_file);
-        $self->refresh_storage();
         return $dst_file;
     }
+
+=cut
 
     my $vol_dst;
     eval { $vol_dst= $sp->get_volume_by_name($name) };
     die $@ if $@ && !(ref($@) && $@->code == 50);
 
-    warn 1;
-    $vol_dst= $sp->clone_volume($vol->get_xml_description);
-    warn 2;
+    $vol_dst= $sp->clone_volume($vol->get_xml_description, $vol);
 
     return $vol_dst->get_path();
 }
@@ -3027,6 +3056,9 @@ sub list_virtual_networks($self) {
             $ip = $ip_doc->getAttribute('address');
             $netmask = $ip_doc->getAttribute('netmask');
         }
+        my ($forward) = $doc->findnodes("/network/forward");
+        my $forward_mode = 'none';
+        $forward_mode = $forward->getAttribute('mode') if $forward;
         my $data= {
             is_active => $net->is_active()
             ,autostart => $net->get_autostart()
@@ -3036,6 +3068,7 @@ sub list_virtual_networks($self) {
             ,ip_address => $ip
             ,ip_netmask => $netmask
             ,internal_id => ''.$net->get_uuid_string
+            ,forward_mode => $forward_mode
         };
         if ($ip_doc) {
             my ($dhcp_range) = $ip_doc->findnodes("dhcp/range");
@@ -3072,9 +3105,24 @@ sub new_network($self, $name='net') {
             }
 
         }
+        if ( $field eq 'name' && $name ne 'net' ) {
+            my $value = $base{$field};
+            $value =~ s/(.*-.).*(\..*)/$1$2/;
+            if (exists $old{$value}) {
+                $value = $base{$field};
+            }
+            if (!exists $old{$value}) {
+                $new->{$field}=$value;
+                next;
+            }
+        }
+
         my ($last) = reverse sort keys %old;
         my ($z,$n) = $last =~ /.*?(0*)(\d+)/;
-        $z=$last if !defined $z;
+        if (!defined $z) {
+            ($z) = $last =~ /.*?(\d+$)/;
+            $z='' if !defined $z;
+        }
         $n=0 if !defined $n;
         $n++;
         $n = "$z$n";
@@ -3100,6 +3148,7 @@ sub new_network($self, $name='net') {
         }
         $new->{$field} = $value;
     }
+    $new->{forward_mode} = "nat";
     return $new;
 }
 
@@ -3113,7 +3162,11 @@ sub create_network($self, $data) {
     my ($xml_net) = $xml->findnodes("/network");
 
     my $forward = $xml_net->addNewChild(undef,'forward');
-    $forward->setAttribute('mode' => 'nat');
+    if (exists $data->{forward_mode}) {
+        $forward->setAttribute('mode' => $data->{forward_mode});
+    } else {
+        $forward->setAttribute('mode' => 'nat');
+    }
 
     my $ip = $xml_net->addNewChild(undef,'ip');
     $ip->setAttribute('address' => $data->{ip_address});
@@ -3226,10 +3279,33 @@ sub change_network($self, $data) {
         }
     }
 
+    my $forward_mode = delete $data->{forward_mode};
+
+    if (defined $forward_mode) {
+        my $curr_fw_mode='none';
+        my ($xml_forward) = $doc->findnodes("/network/forward");
+        $curr_fw_mode = $xml_forward->getAttribute('mode') if $xml_forward;
+        if ( $curr_fw_mode ne $forward_mode) {
+            $changed++;
+            my $is_active = $network->is_active;
+            $network->destroy() if $network->is_active;
+            if (!$xml_forward) {
+                my ($xml_network) = $doc->findnodes("network");
+                $xml_forward = $xml_network->addNewChild(undef,"forward");
+            }
+            $xml_forward->setAttribute('mode' => $forward_mode);
+            my ($xml_nat) = $xml_forward->findnodes("nat");
+            $xml_forward->removeChild($xml_nat) if $forward_mode ne 'nat' && $xml_nat;
+            $network= $self->vm->define_network($doc->toString);
+            $network->create() if $is_active;
+        }
+    }
+
+
     for ('id_vm','internal_id','id' ,'_old_name', 'date_changed') {
         delete $data->{$_};
     }
-    die "Error: unexpected args ".Dumper($data) if keys %$data;
+    warn "Warning: unexpected args ".Dumper($data) if keys %$data;
 
     return $changed;
 }

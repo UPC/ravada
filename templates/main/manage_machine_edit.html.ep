@@ -28,13 +28,17 @@
         <div class="col-md-8 mt-1 mb-1">
 
             <button class="btn btn-primary"
-                ng-disabled="(showmachine._date_changed && showmachine.requests > 0 ) || form_edit.$pristine"
+                ng-disabled="(showmachine._date_changed && showmachine.requests > 0 ) || form_edit.$pristine
+                || ( name == 'memory' && item.memory > item.max_mem)
+                "
                 ng-click="change_hardware(item,name,$index)">
                     <%=l 'Apply' %>
             </button>
 
             <button class="btn btn-primary"
-                ng-disabled="(showmachine._date_changed && showmachine.requests > 0 ) || form_edit.$pristine"
+                ng-disabled="(showmachine._date_changed && showmachine.requests > 0 ) || form_edit.$pristine
+                || ( name == 'memory' && item.memory > item.max_mem)
+                "
                 ng-click="change_hardware(item,name,$index);set_edit()">
                     <%=l 'Accept' %>
             </button>

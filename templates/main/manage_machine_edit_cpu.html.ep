@@ -7,7 +7,7 @@
          <input type="number" size="3" min="1"
             ng-model="item.vcpu['#text']" name="vcpu"
             ng-class='{"disabled": topology}'
-            ng-disabled="topology"
+            ng-disabled="topology || !is_admin"
          />
          <span ng-show="!topology && showmachine.is_active">
             <br/>
@@ -28,6 +28,7 @@
         ><small><%=l 'Sockets' %></small></label>
         <input type="number" size="3" min="1"
             ng-change="topology_changed()"
+            ng-disabled="!is_admin"
             ng-model="item.cpu.topology.sockets" name="sockets"/>
 
         <label for="dies"
@@ -37,6 +38,7 @@
         <input type="number" size="3" min="1"
             ng-show="node.version >= 8000000"
             ng-change="topology_changed()"
+            ng-disabled="!is_admin"
             ng-model="item.cpu.topology.dies" name="dies"/>
 
         <label for="cores"
@@ -44,6 +46,7 @@
         ><small><%=l 'Cores' %></small></label>
         <input type="number" size="3" min="1"
             ng-change="topology_changed()"
+            ng-disabled="!is_admin"
             ng-model="item.cpu.topology.cores" name="cores"/>
 
         <label for="threads"
@@ -51,10 +54,11 @@
         ><small><%=l 'Threads' %></small></label>
         <input type="number" size="3" min="1"
             ng-change="topology_changed()"
+            ng-disabled="!is_admin"
             ng-model="item.cpu.topology.threads" name="threads"/>
 
         <button type="button" class="badge badge-light text-blue"
-        ng-show="topology"
+        ng-show="topology && is_admin"
         ng-click="item.cpu.topology={};change_hardware(item,'cpu',$index)"><%=l 'clear' %></button>
         </div>
 
@@ -75,6 +79,16 @@
                     ng-options="check for check in ['none','partial','full']"
             >
             </select>
+        </li>
+        <li class="list-group-item list-group-item-primary"
+            ng-show="item.cpu.mode=='host-passthrough'"
+        ><%=l 'migratable' %></li>
+        <li class="list-group-item" ng-show="item.cpu.mode=='host-passthrough'">
+            <select ng-model="item.cpu.migratable"
+                    ng-options="check for check in ['on','off']"
+            >
+            </select>
+
         </li>
         <li ng-show="item.cpu.mode=='custom'"
             class="list-group-item list-group-item-primary"><%=l 'match' %></li>

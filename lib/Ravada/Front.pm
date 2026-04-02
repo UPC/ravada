@@ -93,7 +93,11 @@ Returns a list of the base domains as a listref
 
 sub list_bases($self, %args) {
     $args{is_base} = 1;
-    my $query = "SELECT name, id, is_base, id_owner FROM domains "
+    my $query = "SELECT name, d.id, is_base, id_owner,is_public "
+    ."                    ,db.id_bundle"
+    ." FROM domains d "
+    ." LEFT JOIN domains_bundle db "
+    ."   ON d.id=db.id_domain "
         ._where(%args)
         ." ORDER BY name";
 
@@ -227,6 +231,7 @@ sub _get_clone_info($user, $base, $clone = Ravada::Front::Domain->open($base->{i
         && $user->can_screenshot) {
         my $req = Ravada::Request->screenshot(
             id_domain => $clone->id
+            ,uid => $user->id
         );
     }
     return $c;
@@ -271,9 +276,13 @@ sub _init_available_actions($user, $m) {
         $m->{can_reboot} = $m->{can_shutdown} && $m->{can_start};
 
         $m->{can_view} = 0;
-        $m->{can_view} = 1 if $m->{id_owner} == $user->id || $user->is_admin
-        || $user->_machine_shared($m->{id})
-        ;
+        if ( $m->{id_owner} == $user->id
+            || $user->is_admin
+            || $user->_machine_shared($m->{id})
+            || $user->can_view_all()) {
+                $m->{can_view} = 1;
+                $m->{can_start} = 1;
+        }
 
         $m->{can_manage} = ( $user->can_manage_machine($m->{id}) or 0);
         eval {
@@ -329,71 +338,45 @@ sub list_domains($self, %args) {
     my $query = "SELECT d.name,d.alias, d.id, id_base, is_base, id_vm, status, is_public "
         ."      ,vms.name as node , is_volatile, client_status, id_owner "
         ."      ,comment, is_pool, show_clones"
+        ."      ,d.has_clones, d.is_locked"
+        ."      ,d.client_status, d.date_status_change, d.autostart "
         ."      ,d.date_changed"
         ." FROM domains d LEFT JOIN vms "
         ."  ON d.id_vm = vms.id ";
 
-    my $where = '';
-    for my $field ( sort keys %args ) {
-        $where .= " AND " if $where;
-        if (!defined $args{$field}) {
-            $where .= " $field IS NULL ";
-            delete $args{$field};
-            next;
-        }
-        $where .= " d.$field=?"
-    }
-    $where = "WHERE $where" if $where;
+    my ($where, $values) = $self->_create_where(\%args);
 
     my $sth = $CONNECTOR->dbh->prepare("$query $where ORDER BY d.id");
-    $sth->execute(map { $args{$_} } sort keys %args);
+    $sth->execute(@$values);
 
     my @domains = ();
     while ( my $row = $sth->fetchrow_hashref) {
-        for (qw(is_locked is_hibernated is_paused
-                has_clones )) {
+        for (qw(is_hibernated is_paused)) {
             $row->{$_} = 0;
         }
-        my $domain ;
-        my $t0 = time;
-        eval { $domain   = $self->search_domain($row->{name}) };
-        warn $@ if $@;
         $row->{remote_ip} = undef;
-        if ( $row->{is_volatile} && !$domain ) {
-            $self->_remove_domain_db($row->{id});
-            next;
-        }
 
         $row->{name}=Encode::decode_utf8($row->{alias})
         if defined $row->{alias} && length($row->{alias});
 
-        $row->{has_clones} = 0 if !exists $row->{has_clones};
-        $row->{is_locked} = 0 if !exists $row->{is_locked};
         $row->{is_active} = 0;
         $row->{remote_ip} = undef;
-        if ( $domain ) {
-            $row->{is_locked} = $domain->is_locked;
+        {
             if ($row->{status} =~ /active|starting/) {
                 $row->{is_active} = 1;
                 $row->{is_hibernated} = 0;
                 $row->{is_paused} = 0;
+                $row->{remote_ip} = Ravada::Domain::remote_ip($row->{id});
             } else {
                 $row->{is_active} = 0;
-                $row->{is_hibernated} = ( $domain->is_hibernated or 0);
-                $row->{is_paused} = 1 if $domain->is_paused;
+                $row->{is_hibernated} = 1 if $row->{status} eq 'hibernated';
+                $row->{is_paused} = 1 if $row->{status} eq 'paused';
             }
-            $row->{has_clones} = $domain->has_clones;
-#            $row->{disk_size} = ( $domain->disk_size or 0);
-#            $row->{disk_size} /= (1024*1024*1024);
-#            $row->{disk_size} = 1 if $row->{disk_size} < 1;
-            $row->{remote_ip} = $domain->remote_ip if $row->{is_active};
-            $row->{node} = $domain->_vm->name if $domain->_vm;
-            $row->{remote_ip} = $domain->client_status
-                if $domain->client_status && $domain->client_status !~ /^connected/;
-            if  ($domain->remote_ip && $domain->client_status && $domain->client_status =~ /^connected \((.*?)\)/ ) {
-                $row->{remote_ip} = $domain->remote_ip.".$1";
+            $row->{node} = $self->_node_name($row->{id_vm});
+            if (defined $row->{client_status}) {
+                ($row->{remote_ip}) = $row->{client_status} =~ /onnected.*?\((.*)\)/;
+                $row->{remote_ip} = $row->{client_status} if ! $row->{remote_ip};
             }
-            $row->{autostart} = $domain->_data('autostart');
             if (!$row->{status} ) {
                 if ($row->{is_active}) {
                     $row->{status} = 'active';
@@ -403,7 +386,7 @@ sub list_domains($self, %args) {
                     $row->{status} = 'down';
                 }
             }
-            $row->{date_status_change} = $domain->_date_status_change();
+            $row->{date_status_change} = Ravada::Domain::_date_status_change($row->{date_status_change});
         }
         delete $row->{spice_password};
         push @domains, ($row);
@@ -411,6 +394,67 @@ sub list_domains($self, %args) {
     $sth->finish;
 
     return \@domains;
+}
+
+sub _create_where($self, $args) {
+    my $where = '';
+    my @values;
+
+    my $date_changed = delete $args->{date_changed};
+    for my $field ( sort keys %$args ) {
+        $where .= " OR " if $where;
+        if (!defined $args->{$field}) {
+            $where .= " $field IS NULL ";
+            next;
+        }
+        my $operation = "=";
+        $operation = ">=" if $field eq 'date_changed';
+        $operation = "like" if $field eq 'name';
+        if (!ref($args->{$field})) {
+            $where .= " d.$field $operation ?";
+            if ($field eq 'name') {
+                push @values,('%'.$args->{$field}.'%');
+            } else {
+                push @values,($args->{$field});
+            }
+        } else {
+            my $option = '';
+            for my $value ( @{$args->{$field}} ) {
+                $option .= " OR " if $option;
+                if (!defined $value) {
+                    $option .= " d.$field IS NULL ";
+                    next;
+                }
+                $option .= " d.$field=? ";
+                push @values,($value);
+            }
+            $where .= " ($option) ";
+        }
+    }
+    if ($date_changed) {
+        $where = " ( $where ) AND " if $where ;
+        $where .= " d.date_changed >= ? ";
+        push @values, ($date_changed);
+    }
+
+    $where = "WHERE $where" if $where;
+
+    return ($where,\@values);
+}
+
+
+sub _node_name($self, $id_vm) {
+    return $self->{_node_name}->{$id_vm}
+    if $self->{_node_name}->{$id_vm};
+
+    my $sth = $self->_dbh->prepare("SELECT name FROM vms "
+        ." WHERE id=?"
+    );
+    $sth->execute($id_vm);
+    my ($name) = $sth->fetchrow;
+    $self->{_node_name}->{$id_vm} = $name;
+
+    return $name;
 }
 
 =head2 filter_base_without_clones
@@ -743,6 +787,7 @@ sub list_iso_images {
         $row->{options} = decode_json($row->{options})
             if $row->{options};
         $row->{min_ram} = 0.2 if !$row->{min_ram};
+        $row->{min_swap_size} = 0 if !$row->{min_swap_size};
         push @iso,($row);
     }
     $sth->finish;
@@ -917,6 +962,8 @@ sub wait_request {
     }
     $req->status("timeout")
         if $req->status eq 'working';
+
+    $req->refresh();
     return $req;
 
 }
@@ -1141,6 +1188,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'manage_pools'
                 || $command eq 'list_storage_pools'
                 || $command eq 'list_cpu_models'
+                || $command eq 'list_networks'
                 ;
         next if ( $command eq 'force_shutdown'
                 || $command eq 'force_reboot'
@@ -1741,12 +1789,26 @@ sub list_storage_pools($self, $uid, $id_vm, $active=undef) {
 
     my $key="list_storage_pools_$id_vm";
 
-    my $cache = ($self->_cache_get($key) or []);
+    my $req_active_sp;
+    for my $command ( 'active_storage_pool','create_storage_pool') {
+        $req_active_sp = Ravada::Request::done_recently(
+            undef,60, $command
+        );
+        last if $req_active_sp;
+    }
+    my $cache = [];
+    my $force = 0;
+    if ($req_active_sp) {
+        $force = 1;
+    } else {
+        $cache = ($self->_cache_get($key) or []);
+    }
 
     my $req = Ravada::Request->list_storage_pools(
         id_vm => $id_vm
         ,uid => $uid
         ,data => 1
+        ,_force => $force
     );
     return _filter_active($cache, $active) if !$req;
 
@@ -1794,6 +1856,7 @@ sub list_networks($self, $id_vm ,$id_user) {
         $self->_search_user($row->{id_owner},\%owner);
         $row->{_owner} = $owner{$row->{id_owner}};
         $row->{_can_change}=0;
+        $row->{is_active}=0 if !defined $row->{is_active};
 
         $row->{_can_change}=1
         if $user->is_admin || $user->can_manage_all_networks
@@ -1912,6 +1975,112 @@ sub upload_users($self, $users, $type, $create=0) {
     return ($found, $count, \@error);
 }
 
+=head2 upload_users_json
+
+Upload a list of users to the database
+
+=head3 Arguments
+
+=over
+
+=item * string with users and passwords in each line
+
+=item * type: it can be SQL, LDAP or SSO
+
+=back
+
+=cut
+
+
+sub upload_users_json($self, $data_json, $type='openid') {
+
+    my ($found, $count, @error);
+    my $data;
+    eval {
+        $data= decode_json($data_json);
+    };
+    if ( $@ ) {
+        push @error,($@);
+        $data={}
+    }
+
+    my $result = {
+        users_found => 0
+        ,users_added => 0
+        ,groups_found => 0
+        ,groups_added => 0
+    };
+    if (exists $data->{groups} &&
+        (!ref($data->{groups}) || ref($data->{groups}) ne 'ARRAY')) {
+        die "Expecting groups as an array , got ".ref($data->{groups});
+    }
+    $data->{groups} = [] if !exists $data->{groups};
+    for my $g0 (@{$data->{groups}}) {
+        $result->{groups_found}++;
+        my $g = $g0;
+        if (!ref($g)) {
+            $g = { name => $g0 };
+        }
+        if (!exists $g->{name} or !defined $g->{name} || !length($g->{name})) {
+                push @error, ("Missing group name in ".Dumper($g));
+                next;
+        }
+        $found++;
+        my $group = Ravada::Auth::Group->new(name => $g->{name});
+        my $members = delete $g->{members};
+        if (!$group || !$group->id) {
+            unless (defined $members && !scalar(@$members) && $data->{options}->{flush} && $data->{options}->{remove_empty}) {
+                $result->{groups_added}++;
+                Ravada::Auth::Group::add_group(%$g);
+            }
+        } else {
+            push @error,("Group $g->{name} already added");
+        }
+        $self->_add_users($members, $type, $result, \@error, 1);
+        $group->remove_other_members($members) if $data->{options}->{flush};
+
+        for my $m (@$members) {
+            my $user = Ravada::Auth::SQL->new(name => $m);
+            $user->add_to_group($g->{name}) unless $user->is_member($g->{name});
+        }
+        if ( $data->{options}->{remove_empty} && $group->id && !$group->members ) {
+            $group->remove();
+            $result->{groups_removed}++;
+            push @error,("Group ".$group->name." empty removed");
+        }
+    }
+
+    $self->_add_users($data->{users}, $type, $result, \@error)
+    if $data->{users};
+
+    return ($result, \@error);
+}
+
+sub _add_users($self,$users, $type, $result, $error, $ignore_already=0) {
+    for my $u0 (@$users) {
+        $result->{users_found}++;
+        my $u = $u0;
+        $u = dclone($u0) if ref($u0);
+        if (!ref($u)) {
+            $u = { name => $u0 };
+        }
+        if (!exists $u->{is_external}) {
+            if ($type ne 'sql') {
+                $u->{is_external} = 1;
+                $u->{external_auth} = $type ;
+            }
+        }
+        my $user = Ravada::Auth::SQL->new(name => $u->{name});
+        if ($user && $user->id) {
+            push @$error,("User $u->{name} already added")
+                unless $ignore_already;
+            next;
+        }
+        Ravada::Auth::SQL::add_user(%$u);
+        $result->{users_added}++;
+    }
+}
+
 =head2 create_bundle
 
 Creates a new bundle
@@ -1948,6 +2117,21 @@ sub bundle_private_network($self, $id_bundle, $value=1){
     $sth->execute($value, $id_bundle);
 }
 
+=head2 bundle_isolated
+
+Sets the bundle network isolated
+
+Arguments : id_bundle, value ( defaults 1 )
+
+=cut
+
+sub bundle_isolated($self, $id_bundle, $value=1){
+    my $sth = $self->_dbh->prepare(
+        "UPDATE bundles set isolated=? WHERE id=?");
+    $sth->execute($value, $id_bundle);
+}
+
+
 =head2 add_to_bundle
 
 Adds a domain to a bundle
@@ -1959,6 +2143,23 @@ Arguments : id_bundle, id_domain
 sub add_to_bundle ($self, $id_bundle, $id_domain){
     my $sth = $self->_dbh->prepare(
         "INSERT INTO domains_bundle (id_bundle, id_domain ) VALUES(?,?)"
+    );
+    $sth->execute($id_bundle, $id_domain);
+
+}
+
+=head2 remove_from_bundle
+
+Removes a domain from a bundle
+
+Arguments : id_bundle, id_domain
+
+=cut
+
+sub remove_from_bundle ($self, $id_bundle, $id_domain){
+    my $sth = $self->_dbh->prepare(
+        "DELETE FROM domains_bundle "
+        ." WHERE id_bundle=? AND id_domain=? "
     );
     $sth->execute($id_bundle, $id_domain);
 

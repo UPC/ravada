@@ -18,6 +18,39 @@ init( );
 
 #######################################################################
 
+sub test_refresh($vm_name) {
+    my $domain = create_domain($vm_name);
+    is($domain->autostart,0,"[$vm_name] Expecting autostart=0 on domain ".$domain->name);
+    is($domain->is_active,0);
+
+    $domain->_internal_autostart(1);
+    my $req = Ravada::Request->refresh_machine(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request();
+    is($req->error,'');
+
+    my $domain2 = Ravada::Domain->open($domain->id);
+    is($domain2->_data('autostart'),1);
+    is($domain2->autostart,1);
+
+    $domain->_internal_autostart(0);
+
+    my $req2 = Ravada::Request->refresh_machine(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,_force => 1
+    );
+    wait_request();
+    is($req2->error,'');
+
+    my $domain3 = Ravada::Domain->open($domain->id);
+    is($domain3->_data('autostart'),0);
+    is($domain3->autostart,0);
+
+    $domain3->remove(user_admin);
+}
 sub test_autostart($vm_name) {
     my $domain = create_domain($vm_name);
     is($domain->autostart,0,"[$vm_name] Expecting autostart=0 on domain ".$domain->name);
@@ -147,6 +180,8 @@ for my $vm_name ( vm_names() ) {
 
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
+
+        test_refresh($vm_name);
 
         test_autostart($vm_name);
         test_autostart_base($vm_name);

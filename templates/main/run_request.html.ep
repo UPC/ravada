@@ -11,10 +11,20 @@
         ng-init="subscribe_request('<%= url_for('ws_subscribe')->to_abs %>',<%= $request->id %>);auto_view=<%= $auto_view %>;timeout=<%= $timeout %>"
     >
     <div class="jumbotron" ng-cloak="">
-
+%=       include "/main/connection_lost"
+             <div class="card-header">
+        <div>
+        <div style="display: inline-block">
         <h2><%=l 'Running' %> {{domain.alias}}
                 <span ng-show="domain.is_volatile"><%=l 'Volatile' %></span>
         </h2>
+        </div>
+        <div class="lgMachActions" style="display:inline-block; float: right">
+            <span style="float:right;" ng-show="domain.networking && domain.networking != 'nat'" class="badge badge-warning" ng-cloak>{{domain.networking}}</span>
+        </div>
+        </div>
+            </div>
+
             <div class="alert alert-warning">
                 <%=l 'A viewer is required to run the virtual machines.' %>
                 <a href="/requirements"><%=l 'Read more.' %></a>
@@ -42,6 +52,21 @@
             <ul>
                 <li><b><%=l 'Internal IP' %>:</b><span ng-show="domain.ip"> {{domain.ip}}</span>
                     <span ng-hide="domain.ip"><i><%=l 'waiting for network to come up' %></i></span>
+                    <span ng-show="domain.hardware && domain.hardware.network[0]
+                                    && domain.hardware.network[0].port.isolated == 'yes'">
+                        <span class="badge badge-pill badge-warning"
+                            ng-click="show_info_isolated=!show_info_isolated">
+                            <%=l 'isolated port' %>
+                        </span>
+                        <a href="#"
+                            ng-hide="show_info_isolated"
+                            ng-click="show_info_isolated=!show_info_isolated"><%=l '?' %></a>
+                        <span ng-show="show_info_isolated"
+                            ng-click="show_info_isolated=!show_info_isolated"
+                            class="info">
+                                <%=l 'Prevents this machine from seeing other isolated machines in the same network' %>
+                        </span>
+                    </span>
                 </li>
                 <li ng-show="domain.interfaces"><b><%=l 'Hardware address' %></b> {{domain.interfaces[0].hwaddr}} </li>
                 <li><b><%=l 'Max Memory' %>:</b> {{domain.max_mem}}</li>
@@ -64,8 +89,8 @@
                 ng-show="domain.ports.length">
                 <h3 ng-show="domain.ports.length"><%=l 'Open ports' %>
                 </h3>
-                <div>
-                <button
+                <div class="ml-4">
+                <button class="btn btn-light border border-dark"
                      ng-show="request_open_ports && domain.requests==0"
                      ng-click="reload_ports()"
                      ><%=l 'reopen' %></button>
@@ -79,13 +104,15 @@
             <div class="container pl-5"
                 ng-show="request_open_ports"
                 >
-
+            <div class="panel-body" ng-show="domain.networking == 'isolated'">
+                <span class="badge badge-warning">Virtual machine network isolated. No ports exposed.</span>
+            </div>
             <table border="0">
                 <tr ng-repeat="port in domain.ports">
                     <td align="right">
-                    <span ng-show="!port.is_active" class="badge badge-danger"><%=l 'down' %></span>
-                    <span ng-show="port.is_active" class="badge badge-info"><%=l 'up' %>
-                    </span>
+                    <span ng-show="!port.is_active || domain.ports_exposed == 0" class="badge badge-danger"><%=l 'down' %></span>
+                    <span ng-show="port.is_active && domain.ports_exposed == 1" class="badge badge-light border border-info"><%=l 'starting' %></span>
+                    <span ng-show="port.is_active && domain.ports_exposed == 2" class="badge badge-info"><%=l 'up' %></span>
                     </td>
                     <td align="left">
                     <b>{{port.name}}</b>

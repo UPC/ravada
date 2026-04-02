@@ -121,6 +121,15 @@ sub remove_member($self, $name) {
     $sth->execute($id_user);
 }
 
+sub remove_other_members($self, $members) {
+    my %members = map { $_ => 1 } @$members;
+
+    for my $name ($self->members ) {
+        $self->remove_member($name) if !$members{$name};
+    }
+
+}
+
 sub _remove_all_members($self) {
     my $sth = $$CON->dbh->prepare("DELETE FROM users_group "
         ." WHERE id_group=?"
@@ -180,6 +189,14 @@ sub remove($self) {
 sub exists_id($id) {
     _init_connector();
     my $sth = $$CON->dbh->prepare("SELECT id FROM groups_local WHERE id=?");
+    $sth->execute($id);
+    my ($found) = $sth->fetchrow;
+    return $found;
+}
+
+sub _search_name_by_id($id) {
+    _init_connector();
+    my $sth = $$CON->dbh->prepare("SELECT name FROM groups_local WHERE id=?");
     $sth->execute($id);
     my ($found) = $sth->fetchrow;
     return $found;
