@@ -470,7 +470,7 @@ sub _list_domain_requests($rvd, $args) {
     return [] unless $user->is_operator || $user->is_admin || $domain->id_owner == $user->id;
 
     my $sth = $rvd->_dbh->prepare(
-        "SELECT * FROM requests WHERE id_domain=? "
+        "SELECT id, command, status, date_req FROM requests WHERE id_domain=? "
         ." AND status <> 'done'"
         ." ORDER BY date_req "
     );
