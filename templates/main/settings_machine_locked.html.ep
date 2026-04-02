@@ -11,7 +11,7 @@
         <div ng-show="show_lock_details && domain_requests && domain_requests.length"
             class="border border-dark">
         <button type="button" class="badge btn-light"
-            ng-click="show_lock_details=false" title="<%=l 'close' %>"/>x</button>
+            ng-click="show_lock_details=false" title="<%=l 'close' %>">x</button>
 
         <ul ng-repeat="request in domain_requests" class="compact">
         <li class="compact"><small>[{{request.id}}]</small> {{request.command}} {{request.status}}</li>
