@@ -462,7 +462,7 @@ sub _list_domain_requests($rvd, $args) {
     my ($id_domain) = $args->{channel} =~ m{/(\d+)};
     my $domain = $rvd->search_domain_by_id($id_domain) or do {
         warn "Error: domain $id_domain not found.";
-        return;
+        return [];
     };
 
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
