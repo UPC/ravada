@@ -2782,6 +2782,7 @@ sub check_leftovers {
 
 sub _check_removed_nbd {
     return if $<;
+    return if !$NBD_LOADED;
     my ($in, $out, $err);
     my @cmd = ('rmmod',"nbd");
     run3(\@cmd,\$in,\$out,\$err);
