@@ -40,6 +40,7 @@ sub test_remove_n($vm, @nodes ) {
     $domain->prepare_base(user_admin);
 
     my $n=1;
+    $n++ if !$domain->_vm->is_local;
     for my $node ( @nodes ) {
         Ravada::Request->set_base_vm(
             id_vm=> $node->id
@@ -47,7 +48,8 @@ sub test_remove_n($vm, @nodes ) {
             ,id_domain => $domain->id
         );
         wait_request();
-        is($domain->list_instances, ++$n);
+        is($domain->list_instances, ++$n)
+            or die Dumper([$domain->list_instances]);
     }
 
     for my $node1 ( @nodes ) {
@@ -103,6 +105,14 @@ sub test_remove($vm, $node1, $node2) {
     );
     is($clone1->list_instances,1);
 
+    my $n_exp_instances=2;
+    if ($clone1->_vm->id == $node1->id ) {
+        # does nothing
+        $n_exp_instances=1;
+    } elsif ( !$clone1->_vm->is_local && !$node1->is_local ) {
+        # does a pass via local
+        $n_exp_instances=3;
+    }
     Ravada::Request->migrate(
         uid => user_admin->id
         ,id_domain => $clone1->id
@@ -110,7 +120,7 @@ sub test_remove($vm, $node1, $node2) {
     );
     wait_request();
 
-    is($clone1->list_instances,2);
+    is($clone1->list_instances,$n_exp_instances);
 
     my $clone2 = $domain->clone( user => user_admin
         , name => new_domain_name
