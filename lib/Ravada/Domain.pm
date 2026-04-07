@@ -993,7 +993,7 @@ sub prepare_base($self, @args) {
     my @base_img = $self->_do_prepare_base($with_cd, $overwrite, $request);
 
     die "Error: No information files returned from prepare_base"
-        if !scalar(@base_img);
+        if !scalar(@base_img) && $self->list_volumes() ;
 
     my $pending_post = 0;
     if ($request) {
@@ -1062,7 +1062,8 @@ Prepares the virtual machine as a base:
 sub _do_prepare_base($self, $with_cd, $overwrite, $req=undef) {
     my @base_img;
 
-    for my $volume ($self->list_volumes_info()) {
+    my @vols_info = $self->list_volumes_info();
+    for my $volume (@vols_info) {
         next if !$volume->file;
         my $base_file = $volume->base_filename;
         next if !$base_file || $base_file =~ /\.iso$/;
@@ -1076,7 +1077,6 @@ sub _do_prepare_base($self, $with_cd, $overwrite, $req=undef) {
                 .$self->_vm->name;
         }
     }
-    my @vols_info = $self->list_volumes_info();
     my %dupe;
     for my $volume (@vols_info) {
         my $target = $volume->info->{target};
@@ -2080,7 +2080,9 @@ sub open($class, @args) {
 }
 
 sub _check_proper_id_vm($self, $id, $id_vm) {
-    my @instances = ({ id_vm => $$id_vm } , $self->list_instances($id) );
+    #    my @instances = ({ id_vm => $$id_vm } , $self->list_instances($id) );
+    my @instances = $self->list_instances($id);
+    warn Dumper(\@instances);
     for my $instance ( @instances ) {
         my $vm;
         eval {
@@ -5565,7 +5567,7 @@ sub rsync($self, @args) {
         next if _check_stat($file, $vm_local, $node);
         my $msg = $self->_msg_log_rsync($file, $node, "rsync", $request);
 
-        $request->status("syncing")         if $request;
+        $request->status("working")         if $request;
         $request->error("Syncing $file")    if $request;
         $request->error($msg)               if $request && $DEBUG_RSYNC;
         warn "$msg\n" if $DEBUG_RSYNC;
@@ -5616,7 +5618,7 @@ sub _rsync_volumes_back($self, $node, $request=undef) {
 
         my $msg = $self->_msg_log_rsync($file, $node, "rsync_back", $request);
 
-        $request->status("syncing") if $request;
+        $request->status("working") if $request;
         $request->error($msg)       if $request;
         warn "$msg\n" if $DEBUG_RSYNC;
         $rsync->exec(src => 'root@'.$node->host.":".$file ,dest => $file );

@@ -303,6 +303,8 @@ our %CMD_VALIDATE = (
     ,spinoff => \&_validate_compact
     ,prepare_base => \&_validate_prepare_base
     ,remove_base => \&_validate_remove_base
+    ,migrate => \&_validate_migrate
+    ,set_base_vm=> \&_validate_set_base_vm
 );
 
 sub _init_connector {
@@ -1554,23 +1556,47 @@ sub set_base_vm {
     my $id_vm = $args->{id_vm};
     $id_vm = $args->{id_node} if exists $args->{id_node} && $args->{id_node};
 
-    _set_base_vm_requirement($req, $id_vm, $domain);
-
     $domain->_set_base_vm_db($id_vm, $args->{value}, $req->id);
 
     return $req;
 }
 
-sub _set_base_vm_requirement($req, $id_vm, $domain) {
+sub _validate_migrate($req) {
+    warn Dumper($req->args);
     return if $req->defined_arg('value') && $req->defined_arg('value')==0;
 
+    my $domain = Ravada::Front::Domain->open($req->args('id_domain'));
     my $id_vm_local = $domain->_id_vm_local();
     die "Error: node local not found for ".$domain->type
     if !defined $id_vm_local;
 
+    my $id_node = $req->args('id_node');
+
+    return if $id_node==$id_vm_local || $domain->_data('id_vm')==$id_vm_local;
+
+    my $req_local = Ravada::Request->migrate(
+        uid => Ravada::Utils::user_daemon->id
+        ,id_domain => $domain->id
+        ,id_node => $id_vm_local
+    );
+    $req->after_request_ok($req_local->id);
+}
+
+
+sub _validate_set_base_vm($req) {
+    return if $req->defined_arg('value') && $req->defined_arg('value')==0;
+
+    my $domain = Ravada::Front::Domain->open($req->args('id_domain'));
+    my $id_vm_local = $domain->_id_vm_local();
+    die "Error: node local not found for ".$domain->type
+    if !defined $id_vm_local;
+
+    my $id_vm = $req->defined_arg('id_vm');
+    $id_vm = $req->defined_arg('id_node') if !defined $id_vm;
     return if $id_vm == $id_vm_local;
 
     my $bases_vm = $domain->_bases_vm();
+    warn Dumper([$id_vm, $bases_vm]);
 
     return if $bases_vm->{$id_vm_local};
 

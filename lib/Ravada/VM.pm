@@ -212,6 +212,8 @@ sub open {
     }
     my $force = delete $args{force};
 
+    confess "Error: wrong id '$args{id}' " if $args{id} && $args{id} !~ /^\d+$/;
+
     confess "Error: undefind id in ".Dumper(\%args) if !$args{id};
 
     my $class=ref($proto) || $proto;
