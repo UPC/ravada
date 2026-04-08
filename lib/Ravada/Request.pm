@@ -9,7 +9,7 @@ Ravada::Request - Requests library for Ravada
 
 =cut
 
-use Carp qw(confess cluck);
+use Carp qw(confess cluck carp);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
 use JSON::XS;
@@ -137,6 +137,7 @@ our %VALID_ARG = (
     ,migrate => { uid => 1, id_node => 1, id_domain => 1, start => 2, remote_ip => 2
         ,shutdown => 2, shutdown_timeout => 2
     }
+    ,post_migrate => { uid => 1, id_node => 1, id_domain => 1 }
     ,compact => { uid => 1, id_domain => 1 , keep_backup => 2 }
       ,purge => { uid => 1, id_domain => 1 }
       ,backup => { uid => 1, id_domain => 1, compress => 2}
@@ -1562,10 +1563,24 @@ sub set_base_vm {
 }
 
 sub _validate_migrate($req) {
-    warn Dumper($req->args);
     return if $req->defined_arg('value') && $req->defined_arg('value')==0;
 
     my $domain = Ravada::Front::Domain->open($req->args('id_domain'));
+    my $req_post = Ravada::Request->post_migrate(
+        uid => $req->args('uid')
+        ,id_domain => $domain->id
+        ,id_node => $req->args('id_node')
+        ,after_request => $req->id
+    );
+
+    if ($domain->_data('status') ne 'shutdown') {
+        my $req_shutdown = Ravada::Request->shutdown_domain(
+            uid => $req->args('uid')
+            ,id_domain => $domain->id
+            ,_force => 1
+        );
+        $req->after_request_ok($req_shutdown->id);
+    }
     my $id_vm_local = $domain->_id_vm_local();
     die "Error: node local not found for ".$domain->type
     if !defined $id_vm_local;
@@ -1596,7 +1611,6 @@ sub _validate_set_base_vm($req) {
     return if $id_vm == $id_vm_local;
 
     my $bases_vm = $domain->_bases_vm();
-    warn Dumper([$id_vm, $bases_vm]);
 
     return if $bases_vm->{$id_vm_local};
 
@@ -1605,7 +1619,7 @@ sub _validate_set_base_vm($req) {
         ,id_domain => $domain->id
         ,id_vm => $id_vm_local
     );
-    $req->after_request($req_local->id);
+    $req->after_request_ok($req_local->id);
 }
 
 =head2 remove_base_vm
@@ -1972,13 +1986,27 @@ sub requirements_done($self) {
         $ok = 1 if !$req || $req->status eq 'done';
     }
     if ($after_request_ok) {
-        $ok = 0;
-        my $req = Ravada::Request->open($self->after_request_ok);
-        if ($req->status eq 'done' && $req->error ) {
-            $self->status('done');
-            $self->error($req->error);
+        my $ids = $after_request_ok;
+        if ( $ids =~ /^\[/ ) {
+            $ids = decode_json($after_request_ok) 
+        } else {
+            $ids = [ $ids ];
         }
-        $ok = 1 if $req->status eq 'done' && ( !defined $req->error || $req->error eq '' );
+
+        my $fail = 0;
+        for my $id (@$ids) {
+            my $req = Ravada::Request->open($id);
+            if ($req->status eq 'done' && $req->error ) {
+                $self->status('done');
+                $self->error($req->error);
+            }
+            $fail++ if $req->status eq 'done' && ( defined $req->error && $req->error );
+        }
+        if ($fail) {
+            $ok = 0;
+        } else {
+            $ok = 1;
+        }
     }
     return $ok;
 }
@@ -2063,6 +2091,12 @@ sub _data($self, $field, $value=undef) {
     ) {
         confess "ERROR: field $field is read only"
             if $FIELD_RO{$field};
+
+        if ($field =~ /^after_request/) {
+            my $prev_req_id = $self->{_data}->{$field};
+            $value = "[$prev_req_id,$value]" if $prev_req_id;
+
+        }
 
         $self->{_data}->{$field} = $value;
         my $sth = $$CONNECTOR->dbh->prepare(

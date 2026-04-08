@@ -5,6 +5,7 @@ use utf8;
 use Carp qw(confess);
 use Data::Dumper;
 use Digest::MD5;
+use Mojo::JSON qw(decode_json);
 use Test::More;
 
 use lib 't/lib';
@@ -47,6 +48,35 @@ sub test_req_migrate($vm, $node1, $node2) {
 
     $domain->_remove_domain_data_db();
 }
+
+sub test_req_migrate_active($vm, $node1, $node2) {
+    my $domain = create_domain($vm);
+    $domain->_data('id_vm' => $node1->id);
+    $domain->_data('status' => 'active');
+    my $req = Ravada::Request->migrate(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,id_node => $node2->id
+        ,shutdown => 1
+    );
+    ok($req->after_request_ok());
+    my $id_req_prev = $req->after_request_ok();
+    ok($id_req_prev) or return;
+
+    my $ids = decode_json($id_req_prev);
+
+    my ($req_prev_migrate,$req_prev_shutdown);
+    for my $id ( @$ids ) {
+        my $req_prev = Ravada::Request->open($id);
+        $req_prev_migrate = $req_prev if $req_prev->command eq 'migrate';
+        $req_prev_shutdown = $req_prev if $req_prev->command eq 'shutdown';
+    }
+    ok($req_prev_migrate) or exit;
+    ok($req_prev_shutdown) or exit;
+
+    $domain->_remove_domain_data_db();
+}
+
 
 sub test_req_prepare_base($vm, $node1, $node2) {
     my $domain = create_domain($vm);
@@ -102,6 +132,7 @@ for my $vm_name (vm_names() ) {
         my $node1 = _create_remote_node($vm_name);
         my $node2 = _create_remote_node($vm_name);
 
+        test_req_migrate_active($vm, $node1, $node2);
         test_req_migrate($vm, $node1, $node2);
         test_req_prepare_base($vm, $node1, $node2);
     }
