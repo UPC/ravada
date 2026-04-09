@@ -6288,6 +6288,24 @@ sub _migrate_base($self, $domain, $id_node, $uid, $request) {
     die "Base ".$base->name." still not prepared in node $id_node. Retry\n";
 }
 
+sub _cmd_post_migrate($self, $request) {
+
+    my $req_migrate;
+    my $ids = $request->after_request();
+
+    for my $id  ( $ids ) {
+        $req_migrate = Ravada::Request->open($id);
+        last if $req_migrate->command eq 'migrate';
+        $req_migrate = undef;
+    }
+    if ( $req_migrate->error ) {
+        my $domain_f = Ravada::Front::Domain->open($request->args('id_domain'));
+        my $node = Ravada::VM->open($request->args('id_node'));
+        my $domain = $node->search_domain($domain_f->name,1);
+        $domain->remove_instance();
+    }
+}
+
 sub _cmd_migrate($self, $request) {
     my $uid = $request->args('uid');
     my $id_domain = $request->args('id_domain') or die "ERROR: Missing id_domain";
@@ -6953,6 +6971,7 @@ sub _req_method {
     ,start_node  => \&_cmd_start_node
     ,connect_node  => \&_cmd_connect_node
     ,migrate => \&_cmd_migrate
+    ,post_migrate => \&_cmd_post_migrate
     ,rsync_back => \&_cmd_rsync_back
 
     #users

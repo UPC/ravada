@@ -6,6 +6,7 @@ use Carp qw(confess);
 use Data::Dumper;
 use Digest::MD5;
 use Mojo::JSON qw(decode_json);
+use Storable qw(dclone);
 use Test::More;
 
 use lib 't/lib';
@@ -42,11 +43,11 @@ sub test_req_migrate($vm, $node1, $node2) {
     ok($id_req_prev);
     _mock_fail($id_req_prev);
 
-    wait_request(debug => 1, check_error => 0);
+    wait_request(debug => 0, check_error => 0);
     is($req->status(),'done');
     is($req->error,'failure');
 
-    $domain->_remove_domain_data_db();
+    Ravada::Domain::_remove_domain_data_db($domain->id);
 }
 
 sub test_req_migrate_active($vm, $node1, $node2) {
@@ -60,13 +61,11 @@ sub test_req_migrate_active($vm, $node1, $node2) {
         ,shutdown => 1
     );
     ok($req->after_request_ok());
-    my $id_req_prev = $req->after_request_ok();
+    my $id_req_prev = dclone($req->after_request_ok());
     ok($id_req_prev) or return;
 
-    my $ids = decode_json($id_req_prev);
-
     my ($req_prev_migrate,$req_prev_shutdown);
-    for my $id ( @$ids ) {
+    for my $id ( @$id_req_prev ) {
         my $req_prev = Ravada::Request->open($id);
         $req_prev_migrate = $req_prev if $req_prev->command eq 'migrate';
         $req_prev_shutdown = $req_prev if $req_prev->command eq 'shutdown';
@@ -74,7 +73,23 @@ sub test_req_migrate_active($vm, $node1, $node2) {
     ok($req_prev_migrate) or exit;
     ok($req_prev_shutdown) or exit;
 
-    $domain->_remove_domain_data_db();
+    $req->_data('after_request_ok' => 99);
+    delete $req->{_data};
+
+    my $new_ids = $id_req_prev;
+    push @$new_ids,(99);
+    is_deeply($req->after_request_ok(), $new_ids)
+        or die Dumper([$req->after_request_ok(), $new_ids]);
+
+    $req->_data('after_request' => '');
+    for ( 100 .. 103 ) {
+        $req->_data('after_request' => $_ );
+    }
+    is_deeply($req->after_request(), ["100","101","102","103"]);
+    $req->_data('after_request' => '');
+    $req->_data('after_request_ok' => '');
+
+    Ravada::Domain::_remove_domain_data_db($domain->id);
 }
 
 
@@ -91,10 +106,10 @@ sub test_req_prepare_base($vm, $node1, $node2) {
 
     _mock_fail($id_req_prev);
 
-    wait_request(debug => 1, check_error => 0);
+    wait_request(debug => 0, check_error => 0);
     is($req->status(),'done');
     is($req->error,'failure');
-    $domain->_remove_domain_data_db();
+    Ravada::Domain::_remove_domain_data_db($domain->id);
 }
 
 sub _mock_fail($id_req) {
@@ -129,12 +144,15 @@ for my $vm_name (vm_names() ) {
 
         diag("Testing remote node in $vm_name");
 
+        isnt($vm->name,'Void_localhost');
         my $node1 = _create_remote_node($vm_name);
         my $node2 = _create_remote_node($vm_name);
 
         test_req_migrate_active($vm, $node1, $node2);
         test_req_migrate($vm, $node1, $node2);
         test_req_prepare_base($vm, $node1, $node2);
+        $node1->remove();
+        $node2->remove();
     }
 }
 

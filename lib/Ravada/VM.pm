@@ -802,8 +802,9 @@ sub name {
 
     return $self->_data('name') if defined $self->{_data}->{name};
 
-    my ($ref) = ref($self) =~ /.*::(.*)/;
-    return ($ref or ref($self))."_".$self->host;
+    my ($out,$err) = $self->run_command('hostname');
+    chomp $out;
+    return $out;
 }
 
 =head2 search_domain_by_id
@@ -1224,6 +1225,7 @@ sub _insert_vm_db {
     );
     my %args = @_;
     my $name = ( delete $args{name} or $self->name);
+    cluck $name if $name =~ /localhost/;
     my $host = ( delete $args{hostname} or $self->host );
     my $public_ip = ( delete $args{public_ip} or '' );
     delete $args{vm_type};

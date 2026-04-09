@@ -1979,36 +1979,40 @@ sub requirements_done($self) {
 
     my $ok = 0;
     if ($after_request) {
-        $ok = 0;
-        my $req;
-        eval { $req = Ravada::Request->open($self->after_request) };
-        die $@ if $@ && $@!~ /I can't find|not found/i;
-        $ok = 1 if !$req || $req->status eq 'done';
+        $ok = $self->_requirements_done_ids($after_request);
+        return 0 if !$ok;
     }
     if ($after_request_ok) {
-        my $ids = $after_request_ok;
-        if ( $ids =~ /^\[/ ) {
-            $ids = decode_json($after_request_ok) 
-        } else {
-            $ids = [ $ids ];
-        }
+        $ok = $self->_requirements_done_ids($after_request_ok, 1);
+    }
+    return $ok;
+}
 
-        my $fail = 0;
-        for my $id (@$ids) {
-            my $req = Ravada::Request->open($id);
-            if ($req->status eq 'done' && $req->error ) {
+sub _requirements_done_ids($self, $ids, $propagate=undef) {
+
+    $ids = [ $ids ] unless ref($ids) eq 'ARRAY';
+
+    my $fail = 0;
+    for my $id (@$ids) {
+        next if !_req_exists($id);
+        my $req = Ravada::Request->open($id);
+        if ($req->status eq 'done' && $req->error ) {
+            if ($propagate) {
                 $self->status('done');
                 $self->error($req->error);
             }
-            $fail++ if $req->status eq 'done' && ( defined $req->error && $req->error );
         }
-        if ($fail) {
-            $ok = 0;
-        } else {
-            $ok = 1;
-        }
+        return 0 if $req->status() ne 'done';
     }
-    return $ok;
+    return 1;
+}
+
+sub _req_exists($id) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM requests WHERE id=?");
+    $sth->execute($id);
+    my ($ok) = $sth->fetchrow();
+    return 1 if $ok;
+    return 0 if !$ok;
 }
 
 =head2 redo
@@ -2078,9 +2082,16 @@ sub remove($status, %args) {
     }
 }
 
+sub _push($value, $id) {
+    my $list = $value;
+    $list = [$list] if !ref($list);
+    push @$list,($id);
+    return $list;
+}
+
 sub _data($self, $field, $value=undef) {
     confess if $field eq 'after_request' && defined $value
-    && $value == $self->id;
+    && length($value) && $value == $self->id;
 
     if (defined $value
         && (
@@ -2094,11 +2105,11 @@ sub _data($self, $field, $value=undef) {
 
         if ($field =~ /^after_request/) {
             my $prev_req_id = $self->{_data}->{$field};
-            $value = "[$prev_req_id,$value]" if $prev_req_id;
-
+            $value = _push($prev_req_id, $value) if $prev_req_id;
         }
-
         $self->{_data}->{$field} = $value;
+        $value = encode_json($value) if ref($value) eq 'ARRAY';
+
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE requests set $field=?"
             ." WHERE id=?"
@@ -2106,7 +2117,7 @@ sub _data($self, $field, $value=undef) {
         $sth->execute($value, $self->id);
         $sth->finish;
 
-        return $value;
+        return $self->{_data}->{$field};
     }
     return $self->{_data}->{$field}
     if exists $self->{_data}->{$field} && defined $self->{_data}->{$field};
@@ -2135,6 +2146,17 @@ sub _select_db($self) {
     $sth->finish;
 
     return if !$row;
+
+    for my $key (keys %$row) {
+        my $value = $row->{$key};
+        next if !defined $value || $value !~ /^[\[}]/;
+        my $value_decoded;
+        eval {
+            $value_decoded = decode_json($value);
+        };
+        warn "Error decoding '$value' for request id=$row->{id} $@" if $@;
+        $row->{$key} = $value_decoded if defined $value_decoded;
+    }
 
     return $row;
 }

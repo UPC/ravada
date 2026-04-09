@@ -2082,7 +2082,6 @@ sub open($class, @args) {
 sub _check_proper_id_vm($self, $id, $id_vm) {
     #    my @instances = ({ id_vm => $$id_vm } , $self->list_instances($id) );
     my @instances = $self->list_instances($id);
-    warn Dumper(\@instances);
     for my $instance ( @instances ) {
         my $vm;
         eval {
