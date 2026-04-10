@@ -153,5 +153,16 @@ sub _copy_sys($self, $dst, $mode=undef) {
     $self->_chmod($mode, $dst) if $mode;
 }
 
+sub _mv_sys($self, $dst, $mode=undef) {
+    my $file = $self->file;
+    if ($self->vm) {
+        my ($out, $err) = $self->vm->run_command("mv",$file,$dst);
+        die $err if $err;
+    } else {
+        copy($file,$dst) or die "$! $file -> $dst";
+        unlink $file or die "$! $file";
+    }
+    $self->_chmod($mode, $dst) if $mode;
+}
 
 1;

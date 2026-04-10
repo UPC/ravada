@@ -1350,6 +1350,7 @@ sub test_fill_memory($vm, $node, $migrate, $start=0) {
         ,id_domain => $base->id
     );
     wait_request();
+    ok($base->_id_base_in_vm($node->id));
 
     my $master_free_memory = $vm->free_memory;
     my $node_free_memory = $node->free_memory;
@@ -1377,7 +1378,6 @@ sub test_fill_memory($vm, $node, $migrate, $start=0) {
         like($req->error, qr/^(No free memory|$)/);
         is($req->status,'done');
         push @clones,($clone_name);
-        diag($req->command." ".$req->status);
         my $clone = rvd_back->search_domain($clone_name) or last;
         ok($clone,"Expecting clone $clone_name") or exit;
         $created_in_node++ if $clone->_data('id_vm') == $node->id;
@@ -1391,8 +1391,13 @@ sub test_fill_memory($vm, $node, $migrate, $start=0) {
             ,shutdown_timeout => 1
         ) if $migrate;
         wait_request(debug => 0);
-        eval { $clone->start(user_admin) };
-        $error = $@;
+        $clone = Ravada::Domain->open($clone->id);
+        my $req_start = Ravada::Request->start_domain(
+            uid => user_admin->id
+            ,id_domain => $clone->id
+        );
+        wait_request(debug => 1, check_error => 0);
+        $error = $req_start->error;
         diag("error=$error");# if $error;
         like($error, qr/(^$|No free memory)/);
         exit if $error && $error !~ /No free memory/;
@@ -1400,9 +1405,14 @@ sub test_fill_memory($vm, $node, $migrate, $start=0) {
         last if $error;
 
         $clone = Ravada::Domain->open($clone->id);
-        $nodes{$clone->_vm->name}++;
+        my $node_name = $clone->_vm->name;
+        $nodes{$node_name}++;
 
         last if $migrate && exists $nodes{$vm->name} && $nodes{$vm->name} > 2;
+        if (!$error && !$clone->is_active) {
+            die $clone->_vm->name." ".$clone->name if !$error && !$clone->is_active;
+        }
+        $memory *= 1.5;
     }
     ok($created_in_node,"Expecting some clones created in node ".$node->name) or exit;
     ok(exists $nodes{$vm->name},"Expecting some clones to node ".$vm->name." ".$vm->id)
@@ -1637,7 +1647,7 @@ sub test_volumes_levels($domain, $level) {
             unlike($file,qr{--+},$domain->name) or exit;
         }
         is(scalar(@backings), $level, "Expecting ".$domain->name
-            ." : ".$vol->file." level $level\n".Dumper(\@backings)) or exit;
+            ." : ".$vol->file." level $level\n".Dumper(\@backings)) or confess;
     }
 }
 
@@ -1674,6 +1684,7 @@ sub test_domain_volumes_levels($domain, $level) {
 sub test_nested_base($vm, $node, $levels=1) {
 
     my $base0 = create_domain($vm);
+
     $base0->add_volume(swap => 1, size => 10 * 1024);
     $base0->add_volume(type => 'tmp', size => 10 * 1024);
     $base0->add_volume(type => 'data', size => 10 * 1024);
@@ -1683,11 +1694,22 @@ sub test_nested_base($vm, $node, $levels=1) {
     my @bases = ( );
     for my $n ( 1 .. $levels ) {
         diag("Cloning from ".$base1->name." level $n / $levels");
-        $base1->prepare_base(user_admin) if !$base1->is_base;
-        $clone = $base1->clone(
-            name => new_domain_name
-            ,user => user_admin
+        if (!$base1->is_base) {
+            Ravada::Request->prepare_base(
+                uid => user_admin->id
+                ,id_domain => $base1->id
+            );
+            wait_request();
+        }
+        diag("Cloning from ".$base1->name." ".($base1->id_base or ' ')." level $n / $levels");
+        my $name = new_domain_name();
+        Ravada::Request->clone(
+            name => $name
+            ,uid => user_admin->id
+            ,id_domain => $base1->id
         );
+        wait_request();
+        $clone = $vm->search_domain($name);
         is($clone->id_base,$base1->id);
         push @bases,($base1);
         wait_request();
@@ -1713,6 +1735,7 @@ sub _test_migrate_nested($vm, $node, $bases, $clone, $levels) {
         ,id_domain => $clone->id
         ,uid => user_admin->id
         ,shutdown => 1
+        ,_force => 1
     );
     for ( 1 .. $levels+3 ) {
         last if $req->status eq 'done';
@@ -2229,12 +2252,12 @@ for my $vm_name (vm_names() ) {
 
         start_node($node);
 
+            test_nested_base($vm, $node, 3);
         for my $volatile (1,0) {
             test_remove_base($vm, $node, $volatile);
         }
         test_change_clone($vm, $node);
 
-        test_fill_memory($vm, $node, 1); # migrate
         test_base_unset($vm,$node);
         test_removed_base_file($vm, $node);
 
@@ -2262,8 +2285,6 @@ for my $vm_name (vm_names() ) {
         test_volatile_req_clone($vm, $node);
 
         test_pc_other($vm,$node);
-
-        test_fill_memory($vm, $node, 1); # migrate
 
         # test displays with no builtin added
         test_displays($vm, $node,1) if $tls;

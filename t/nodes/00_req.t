@@ -61,7 +61,8 @@ sub test_req_migrate_active($vm, $node1, $node2) {
         ,shutdown => 1
     );
     ok($req->after_request_ok());
-    my $id_req_prev = dclone($req->after_request_ok());
+    my $id_req_prev = $req->after_request_ok();
+    $id_req_prev = [$id_req_prev] if !ref($id_req_prev);
     ok($id_req_prev) or return;
 
     my ($req_prev_migrate,$req_prev_shutdown);
@@ -120,10 +121,58 @@ sub _mock_fail($id_req) {
     $sth->execute($id_req);
 }
 
+sub test_req_migrate_nested($vm, $node1) {
+    my $base1 = create_base($vm);
+    $base1->_data('is_base' => 1);
+
+    my $base2 = create_base($vm);
+    $base2->_data('is_base' => 1);
+    $base2->_data('id_base' => $base1->id);
+
+    my $base3 = create_base($vm);
+    $base2->_data('is_base' => 1);
+    $base3->_data('id_base' => $base2->id);
+
+    my $clone = create_domain($vm);
+    $clone->_data('id_base' => $base3->id);
+
+    my $req = Ravada::Request->migrate(
+        uid => user_admin->id
+        ,id_domain => $clone->id
+        ,id_node => $node1->id
+    );
+    my $id_req_prev = $req->after_request_ok();
+    ok($id_req_prev) or return;
+    my $req_prev = Ravada::Request->open($id_req_prev);
+    is($req_prev->id_domain, $clone->id_base);
+    is($req_prev->id_domain, $base3->id);
+    is($req_prev->command(), 'set_base_vm');
+
+    $id_req_prev = $req_prev->after_request_ok();
+    ok($id_req_prev) or return;
+    isnt($id_req_prev, $req_prev->id) or exit;
+    $req_prev = Ravada::Request->open($id_req_prev);
+    is($req_prev->id_domain, $base2->id);
+    is($req_prev->id_domain, $base3->id_base);
+    is($req_prev->command(), 'set_base_vm');
+
+    $id_req_prev = $req_prev->after_request_ok();
+    ok($id_req_prev) or return;
+    isnt($id_req_prev, $req_prev->id) or exit;
+    $req_prev = Ravada::Request->open($id_req_prev);
+    is($req_prev->id_domain, $base1->id);
+    is($req_prev->id_domain, $base2->id_base);
+    is($req_prev->command(), 'set_base_vm');
+
+    $id_req_prev = $req_prev->after_request_ok();
+    ok(!$id_req_prev);
+    remove_domain($clone);
+}
 
 ###############################################################################
 
 init();
+clean();
 for my $vm_name (vm_names() ) {
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
@@ -148,6 +197,7 @@ for my $vm_name (vm_names() ) {
         my $node1 = _create_remote_node($vm_name);
         my $node2 = _create_remote_node($vm_name);
 
+        test_req_migrate_nested($vm, $node1);
         test_req_migrate_active($vm, $node1, $node2);
         test_req_migrate($vm, $node1, $node2);
         test_req_prepare_base($vm, $node1, $node2);

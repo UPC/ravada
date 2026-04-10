@@ -1581,20 +1581,20 @@ sub _validate_migrate($req) {
         );
         $req->after_request_ok($req_shutdown->id);
     }
-    my $id_vm_local = $domain->_id_vm_local();
-    die "Error: node local not found for ".$domain->type
-    if !defined $id_vm_local;
-
     my $id_node = $req->args('id_node');
 
-    return if $id_node==$id_vm_local || $domain->_data('id_vm')==$id_vm_local;
+    if ($domain->_data('id_base')) {
+        my $base = Ravada::Front::Domain->open($domain->_data('id_base'));
+        if (!$base->base_in_vm($id_node)) {
+            my $req_prev = Ravada::Request->set_base_vm(
+                uid => $req->args('uid')
+                ,id_domain => $base->id
+                ,id_vm => $id_node
+            );
+            $req->_data('after_request_ok' => $req_prev->id);
+        }
+    }
 
-    my $req_local = Ravada::Request->migrate(
-        uid => Ravada::Utils::user_daemon->id
-        ,id_domain => $domain->id
-        ,id_node => $id_vm_local
-    );
-    $req->after_request_ok($req_local->id);
 }
 
 
@@ -1602,24 +1602,21 @@ sub _validate_set_base_vm($req) {
     return if $req->defined_arg('value') && $req->defined_arg('value')==0;
 
     my $domain = Ravada::Front::Domain->open($req->args('id_domain'));
-    my $id_vm_local = $domain->_id_vm_local();
-    die "Error: node local not found for ".$domain->type
-    if !defined $id_vm_local;
 
     my $id_vm = $req->defined_arg('id_vm');
     $id_vm = $req->defined_arg('id_node') if !defined $id_vm;
-    return if $id_vm == $id_vm_local;
 
-    my $bases_vm = $domain->_bases_vm();
+    return if !$domain->id_base;
 
-    return if $bases_vm->{$id_vm_local};
+    my $base = Ravada::Front::Domain->open($domain->id_base);
+    return if $base->base_in_vm($id_vm);
 
-    my $req_local = Ravada::Request->set_base_vm(
+    my $req_prev = Ravada::Request->set_base_vm(
         uid => Ravada::Utils::user_daemon->id
-        ,id_domain => $domain->id
-        ,id_vm => $id_vm_local
+        ,id_domain => $base->id
+        ,id_vm => $id_vm
     );
-    $req->after_request_ok($req_local->id);
+    $req->after_request_ok($req_prev->id);
 }
 
 =head2 remove_base_vm
@@ -2090,7 +2087,7 @@ sub _push($value, $id) {
 }
 
 sub _data($self, $field, $value=undef) {
-    confess if $field eq 'after_request' && defined $value
+    confess "Error: recursive requirement" if $field =~ /after_request/ && defined $value
     && length($value) && $value == $self->id;
 
     if (defined $value

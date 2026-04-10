@@ -359,6 +359,7 @@ sub _around_start($orig, $self, @arg) {
     for (1 .. 2) {
         eval { $self->_start_checks(%arg, enable_host_devices => $enable_host_devices) };
         my $error = $@;
+        warn $error if $error;
         if ($error) {
             if ( $error =~/base file not found/ && !$self->_vm->is_local) {
                 $self->_request_set_base();
@@ -589,7 +590,8 @@ sub _start_checks($self, @args) {
     # If not specific id_manager we go to the last id_vmanager unless it was localhost
     # If the last VManager was localhost it will try to balance here.
     $id_vm = $self->_data('id_vm')
-    if !$id_vm && defined $self->_data('id_vm');
+    if !$id_vm && defined $self->_data('id_vm')
+    && $self->_data('id_vm') != $vm_local->id;
 
     # check the requested id_vm is suitable
     if ($id_vm) {
@@ -2080,8 +2082,7 @@ sub open($class, @args) {
 }
 
 sub _check_proper_id_vm($self, $id, $id_vm) {
-    #    my @instances = ({ id_vm => $$id_vm } , $self->list_instances($id) );
-    my @instances = $self->list_instances($id);
+    my @instances = ({ id_vm => $$id_vm } , $self->list_instances($id) );
     for my $instance ( @instances ) {
         my $vm;
         eval {
@@ -5647,7 +5648,8 @@ sub _pre_migrate($self, $node, $request = undef) {
         confess "ERROR: base id ".$self->id_base." not found."  if !$base;
 
         if ( ! $self->_check_all_parents_in_node($node, $request) ) {
-            die "Warning: base not in node. Retry.\n";
+            die "Warning: base of ".$self->name." , ".$base->name." not in node ".$node->id
+                .". Retry.\n";
         }
 
     }

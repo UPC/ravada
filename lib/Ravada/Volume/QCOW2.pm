@@ -36,7 +36,7 @@ sub prepare_base($self, $req=undef) {
     };
 
     if ($format && $format eq 'qcow2') {
-        $self->_copy($base_img, '0400');
+        $self->_copy_sys($base_img, '0400');
     } else {
         $self->_convert($base_img, $req);
     }
