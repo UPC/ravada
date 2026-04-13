@@ -5648,8 +5648,7 @@ sub _pre_migrate($self, $node, $request = undef) {
         confess "ERROR: base id ".$self->id_base." not found."  if !$base;
 
         if ( ! $self->_check_all_parents_in_node($node, $request) ) {
-            die "Warning: base of ".$self->name." , ".$base->name." not in node ".$node->id
-                .". Retry.\n";
+            die "Error: base of ".$self->name." , ".$base->name." not in node ".$node->id." ".$node->name;
         }
 
     }

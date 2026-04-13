@@ -735,7 +735,7 @@ sub _duplicated_request($self=undef, $command=undef, $args=undef) {
     }
     confess "Error: missing command " if !$command;
     #    delete $args_d->{uid} unless $command eq 'clone';
-    delete $args_d->{uid} if $command =~ /(cleanup|refresh_vms|set_base_vm)/;
+    delete $args_d->{uid} if $command =~ /(cleanup|refresh_vms|set_base_vm|remove_base_vm)/;
     delete $args_d->{uid} if exists $args_d->{uid} && !defined $args_d->{uid};
     delete $args_d->{at};
     delete $args_d->{status};
@@ -1984,7 +1984,7 @@ sub done_recently($self, $seconds=60,$command=undef, $args=undef) {
 
         next if join(".",sort keys %$args_d) ne join(".",sort keys %$args_found_d);
         my $args_d_s = join(".",map { $args_d->{$_} } sort keys %$args_d);
-        my $args_found_s = join(".",map {$args_found_d->{$_} } sort keys %$args_found_d);
+        my $args_found_s = join(".",map {$args_found_d->{$_} or '' } sort keys %$args_found_d);
         next if $args_d_s ne $args_found_s;
 
         return Ravada::Request->open($id);

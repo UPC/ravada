@@ -1072,7 +1072,7 @@ sub test_duplicated_set_base_vm($vm, $node) {
         , at => time + 3
     );
     my $req4 = Ravada::Request->remove_base_vm(id_vm => $node->id
-        , uid => 2
+        , uid => 1
         , id_domain => $domain->id
         , at => time + 4
     );
@@ -1721,6 +1721,8 @@ sub test_nested_base($vm, $node, $levels=1) {
     _test_migrate_nested($vm, $node, \@bases, $clone, $levels);
     _migrate_fast($clone, $vm);
     _remove_base_vm($base0, $node);
+    diag("###########################################");
+    diag("test migrate nested again");
     _test_migrate_nested($vm, $node, \@bases, $clone, $levels);
     my ($file) = $base0->list_files_base;
     $node->remove_file($file);
@@ -2275,7 +2277,7 @@ for my $vm_name (vm_names() ) {
 
         start_node($node);
 
-            test_nested_base($vm, $node, 3);
+        test_duplicated_set_base_vm($vm, $node);
         for my $volatile (1,0) {
             test_remove_base($vm, $node, $volatile);
         }
@@ -2319,10 +2321,8 @@ for my $vm_name (vm_names() ) {
         test_nat($vm, $node, 1); # also set deprecated localhost ip
 
         test_duplicated_set_base_vm($vm, $node);
-        if ($vm_name eq 'KVM') {
-            test_nested_base($vm, $node, 3);
-            test_nested_base($vm, $node);
-        }
+        test_nested_base($vm, $node, 3);
+        test_nested_base($vm, $node);
 
         test_removed_base_file($vm, $node);
 
