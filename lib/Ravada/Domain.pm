@@ -2498,7 +2498,7 @@ sub info($self, $user) {
     #}
     $info->{drivers} = $self->_load_drivers();
 
-    $info->{bases} = $self->_bases_vm();
+    $info->{bases} = $self->_bases_vm_info();
     $info->{clones} = $self->_clones_vm();
     $info->{ports} = [$self->list_ports()];
     my @cdrom = ();
@@ -5796,7 +5796,6 @@ sub set_base_vm($self, %args) {
             }
         }
         ($node2) = @nodes if !$node2;
-        $vm->_migrate_domains($node2) if $node2 && $migrate;
         if (!@nodes) {
             $self->_vm($vm);
             $self->_do_remove_base($user);
@@ -6018,24 +6017,42 @@ sub _base_files_in_vm($self,$vm) {
     return 1;
 }
 
-sub _bases_vm($self) {
+sub _bases_vm_info($self, $only_enabled=0) {
+    return $self->_bases_vm($only_enabled,1);
+}
+
+sub _bases_vm($self, $only_enabled=0, $info=0) {
     my $sth = $$CONNECTOR->dbh->prepare(
         "SELECT id, hostname FROM vms WHERE vm_type=?"
     );
     $sth->execute($self->type);
     my %base;
     while (my ($id_vm, $hostname) = $sth->fetchrow) {
-        $base{$id_vm} = 0;
+        if ($info ) {
+            $base{$id_vm} = {enabled => 0};
+        } else {
+            $base{$id_vm} = 0;
+        }
     }
     $sth->finish;
 
     for my $id_vm ( sort keys %base ) {
         $sth = $$CONNECTOR->dbh->prepare(
-            "SELECT enabled FROM bases_vm WHERE id_domain=? AND id_vm=?"
+            "SELECT enabled,id_request FROM bases_vm WHERE id_domain=? AND id_vm=?"
         );
         $sth->execute($self->id, $id_vm);
-        while (my ($enabled) = $sth->fetchrow) {
-            $base{$id_vm} = $enabled;
+        while (my $row = $sth->fetchrow_hashref) {
+            if ($info) {
+                $base{$id_vm}=$row;
+            } else {
+                $base{$id_vm} = $row->{enabled};
+            }
+        }
+    }
+    # delete disabled entries when checking for only enabled
+    if ($only_enabled) {
+        for my $id_vm (keys %base) {
+            delete $base{$id_vm} if !$base{$id_vm};
         }
     }
     return \%base;

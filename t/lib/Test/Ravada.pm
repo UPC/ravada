@@ -77,6 +77,7 @@ create_domain
     remove_old_domains_req
     remove_domain_and_clones_req
     remove_domain
+    remove_domain_db
     remove_volatile_clones
     mojo_init
     mojo_clean
@@ -901,6 +902,42 @@ sub remove_domain(@bases) {
     }
 
 }
+
+sub remove_domain_db(@bases) {
+
+    for my $base0 (@bases) {
+        confess if !defined $base0;
+        my $base = $base0;
+
+        my $id = $base0->{id};
+        $id = $base0->id if !defined $id;
+
+        my $sth = $CONNECTOR->dbh->prepare(
+            "DELETE FROM requests "
+            ." WHERE id_domain=?");
+        $sth->execute($id);
+
+        $base = Ravada::Front::Domain->open($id)
+        unless ref($base) =~ /^Ravada::/;
+
+        if (!defined $base) {
+            warn "I can't find base '$id'";
+            next;
+        }
+
+        for my $clone ($base->clones) {
+            my $d_clone = Ravada::Front::Domain->open($clone->{id});
+            if ( $d_clone ) {
+                remove_domain_db($d_clone);
+            } else {
+                Ravada::Domain::_remove_domain_data_db($clone->{id})
+            }
+        }
+        Ravada::Domain::_remove_domain_data_db($id)
+    }
+
+}
+
 
 sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
     my $domain;

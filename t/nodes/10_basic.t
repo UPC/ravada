@@ -1719,7 +1719,8 @@ sub test_nested_base($vm, $node, $levels=1) {
     }
 
     _test_migrate_nested($vm, $node, \@bases, $clone, $levels);
-    $base0->remove_base_vm(vm => $node, user => user_admin);
+    _migrate_fast($clone, $vm);
+    _remove_base_vm($base0, $node);
     _test_migrate_nested($vm, $node, \@bases, $clone, $levels);
     my ($file) = $base0->list_files_base;
     $node->remove_file($file);
@@ -1729,14 +1730,36 @@ sub test_nested_base($vm, $node, $levels=1) {
     }
 }
 
+sub _migrate_fast($domain, $node) {
+    Ravada::Request->migrate(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,id_node => $node->id
+        ,shutdown => 1
+    );
+    wait_request(debug => 1);
+}
+
+sub _remove_base_vm($base,$node) {
+  diag("Remove base from ".$node->name." for ".$base->name);
+    Ravada::Request->remove_base_vm(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,id_vm => $node->id
+    );
+    wait_request(debug => 1);
+}
+
 sub _test_migrate_nested($vm, $node, $bases, $clone, $levels) {
+    delete_request('migrate','set_base_vm');
+    diag("migrating clone ".$clone->name." to ".$node->name." ".$node->id);
     my $req = Ravada::Request->migrate(
         id_node => $node->id
         ,id_domain => $clone->id
         ,uid => user_admin->id
         ,shutdown => 1
-        ,_force => 1
     );
+    warn Dumper([$req->id,$req->after_request_ok()]);
     for ( 1 .. $levels+3 ) {
         last if $req->status eq 'done';
         wait_request(debug => 0, check_error => 0);
@@ -1748,7 +1771,7 @@ sub _test_migrate_nested($vm, $node, $bases, $clone, $levels) {
         is($base->base_in_vm($node->id),1);
     }
     my $clone2 = Ravada::Domain->open($clone->id);
-    is($clone2->_vm->id,$node->id) or exit;
+    is($clone2->_vm->id,$node->id) or confess;
     eval { $clone2->start(user_admin) };
     is(''.$@, '', $clone2->name) or exit;
 }

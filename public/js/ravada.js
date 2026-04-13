@@ -856,11 +856,11 @@
             $http.get("/machine/public/"+machineId+"/"+value);
           };
           $scope.set_base= function(vmId,machineId, value) {
-            $scope.showmachine.bases[vmId]=value;
             var url = 'set_base_vm';
             if (value == 0 || !value) {
                 url = 'remove_base_vm';
             }
+            $scope.showmachine.bases[vmId]={'enabled': value, 'id_request': -1 };
             $http.get("/machine/"+url+"/" +vmId+ "/" +machineId+".json")
               .then(function(response) {
               });

@@ -854,7 +854,11 @@ sub iso_file ($self, $id_vm, $uid) {
     return [] if $req->status ne 'done';
 
     my $isos = [];
-    $isos = decode_json($req->output()) if $req->output;
+    eval {
+        $isos = decode_json($req->output())
+        if $req->output && !ref($req->output())
+    };
+    warn $@." for request=".$req->id." ".Dumper($req->output) if $@;
 
     $self->_cache_store($key, $isos);
 
@@ -1512,7 +1516,7 @@ sub list_network_interfaces($self, %args) {
     }
     return [] if $req->status ne 'done' || !length($req->output);
 
-    my $interfaces = decode_json($req->output());
+    my $interfaces = $req->output;
     $self->{$cache_key} = $interfaces;
 
     return $interfaces;
@@ -1814,7 +1818,7 @@ sub list_cpu_models($self, $uid, $id_domain) {
     return {} if $req->status ne 'done';
 
     my $models= {};
-    $models = decode_json($req->output()) if $req->output;
+    $models = $req->output() if $req->output;
 
     $self->_cache_store($key,$models);
 
@@ -1858,7 +1862,8 @@ sub list_storage_pools($self, $uid, $id_vm, $active=undef) {
     return _filter_active($cache, $active) if $req->status ne 'done';
 
     my $pools = [];
-    $pools = decode_json($req->output()) if $req->output;
+
+    $pools = $req->output() if $req->output;
 
     $self->_cache_store($key,$pools) if scalar(@$pools);
 

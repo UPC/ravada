@@ -6302,7 +6302,7 @@ sub _cmd_post_migrate($self, $request) {
         my $domain_f = Ravada::Front::Domain->open($request->args('id_domain'));
         my $node = Ravada::VM->open($request->args('id_node'));
         my $domain = $node->search_domain($domain_f->name,1);
-        $domain->remove_instance();
+        $domain->remove_instance($node->id);
     }
 }
 

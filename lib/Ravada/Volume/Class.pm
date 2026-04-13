@@ -38,7 +38,7 @@ sub _post_prepare_base($self, $base_file) {
     $self->_chmod(0o400,$base_file);
 
     $self->vm->refresh_storage_pools();
-    $self->vm->remove_file($self->file);
+    $self->vm->remove_file($self->file) if $self->vm->file_exists($self->file);
 
     my @domain = ();
     @domain = ( domain => $self->domain) if $self->domain;
