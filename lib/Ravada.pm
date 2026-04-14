@@ -419,10 +419,12 @@ sub _update_isos {
                    ,arch => 'x86_64'
                     ,xml => 'noble-amd64.xml'
              ,xml_volume => 'focal_fossa64-volume.xml'
-                    ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/24.04.*/release/ubuntu-mate-24.04.*-desktop-amd64.iso'
+                    ,url => 'http://cdimage.
+		    ubuntu.com/ubuntu-mate/releases/24.04.*/release/ubuntu-mate-24.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
-                ,min_ram => 3
+                ,min_ram => 4
+		,min_disk_size => '20'
         },
 	mate_jammy=> {
                     name => 'Ubuntu Mate 22.04 Jammy Jellyfish 64 bits'
@@ -433,7 +435,8 @@ sub _update_isos {
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/22.04.*/release/ubuntu-mate-22.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
-                ,min_ram => 1
+                ,min_ram => 4
+		,min_disk_size => '20'
         },
 
 	mate_focal_fossa => {
@@ -445,7 +448,8 @@ sub _update_isos {
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/20.04.*/release/ubuntu-mate-20.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
-                ,min_ram => 1
+                ,min_ram => 4
+		,min_disk_size => '20'
         },
         mate_bionic => {
                     name => 'Ubuntu Mate 18.04 Bionic 64 bits'
@@ -455,7 +459,8 @@ sub _update_isos {
              ,xml_volume => 'bionic64-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/18.04.*/release/ubuntu-mate-18.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
-                ,min_ram => 1
+                ,min_ram => 4
+		,min_disk_size => '20'
         },
         mate_bionic_i386 => {
                     name => 'Ubuntu Mate 18.04 Bionic 32 bits'
@@ -465,7 +470,8 @@ sub _update_isos {
              ,xml_volume => 'bionic32-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/18.04.*/release/ubuntu-mate-18.04.*-desktop-i386.iso'
                 ,sha256_url => '$url/SHA256SUMS'
-                ,min_ram => 1
+                ,min_ram => 4
+		,min_disk_size => '20'
         },
 	,focal_fossa=> {
                     name => 'Ubuntu 20.04 Focal Fossa'
@@ -476,8 +482,8 @@ sub _update_isos {
                     ,url => 'http://releases.ubuntu.com/20.04/'
                 ,file_re => '^ubuntu-20.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
-          ,min_disk_size => '9'
-          ,min_ram => 1
+          ,min_disk_size => '25'
+          ,min_ram => 4
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
                    ,arch => 'x86_64'
         }
@@ -490,7 +496,7 @@ sub _update_isos {
                     ,url => 'http://releases.ubuntu.com/22.04/'
                 ,file_re => '^ubuntu-22.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
-          ,min_disk_size => '14'
+          ,min_disk_size => '25'
           ,min_ram => 4
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
                    ,arch => 'x86_64'
@@ -505,7 +511,7 @@ sub _update_isos {
                     ,url => 'http://releases.ubuntu.com/24.04/'
                 ,file_re => '^ubuntu-24.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
-          ,min_disk_size => '14'
+          ,min_disk_size => '25'
           ,min_ram => 4
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
                    ,arch => 'x86_64'
@@ -599,8 +605,8 @@ sub _update_isos {
             ,file_re => 'kubuntu-24.04.*-desktop-amd64.iso'
             ,rename_file => 'kubuntu_noble.iso'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
-            ,min_ram => 3
-            ,min_disk_size => 11
+            ,min_ram => 4
+            ,min_disk_size => '25'
         }
 
 	      ,kubuntu_64_jammy => {
@@ -614,8 +620,8 @@ sub _update_isos {
             ,file_re => 'kubuntu-22.04.*-desktop-amd64.iso'
             ,rename_file => 'kubuntu_jammy.iso'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
-            ,min_ram => 3
-            ,min_disk_size => 11
+            ,min_ram => 4
+            ,min_disk_size => '25'
         }
 	      ,kubuntu_64_focal_fossa => {
             name => 'Kubuntu 20.04 Focal Fossa 64 bits'
@@ -628,7 +634,8 @@ sub _update_isos {
             ,file_re => 'kubuntu-20.04.*-desktop-amd64.iso'
             ,rename_file => 'kubuntu_focal_fossa_64.iso'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
-                ,min_ram => 1
+                ,min_ram => 4
+		,min_disk_size => '25'
         }
         ,suse_15 => {
             name => "openSUSE Leap 15"
@@ -636,7 +643,7 @@ sub _update_isos {
             ,arch => 'x86_64'
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
-            ,url => 'https://download.opensuse.org/distribution/leap/15.4/iso/'
+            ,url => 'https://download.opensuse.org/distribution/leap/15.6/iso/'
             ,file_re => 'openSUSE-Leap-15.\d-NET-x86_64-Current.iso'
 
         }
@@ -646,8 +653,8 @@ sub _update_isos {
             ,arch => 'x86_64'
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
-            ,url => 'https://download.opensuse.org/distribution/leap/16.0/iso/'
-            ,file_re => 'openSUSE-Leap-16.\d-NET-x86_64-Current.iso'
+            ,url => 'https://download.opensuse.org/distribution/leap/16.0/installer/iso/'
+            ,file_re => 'agama-installer\.x86_64-.*-Leap_16\.0-Build.*\.iso'
 
         }
         ,xubuntu_noble => {
@@ -659,6 +666,8 @@ sub _update_isos {
             ,url => 'https://ftp.lysator.liu.se/ubuntu-dvd/xubuntu/releases/24.04.*/release/'
             ,file_re => 'xubuntu.*desktop.*.iso'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
+	    ,min_ram => 2
+	    ,min_disk_size => '20'
         }
         ,xubuntu_bionic => {
             name => 'Xubuntu 18.04 Bionic Beaver 32 bits'
@@ -670,6 +679,8 @@ sub _update_isos {
             ,url => 'http://archive.ubuntu.com/ubuntu/dists/bionic/main/installer-i386/current/images/netboot/'
             ,file_re => 'mini.iso'
             ,rename_file => 'xubuntu_bionic_32.iso'
+	     ,min_ram => 2
+	    ,min_disk_size => '20'
         }
         ,lubuntu_noble => {
             name => 'Lubuntu 24.04 Noble Nombat'
@@ -680,6 +691,7 @@ sub _update_isos {
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
             ,min_disk_size => '10'
+	    ,min_ram => 1
             ,arch => 'x86_64'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
@@ -843,16 +855,6 @@ sub _update_isos {
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
             ,options => { machine => 'pc-q35'}
-        }
-        ,devuan_excalibur_i386=> {
-            name =>'Devuan 13 Excalibur 32 bits'
-            ,description => 'Devuan Excalibur Desktop Live (i386)'
-            ,arch => 'i686'
-            ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_excalibur/desktop-live/'
-            ,file_re => 'devuan_excalibur_.*_i386_desktop-live.iso'
-            ,xml => 'jessie-i386.xml'
-            ,xml_volume => 'jessie-volume.xml'
-            ,min_disk_size => '10'
         }
 	,parrot_xfce_amd64 => {
             name => 'Parrot Home Edition XFCE 7.1'
