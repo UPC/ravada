@@ -412,10 +412,11 @@ sub _update_isos {
              ,xml_volume => 'bionic64-volume.xml'
                     ,url => 'https://archive.archlinux.org/iso/2026.03.01/'
                     ,file_re => 'archlinux-2026.03.01-x86_64.iso'
+		    ,sha256_url => '$url/sha256sums.txt'
         },
 	mate_noble => {
                     name => 'Ubuntu Mate 24.04 Noble Numbat 64 bits'
-            ,description => 'Ubuntu Mate 24.04 Noble Nubat m64 bits'
+            ,description => 'Ubuntu Mate 24.04 Noble Numbat 64 bits'
                    ,arch => 'x86_64'
                     ,xml => 'noble-amd64.xml'
              ,xml_volume => 'focal_fossa64-volume.xml'
@@ -586,7 +587,7 @@ sub _update_isos {
             ,description => 'Alpine Linux 3.23 32 bits ( Minimal Linux Distribution )'
             ,arch => 'i686'
             ,xml => 'alpine-i386.xml'
-            ,xml_volume => 'alpine323_32-volume.xml'
+            ,xml_volume => 'alpine316_32-volume.xml'
             ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.23/releases/x86/'
             ,options => { machine => 'pc-i440fx' }
             ,file_re => 'alpine-standard-3.23.*-x86.iso'
