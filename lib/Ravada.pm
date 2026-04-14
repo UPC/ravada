@@ -574,7 +574,7 @@ sub _update_isos {
             ,description => 'Alpine Linux 3.23 64 bits ( Minimal Linux Distribution )'
             ,arch => 'x86_64'
             ,xml => 'alpine-amd64.xml'
-            ,xml_volume => 'alpine323_64-volume.xml'
+            ,xml_volume => 'alpine381_64-volume.xml'
             ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.23/releases/x86_64/'
             ,file_re => 'alpine-standard-3.23.*-x86_64.iso'
             ,sha256_url => '$url/alpine-standard-3.23.*.iso.sha256'
