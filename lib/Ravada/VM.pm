@@ -565,7 +565,7 @@ sub _around_create_domain {
             die "Error: No free nodes available.\n";
         }
         if ( $base->_base_files_in_vm($vm)
-                 && $base->_check_all_parents_in_node($vm)) {
+                 && $base->_check_all_base_parents_in_node($vm)) {
                 $self = $vm;
         }
         $request->status("creating machine on ".$self->name)  if $request;

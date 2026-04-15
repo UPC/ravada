@@ -344,6 +344,10 @@ sub remove {
 
 sub remove_instance($self, $user) {
     eval {
+        $self->domain->destroy() if $self->domain->is_active();
+    };
+    warn $@ if $@;
+    eval {
         $self->domain->undefine(Sys::Virt::Domain::UNDEFINE_NVRAM)    if $self->domain;# && !$self->is_removed 
     };
     warn $@ if $@;

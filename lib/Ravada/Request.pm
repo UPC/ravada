@@ -1167,6 +1167,13 @@ sub _validate_clone($self
         $self->error("Error: user id='$uid' does not exist");
         return;
     }
+    if ($base->is_active) {
+        my $req_shutdown = Ravada::Request->shutdown_domain(
+            uid => $uid
+            ,id_domain => $base->id
+        );
+        $self->after_request($req_shutdown->id);
+    }
 
     my ($req_base) = grep { $_->command eq 'prepare_base' }
         $base->list_requests;
@@ -1564,8 +1571,6 @@ sub set_base_vm {
 }
 
 sub _validate_migrate($req) {
-    return if $req->defined_arg('value') && $req->defined_arg('value')==0;
-
     my $domain = Ravada::Front::Domain->open($req->args('id_domain'));
     my $req_post = Ravada::Request->post_migrate(
         uid => $req->args('uid')
@@ -1690,8 +1695,8 @@ sub _validate_remove_base_vm($req) {
 
     my $bases_vm = $domain->_bases_vm(1);
     my @other_vms;
-    for my $id_vm (keys %$bases_vm) {
-        push @other_vms,($id_vm) if _node_is_active($id_vm);
+    for my $id_vm_other (keys %$bases_vm) {
+        push @other_vms,($id_vm_other) if $id_vm_other != $id_vm && _node_is_active($id_vm_other);
     }
 
     if ( !@other_vms ) {
@@ -1704,10 +1709,11 @@ sub _validate_remove_base_vm($req) {
     for my $clone ($domain->clones) {
 
         # migrate clones to other vms
+        my $req_migrate;
         if ( $clone->{id_vm} == $id_vm ) {
             my $start = 0;
             $start = 1 if $clone->{status} eq 'active';
-            my $req_migrate = Ravada::Request->migrate(
+            $req_migrate = Ravada::Request->migrate(
                 uid => Ravada::Utils::user_daemon->id
                 ,id_domain => $clone->{id}
                 ,id_node => $other_vms[0]
@@ -1725,6 +1731,7 @@ sub _validate_remove_base_vm($req) {
                 ,id_domain => $clone->{id}
                 ,id_vm => $id_vm
             );
+            $req_prev->after_request_ok($req_migrate->id) if $req_migrate;
             $req->after_request_ok($req_prev->id);
         }
     }
@@ -1983,7 +1990,7 @@ sub done_recently($self, $seconds=60,$command=undef, $args=undef) {
         delete $args_found_d->{at};
 
         next if join(".",sort keys %$args_d) ne join(".",sort keys %$args_found_d);
-        my $args_d_s = join(".",map { $args_d->{$_} } sort keys %$args_d);
+        my $args_d_s = join(".",map { $args_d->{$_} or '' } sort keys %$args_d);
         my $args_found_s = join(".",map {$args_found_d->{$_} or '' } sort keys %$args_found_d);
         next if $args_d_s ne $args_found_s;
 
@@ -2194,7 +2201,11 @@ sub _data($self, $field, $value=undef) {
             $value = _push($prev_req_id, $value) if $prev_req_id;
         }
         $self->{_data}->{$field} = $value;
-        $value = encode_json($value) if ref($value) eq 'ARRAY';
+        my $value0 = $value;
+        eval {
+            $value = encode_json($value) if ref($value) eq 'ARRAY';
+        };
+        confess Dumper([$@,$value0]) if $@;
 
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE requests set $field=?"

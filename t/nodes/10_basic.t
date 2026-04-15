@@ -152,7 +152,6 @@ sub test_iptables($node, $node2) {
         ,jump => 'DROP'
     );
     is(scalar @found,0,Dumper(\@found));
-    #    warn Dumper($list->{filter});
 
     $clone1->remove(user_admin);
 
@@ -1156,11 +1155,29 @@ sub test_keep_node($node, $clone) {
 sub test_base_unset($vm, $node) {
     my $base = create_domain($vm);
     $base->prepare_base(user_admin);
-    $base->set_base_vm(vm => $node, user => user_admin);
+    Ravada::Request->set_base_vm(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,id_vm => $node->id
+    );
+    wait_request();
 
     my $clone = $base->clone(name => new_domain_name, user => user_admin);
-    $clone->migrate($node);
-    $base->set_base_vm(id_vm => $node->id,value => 0, user => user_admin);
+    Ravada::Request->migrate(
+        uid => user_admin->id
+        ,id_domain => $clone->id
+        ,id_node => $node->id
+    );
+    wait_request();
+
+    Ravada::Request->set_base_vm(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,id_vm => $node->id
+        ,value => 0
+    );
+    wait_request();
+
     is($base->base_in_vm($node->id),0) or exit;
     is(Ravada::Domain::base_in_vm($base->id,$node->id),0) or exit;
     wait_request(debug => 0);
@@ -1327,10 +1344,14 @@ sub _shutdown_domains(@nodes) {
             my $base_name=base_domain_name();
             if ( $domain->name =~ /$base_name/ ) {
                 warn $domain->name;
-                $domain->shutdown_now(user_admin);
+                Ravada::Request->force_shutdown(
+                    uid => user_admin->id
+                    ,id_domain => $domain->id
+                );
             }
         }
     }
+    wait_request();
 }
 
 sub test_fill_memory($vm, $node, $migrate, $start=0) {
@@ -1366,7 +1387,6 @@ sub test_fill_memory($vm, $node, $migrate, $start=0) {
     my $created_in_node=0;
     for ( 1 .. 100  ) {
         my $clone_name = new_domain_name();
-        diag("Try $_ , $clone_name may go to ".$node->name);
         my $req = Ravada::Request->create_domain(
             name => $clone_name
             ,id_owner => user_admin->id
@@ -1381,7 +1401,6 @@ sub test_fill_memory($vm, $node, $migrate, $start=0) {
         my $clone = rvd_back->search_domain($clone_name) or last;
         ok($clone,"Expecting clone $clone_name") or exit;
         $created_in_node++ if $clone->_data('id_vm') == $node->id;
-        diag($clone->name." ".$clone->_data('id_vm')." [node=".$node->id."]");
         _check_files_exist($clone);
 
         Ravada::Request->migrate( uid => user_admin->id
@@ -1396,9 +1415,8 @@ sub test_fill_memory($vm, $node, $migrate, $start=0) {
             uid => user_admin->id
             ,id_domain => $clone->id
         );
-        wait_request(debug => 1, check_error => 0);
+        wait_request(debug => 0, check_error => 0);
         $error = $req_start->error;
-        diag("error=$error");# if $error;
         like($error, qr/(^$|No free memory)/);
         exit if $error && $error !~ /No free memory/;
         $created_in_node++ if $clone->_data('id_vm') == $node->id;
@@ -1685,9 +1703,9 @@ sub test_nested_base($vm, $node, $levels=1) {
 
     my $base0 = create_domain($vm);
 
-    $base0->add_volume(swap => 1, size => 10 * 1024);
-    $base0->add_volume(type => 'tmp', size => 10 * 1024);
-    $base0->add_volume(type => 'data', size => 10 * 1024);
+    $base0->add_volume(swap => 1, size => 10 * 1024, format => 'qcow2');
+    $base0->add_volume(type => 'tmp', size => 10 * 1024, format => 'qcow2');
+    $base0->add_volume(type => 'data', size => 10 * 1024, format => 'qcow2');
 
     my $base1 = $base0;
     my $clone;
@@ -1701,15 +1719,14 @@ sub test_nested_base($vm, $node, $levels=1) {
             );
             wait_request();
         }
-        diag("Cloning from ".$base1->name." ".($base1->id_base or ' ')." level $n / $levels");
-        my $name = new_domain_name();
         Ravada::Request->clone(
-            name => $name
-            ,uid => user_admin->id
+            uid => user_admin->id
             ,id_domain => $base1->id
+            ,number => 3
         );
         wait_request();
-        $clone = $vm->search_domain($name);
+        my @clones = $base1->clones();
+        $clone = $vm->search_domain($clones[0]->{name});
         is($clone->id_base,$base1->id);
         push @bases,($base1);
         wait_request();
@@ -1721,14 +1738,28 @@ sub test_nested_base($vm, $node, $levels=1) {
     _test_migrate_nested($vm, $node, \@bases, $clone, $levels);
     _migrate_fast($clone, $vm);
     _remove_base_vm($base0, $node);
-    diag("###########################################");
-    diag("test migrate nested again");
     _test_migrate_nested($vm, $node, \@bases, $clone, $levels);
-    my ($file) = $base0->list_files_base;
-    $node->remove_file($file);
 
-    for my $domain ($clone, reverse @bases ) {
-        $domain->remove(user_admin);
+    _test_all_children_ok($base0);
+
+    remove_domain($base0);
+}
+
+sub _test_all_children_ok($base) {
+    for my $clone( $base->clones ) {
+        Ravada::Request->refresh_machine(
+            uid => user_admin->id
+            ,id_domain => $clone->{id}
+        );
+        if ($clone->{is_base}) {
+            _test_all_children_ok(Ravada::Front::Domain->open($clone->{id}));
+        } else {
+            Ravada::Request->start_domain(
+                uid => user_admin->id
+                ,id_domain => $clone->{id}
+            );
+        }
+        wait_request();
     }
 }
 
@@ -1740,28 +1771,35 @@ sub _migrate_fast($domain, $node) {
         ,shutdown => 1
     );
     wait_request(debug => 1);
+    my $domain2 = Ravada::Front::Domain->open($domain->id);
+    is($domain2->_data('id_vm'),$node->id) or confess;
 }
 
 sub _remove_base_vm($base,$node) {
-  diag("Remove base from ".$node->name." for ".$base->name);
-    Ravada::Request->remove_base_vm(
+    diag("Remove base from ".$node->id." ".$node->name." for ".$base->id." "
+        .$base->name);
+    delete_request('migrate','set_base_vm','remove_base_vm');
+    my $req = Ravada::Request->remove_base_vm(
         uid => user_admin->id
         ,id_domain => $base->id
         ,id_vm => $node->id
     );
+
     wait_request(debug => 1);
+    my $base2=Ravada::Domain->open($base->id);
+    isnt($base2->_data('id_vm'), $node->id) or confess $base->id." ".$base->name;
+
+    _check_clones_in_node($base2, $base2->_data('id_vm'));
 }
 
 sub _test_migrate_nested($vm, $node, $bases, $clone, $levels) {
-    delete_request('migrate','set_base_vm');
-    diag("migrating clone ".$clone->name." to ".$node->name." ".$node->id);
+    delete_request('migrate','set_base_vm','remove_base_vm');
     my $req = Ravada::Request->migrate(
         id_node => $node->id
         ,id_domain => $clone->id
         ,uid => user_admin->id
         ,shutdown => 1
     );
-    warn Dumper([$req->id,$req->after_request_ok()]);
     for ( 1 .. $levels+3 ) {
         last if $req->status eq 'done';
         wait_request(debug => 0, check_error => 0);
@@ -1770,12 +1808,23 @@ sub _test_migrate_nested($vm, $node, $bases, $clone, $levels) {
     is($req->status,'done');
     for my $base ( @$bases ) {
         is($base->is_base,1,"Expecting ".$base->name." is base") or exit;
-        is($base->base_in_vm($node->id),1);
+        is($base->base_in_vm($node->id),1) or confess Dumper([$clone->id,$base->id]);
     }
     my $clone2 = Ravada::Domain->open($clone->id);
     is($clone2->_vm->id,$node->id) or confess;
     eval { $clone2->start(user_admin) };
     is(''.$@, '', $clone2->name) or exit;
+}
+
+sub _check_clones_in_node($base0, $id_node) {
+    my $base = $base0;
+    $base = Ravada::Front::Domain->open($base0->{id}) if ref($base) !~/Ravada/;
+    for my $clone ( $base->clones ) {
+        is($clone->{id_vm}, $id_node) or confess $clone->{name};
+        if ( $clone->{is_base}) {
+            _check_clones_in_node($clone, $id_node);
+        }
+    }
 }
 
 sub test_display_ip($vm, $node, $set_localhost_dp=0) {
@@ -2169,6 +2218,21 @@ sub test_spinoff_remote($vm, $node) {
     test_remove_instances($base, $vm, $node);
 }
 
+sub test_base_only_in_node_add_hw($vm, $node) {
+
+    my $base = _req_create($node);
+    Ravada::Request->add_hardware(
+        name => 'disk'
+        ,uid => user_admin->id
+        ,id_domain => $base->id
+        ,data => { size => '0.5G' }
+    );
+    wait_request(debug => 0);
+
+    test_volumes_exist($base,$node,1);
+    test_volumes_exist($base,$vm,0);
+}
+
 sub test_base_only_in_node($vm, $node, $start=0) {
 
     diag("Test base only in node , start=$start");
@@ -2210,7 +2274,10 @@ sub test_base_only_in_node($vm, $node, $start=0) {
 sub test_remove_instances($base, @nodes) {
     my @volumes = $base->list_volumes();
     my @files_base = $base->list_files_base();
-    $base->remove(user_admin);
+    Ravada::Request->remove_domain(
+        uid => user_admin->id
+        ,name => $base->name
+    );
     wait_request(debug => 0);
     my $vm = $base->_vm;
     for my $vm ( $base->_vm, @nodes ) {
@@ -2277,6 +2344,9 @@ for my $vm_name (vm_names() ) {
 
         start_node($node);
 
+        test_base_only_in_node_add_hw($vm, $node); #start after create = 1
+
+        test_base_unset($vm,$node);
         test_duplicated_set_base_vm($vm, $node);
         for my $volatile (1,0) {
             test_remove_base($vm, $node, $volatile);

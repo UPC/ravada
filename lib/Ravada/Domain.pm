@@ -1282,7 +1282,7 @@ sub _check_has_clones {
     return if !$self->is_known();
 
     my @clones = $self->clones;
-    die "Domain ".$self->name." has ".scalar @clones." clones.\n"
+    confess "Domain ".$self->name." has ".scalar @clones." clones.\n"
         if $#clones>=0;
 }
 
@@ -3314,7 +3314,6 @@ sub clone {
     return $self->_clone_from_pool(@_) if $from_pool;
 
     if ($self->is_active) {
-        warn $self->name." is active, req shutdown";
         my $req = Ravada::Request->shutdown(uid => $user->id
             ,id_domain => $self->id
         );
@@ -5646,11 +5645,6 @@ sub _pre_migrate($self, $node, $request = undef) {
         confess "ERROR: base ".$base->name." not prepared in node ".$node->name
         if !$base->base_in_vm($node->id);
         confess "ERROR: base id ".$self->id_base." not found."  if !$base;
-
-        if ( ! $self->_check_all_parents_in_node($node, $request) ) {
-            die "Error: base of ".$self->name." , ".$base->name." not in node ".$node->id." ".$node->name;
-        }
-
     }
     $node->_add_instance_db($self->id);
 }
@@ -5765,7 +5759,6 @@ sub set_base_vm($self, %args) {
             $request->status("working","Preparing base")    if $request;
             $self->prepare_base($user) 
         }
-        $self->_check_all_parents_in_node($vm);
         $request->status("working", "Syncing base volumes to ".$vm->host)
             if $request;
 
@@ -5824,6 +5817,14 @@ sub _remove_files_not_shared($self, @nodes){
         }
         $self->_vm->remove_file($file) if !$shared;
     }
+}
+
+sub _check_all_base_parents_in_node($self, $vm) {
+    return 1 if !$self->id_base;
+
+    my $base = Ravada::Front::Domain->open($self->id_base);
+    return 0 if !$base->base_in_vm($vm->id);
+    return $base->_check_all_base_parents_in_node($vm);
 }
 
 sub _check_all_parents_in_node($self, $vm, $request=undef) {
