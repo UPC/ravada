@@ -1669,11 +1669,18 @@ sub remove_base_vm {
     my $self = {};
     bless($self,$class);
 
-    return $self->_new_request(
+    my $req = $self->_new_request(
             command => 'remove_base_vm'
              , args => $args
     );
 
+    my $id_vm = $req->defined_arg('id_vm');
+    $id_vm = $req->defined_arg('id_node') if !defined $id_vm;
+
+    my $domain = Ravada::Front::Domain->open($req->args('id_domain'));
+    $domain->_set_base_vm_db($id_vm, undef, $req->id);
+
+    return $req;
 }
 
 sub _node_is_active($id) {

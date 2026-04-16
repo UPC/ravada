@@ -171,30 +171,41 @@ sub test_req_migrate_nested($vm, $node1) {
 
 sub test_req_failed($vm) {
 
-    my $base = create_base($vm);
+    my $base = create_domain($vm);
+    diag(" test req failed ".$base->id." ".$base->name." ".$vm->name." [".$vm->id."]");
+
+    my $bases_vm = $base->_bases_vm_info();
+    is($bases_vm->{$vm->id}->{enabled},0) or exit;
+
     my $req = Ravada::Request->set_base_vm(
         uid => user_admin->id
         ,id_domain => $base->id
         ,id_vm => $vm->id
     );
-    my $bases_vm = $base->_bases_vm_info();
-    warn Dumper($bases_vm);
-    is($bases_vm->{$vm->id}->{enabled},undef) or exit;
+    $bases_vm = $base->_bases_vm_info();
+    is($bases_vm->{$vm->id}->{enabled},0) or exit;
     is($bases_vm->{$vm->id}->{id_request},$req->id);
+    wait_request();
+
+    $bases_vm = $base->_bases_vm_info();
+    is($bases_vm->{$vm->id}->{enabled},1) or exit;
+    is($bases_vm->{$vm->id}->{id_request},undef) or exit;
 
     my $req_rm = Ravada::Request->remove_base_vm(
         uid => user_admin->id
         ,id_domain => $base->id
         ,id_vm => $vm->id
     );
-    warn Dumper([$req_rm->id,$req_rm->after_request_ok]);
-    warn Dumper($base->_bases_vm_info());
 
+    $bases_vm = $base->_bases_vm_info();
+    is($bases_vm->{$vm->id}->{enabled},1) or exit;
+    is($bases_vm->{$vm->id}->{id_request},$req_rm->id) or exit;
     wait_request(debug => 1);
 
     $bases_vm = $base->_bases_vm_info();
-    warn Dumper($bases_vm);
-    die $base->id." ".$base->name;
+    is($bases_vm->{$vm->id}->{enabled},0) or exit;
+
+    remove_domain($base);
  
 }
 
