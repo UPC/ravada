@@ -5685,19 +5685,28 @@ sub _set_base_vm_db($self, $id_vm, $value, $id_request=undef) {
     if (!defined $id_is_base) {
         return if !$value && !$self->is_known;
         my $sth = $$CONNECTOR->dbh->prepare(
-            "INSERT INTO bases_vm (id_domain, id_vm, enabled, id_request) "
-            ." VALUES(?, ?, ?, ?)"
+            "INSERT INTO bases_vm (id_domain, id_vm, id_request) "
+            ." VALUES(?, ?, ?)"
         );
-        $sth->execute($self->id, $id_vm, $value, $id_request);
+        $sth->execute($self->id, $id_vm, $id_request);
         $sth->finish;
     } else {
         my $sth = $$CONNECTOR->dbh->prepare(
-            "UPDATE bases_vm SET enabled=?, id_request=?"
+            "UPDATE bases_vm SET id_request=?"
             ." WHERE id_domain=? AND id_vm=?"
         );
-        $value = 0 if !defined $value;
-        $sth->execute($value, $id_request, $self->id, $id_vm);
+        $sth->execute($id_request, $self->id, $id_vm);
         $sth->finish;
+    }
+    if (defined $value) {
+        $is_base = $self->base_in_vm($id_vm) if !$is_base;
+        my $sth = $$CONNECTOR->dbh->prepare(
+            "UPDATE bases_vm SET enabled=?"
+            ." WHERE id_domain=? AND id_vm=?"
+        );
+        $sth->execute($value, $self->id, $id_vm);
+        $sth->finish;
+
     }
 }
 
@@ -5753,7 +5762,6 @@ sub set_base_vm($self, %args) {
         $request->status("working");
         $id_request = $request->id;
     }
-    $self->_set_base_vm_db($vm->id, $value, $id_request);
     if ($value) {
         if ( !$self->is_base() ) {
             $request->status("working","Preparing base")    if $request;

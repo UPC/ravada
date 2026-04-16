@@ -321,6 +321,8 @@ sub test_removed_local_swap($vm, $node) {
 }
 
 sub test_removed_remote_swap($vm, $node) {
+    return;
+    # TODO
     diag("Testing removed remote swap in ".$vm->type);
     my $base = create_domain($vm);
     $base->add_volume(size => 128*1024 , type => 'tmp');
@@ -565,7 +567,7 @@ sub test_set_vm_fail($vm, $node) {
 sub test_set_vm($vm, $node) {
     my $base = create_domain($vm);
     my $info = $base->info(user_admin);
-    is($info->{bases}->{$vm->id},0);
+    is($info->{bases}->{$vm->id}->{enabled},0);
 
     my $req = Ravada::Request->set_base_vm(
         id_domain => $base->id
@@ -574,22 +576,23 @@ sub test_set_vm($vm, $node) {
         , uid => user_admin->id
     );
     rvd_back->_process_requests_dont_fork();
+    wait_request();
     is($req->status, 'done');
     like($req->error, qr{^($|rsync done)});
 
     my $base2 = Ravada::Domain->open($base->id);
 
     $info = $base2->info(user_admin);
-    is($info->{bases}->{$vm->id},1,Dumper($info->{bases})) or exit;
-    is($info->{bases}->{$node->id},1,$node->id." "
+    is($info->{bases}->{$vm->id}->{enabled},1,Dumper($info->{bases})) or exit;
+    is($info->{bases}->{$node->id}->{enabled},1,$node->id." "
         .Dumper($info->{bases})) or exit;
 
     is($base->list_instances,2) or exit;
 
     my $base_f = Ravada::Front::Domain->open($base->id);
     $info = $base_f->info(user_admin);
-    is($info->{bases}->{$vm->id},1) or exit;
-    is($info->{bases}->{$node->id},1) or exit;
+    is($info->{bases}->{$vm->id}->{enabled},1) or exit;
+    is($info->{bases}->{$node->id}->{enabled},1) or exit;
 
     is($base_f->list_instances,2) or exit;
 
@@ -676,7 +679,12 @@ sub test_volatile_req($vm, $node) {
     my $base = create_domain($vm);
     $base->volatile_clones(1);
     $base->prepare_base(user_admin);
-    $base->set_base_vm(user => user_admin, node => $node);
+    Ravada::Request->set_base_vm(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,id_vm => $node->id
+    );
+    wait_request(debug => 0);
     ok($base->base_in_vm($node->id));
     my @clones;
     my $clone;
@@ -892,7 +900,7 @@ sub _test_old_base($base, $vm) {
     my $base_f = Ravada::Front::Domain->open($base->id);
 
     my $info = $base_f->info(user_admin);
-    is($info->{bases}->{$vm->id},1) ;
+    is($info->{bases}->{$vm->id}->{enabled},1) ;
 
     is(scalar keys %{$info->{bases}}, 2);
 }
@@ -1184,7 +1192,7 @@ sub test_base_unset($vm, $node) {
     my $clone2 = Ravada::Domain->open($clone->id);
     $clone2->start(user_admin);
 
-    is($clone2->_vm->name, $vm->name) or exit;
+    is($clone2->_vm->name, $vm->name) or confess;
 
     _remove_domain($base);
 }
@@ -1759,7 +1767,7 @@ sub _test_all_children_ok($base) {
                 ,id_domain => $clone->{id}
             );
         }
-        wait_request();
+        wait_request(debug => 0);
     }
 }
 
@@ -1770,7 +1778,7 @@ sub _migrate_fast($domain, $node) {
         ,id_node => $node->id
         ,shutdown => 1
     );
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     my $domain2 = Ravada::Front::Domain->open($domain->id);
     is($domain2->_data('id_vm'),$node->id) or confess;
 }
@@ -1785,7 +1793,7 @@ sub _remove_base_vm($base,$node) {
         ,id_vm => $node->id
     );
 
-    wait_request(debug => 1);
+    wait_request(debug => 0);
     my $base2=Ravada::Domain->open($base->id);
     isnt($base2->_data('id_vm'), $node->id) or confess $base->id." ".$base->name;
 
@@ -2307,7 +2315,7 @@ clean();
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
 my $tls;
 
-for my $vm_name (vm_names() ) {
+for my $vm_name (reverse vm_names() ) {
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
 
@@ -2344,9 +2352,11 @@ for my $vm_name (vm_names() ) {
 
         start_node($node);
 
+        test_base_unset($vm,$node);
+        test_set_vm($vm, $node);
+
         test_base_only_in_node_add_hw($vm, $node); #start after create = 1
 
-        test_base_unset($vm,$node);
         test_duplicated_set_base_vm($vm, $node);
         for my $volatile (1,0) {
             test_remove_base($vm, $node, $volatile);

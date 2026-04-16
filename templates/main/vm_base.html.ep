@@ -58,8 +58,7 @@
     <div class="col-md-4" ng-show="{{node.type == showmachine.type}}">
         <div ng-hide="node.is_active"><%=l 'Node down' %></div>
         <div ng-hide="node.enabled"><%=l 'Node disabled' %></div>
-        <div ng-show="node.is_local && showmachine.has_clones"><%=l 'This base has clones' %></div>
-        <div ng-show="!node.is_local && showmachine.clones[node.id]"><%=l 'This node has' %> {{ showmachine.clones[node.id].length }} <%=l 'clones' %></div>
+        <div ng-show="showmachine.clones[node.id]"><%=l 'This node has' %> {{ showmachine.clones[node.id].length }} <%=l 'clones' %></div>
     </div>
 </div>
 </div>

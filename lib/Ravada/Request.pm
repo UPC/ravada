@@ -1565,7 +1565,7 @@ sub set_base_vm {
     my $id_vm = $args->{id_vm};
     $id_vm = $args->{id_node} if exists $args->{id_node} && $args->{id_node};
 
-    $domain->_set_base_vm_db($id_vm, $args->{value}, $req->id);
+    $domain->_set_base_vm_db($id_vm, undef, $req->id);
 
     return $req;
 }
