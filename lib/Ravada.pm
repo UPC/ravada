@@ -587,7 +587,7 @@ sub _update_isos {
             ,description => 'Alpine Linux 3.23 32 bits ( Minimal Linux Distribution )'
             ,arch => 'i686'
             ,xml => 'alpine-i386.xml'
-            ,xml_volume => 'alpine316_32-volume.xml'
+            ,xml_volume => 'alpine381_32-volume.xml'
             ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.23/releases/x86/'
             ,options => { machine => 'pc-i440fx' }
             ,file_re => 'alpine-standard-3.23.*-x86.iso'
