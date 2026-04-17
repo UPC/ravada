@@ -2206,3 +2206,90 @@ msgstr "Show Clones"
 
 msgid "starting"
 msgstr "starting"
+
+msgid "Add Host Device"
+msgstr "Add Host Device"
+
+msgid "LDAP groups"
+msgstr "LDAP groups"
+
+msgid "Local groups"
+msgstr "Local groups"
+
+msgid "Create a group"
+msgstr "Create a group"
+
+msgid "This virtual machine has no local group restrictions."
+msgstr "This virtual machine has no local group restrictions."
+
+msgid "Routes"
+msgstr "Routes"
+
+msgid "Storage"
+msgstr "Storage"
+
+msgid "list"
+msgstr "list"
+
+msgid "purge"
+msgstr "purge"
+
+msgid "default"
+msgstr "default"
+
+msgid "Enabled"
+msgstr "Enabled"
+
+msgid "Size"
+msgstr "Size"
+
+msgid "Used"
+msgstr "Used"
+
+msgid "Available"
+msgstr "Available"
+
+msgid "Path"
+msgstr "Path"
+
+msgid "New Storage"
+msgstr "New Storage"
+
+msgid "Unused volumes"
+msgstr "Unused volumes"
+
+msgid "Remove Selected"
+msgstr "Remove Selected"
+
+msgid "back"
+msgstr "back"
+
+msgid "IP address"
+msgstr "IP address"
+
+msgid "Netmask"
+msgstr "Netmask"
+
+msgid "DHCP start"
+msgstr "DHCP start"
+
+msgid "DHCP end"
+msgstr "DHCP end"
+
+msgid "Auto Start"
+msgstr "Auto Start"
+
+msgid "Auto create users"
+msgstr "Auto create users"
+
+msgid "Authenticated users are allowed to log in"
+msgstr "Authenticated users are allowed to log in"
+
+msgid "Auth OpenID"
+msgstr "Auth OpenID"
+
+msgid "Logout URL"
+msgstr "Logout URL"
+
+msgid "Charts"
+msgstr "Charts"
