@@ -501,7 +501,7 @@ sub _check_base_in_vm_db($base, $id_node, $id_req, $value) {
     $sth->execute($base->id, $id_node);
     my $found = $sth->fetchrow_hashref;
     ok($found) or exit;
-    is($found->{enabled}, $value);
+    is($found->{enabled}, $value) or confess;
     is($found->{id_request}, $id_req) or confess;
 
     my @vms = $base->list_vms();
@@ -1163,6 +1163,8 @@ sub test_keep_node($node, $clone) {
 sub test_base_unset($vm, $node) {
     my $base = create_domain($vm);
     $base->prepare_base(user_admin);
+    is(Ravada::Domain::base_in_vm($base->id,$vm->id),1) or exit;
+
     Ravada::Request->set_base_vm(
         uid => user_admin->id
         ,id_domain => $base->id
@@ -1178,18 +1180,20 @@ sub test_base_unset($vm, $node) {
     );
     wait_request();
 
+    delete_request('migrate','set_base_vm','remove_base_vm');
     Ravada::Request->set_base_vm(
         uid => user_admin->id
         ,id_domain => $base->id
         ,id_vm => $node->id
         ,value => 0
     );
-    wait_request();
+    wait_request(debug => 0);
 
     is($base->base_in_vm($node->id),0) or exit;
     is(Ravada::Domain::base_in_vm($base->id,$node->id),0) or exit;
     wait_request(debug => 0);
     my $clone2 = Ravada::Domain->open($clone->id);
+    is($clone2->_data('id_vm'), $vm->id) or exit;
     $clone2->start(user_admin);
 
     is($clone2->_vm->name, $vm->name) or confess;

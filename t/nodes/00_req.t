@@ -172,7 +172,6 @@ sub test_req_migrate_nested($vm, $node1) {
 sub test_req_failed($vm) {
 
     my $base = create_domain($vm);
-    diag(" test req failed ".$base->id." ".$base->name." ".$vm->name." [".$vm->id."]");
 
     my $bases_vm = $base->_bases_vm_info();
     is($bases_vm->{$vm->id}->{enabled},0) or exit;
@@ -200,7 +199,7 @@ sub test_req_failed($vm) {
     $bases_vm = $base->_bases_vm_info();
     is($bases_vm->{$vm->id}->{enabled},1) or exit;
     is($bases_vm->{$vm->id}->{id_request},$req_rm->id) or exit;
-    wait_request(debug => 1);
+    wait_request(debug => 0);
 
     $bases_vm = $base->_bases_vm_info();
     is($bases_vm->{$vm->id}->{enabled},0) or exit;
@@ -286,7 +285,6 @@ sub test_req_remove_base_nested($vm, $node1, $clone, $base3, $base2, $base1) {
 }
 
 sub test_remove_requirements($base, $req) {
-    diag("testing remove requirements for ".$base->id." ".$base->name);
     my @clones = $base->clones;
     return if !@clones;
 

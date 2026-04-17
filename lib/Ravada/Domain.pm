@@ -5999,9 +5999,6 @@ sub base_in_vm($self,$id_vm) {
     confess "ERROR: id_vm must be a number, it is '$id_vm'"
         if $id_vm !~ /^\d+$/;
 
-    confess "ERROR: Domain ".$self->name." is not a base"
-        if ref($self) && !$self->is_base;
-
     confess "Undefined id_vm " if !defined $id_vm;
 
     my $sth = $$CONNECTOR->dbh->prepare(

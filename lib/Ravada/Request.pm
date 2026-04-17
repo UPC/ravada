@@ -1620,8 +1620,16 @@ sub _validate_migrate($req) {
 
 sub _validate_set_base_vm($req) {
 
-    return _validate_remove_base_vm($req)
-        if $req->defined_arg('value') && $req->defined_arg('value')==0;
+    my $value;
+    if ( $req->command eq 'set_base_vm') {
+        $value = 1;
+        my $args = $req->args();
+        $value = $args->{value} if exists $args->{value};
+    } elsif ($req->command eq 'remove_base_vm') {
+        $value = 0;
+    }
+
+    return _validate_remove_base_vm($req) if !$value;
 
     my $domain = Ravada::Front::Domain->open($req->args('id_domain'));
     my $id_vm_local = $domain->_id_vm_local();
@@ -1706,7 +1714,7 @@ sub _validate_remove_base_vm($req) {
         push @other_vms,($id_vm_other) if $id_vm_other != $id_vm && _node_is_active($id_vm_other);
     }
 
-    if ( !@other_vms ) {
+    if ( !@other_vms && $domain->clones ) {
         $req->error("Error: there are no other VMs to migrate clones when removing base "
             .$domain->id." ".$domain->name);
         $req->status('done');
@@ -1732,7 +1740,6 @@ sub _validate_remove_base_vm($req) {
 
         # remove child bases
         if ( $clone->{is_base} ) {
-
             my $req_prev = Ravada::Request->remove_base_vm(
                 uid => Ravada::Utils::user_daemon->id
                 ,id_domain => $clone->{id}
