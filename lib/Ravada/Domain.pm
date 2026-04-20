@@ -2937,8 +2937,11 @@ sub is_base {
         $sth->execute($value, $self->id );
         $sth->finish;
 
-        $sth =$$CONNECTOR->dbh->prepare("UPDATE bases_vm SET enabled=? WHERE id_domain=?");
-        $sth->execute($value, $self->id);
+        $sth =$$CONNECTOR->dbh->prepare(
+            "UPDATE bases_vm SET enabled=? WHERE id_domain=?"
+            ." AND id_vm=?"
+        );
+        $sth->execute($value, $self->id, $self->_data('id_vm'));
         return $value;
     }
     my $ret = $self->_data('is_base');
@@ -3624,20 +3627,6 @@ sub _post_shutdown {
     $self->_set_displays_active(0, $info);
     delete $info->{ip};
     $self->_data(info => encode_json($info));
-    # only if not volatile
-    my $request;
-    $request = $arg{request} if exists $arg{request};
-    if ( !$self->is_local && !$self->is_volatile && $self->has_non_shared_storage()) {
-        my @instances = $self->list_instances();
-        my ($instance_local) = grep { $_->{id_vm} == $self->_id_vm_local() } @instances;
-        my $req;
-        $req = Ravada::Request->rsync_back(
-            uid => Ravada::Utils::user_daemon->id
-            ,id_domain => $self->id
-            ,id_node => $self->_vm->id
-            ,at => time + Ravada::setting(undef,"/backend/delay_migrate_back")
-        ) if $instance_local;
-    }
 
     $self->_schedule_compact();
     $self->needs_restart(0) if $self->is_known()
@@ -5808,7 +5797,37 @@ sub set_base_vm($self, %args) {
         }
     }
 
-    return $self->_set_base_vm_db($vm->id, $value);
+    $self->_set_base_vm_db($vm->id, $value);
+
+    if (!$value) {
+
+        my $bases_vm = $self->_bases_vm(1); #enabled bases vm
+        if (!keys %$bases_vm) {
+            $self->_post_remove_base();
+        }
+    }
+}
+
+sub _check_set_base_reqs($self) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id,id_request FROM bases_vm "
+        ." WHERE id_domain=? "
+        ."   AND id_request is NOT NULL"
+    );
+    $sth->execute($self->id);
+
+    my $sth_update = $$CONNECTOR->dbh->prepare(
+        "UPDATE bases_vm SET id_request=NULL WHERE id=?"
+    );
+    while ( my ($id, $id_request) = $sth->fetchrow ) {
+        my $req;
+        eval { $req = Ravada::Request->open($id_request)};
+        warn $@ if $@;
+
+        if (!$req || $req->status() eq 'done') {
+            $sth_update->execute($id);
+        }
+    }
 }
 
 sub _remove_files_not_shared($self, @nodes){

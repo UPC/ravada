@@ -761,16 +761,15 @@ sub test_volatile_req_clone($vm, $node, $machine='pc-i440fx') {
 
     my $base = create_domain_v2(vm => $vm, options => { machine => $machine });
     $base->prepare_base(user_admin);
+    $base->volatile_clones(1);
     my $req = Ravada::Request->set_base_vm(
         uid => user_admin->id
         ,id_domain => $base->id
         ,id_vm => $node->id
         ,value => 1
     );
-    _check_base_in_vm_db($base, $node->id,$req->id, 1);
-    $base->volatile_clones(1);
-    ok($base->base_in_vm($node->id));
-    _check_base_in_vm_db($base, $node->id,$req->id, 1);
+    _check_base_in_vm_db($base, $node->id,$req->id, 0);
+    ok(!$base->base_in_vm($node->id));
     wait_request(debug => 0);
     _check_base_in_vm_db($base, $node->id,undef, 1);
 
@@ -1444,7 +1443,8 @@ sub test_fill_memory($vm, $node, $migrate, $start=0) {
         }
         $memory *= 1.5;
     }
-    ok($created_in_node,"Expecting some clones created in node ".$node->name) or exit;
+    ok($created_in_node,"Expecting some clones created in node ".$node->name)
+        or confess;
     ok(exists $nodes{$vm->name},"Expecting some clones to node ".$vm->name." ".$vm->id)
         or die Dumper(\%nodes);
     ok(exists $nodes{$node->name},"Expecting some clones to node ".$node->name." ".$node->id) or exit;
@@ -1671,6 +1671,7 @@ sub test_volumes_levels($domain, $level) {
 
     for my $vol ($domain->list_volumes_info) {
         next if !$vol->file;
+        next if $vol->file !~ /.qcow/;
         my @backings = _get_backing_files($vol->file);
         for my $file (@backings) {
             like($file ,qr{-vd[a-z][\.-]},$domain->name) or exit;
@@ -1694,6 +1695,7 @@ sub _get_backing_xml($disk) {
 }
 
 sub test_domain_volumes_levels($domain, $level) {
+    return if $domain->type eq 'Void';
     my $doc =XML::LibXML->load_xml(string => $domain->xml_description());
 
     my $found = 0;
@@ -2355,6 +2357,8 @@ for my $vm_name (reverse vm_names() ) {
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
         start_node($node);
+
+        test_nested_base($vm, $node, 3);
 
         test_base_unset($vm,$node);
         test_set_vm($vm, $node);

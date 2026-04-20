@@ -169,6 +169,36 @@ sub test_req_migrate_nested($vm, $node1) {
     remove_domain_db($clone);
 }
 
+sub test_req_gone($vm) {
+
+    my $base = create_domain($vm);
+
+    my $bases_vm = $base->_bases_vm_info();
+    is($bases_vm->{$vm->id}->{enabled},0) or exit;
+
+    my $req = Ravada::Request->set_base_vm(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,id_vm => $vm->id
+    );
+    $bases_vm = $base->_bases_vm_info();
+    is($bases_vm->{$vm->id}->{enabled},0) or exit;
+    is($bases_vm->{$vm->id}->{id_request},$req->id);
+    $req->status('done');
+
+    Ravada::Request->refresh_machine(
+        uid => user_admin->id
+        ,id_domain => $base->id
+    );
+    wait_request();
+
+    $bases_vm = $base->_bases_vm_info();
+    is($bases_vm->{$vm->id}->{enabled},0) or exit;
+    is($bases_vm->{$vm->id}->{id_request},undef);
+
+    remove_domain($base);
+}
+
 sub test_req_failed($vm) {
 
     my $base = create_domain($vm);
@@ -334,6 +364,8 @@ for my $vm_name (vm_names() ) {
         isnt($vm->name,'Void_localhost');
         my $node1 = _create_remote_node($vm_name);
         my $node2 = _create_remote_node($vm_name);
+
+        test_req_gone($vm);
 
         test_req_failed($vm);
         test_req_prepare_nested($vm, $node1);

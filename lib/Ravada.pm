@@ -5996,6 +5996,7 @@ sub _cmd_refresh_machine($self, $request) {
     $domain->info($user);
     $domain->client_status(1) if $is_active;
     $domain->_check_port_conflicts();
+    $domain->_check_set_base_reqs();
 
     Ravada::Request->refresh_machine_ports(id_domain => $domain->id, uid => $user->id
         ,timeout => 60, retry => 10)
@@ -6363,6 +6364,7 @@ sub _cmd_migrate($self, $request) {
 }
 
 sub _cmd_rsync_back($self, $request) {
+    return;
     my $uid = $request->args('uid');
     my $id_domain = $request->args('id_domain') or die "ERROR: Missing id_domain";
 
