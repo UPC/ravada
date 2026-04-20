@@ -940,19 +940,41 @@ sub test_remove_base($node) {
     is($domain->base_in_vm($vm->id),1);
     is($domain->base_in_vm($node->id),0);
 
-    $domain->set_base_vm(vm => $node, user => user_admin);
+    Ravada::Request->set_base_vm(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        , id_vm => $node->id
+    );
+    wait_request();
     is($domain->base_in_vm($node->id),1);
+    Ravada::Request->remove_base_vm(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        , id_vm => $vm->id
+    );
+    Ravada::Request->remove_base_vm(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        , id_vm => $node->id
+    );
 
-    $domain->remove_base_vm(user => user_admin, vm => $vm);
+    wait_request();
 
     is($domain->is_base,0);
-    wait_request(debug => 0);
+    $domain = Ravada::Domain->open($domain->id);
 
-    $domain->prepare_base(user_admin);
-    is($domain->base_in_vm($vm->id),1);
-    is($domain->base_in_vm($node->id),0);
+    Ravada::Request->prepare_base(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request();
+    is($domain->base_in_vm($domain->_data('id_vm')),1);
 
-    $domain->remove(user_admin);
+    my $id_other_vm = $node->id;
+    $id_other_vm = $vm->id if $id_other_vm == $domain->_data('id_vm');
+    is($domain->base_in_vm($id_other_vm),0);
+
+    remove_domain($domain);
 }
 
 sub test_remove_base_main($node) {
@@ -1001,7 +1023,7 @@ sub test_remove_base_main($node) {
     is($domain->base_in_vm($node->id),0
         ,"Expecting no base in node ".$node->name." ".$node->id) or exit;
 
-    $domain->remove(user_admin);
+    remove_domain($domain);
 }
 
 
@@ -1282,11 +1304,14 @@ SKIP: {
 
     diag("Testing remote node in $vm_name");
 
-    test_rsync_newer($vm_name, $node);
     ok($node->vm,"[$vm_name] expecting a VM inside the node") or do {
         remove_node($node);
         next;
     };
+    test_remove_base($node);
+    test_domain_on_remote($vm_name, $node);
+    my $domain22 = test_domain($vm_name, $node);
+    test_remove_domain_from_local($vm_name, $node, $domain22)    if $domain22;
 
     is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
     test_remove_base_main($node);
