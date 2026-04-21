@@ -978,6 +978,15 @@ sub _validate_start_domain($self) {
 sub _validate_prepare_base($self) {
     $self->_validate_compact();
 
+    for my $command (qw (prepare_base post_prepare_base
+        set_base_vm remove_base_vm )) {
+
+        my $req= $self->_search_request($command
+            , id_domain => $self->args('id_domain'));
+
+        $self->after_request($req->id) if $req;
+    }
+
     my $req_create = $self->_search_request('create'
         , id_base=> $self->args('id_domain'));
 
@@ -1721,10 +1730,12 @@ sub _validate_remove_base_vm($req) {
         return;
     }
 
+    my ($req_migrate, $req_rm);
+    my ($req_migrate_prev, $req_rm_prev);
+
     for my $clone ($domain->clones) {
 
         # migrate clones to other vms
-        my $req_migrate;
         if ( $clone->{id_vm} == $id_vm ) {
             my $start = 0;
             $start = 1 if $clone->{status} eq 'active';
@@ -1735,20 +1746,24 @@ sub _validate_remove_base_vm($req) {
                 ,shutdown => 1
                 ,start => $start
             );
-            $req->after_request_ok($req_migrate->id);
+            $req_migrate->after_request_ok($req_migrate_prev->id) if $req_migrate_prev;
+            $req_migrate_prev = $req_migrate;
         }
 
         # remove child bases
         if ( $clone->{is_base} ) {
-            my $req_prev = Ravada::Request->remove_base_vm(
+            $req_rm = Ravada::Request->remove_base_vm(
                 uid => Ravada::Utils::user_daemon->id
                 ,id_domain => $clone->{id}
                 ,id_vm => $id_vm
             );
-            $req_prev->after_request_ok($req_migrate->id) if $req_migrate;
-            $req->after_request_ok($req_prev->id);
+            $req_rm->after_request_ok($req_migrate->id) if $req_migrate;
+            $req_rm->after_request_ok($req_rm_prev->id) if $req_rm_prev;
+            $req_rm_prev = $req_rm;
         }
     }
+    $req->after_request_ok($req_rm->id) if $req_rm;
+    $req->after_request_ok($req_migrate->id) if $req_migrate;
 }
 
 

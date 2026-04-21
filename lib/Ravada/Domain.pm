@@ -1992,6 +1992,9 @@ sub _assert_update($self, $table, $field, $value) {
     if ($field eq 'is_base' && !$value && $self->clones ) {
         confess "Error: You can not set $field=$value if there are clones";
     }
+    if ($field eq 'id_base' && defined $value && $value == $self->id) {
+        confess "Error: A domain can not be base of itself";
+    }
 }
 
 =head2 open

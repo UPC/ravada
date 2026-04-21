@@ -183,6 +183,15 @@ sub test_domain {
     );
     wait_request();
 
+    for ( 1 .. 3 ) {
+        last if $clone->is_active;
+        Ravada::Request->refresh_machine(
+            uid => user_admin->id
+            ,id_domain => $clone->id
+        );
+        wait_request();
+        $clone = Ravada::Domain->open($clone->id);
+    }
     is($clone->is_active,1) or return;
 
     my $local_ip = $node->ip;

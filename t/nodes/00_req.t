@@ -246,9 +246,15 @@ sub test_req_prepare_nested($vm, $node1) {
     $base2->_data('is_base' => 1);
     $base2->_data('id_base' => $base1->id);
 
+    my $clone2 = create_base($vm);
+    $clone2->_data('id_base' => $base1->id);
+
     my $base3 = create_base($vm);
-    $base2->_data('is_base' => 1);
+    $base3->_data('is_base' => 1);
     $base3->_data('id_base' => $base2->id);
+
+    my $clone3 = create_base($vm);
+    $clone3->_data('is_base' => 1);
 
     my $clone = create_domain($vm);
     $clone->_data('id_base' => $base3->id);
@@ -306,15 +312,21 @@ sub test_req_prepare_nested($vm, $node1) {
 }
 
 sub test_req_remove_base_nested($vm, $node1, $clone, $base3, $base2, $base1) {
+    for ( 1 .. 3 ) {
+        my $clone = create_domain($vm);
+        $clone->_data('id_base' => $base1->id);
+        $clone->_data('id_vm' => $node1->id);
+    }
+
     my $req = Ravada::Request->remove_base_vm(
         uid => user_admin->id
         ,id_domain => $base1->id
         ,id_vm => $node1->id
     );
-    test_remove_requirements($base1, $req);
+    test_remove_requirements($base1, $node1->id,  $req);
 }
 
-sub test_remove_requirements($base, $req) {
+sub test_remove_requirements($base, $id_node, $req) {
     my @clones = $base->clones;
     return if !@clones;
 
@@ -322,12 +334,11 @@ sub test_remove_requirements($base, $req) {
     ok($id_req_prev) or die "Expecting requirements for "
         .$req->id." ".$req->command." ".Dumper($req->args);
     $id_req_prev=[$id_req_prev] if !ref($id_req_prev);
+
     for my $clone ( @clones ) {
-        my $req_prev;
-        for my $id (@$id_req_prev) {
-            $req_prev = Ravada::Request->open($id);
-            last if $req_prev->id_domain == $clone->{id};
-        }
+        next if $clone->{id_vm} != $id_node;
+        my $req_prev = _search_request_previous($clone->{id}, $id_req_prev);
+        ok($req_prev, "Expecting a request to migrate clone ".$clone->{id}." ".$clone->{name}) or exit;
         ok($req_prev, "Expecting req for clone $clone->{id}") or die ;
         if ($clone->{is_base}) {
             my $base2 = Ravada::Front::Domain->open($clone->{id});
@@ -336,6 +347,17 @@ sub test_remove_requirements($base, $req) {
     }
 }
 
+sub _search_request_previous($id_domain, $id_req_prev) {
+    return if !$id_req_prev;
+    $id_req_prev = [$id_req_prev] if !ref($id_req_prev);
+    for my $id (@$id_req_prev) {
+        my $req_prev = Ravada::Request->open($id);
+        return $req_prev if $req_prev->id_domain == $id_domain;
+
+        $req_prev = _search_request_previous($id_domain, $req_prev->after_request_ok());
+        return $req_prev if $req_prev;
+    }
+}
 
 ###############################################################################
 
