@@ -1064,18 +1064,6 @@ sub _check_require_base {
     my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones shutdown force_shutdown refresh_machine_ports set_time open_exposed_ports manage_pools screenshot remove_clones
     list_cpu_models
     );
-    my @requests;
-    for my $req ( $base->list_requests ) {
-        push @requests,($req) if !$ignore_requests{$req->command};
-    }
-    if (@requests) {
-        confess "ERROR: Domain ".$base->name." has ".scalar(@requests)
-                            ." requests.\n"
-                            .Dumper(\@requests)
-            unless scalar @requests == 1 && $request
-                && $requests[0]->id eq $request->id;
-    }
-
 
     die "ERROR: Domain ".$self->name." is not base"
             if !$base->is_base();

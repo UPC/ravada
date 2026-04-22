@@ -270,6 +270,7 @@ our %COMMAND = (
             ,'remove_domain', 'remove', 'refresh_machine_ports'
             ,'connect_node','start_node','shutdown_node'
             ,'post_login'
+            ,'migrate','post_migrate'
         ]
     }
 
@@ -1764,8 +1765,27 @@ sub _validate_remove_base_vm($req) {
     }
     $req->after_request_ok($req_rm->id) if $req_rm;
     $req->after_request_ok($req_migrate->id) if $req_migrate;
+
+    _chain_requested_clone($req, $domain->id);
 }
 
+sub _chain_requested_clone($req, $id_domain) {
+
+    for my $req_clone (
+        $req->_search_request('clone', id_domain => $id_domain)
+        , $req->_search_request('create_domain', id_base => $id_domain)
+    ) {
+        next if $req_clone->status eq 'done';
+
+        # if it is requested chain after this one
+        if ($req_clone->status eq 'requested') {
+            $req_clone->after_request($req->id);
+        # if running, chain this request after
+        } elsif ($req_clone->status() eq 'running') {
+            $req->after_request($req_clone->id);
+        }
+    }
+}
 
 
 =head2 type
