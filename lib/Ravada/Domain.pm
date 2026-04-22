@@ -5630,7 +5630,7 @@ sub _pre_migrate($self, $node, $request = undef) {
     $self->_internal_autostart(0);
 
     $self->check_status();
-    confess "ERROR: Active domains can't be migrated"   if $self->is_active;
+    die "ERROR: Active domains can't be migrated.\n"   if $self->is_active;
 
     if ( $self->id_base ) {
         my $base = Ravada::Domain->open($self->id_base);
