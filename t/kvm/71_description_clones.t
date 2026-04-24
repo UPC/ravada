@@ -112,10 +112,14 @@ sub test_prepare_base {
 
     eval {
         $domain->remove_base( user_admin);
+    };
+    is(''.$@,'') or exit;
+
+    eval {
         $domain->prepare_base( user_admin );
         $@ = '';
     };
-    is(''.$@,'');
+    is(''.$@,'') or exit;
     ok($domain->is_base);
 
     my $name_clone = new_domain_name();
@@ -200,6 +204,7 @@ sub test_description {
     my $description = "This is a description test";
     my $domain2 = rvd_back->search_domain($domain->name);
     ok ($domain2->description eq $description, "I can't find description");
+    remove_domain($domain);
 }
 
 sub test_remove_base {

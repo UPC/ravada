@@ -124,7 +124,7 @@ sub test_upgrade_default_user() {
 }
 ######################################################################
 
-init();
+clean();
 
 my $vm_name = 'Void';
 my $vm;

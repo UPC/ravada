@@ -5,6 +5,7 @@ use Data::Dumper;
 use Encode;
 use Encode::Locale;
 use Fcntl qw(:flock O_WRONLY O_EXCL O_CREAT);
+use File::Copy qw(copy);
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use Moose;
@@ -141,7 +142,9 @@ sub create_domain {
                 ,is_base => 1
                 ,vm => $domain_base->_vm
             );
-            my $vol_clone = $vol_base->clone(name => "$args{name}-$target");
+            my $vol_clone = $vol_base->clone(name => "$args{name}-$target"
+                ."-".Ravada::Utils::random_name()
+            );
             $domain->add_volume(name => $vol_clone->name
                               , target => $target
                                 , file => $vol_clone->file
@@ -705,7 +708,10 @@ Returns true if the file exists in this virtual manager storage
 =cut
 
 sub file_exists( $self, $file ) {
-    return -e $file if $self->is_local;
+    if ( $self->is_local) {
+        return 1 if -e $file;
+        return 0;
+    }
 
     my $ssh = $self->_ssh;
     confess "Error: no ssh connection to ".$self->name if ! $ssh;
@@ -729,6 +735,7 @@ sub _search_iso($self, $id, $device = undef) {
     $sth->execute($id);
     my $row = $sth->fetchrow_hashref;
     $row->{device} = $device if defined $device;
+    Ravada::Front::_get_device_re($row);
     return $row;
 }
 
@@ -877,7 +884,8 @@ sub remove_storage_pool($self, $name) {
     $self->write_file($file_sp, Dump( \@sp2));
 }
 
-sub copy_file($self, $orig, $dst) {
+sub copy_file($self, $orig, $dst, %args) {
+    my $mode = delete $args{mode};
     if ($self->is_local) {
         copy($orig, $dst) or die "$! $orig $dst";
     } else {

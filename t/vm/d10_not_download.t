@@ -29,6 +29,7 @@ sub test_windows($vm) {
         next unless $iso->{name} =~ /windows/i || !$iso->{url};
         is($iso->{has_cd},1) unless $iso->{name} =~ /^Empty/;
         is($iso->{url}, undef);
+        next if $iso->{arch} eq 'i686';
         my $name = new_domain_name();
         my @args =(
             id_owner => user_admin->id

@@ -802,6 +802,9 @@ sub subscribe($self, %args) {
     delete $args2{ws};
     warn "Subscribe ".Dumper(\%args2) if $DEBUG;
     if (!exists $self->clients->{$ws}) {
+        die "Error: missig id_node in ".$args{channel}
+        if $args{channel} eq 'list_isos';
+
         $self->clients->{$ws} = {
             ws => $ws
             , %args
@@ -835,7 +838,6 @@ sub unsubscribe($self, $ws) {
 
 sub unsubscribe_all($self) {
     for my $ws ( keys %{$self->clients()} ) {
-        warn $ws;
         delete $self->clients->{$ws};
     }
 }

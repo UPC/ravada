@@ -101,7 +101,6 @@ sub _change_hardware_ram($domain) {
 }
 
 sub _add_hardware_disk($domain) {
-    diag("add disk");
     Ravada::Request->shutdown_domain(
         uid => user_admin->id
         ,id_domain => $domain->id
@@ -117,7 +116,9 @@ sub _add_hardware_disk($domain) {
     );
     wait_request();
     my $domain2 = Ravada::Front::Domain->open($domain->id);
-    diag($domain2->_data('config_no_hd'));
+    like($domain2->_data('config_no_hd'),qr/./) or die $domain->name;
+    my $name = $domain2->name;
+    ok(grep /$name/, $domain->list_volumes);
 }
 
 sub test_req_rename_domain {

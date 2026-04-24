@@ -35,6 +35,7 @@ require Exporter;
 create_domain
     create_domain_v2 create_base
     import_domain
+    import_clone
     test_chain_prerouting
     find_ip_rule
     search_id_iso
@@ -63,6 +64,7 @@ create_domain
 
     create_ram_fs
     create_storage_pool
+    start_storage_pool
     local_ips
 
     wait_request
@@ -76,6 +78,7 @@ create_domain
     remove_old_domains_req
     remove_domain_and_clones_req
     remove_domain
+    remove_domain_db
     remove_volatile_clones
     mojo_init
     mojo_clean
@@ -110,6 +113,8 @@ create_domain
 
     config_host_devices
     qemu_fix_xml_file
+
+    check_leftovers
 
     end
 );
@@ -301,6 +306,37 @@ sub import_domain($vm, $name=$BASE_NAME, $import_base=1) {
     return $domain;
 }
 
+sub import_clone($vm, %options) {
+
+    my $base0;
+    if ($vm->type eq 'Void') {
+        $base0 = create_domain_v2(vm => $vm, swap => 1 , data => 1);
+    } else {
+        $base0 = rvd_front()->search_domain($BASE_NAME);
+        $base0 = import_domain($vm->type, $BASE_NAME, 1) if !$base0;
+    }
+    return if !$base0;
+    my $name = new_domain_name();
+    Ravada::Request->clone(
+        name => $name
+        ,uid => user_admin->id
+        ,id_domain => $base0->id
+    );
+    wait_request();
+    my $clone = rvd_back()->search_domain($name);
+    my $req = Ravada::Request->spinoff(
+        uid => user_admin->id
+        ,id_domain => $clone->id
+    );
+    Ravada::Request->prepare_base(
+        uid => user_admin->id
+        ,id_domain => $clone->id
+        ,after_request => $req->id
+    );
+    wait_request();
+    return $clone;
+}
+
 sub create_base($vm) {
     my $domain = create_domain_v2(vm => $vm);
     $domain->prepare_base(user_admin);
@@ -414,8 +450,6 @@ sub create_domain($vm_name, $user=$USER_ADMIN, $id_iso='Alpine%64', $swap=undef)
         $id_iso = search_id_iso($iso_name, $vm);
         warn "I can't find iso $iso_name" if !defined $id_iso;
     }
-    confess "ERROR: Domains can only be created at localhost"
-        if $vm->host ne 'localhost';
 
 =pod
     // TODO: use create v2 from now on
@@ -870,6 +904,42 @@ sub remove_domain(@bases) {
 
 }
 
+sub remove_domain_db(@bases) {
+
+    for my $base0 (@bases) {
+        confess if !defined $base0;
+        my $base = $base0;
+
+        my $id = $base0->{id};
+        $id = $base0->id if !defined $id;
+
+        my $sth = $CONNECTOR->dbh->prepare(
+            "DELETE FROM requests "
+            ." WHERE id_domain=?");
+        $sth->execute($id);
+
+        $base = Ravada::Front::Domain->open($id)
+        unless ref($base) =~ /^Ravada::/;
+
+        if (!defined $base) {
+            warn "I can't find base '$id'";
+            next;
+        }
+
+        for my $clone ($base->clones) {
+            my $d_clone = Ravada::Front::Domain->open($clone->{id});
+            if ( $d_clone ) {
+                remove_domain_db($d_clone);
+            } else {
+                Ravada::Domain::_remove_domain_data_db($clone->{id})
+            }
+        }
+        Ravada::Domain::_remove_domain_data_db($id)
+    }
+
+}
+
+
 sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
     my $domain;
     if (ref($domain_data) =~ /Ravada.*Domain/) {
@@ -908,7 +978,7 @@ sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
         ,uid => user_admin->id
         ,@after_req
     );
-    wait_request(debug => 0) if $wait;
+    wait_request(debug => 0,check_error => 0) if $wait;
     return $req;
 }
 
@@ -1172,6 +1242,15 @@ sub _wait_mojo_request($t, $url) {
 
 sub wait_mojo_request($t, $url) {
     _wait_mojo_request($t, $url);
+}
+
+sub start_storage_pool($vm, $sp_name) {
+    my $sp = $vm->vm->get_storage_pool_by_name($sp_name);
+    return if !$sp;
+    return $sp if $sp->is_active();
+
+    $sp->create();
+    return $sp;
 }
 
 sub _activate_storage_pools($vm) {
@@ -1692,6 +1771,16 @@ sub remove_qemu_networks($vm=undef) {
 
 }
 
+sub _remove_dir($dir) {
+    die $dir if $dir !~ m{/tst_};
+    opendir (my $ls,$dir) or die "$! $dir";
+    while (my $file = readdir $ls) {
+        next if $file =~ /^\./;
+        unlink "$dir/$file" or die "$dir/$file";
+    }
+    closedir $ls;
+}
+
 sub remove_qemu_pools($vm=undef) {
     return if !$vm && (!$VM_VALID{'KVM'} || $>);
     return if defined $vm && $vm->type eq 'Void';
@@ -1718,6 +1807,13 @@ sub remove_qemu_pools($vm=undef) {
             diag("Removing ".$vm->name." storage_pool ".$pool->get_name);
             for my $vol ( $pool->list_volumes ) {
                 diag("Removing ".$pool->get_name." vol ".$vol->get_name);
+                my $xml = XML::LibXML->load_xml(string => $vol->get_xml_description());
+                my ($format_h) = $xml->findnodes("/volume/target/format");
+                my $format = $format_h->getAttribute('type');
+                if ( $format eq 'dir') {
+                    my $dir = $xml->findnodes('/volume/target/path/text()');
+                    _remove_dir($dir);
+                }
                 $vol->delete();
             }
         }
@@ -2380,6 +2476,7 @@ sub start_node($node) {
     }
     eval { $node2->run_command("true") };
     is($@,'',"Expecting no error setting clock on ".$node->name." ".($@ or ''));
+
 }
 
 sub remove_node($node) {
@@ -2726,8 +2823,13 @@ sub _check_leftovers {
 
 }
 
+sub check_leftovers {
+    _check_leftovers();
+}
+
 sub _check_removed_nbd {
     return if $<;
+    return if !$NBD_LOADED;
     my ($in, $out, $err);
     my @cmd = ('rmmod',"nbd");
     run3(\@cmd,\$in,\$out,\$err);

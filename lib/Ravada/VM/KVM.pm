@@ -300,6 +300,7 @@ sub search_volume($self,$file,$refresh=0) {
         }
         eval { $vol = $pool->get_volume_by_name($name) };
         die $@ if $@ && $@ !~ /^libvirt error code: 50,/;
+        $vol = undef if $vol && $vol->get_path ne $file;
     }
 
     return $vol if $vol;
@@ -371,7 +372,6 @@ sub search_volume_re($self,$pattern,$refresh=0) {
            eval { ($file) = $vol->get_path =~ m{.*/(.*)} };
            confess $@ if $@ && $@ !~ /libvirt error code: 50,/;
            next if !$file || $file !~ $pattern;
-
 
            return $vol if !wantarray;
            push @volume,($vol);
@@ -568,7 +568,13 @@ Returns true if the file exists in this virtual manager storage
 =cut
 
 sub file_exists($self, $file) {
-    return -e $file if $self->is_local;
+    if ($self->is_local) {
+        if (-e $file) {
+            return 1;
+        } else {
+            return 0;
+        }
+    }
     return $self->_file_exists_remote($file);
 }
 
@@ -577,7 +583,7 @@ sub _file_exists_remote($self, $file) {
     return 1 if $found;
 
     $file = $self->_follow_link($file) unless $file =~ /which$/;
-    return if !$self->vm;
+    return 0 if !$self->vm;
     for my $pool ($self->vm->list_all_storage_pools ) {
         next if !$pool->is_active;
         $self->_wait_storage( sub { $pool->refresh() } );
@@ -624,6 +630,8 @@ Returns the directory where disk images are stored in this Virtual Manager
 
 sub dir_img {
     my $self = shift;
+
+    return '/var/tmp' if $<;
 
     my $pool;
     eval { $pool = $self->_load_storage_pool() };
@@ -698,7 +706,12 @@ sub create_storage_pool($self, $name, $dir, $vm=$self->vm) {
 }
 
 sub remove_storage_pool($self, $name) {
-    my $sp = $self->vm->get_storage_pool_by_name($name);
+    my $sp;
+    eval { $sp = $self->vm->get_storage_pool_by_name($name) };
+
+    return if $@ && ref($@) eq 'Sys::Virt::Error'
+        && $@->code == 49; # Missing storage pool
+    die $@ if $@;
     return if !$sp;
 
     $sp->destroy if $sp->is_active;
@@ -1026,8 +1039,8 @@ sub _domain_create_from_iso {
         if ( $iso_file ne "<NONE>" || $iso_file ) {
             $device_cdrom = $iso_file;
         }
-    } elsif ($iso->{has_cd}) {
-        $device_cdrom = $self->search_volume_path_re(qr($iso->{file_re}));
+    } elsif ($iso->{has_cd} && $iso->{url}) {
+        $device_cdrom = $self->search_volume_path_re(qr($iso->{file_re})) if $iso->{file_re};
         if (!$device_cdrom) {
             my $req_download = Ravada::Request->download(
                 uid => Ravada::Utils::user_daemon->id
@@ -1222,11 +1235,9 @@ sub _domain_create_from_base {
     confess "argument id_base or base required ".Dumper(\%args)
         if !$args{id_base} && !$args{base};
 
-    my $vm_local = $self;
-    $vm_local = $self->new( host => 'localhost') if !$vm_local->is_local;
-
     my $base = $args{base};
-    $base = $vm_local->_search_domain_by_id($args{id_base}) if $args{id_base};
+    $base = $self->_search_domain_by_id($args{id_base}) if $args{id_base};
+    $base->_set_volumes_backing_store();
 
     confess "Unknown base id: $args{id_base}" if !$base;
     my $volatile;
@@ -1276,6 +1287,7 @@ sub _domain_create_from_base {
         , id_vm => $self->id
     );
     $domain->_set_spice_password($spice_password);
+    $domain->_set_volumes_backing_store() if !$volatile;
     $domain->xml_description();
     return $domain;
 }
@@ -1336,8 +1348,6 @@ sub _iso_name($self, $iso, $req=undef, $verbose=1) {
     my $test = 0;
     $test = 1 if $req && $req->defined_arg('test');
 
-    confess if !exists $iso->{filename};
-
     return if !exists $iso->{filename} || !$iso->{filename};
     my $device_cdrom = $self->search_volume_path_re(qr($iso->{filename}));
     if ($test || ! $device_cdrom) {
@@ -1392,13 +1402,15 @@ sub _iso_name($self, $iso, $req=undef, $verbose=1) {
 }
 
 sub _fill_url($iso) {
-    return if $iso->{url} =~ m{.*/[^/]+\.[^/]+$};
+    return if $iso->{url} =~ m{.*/[^/]+\.iso$};
     if ($iso->{file_re}) {
         $iso->{url} .= "/" if $iso->{url} !~ m{/$};
         $iso->{url} .= $iso->{file_re};
         return;
     }
-    confess "Error: Missing field file_re for ".$iso->{name};
+    confess "Error: Missing field file_re for ".$iso->{name} if !$iso->{filename};
+    $iso->{url} .= "/" if $iso->{url} !~ m{/$};
+    $iso->{url} .= $iso->{filename};
 }
 
 sub _check_md5 {
@@ -1452,6 +1464,8 @@ sub _check_signature($file, $type, $expected) {
 sub _download_file_external_headers($self,$url) {
     my @cmd = ('wget',"-S","--spider",$url);
 
+    confess if $url =~ /\^/;
+
     my ($in,$out,$err);
     run3(\@cmd,\$in,\$out,\$err);
     my ($status) = $err =~ /^\s*(HTTP.*\d+.*)/m;
@@ -1464,19 +1478,14 @@ sub _download_file_external_headers($self,$url) {
 }
 
 sub _download_file_external($self, $url, $device, $verbose=1, $test=0) {
-    $url .= "/" if $url !~ m{/$} && $url !~ m{.*/([^/]+\.[^/]+)$};
-
-    my ($filename) = $device =~ m{.*/(.*)};
 
     # The following regex checks if the URL does NOT end with a filename that has an extension
     # (e.g., 'file.iso'), distinguishing file URLs from directory URLs.
-    if ($url =~ m{[^*]} && $url !~ m{.*/.+\..+$}) {
-        my @found = $self->_search_url_file($url, $filename);
+    if ($url =~ m{[^*]}) {
+        my ($url2, $filename) = $url =~ m{(.*)/(.*)};
+        my @found = $self->_search_url_file($url2, $filename);
         die "Error: URL not found '$url'" if !scalar @found;
         $url = $found[-1];
-    }
-    if ( $url =~ m{/$} ) {
-        $url = "$url$filename";
     }
 
     $url =~ s{/./}{/}g;
@@ -1499,7 +1508,6 @@ sub _download_file_external($self, $url, $device, $verbose=1, $test=0) {
     # return $url;
 
 
-    warn join(" ",@cmd)."\n";
     warn join(" ",@cmd)."\n"    if $verbose;
     my ($out, $err) = $self->run_command(@cmd);
     warn "out=$out" if $out && $verbose;
@@ -1535,7 +1543,7 @@ sub _search_iso($self, $id_iso, $file_iso=undef) {
     return $row if $file_iso &&  $self->file_exists($file_iso);
     return $row if !$row->{url};
 
-    Ravada::Front::_fix_iso_file_re($row);
+    Ravada::Front::_get_device_re($row);
 
     $self->_fetch_filename($row);#    if $row->{file_re};
     if ($VERIFY_ISO) {
@@ -1551,7 +1559,7 @@ sub _download($self, $url) {
     $url =~ s{(.*/)[^/]+/\.\.\/(.*)}{$1$2};
     if ($url =~ m{[^*]}) {
         my @found = $self->_search_url_file($url);
-        die "Error: URL not found '$url'" if !scalar @found;
+        confess "Error: URL not found '$url'" if !scalar @found;
         $url = $found[-1];
     }
 
@@ -1666,11 +1674,12 @@ sub _fetch_filename($self, $row, $test=0) {
          return;
     }
     return if !$row->{file_re} && !$row->{url} && !$row->{device};
-    if (!$row->{file_re}) {
+    if (!$row->{file_re} && !$row->{filename}) {
         my ($new_url, $file);
         ($new_url, $file) = $row->{url} =~ m{(.*)/(.*)} if $row->{url};
         ($file) = $row->{device} =~ m{.*/(.*)}
             if !$file && $row->{device};
+
         confess "No filename in $row->{name} $row->{url}" if !$file;
 
         $row->{url} = $new_url;
@@ -1693,11 +1702,15 @@ sub _fetch_filename($self, $row, $test=0) {
         die "No ".qr($row->{file_re})." found on $row->{url}" if !@found;
     }
 
-    my $url = $found[-1];
-    my ($file) = $url =~ m{.*/(.*)};
+        @found = $self->_search_url_file($row->{url}, $row->{file_re});
+        die "No ".qr($row->{file_re})." found on $row->{url}\n" if !@found;
 
-    $row->{url} = $url;
-    $row->{filename} = ($row->{rename_file} or $file);
+    my $url = $found[-1];
+    my ($url_path,$file) = $url =~ m{(.*)/(.*)};
+
+    $row->{file_re} = undef;
+    $row->{url} = $url_path;
+    $row->{filename} = $file;
 
 #    $row->{url} .= "/" if $row->{url} !~ m{/$};
 #    $row->{url} .= $file;
@@ -1714,7 +1727,8 @@ sub _search_url_file($self, $url_re, $file_re=undef) {
             $url_re =~ s{(.*)/.*/\.\.$}{$1};
         }
     } else {
-        $url_re =~ s{(.*)/.*$}{$1};
+        # this failed on http://cdimage.ubuntu.com/ubuntu-mate/releases/24.04.*/release
+        $url_re =~ s{(.*)/.*\..*$}{$1} if $url_re =~ /\.iso$/;
     }
 
     $file_re .= '$' if $file_re !~ m{\$$};
@@ -1759,15 +1773,16 @@ sub _fetch_this($self, $row, $type, $file = $row->{filename}){
 
     $file=~ s{.*/(.+)}{$1} if $file =~ m{/} && $file !~ m{/$};
 
-    my ($url, $file2) = $row->{url} =~ m{(.*)/(.+)};
-    $url = $row->{url} if $row->{url} =~ m{/$};
+    my ($url, $file2);
+    ($url, $file2) = $row->{url} =~ m{(.*)/(.+)} if $row->{url} =~ m{\.iso.?$};
+    $url = $row->{url} if !$url;
     my $url_orig = $row->{"${type}_url"};
     $file = $file2 if $file2 && $file2 !~ /\*|\^/ && $file2 !~ m{/$};
 
     $url_orig =~ s{(.*)\$url(.*)}{$1$url$2}  if $url_orig =~ /\$url/;
 
     confess "error: file missing '$file' ".Dumper($row) if $file =~ m{/$};
-    confess "error " if $url_orig =~ /\$/;
+    confess "error $url_orig" if $url_orig =~ /\$/;
 
     my $content = $self->_download($url_orig);
 
@@ -3261,6 +3276,48 @@ sub change_network($self, $data) {
     warn "Warning: unexpected args ".Dumper($data) if keys %$data;
 
     return $changed;
+}
+
+sub _search_pool_volume($self, $file) {
+    confess "ERROR: undefined file" if !defined $file;
+
+    my ($name) = $file =~ m{.*/(.*)};
+    $name = $file if !defined $name;
+
+    my $vol;
+    for my $pool (_list_storage_pools($self->vm)) {
+        next if !$pool->is_active;
+        eval { $vol = $pool->get_volume_by_name($name) };
+        die $@ if $@ && $@ !~ /^libvirt error code: 50,/;
+        return ($pool, $vol) if $vol;
+    }
+
+}
+
+sub copy_file($self, $orig, $dst, %args) {
+
+    my $mode = delete $args{mode};
+
+    my ($sp,$vol) = $self->_search_pool_volume($orig);
+    die "Error: volume $orig not found" if !$vol;
+
+    my $xml = XML::LibXML->load_xml(string => $vol->get_xml_description());
+
+    my ($name) = $dst =~ m{.*/(.*)};
+    $xml->findnodes("/volume/name/text()")->[0]->setData($name);
+    $xml->findnodes("/volume/key/text()")->[0]->setData($dst);
+    $xml->findnodes("/volume/target/path/text()")->[0]->setData($dst);
+
+    $xml->findnodes("/volume/target/permissions/mode/text()")->[0]
+        ->setData($mode) if $mode;
+
+    my ($dst_path) = $dst =~ m{(.*)/.*?};
+    die "Error: I can't find path in 'dst'" if !$dst_path;
+    my $sp_dst = $self->vm->get_storage_pool_by_target_path($dst_path);
+    my $vol_dst;
+    eval { $vol_dst = $sp_dst->clone_volume($xml, $vol) };
+    confess $@ if $@;
+
 }
 
 1;
