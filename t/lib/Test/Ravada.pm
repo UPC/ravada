@@ -64,6 +64,7 @@ create_domain
 
     create_ram_fs
     create_storage_pool
+    start_storage_pool
     local_ips
 
     wait_request
@@ -1241,6 +1242,15 @@ sub _wait_mojo_request($t, $url) {
 
 sub wait_mojo_request($t, $url) {
     _wait_mojo_request($t, $url);
+}
+
+sub start_storage_pool($vm, $sp_name) {
+    my $sp = $vm->vm->get_storage_pool_by_name($sp_name);
+    return if !$sp;
+    return $sp if $sp->is_active();
+
+    $sp->create();
+    return $sp;
 }
 
 sub _activate_storage_pools($vm) {

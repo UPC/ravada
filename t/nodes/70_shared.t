@@ -35,7 +35,7 @@ sub test_shared($vm, $node) {
         ,id_domain => $domain->id
         ,id_vm => $node->id
     );
-    rvd_back->_process_requests_dont_fork(1);
+    wait_request();
 
     ok($req->status, 'done');
     is($req->error, '') or exit;
@@ -61,7 +61,7 @@ sub test_shared($vm, $node) {
         ,id_vm => $node->id
         ,value => 0
     );
-    rvd_back->_process_requests_dont_fork(1);
+    wait_request();
 
     ok($req->status, 'done');
     is($req->error, '') or exit;
@@ -70,12 +70,7 @@ sub test_shared($vm, $node) {
     is($domain->base_in_vm($vm->id),1);
 
     for my $vol (@files_base) {
-        my $ok;
-        for ( 1 .. 5 ) {
-            $ok = -e $vol;
-            last if $ok;
-            sleep 1;
-        }
+        my $ok = $vm->file_exists($vol);
         ok($ok,"Volume $vol should exist") or exit;
         ok($node->file_exists($vol), "Volume $vol should exist in ".$node->name);
     }
@@ -162,14 +157,16 @@ sub test_change_ram($vm, $node, $start=0, $prepare_base=0, $migrate=0) {
 
 sub _test_volumes_exist($domain) {
     my $domain_local = Ravada::Domain->open($domain->id);
+    my $vm = $domain_local->_vm;
+    $vm->refresh_storage();
     for my $disk ( $domain_local->list_volumes ) {
-        ok(-e $disk,"Expecting ".$domain_local->name." $disk exist in "
+        ok($vm->file_exists($disk),"Expecting ".$domain_local->name." $disk exist in "
             .$domain_local->_vm->name) or confess;
     }
     if ($domain->id_base) {
         my $base = Ravada::Domain->open($domain->id_base);
         for my $disk ($base->list_files_base) {
-            ok(-e $disk,"Expecting $disk exist");
+            ok($vm->file_exists($disk),"Expecting $disk exist");
         }
     }
 }
@@ -180,9 +177,21 @@ sub test_add_disk($vm, $node, $start=0, $prepare_base=0, $migrate=0) {
 
     my $domain = $base;
     if ($prepare_base) {
-        $base->prepare_base(user_admin);
-        $base->set_base_vm(vm => $node, user => user_admin);
+        Ravada::Request->prepare_base(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+        );
+        wait_request();
         $domain = $base->clone(name => new_domain_name, user => user_admin);
+        for my $node0 ( $vm, $node ) {
+            Ravada::Request->set_base_vm(
+                uid => user_admin->id
+                ,id_domain => $base->id
+                ,id_vm => $node0->id
+            );
+        }
+        wait_request();
+
     }
     my $n = scalar($domain->list_volumes);
     my @volumes0 = map { $_->{file} } $domain->list_volumes_info;
@@ -206,8 +215,7 @@ sub test_add_disk($vm, $node, $start=0, $prepare_base=0, $migrate=0) {
     is(scalar($domain->list_volumes),$n+1);
     _test_volumes_exist($domain);
 
-    $domain->remove(user_admin);
-    #    $base->remove(user_admin) if $base->id != $domain->id;
+    remove_domain($base);
 }
 
 sub req_start($domain) {
@@ -233,8 +241,8 @@ sub req_migrate($node, $domain, $start=0) {
     is($req->status,'done');
     is($req->error,'');
 
-    my $domain2 = Ravada::Domain->open($domain->id);
-    is($domain2->_vm->id,$node->id);
+    $domain = Ravada::Domain->open($domain->id);
+    is($domain->_vm->id,$node->id);
 }
 
 sub import_base($vm) {
@@ -244,6 +252,14 @@ sub import_base($vm) {
     } else {
         $BASE = create_domain($vm);
     }
+}
+
+sub _check_sp($sp, @nodes) {
+    for my $node (@nodes) {
+        my $sp = $node->vm->get_storage_pool_by_name($sp);
+        confess "SP $sp not active in ".$node->name if !$sp->is_active;
+    }
+
 }
 
 #################################################################################
@@ -283,8 +299,11 @@ the file "
         }
 
         if ($vm && !grep /^$SHARED_SP$/,$vm->list_storage_pools) {
-            $msg = "SKIPPED: Missing storage pool '$SHARED_SP' in node ".$vm->name;
-            $vm = undef;
+            my $sp = start_storage_pool($vm,$SHARED_SP);
+            if (!$sp) {
+                $msg = "SKIPPED: Missing storage pool '$SHARED_SP' in node ".$vm->name;
+                $vm = undef;
+            }
         }
 
         diag($msg)      if !$vm;
@@ -313,8 +332,6 @@ the file "
 
         import_base($vm);
 
-        test_is_shared($vm, $node);
-        test_shared($vm, $node);
 
         for my $default_sp ( 0,1 ) {
             $node->default_storage_pool_name('default')     if !$default_sp;
@@ -322,12 +339,16 @@ the file "
             for my $start ( 0,1 ) {
                 for my $prepare_base ( 0,1 ) {
                     for my $migrate( 1, 0 ) {
+                        _check_sp($SHARED_SP, $vm, $node);
                         test_change_ram($vm,$node, $start, $prepare_base, $migrate);
                         test_add_disk($vm,$node, $start, $prepare_base, $migrate);
                     }
                 }
             }
         }
+
+        test_is_shared($vm, $node);
+        test_shared($vm, $node);
 
         NEXT:
         clean_remote_node($node);

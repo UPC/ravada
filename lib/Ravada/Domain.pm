@@ -2824,7 +2824,6 @@ sub _remove_instance($self, $user, $cascade, $id_instance=undef) {
             $self->remove_instance($user);
     };
     warn $@ if $@;
-    $self->_remove_files_base();
     $sth_delete->execute($id_instance) if defined $id_instance;
 
 }
@@ -5639,6 +5638,7 @@ sub _pre_migrate($self, $node, $request = undef) {
         confess "ERROR: base id ".$self->id_base." not found."  if !$base;
     }
     $node->_add_instance_db($self->id);
+    $node->refresh_storage_pools();
 }
 
 sub _post_migrate($self, $node, $request = undef) {
@@ -5650,6 +5650,7 @@ sub _post_migrate($self, $node, $request = undef) {
     # TODO: update db instead set this value
     $self->{_migrated} = 1;
 
+    $node->refresh_storage_pools();
 }
 
 sub _around_migrate($orig, $self, $node, $request=undef) {
@@ -5762,6 +5763,7 @@ sub set_base_vm($self, %args) {
         $request->status("working", "Syncing base volumes to ".$vm->host)
             if $request;
 
+        $vm->refresh_storage_pools();
         eval {
             $self->migrate($vm, $request);
         };
@@ -5776,34 +5778,35 @@ sub set_base_vm($self, %args) {
 
     } else {
         $request->status("working","Removing base")     if $request;
-        my $bases_vm = $self->_bases_vm();
+
+        my $bases_vm = $self->_bases_vm(1);
         my @nodes;
         my $node2;
         for my $id_vm ( keys %$bases_vm) {
-            next if $id_vm == $vm->id;
-            if ($bases_vm->{$id_vm}) {
+            if ( $id_vm != $vm->id ) {
                 my $node = Ravada::VM->open($id_vm);
-                push @nodes,($node);
                 $node2 = $node if $node->is_local();
+                push @nodes,($node);
             }
         }
         ($node2) = @nodes if !$node2;
         if (!@nodes) {
             $self->_vm($vm);
             $self->_do_remove_base($user);
+            $vm->refresh_storage_pools();
         } else {
             my $instance = $vm->search_domain($self->name);
             $instance->_remove_instance($user,1) if $instance;
-            $self->_remove_files_not_shared(@nodes);
+            $self->_remove_files_not_shared(@nodes, $self->_vm);
             $self->_vm($node2);
             $self->_data('id_vm' => $node2->id);
+            $node2->refresh_storage_pools();
         }
     }
 
     $self->_set_base_vm_db($vm->id, $value);
 
     if (!$value) {
-
         my $bases_vm = $self->_bases_vm(1); #enabled bases vm
         if (!keys %$bases_vm) {
             $self->_post_remove_base();
@@ -6868,13 +6871,6 @@ sub _add_hardware_disk($orig, $self, $index, $data) {
     die "Error: new disk volumes can not be added to bases\n"
     if $self->is_base;
 
-    my $real_id_vm;
-    if (!$self->_vm->is_local) {
-        $real_id_vm = $self->_vm->id;
-        my $vm_local = $self->_vm->new( host => 'localhost' );
-        $self->_set_vm($vm_local, 1);
-    }
-
     $self->_check_duplicated_volume_name($data->{file});
     $orig->($self, 'disk', $index, $data);
 
@@ -6885,11 +6881,6 @@ sub _add_hardware_disk($orig, $self, $index, $data) {
     $self->list_volumes_info();
     $self->_redefine_instances();
 
-    if ( $real_id_vm ) {
-        my $id_vm = $real_id_vm;
-        my $vm = Ravada::VM->open($id_vm);
-        $self->_set_vm($vm, 1);
-    }
 }
 
 sub _fix_filesystem_data($self,$data) {
