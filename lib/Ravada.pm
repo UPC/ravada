@@ -526,7 +526,7 @@ sub _update_isos {
                 ,file_re => '^ubuntu-26.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
           ,min_disk_size => '25'
-          ,min_ram => 4
+          ,min_ram => 6
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
                    ,arch => 'x86_64'
 
@@ -620,7 +620,7 @@ sub _update_isos {
             ,file_re => 'kubuntu-26.04.*-desktop-amd64.iso'
             ,rename_file => 'kubuntu_noble.iso'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
-            ,min_ram => 4
+            ,min_ram => 6
             ,min_disk_size => '25'
         }
 
@@ -733,7 +733,7 @@ sub _update_isos {
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
             ,min_disk_size => '10'
-	    ,min_ram => 1
+	    ,min_ram => 2
             ,arch => 'x86_64'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
