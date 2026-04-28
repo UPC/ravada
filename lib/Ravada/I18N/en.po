@@ -2177,8 +2177,8 @@ msgstr "Share"
 msgid "Host Devices"
 msgstr "Host Devices"
 
-msgid "Mange Host Devices"
-msgstr "Mange Host Devices"
+msgid "Manage Host Devices"
+msgstr "Manage Host Devices"
 
 msgid "Auto Compact"
 msgstr "Auto Compact"
@@ -2293,3 +2293,6 @@ msgstr "Logout URL"
 
 msgid "Charts"
 msgstr "Charts"
+
+msgid "share"
+msgstr "share"
