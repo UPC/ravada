@@ -618,7 +618,7 @@ sub _update_isos {
             ,sha256_url => '$url/SHA256SUMS'
             ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/26.04.*/release/'
             ,file_re => 'kubuntu-26.04.*-desktop-amd64.iso'
-            ,rename_file => 'kubuntu_noble.iso'
+            ,rename_file => 'kubuntu_resolute.iso'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
             ,min_ram => 6
             ,min_disk_size => '25'
