@@ -517,7 +517,7 @@ sub _update_isos {
                    ,arch => 'x86_64'
 
         }
-        ,ubuntu_noble => {
+        ,ubuntu_resolute => {
                     name => 'Ubuntu 26.04 Resolute Raccoon'
             ,description => 'Ubuntu 26.04 Resolute Raccoon 64 bits'
                     ,xml => 'noble-amd64.xml'
