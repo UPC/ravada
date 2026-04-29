@@ -3204,7 +3204,7 @@ get '/translations' => sub($c) {
 };
 
 get '/text/hours' => sub($c) {
-    my $lh = Ravada::I18N->get_handle($USER->language());
+    my $lh = Ravada::I18N->get_handle($USER->language() || 'en');
     my @options = (
         {id => 0, title => $lh->maketext('hours')}
         ,{id => 1, title => $lh->maketext('1 hour')}
@@ -3217,7 +3217,7 @@ get '/text/hours' => sub($c) {
 };
 
 get '/text/days' => sub($c) {
-    my $lh = Ravada::I18N->get_handle($USER->language());
+    my $lh = Ravada::I18N->get_handle($USER->language() || 'en');
     my @options = (
         {id => 0, title => $lh->maketext('days')}
         ,{id => 1, title => $lh->maketext('1 day')}
@@ -3229,7 +3229,7 @@ get '/text/days' => sub($c) {
 };
 
 get '/text/weeks' => sub($c) {
-    my $lh = Ravada::I18N->get_handle($USER->language());
+    my $lh = Ravada::I18N->get_handle($USER->language() || 'en');
     my @options = (
         {id => 0, title => $lh->maketext('weeks')}
         ,{id => 1, title => $lh->maketext('1 week')}
@@ -3241,7 +3241,7 @@ get '/text/weeks' => sub($c) {
 };
 
 get '/text/months' => sub($c) {
-    my $lh = Ravada::I18N->get_handle($USER->language());
+    my $lh = Ravada::I18N->get_handle($USER->language() || 'en');
     my @options = (
         {id => 0, title => $lh->maketext('months')}
         ,{id => 1, title => $lh->maketext('1 month')}
@@ -3254,7 +3254,7 @@ get '/text/months' => sub($c) {
 };
 
 get '/text/years' => sub($c) {
-    my $lh = Ravada::I18N->get_handle($USER->language());
+    my $lh = Ravada::I18N->get_handle($USER->language() || 'en');
     my @options = (
         {id => 0, title => $lh->maketext('years')}
         ,{id => 1, title => $lh->maketext('1 year')}
