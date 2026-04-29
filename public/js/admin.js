@@ -1849,44 +1849,21 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.year = 0;
 
         var max_y = 10;
-        $scope.options_h = [
-            {id:0, title: 'hours'}
-            ,{id:1 , title: '1 hour'}
-            ,{id:2 , title: '2 hours'}
-            ,{id:3 , title: '3 hours'}
-            ,{id:6 , title: '6 hours'}
-            ,{id:8 , title: '8 hours'}
-        ];
-        $scope.options_d = [
-            {id:0 , title: 'days'}
-            ,{id:1 , title: '1 day'}
-            ,{id:2 , title: '2 days'}
-            ,{id:3 , title: '3 days'}
-            ,{id:6 , title: '6 days'}
-        ];
-        $scope.options_w = [
-            {id:0 , title: 'weeks'}
-            ,{id:1 , title: '1 week'}
-            ,{id:2 , title: '2 weeks'}
-            ,{id:3 , title: '3 weeks'}
-            ,{id:4 , title: '4 weeks'}
-        ];
-        $scope.options_m = [
-            {id:0 , title: 'months'}
-            ,{id:1 , title: '1 month'}
-            ,{id:2 , title: '2 months'}
-            ,{id:3 , title: '3 months'}
-            ,{id:6 , title: '6 months'}
-            ,{id:9 , title: '9 months'}
-        ];
-        $scope.options_y = [
-            {id:0 , title: 'years'}
-            ,{id:1 , title: '1 year'}
-            ,{id:2 , title: '2 years'}
-            ,{id:3 , title: '3 years'}
-            ,{id:6 , title: '6 years'}
-            ,{id:9 , title: '9 years'}
-        ];
+        $http.get('/text/hours').then(function(response) {
+            $scope.options_h = response.data;
+        });
+        $http.get('/text/days').then(function(response) {
+            $scope.options_d = response.data;
+        });
+        $http.get('/text/weeks').then(function(response) {
+            $scope.options_w = response.data;
+        });
+        $http.get('/text/months').then(function(response) {
+            $scope.options_m = response.data;
+        });
+        $http.get('/text/years').then(function(response) {
+            $scope.options_y = response.data;
+        });
 
         var url;
 

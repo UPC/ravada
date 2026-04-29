@@ -2319,3 +2319,87 @@ msgstr "Compresión automática"
 
 msgid "Show Clones"
 msgstr "Mostrar clones"
+
+msgid "hours"
+msgstr "horas"
+
+msgid "1 hour"
+msgstr "1 hora"
+
+msgid "2 hours"
+msgstr "2 horas"
+
+msgid "3 hours"
+msgstr "3 horas"
+
+msgid "6 hours"
+msgstr "6 horas"
+
+msgid "8 hours"
+msgstr "8 horas"
+
+msgid "days"
+msgstr "días"
+
+msgid "1 day"
+msgstr "1 día"
+
+msgid "2 days"
+msgstr "2 días"
+
+msgid "3 days"
+msgstr "3 días"
+
+msgid "6 days"
+msgstr "6 días"
+
+msgid "weeks"
+msgstr "semanas"
+
+msgid "1 week"
+msgstr "1 semana"
+
+msgid "2 weeks"
+msgstr "2 semanas"
+
+msgid "3 weeks"
+msgstr "3 semanas"
+
+msgid "4 weeks"
+msgstr "4 semanas"
+
+msgid "months"
+msgstr "meses"
+
+msgid "1 month"
+msgstr "1 mes"
+
+msgid "2 months"
+msgstr "2 meses"
+
+msgid "3 months"
+msgstr "3 meses"
+
+msgid "6 months"
+msgstr "6 meses"
+
+msgid "9 months"
+msgstr "9 meses"
+
+msgid "years"
+msgstr "años"
+
+msgid "1 year"
+msgstr "1 año"
+
+msgid "2 years"
+msgstr "2 años"
+
+msgid "3 years"
+msgstr "3 años"
+
+msgid "6 years"
+msgstr "6 años"
+
+msgid "9 years"
+msgstr "9 años"
