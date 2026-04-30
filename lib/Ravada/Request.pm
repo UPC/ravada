@@ -941,6 +941,21 @@ sub _validate_remove_base($self) {
         ) {
         $reqs_base[-1]->status('done');
         $reqs_base[-2]->status('done');
+    } else {
+        my $bases_vm = $domain->_bases_vm(1);
+        my %done;
+        my $req_prev;
+        for my $id_vm ($domain->_data('id_vm'),keys %$bases_vm ) {
+            next if $done{$id_vm}++;
+            my $req = Ravada::Request->remove_base_vm(
+                uid => $self->args('uid')
+                ,id_domain => $id_domain
+                ,id_vm => $id_vm
+            );
+            $req->after_request_ok($req_prev->id) if $req_prev;
+            $self->after_request_ok($req->id);
+            $req_prev = $req;
+        }
     }
 }
 
@@ -1582,6 +1597,11 @@ sub set_base_vm {
 
 sub _validate_migrate($req) {
     my $domain = Ravada::Front::Domain->open($req->args('id_domain'));
+    if ($domain->_data('id_vm') == $req->args('id_node')) {
+        $req->status('done');
+        $req->error("Already migrated");
+        return;
+    }
     my $req_post = Ravada::Request->post_migrate(
         uid => $req->args('uid')
         ,id_domain => $domain->id

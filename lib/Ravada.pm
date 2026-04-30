@@ -6312,6 +6312,10 @@ sub _cmd_migrate($self, $request) {
     my $id_domain = $request->args('id_domain') or die "ERROR: Missing id_domain";
 
     my $user = Ravada::Auth::SQL->search_by_id($uid);
+
+    my $domain_f = Ravada::Front::Domain->open($id_domain);
+    return if $domain_f->_data('id_vm') == $request->args('id_node');
+
     my $domain = Ravada::Domain->open($id_domain)
         or confess "Error: domain $id_domain not found";
 
@@ -6321,8 +6325,6 @@ sub _cmd_migrate($self, $request) {
     return if $domain->_vm->id == $request->args('id_node');
 
     my $node = Ravada::VM->open($request->args('id_node'));
-
-    $self->_migrate_base($domain, $node, $uid, $request) if $domain->id_base;
 
     if ($domain->is_active) {
         if ($request->defined_arg('shutdown')) {
@@ -6342,16 +6344,6 @@ sub _cmd_migrate($self, $request) {
     }
 
     $self->_remove_unnecessary_downs($domain);
-    if (!$domain->_vm->is_local && !$node->is_local) {
-        my $req_pre = Ravada::Request->migrate(
-            uid => Ravada::Utils->user_daemon->id
-            ,id_domain => $domain->id
-            ,id_node => $domain->_id_vm_local() 
-        );
-        $request->after_request_ok($req_pre->id);
-        $request->retry(10) if !defined $request->retry();
-        die "Can not migrate from remote to remote. Retry.\n";
-    }
     $domain->migrate($node, $request);
 
     my @remote_ip;

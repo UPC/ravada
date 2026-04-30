@@ -298,19 +298,7 @@ sub remove {
 
     my @volumes;
     if (!$self->is_removed ) {
-       my @vols_info;
-       for ( 1 .. 10 ) {
-           eval { @vols_info = $self->list_volumes_info };
-           last if !$@;
-           warn "WARNING: remove, volumes info: $@";
-           sleep 1;
-       }
-       for my $vol ( @vols_info ) {
-            push @volumes,($vol->{file})
-                if exists $vol->{file}
-                   && exists $vol->{device}
-                   && $vol->{device} eq 'file';
-        }
+       @volumes = grep (/!\.iso$/,$self->list_volumes());
     }
 
     if (!$self->is_removed && $self->domain && $self->domain->is_active) {
@@ -407,8 +395,14 @@ sub _disk_device($self, $with_info=undef, $attribute=undef, $value=undef) {
 
         my ($boot_node) = $disk->findnodes('boot');
         my $info = {};
-        eval { $info = $self->_volume_info($file)
-            if $file && ( $device eq 'disk' or $device eq 'cdrom') };
+        eval {
+            $info = $self->_volume_info($file)
+            if $with_info
+                && $file && ( $device eq 'disk' or $device eq 'cdrom') 
+                && ( !defined $self->_data('id_vm')
+                    || $self->_vm->id == $self->_data('id_vm'))
+        }
+        ;
         die $@ if $@ && $@ !~ /not found/i;
         $info->{device} = $device;
         if (!$info->{name} ) {

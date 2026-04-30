@@ -601,7 +601,7 @@ sub _file_exists_remote($self, $file) {
         }
     }
 
-    die "Error: invalid file '$file'" if $file =~ /[`;(\[" ]/;
+    confess "Error: invalid file '$file'" if $file =~ /[`;(\[" ]/;
     my $ssh = $self->_ssh;
     confess "Error: no _ssh ".$self->name if !$ssh;
     my ($out,$err) = $ssh->capture2("ls $file");

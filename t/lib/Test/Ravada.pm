@@ -791,7 +791,7 @@ sub _discover() {
         my $out = $req->output;
         warn $req->error if $req->error;
         next if !$out;
-        my $discover = decode_json($out);
+        my $discover = $out;
         my @list = grep { $_ =~ /^$name/ } @$discover;
         for my $name (@list) {
             diag("Importing $name in ".$vm_name);
@@ -812,7 +812,7 @@ sub _discover() {
                     $domain = rvd_front->search_domain($name);
                     last if $domain;
                     sleep 1;
-                    wait_request(debug => 1);
+                    wait_request(debug => 0);
                 }
                 eval {
                     $sth_instances->execute($domain->id, $id_vm);
@@ -960,19 +960,15 @@ sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
             diag("Waiting for clones of domain ".$domain->name." removed "
                 .scalar($domain->clones)) if !(time % 10);
             if ($run_request) {
-                wait_request();
+                wait_request(debug => 0);
             } else {
                 sleep 1;
             }
         }
     }
-    my $req_rm;
-    $req_rm = Ravada::Request->remove_base(uid => user_admin->id, id_domain => $domain->id)
-    if $domain->is_base;
 
     my @after_req;
     @after_req = ( after_request => $req_clone->id ) if $req_clone;
-    @after_req = ( after_request => $req_rm->id ) if $req_rm;
     my $req= Ravada::Request->remove_domain(
         name => $domain->name
         ,uid => user_admin->id
@@ -1020,6 +1016,11 @@ sub _remove_old_domains_vm($vm_name) {
             && $@ !~ /libvirt error code: 55,/
         ;
 
+        my $domain0 = Ravada::Domain->open($domain->id);
+        if ($domain0 && $domain0->is_active) {
+            $domain0->shutdown_now();
+            sleep 1;
+        }
         $domain = $vm->search_domain($domain->name);
         eval {$domain->remove( $USER_ADMIN ) }  if $domain;
         warn "Error shutdown ".$domain->name." $@" if $@ && $@ !~ /No DB info/i
@@ -1103,6 +1104,9 @@ sub _remove_old_domains_kvm {
 
         warn "WARNING: error $@ trying to shutdown ".$domain_name." on ".$vm->name
             if $@ && $@ !~ /error code: (42|55),/;
+
+        my $domain0 = rvd_back->search_domain($domain_name);
+        $domain0->shutdown_now() if $domain0 && $domain0->is_active;
 
         eval {
             $domain->managed_save_remove()
@@ -1245,6 +1249,7 @@ sub wait_mojo_request($t, $url) {
 }
 
 sub start_storage_pool($vm, $sp_name) {
+    return if $vm->type eq 'Void';
     my $sp = $vm->vm->get_storage_pool_by_name($sp_name);
     return if !$sp;
     return $sp if $sp->is_active();
@@ -1303,10 +1308,18 @@ sub _remove_old_disks_kvm {
         for my $volume  ( @volumes ) {
             next if $volume->get_name !~ /^${name}_\d+.*\.(img|raw|ro\.qcow2|qcow2|void|backup)$/;
 
+            _chmod_w($vm, $volume->get_path, $pool);
             eval { $volume->delete() };
             if ($@) {
                 if ($@->code == 38 ) {
-                    $vm->remove_file($volume->get_path);
+                    for ( 1 .. 2 ) {
+                        eval {
+                            $vm->remove_file($volume->get_path);
+                        };
+                        warn "warning: $@" if $@;
+                        last if !$@;
+                        _chmod_w($vm, $volume->get_path, $pool);
+                    }
                 } else {
                     warn "Error $@ removing ".$volume->get_name." in ".$vm->name if $@;
                 }
@@ -1325,6 +1338,24 @@ sub _remove_old_disks_void($node=undef){
     } else {
        _remove_old_disks_void_remote($node);
     }
+}
+
+sub _chmod_w($vm, $file, $pool) {
+    my @stat = stat($file);
+    return if !$stat[2];
+    my $txt_mode = sprintf("%04o",$stat[2]);
+
+    my $ret_mode = $stat[2];
+    $ret_mode &= 070;
+
+    my $user_w = $ret_mode & 020;
+
+    return if $user_w;
+
+    my ($out, $err) = $vm->run_command("chmod","+w",$file) or warn "$! $file";
+    warn $err if $err;
+    chmod(0700,$file) if -e $file;
+    $pool->refresh();
 }
 
 sub _remove_old_disks_void_remote($node) {

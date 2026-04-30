@@ -2732,8 +2732,6 @@ sub _check_active_node($self) {
 
 sub _after_remove_domain($self, $user, $cascade=undef) {
 
-    my $vm_local = $self->_vm->new( host => 'localhost' );
-
     $self->_rrd_remove();
     $self->_remove_iptables( );
     $self->remove_expose();
@@ -2769,14 +2767,8 @@ sub _after_remove_domain($self, $user, $cascade=undef) {
 }
 
 sub _remove_all_volumes($self) {
-    my $vm_local = $self->_vm;
-    $vm_local = $self->_vm->new( host => 'localhost' ) if !$self->is_local;
     for my $vol (@{$self->{_volumes}}) {
         next if $vol =~ /iso$/;
-        if (!$self->is_local) {
-            my ($dir) = $vol =~ m{(.*)/};
-            next if $vm_local->shared_storage($self->_vm, $dir);
-        }
         $self->remove_volume($vol);
     }
 }
@@ -3151,10 +3143,6 @@ sub _cascade_remove_base_in_nodes($self) {
     my $req_nodes;
     my $vm_local;
     for my $vm ( $self->list_vms ) {
-        if ( $vm->is_local ) {
-            $vm_local= $vm;
-            next;
-        }
         my @after;
         push @after,(after_request => $req_nodes->id) if $req_nodes;
         $req_nodes = Ravada::Request->remove_base_vm(
@@ -3166,18 +3154,6 @@ sub _cascade_remove_base_in_nodes($self) {
             ,@after
         );
     }
-    return if !$vm_local || !$req_nodes;
-    my @after;
-    push @after,(after_request => $req_nodes->id) if $req_nodes;
-    Ravada::Request->remove_base_vm(
-            id_vm => $vm_local->id
-            ,id_domain => $self->id
-            ,uid => Ravada::Utils::user_daemon->id
-            ,migrate => 0
-            ,_force => 1
-            ,@after
-    );
-    $self->is_base(0);
     return $req_nodes;
 }
 
@@ -5215,6 +5191,7 @@ sub get_controllers($self) {
     my $info;
     my %controllers = $self->list_controllers();
     for my $name ( sort keys %controllers ) {
+        next if $name eq 'disk' && $self->_vm && $self->_vm->id != $self->_data('id_vm');
         $info->{$name} = [$self->get_controller($name)];
     }
 
@@ -5800,7 +5777,7 @@ sub set_base_vm($self, %args) {
             $self->_remove_files_not_shared(@nodes, $self->_vm);
             $self->_vm($node2);
             $self->_data('id_vm' => $node2->id);
-            $node2->refresh_storage_pools();
+            $vm->refresh_storage_pools();
         }
     }
 
@@ -5848,7 +5825,8 @@ sub _remove_files_not_shared($self, @nodes){
             $shared++ if $self->_vm->shared_storage($node, $dir);
             last if $shared;
         }
-        $self->_vm->remove_file($file) if !$shared;
+        next if $shared;
+        $self->_vm->remove_file($file);
     }
 }
 

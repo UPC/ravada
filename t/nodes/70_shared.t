@@ -120,7 +120,7 @@ sub _change_ram($domain) {
 }
 
 sub test_change_ram($vm, $node, $start=0, $prepare_base=0, $migrate=0) {
-    diag("start=$start , prepare_base=$prepare_base , migrate=$migrate");
+    diag("test change ram start=$start , prepare_base=$prepare_base , migrate=$migrate");
     my $base = $BASE->clone(name => new_domain_name, user => user_admin);
     $base->spinoff();
 
@@ -132,27 +132,56 @@ sub test_change_ram($vm, $node, $start=0, $prepare_base=0, $migrate=0) {
     }
     req_migrate($node, $domain, $start) if $migrate;
 
-    my $new_mem = _change_ram($domain);
     if ( $migrate ) {
         my $domain2 = Ravada::Domain->open($domain->id);
         is($domain2->_vm->id, $node->id);
+        $domain=$domain2;
     }
+    my $new_mem = _change_ram($domain);
     _test_volumes_exist($domain);
 
     my $domain_local = $vm->search_domain($domain->name);
-    is($domain_local->_vm->id,$vm->id);
-    my $mem2 = $domain_local->info(user_admin)->{memory};
-    is($mem2, $new_mem);
+    if ( $domain_local ) {
+        is($domain_local->_vm->id,$vm->id);
+        my $mem2 = $domain_local->info(user_admin)->{memory};
+        is($mem2, $new_mem);
+    }
 
     req_start($domain);
     req_migrate($node, $domain, 1);
     $domain = Ravada::Domain->open($domain->id);
-    $mem2 = $domain->info(user_admin)->{memory};
+    my $mem2 = $domain->info(user_admin)->{memory};
     is($mem2, $new_mem);
     _test_volumes_exist($domain);
 
-    $domain->remove(user_admin);
-    $base->remove(user_admin) if $base->id != $domain->id;
+    my @volumes = ($base->list_volumes, $domain->list_volumes, $base->list_files_base);
+    remove_domain_and_clones_req($base,1,1);
+    test_files_removed([$vm, $node], \@volumes);
+}
+
+sub test_files_removed($nodes, $volumes) {
+    my %done;
+    for my $vm ( @$nodes ) {
+        for my $file (@$volumes) {
+
+            my $key = $vm->name.".".$file;
+            return if $done{$key}++;
+
+            ok(!$vm->file_exists($file)) or die $file;
+            ok(!-e $file) or die $file;
+        }
+    }
+
+}
+
+sub test_domains_removed(@domain) {
+    my %done;
+    for my $domain (@domain) {
+        next if $done{$domain->name}++;
+        for my $vm (rvd_back->list_vms) {
+
+        }
+    }
 }
 
 sub _test_volumes_exist($domain) {
@@ -204,9 +233,9 @@ sub test_add_disk($vm, $node, $start=0, $prepare_base=0, $migrate=0) {
     }
     _test_volumes_exist($domain);
 
+    my @volumes1 = $domain->list_volumes();
     my $domain_local = $vm->search_domain($domain->name);
     is($domain_local->_vm->id,$vm->id);
-    my @volumes1 = map { $_->{file} } $domain->list_volumes_info;
     is(scalar($domain_local->list_volumes),$n+1,Dumper(\@volumes0,\@volumes1)) or exit;
 
     req_start($domain);
@@ -215,7 +244,9 @@ sub test_add_disk($vm, $node, $start=0, $prepare_base=0, $migrate=0) {
     is(scalar($domain->list_volumes),$n+1);
     _test_volumes_exist($domain);
 
-    remove_domain($base);
+    my @volumes = ($base->list_volumes, $domain->list_volumes);
+    remove_domain_and_clones_req($base);
+    test_files_removed([$vm, $node], \@volumes);
 }
 
 sub req_start($domain) {
@@ -229,6 +260,8 @@ sub req_start($domain) {
 }
 
 sub req_migrate($node, $domain, $start=0) {
+    my $domain2 = Ravada::Front::Domain->open($domain->id);
+    return if $domain2->_data('id_vm') == $node->id;
     my $req = Ravada::Request->migrate(
         id_domain => $domain->id
         ,uid => user_admin->id
@@ -241,8 +274,8 @@ sub req_migrate($node, $domain, $start=0) {
     is($req->status,'done');
     is($req->error,'');
 
-    $domain = Ravada::Domain->open($domain->id);
-    is($domain->_vm->id,$node->id);
+    my $domain_f = Ravada::Front::Domain->open($domain->id);
+    is($domain_f->_data('id_vm'),$node->id);
 }
 
 sub import_base($vm) {
@@ -257,9 +290,27 @@ sub import_base($vm) {
 sub _check_sp($sp, @nodes) {
     for my $node (@nodes) {
         my $sp = $node->vm->get_storage_pool_by_name($sp);
-        confess "SP $sp not active in ".$node->name if !$sp->is_active;
+        confess "SP ".$sp->get_name." not active in ".$node->name if !$sp->is_active;
     }
 
+}
+
+sub test_remove_base($vm, $node) {
+    my $base = $BASE->clone(name => new_domain_name, user => user_admin);
+    $base->spinoff();
+
+    $base->prepare_base(user_admin);
+    $base->set_base_vm(vm => $node, user => user_admin);
+    my @vols_base = $base->list_files_base;
+    Ravada::Request->remove_base(
+        uid => user_admin->id
+        ,id_domain => $base->id
+    );
+    wait_request(debug => 0);
+    for my $vol ( @vols_base ) {
+        ok(!-e $vol) or die $vol;
+    }
+    remove_domain_and_clones_req($base);
 }
 
 #################################################################################
@@ -332,16 +383,18 @@ the file "
 
         import_base($vm);
 
+        test_remove_base($vm, $node);
+        _check_sp($SHARED_SP, $vm, $node);
 
         for my $default_sp ( 0,1 ) {
             $node->default_storage_pool_name('default')     if !$default_sp;
             $node->default_storage_pool_name($SHARED_SP)    if $default_sp;
             for my $start ( 0,1 ) {
-                for my $prepare_base ( 0,1 ) {
+                for my $prepare_base ( 1,0 ) {
                     for my $migrate( 1, 0 ) {
-                        _check_sp($SHARED_SP, $vm, $node);
                         test_change_ram($vm,$node, $start, $prepare_base, $migrate);
                         test_add_disk($vm,$node, $start, $prepare_base, $migrate);
+                        _check_sp($SHARED_SP, $vm, $node);
                     }
                 }
             }
@@ -351,6 +404,7 @@ the file "
         test_shared($vm, $node);
 
         NEXT:
+        remove_old_domains_req();
         clean_remote_node($node);
         remove_node($node);
     }
