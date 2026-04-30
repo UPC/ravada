@@ -2296,3 +2296,6 @@ msgstr "Charts"
 
 msgid "share"
 msgstr "share"
+
+msgid "Too many users. Type a search pattern to list them"
+msgstr "Too many users. Type a search pattern to list them"
