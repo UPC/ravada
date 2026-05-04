@@ -7452,7 +7452,7 @@ sub _cmd_list_unused_volumes($self, $request) {
     }
     my @list = map { {file => $_} } sort @files;
 
-    $request->output(encode_json({list => \@list, more => $more}))
+    $request->output({list => \@list, more => $more})
         if $request;
     return @list;
 }
@@ -7529,7 +7529,7 @@ sub _cmd_create_network($self, $request) {
 
     die "Error: node $id not avaiable.\n" if !$vm || !$vm->vm;
 
-    $request->output(encode_json({}));
+    $request->output({});
     my $id_net = $vm->create_network($request->args('data'),$request->args('uid')
                     , $request);
     $request->output(encode_json({id_network => $id_net}));

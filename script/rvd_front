@@ -752,10 +752,8 @@ any '/v2/network/new/#id_vm' => sub($c) {
     );
     $RAVADA->wait_request($req);
     my $data = {};
-    if ($req->status eq 'done' && $req->output && $req->output =~ /^\{/) {
-        eval {
-            $data = decode_json($req->output);
-        };
+    if ($req->status eq 'done' && $req->output) {
+        $data = $req->output;
         warn $@ if $@;
         $data->{_owner} = {
             id => $USER->id
@@ -814,7 +812,7 @@ post '/v2/network/set' => sub($c) {
         );
         $RAVADA->wait_request($req, 120);
         my $out = {};
-        eval { $out = decode_json($req->output) if $req->output };
+        $out = $req->output if $req->output;
         warn $@ if $@;
         %data = %$out if $out && keys %$out;
     }

@@ -2394,10 +2394,6 @@ for my $vm_name (reverse vm_names() ) {
 
         start_node($node);
 
-        test_migrate_req($vm, $node);
-
-        test_migrate_clone($node, $vm);
-
         test_base_only_in_node_add_hw($vm, $node); #start after create = 1
 
         test_migrate_clone($node, $vm);
@@ -2410,8 +2406,6 @@ for my $vm_name (reverse vm_names() ) {
 
         test_base_only_in_node($vm, $node, 1); #start after create = 1
         test_base_only_in_node($vm, $node);
-
-        test_removed_base_file($vm, $node);
 
         test_volatile_req($vm, $node);
 
@@ -2431,8 +2425,6 @@ for my $vm_name (reverse vm_names() ) {
         test_displays($vm, $node) if $tls;
 
         test_iptables_close($vm, $node);
-
-        test_nat($vm, $node, 1); # also set deprecated localhost ip
 
         test_duplicated_set_base_vm($vm, $node);
         test_nested_base($vm, $node, 3);

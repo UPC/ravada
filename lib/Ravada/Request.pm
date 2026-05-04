@@ -2297,7 +2297,7 @@ sub _data($self, $field, $value=undef) {
         $self->{_data}->{$field} = $value;
         my $value0 = $value;
         eval {
-            $value = encode_json($value) if ref($value) eq 'ARRAY';
+            $value = encode_json($value) if ref($value);
         };
         confess Dumper([$@,$value0]) if $@;
 
@@ -2340,7 +2340,7 @@ sub _select_db($self) {
 
     for my $key (keys %$row) {
         my $value = $row->{$key};
-        next if !defined $value || $value !~ /^[\[}]/;
+        next if !defined $value || $value !~ /^[\[\{}]/;
         my $value_decoded;
         eval {
             $value_decoded = decode_json($value);

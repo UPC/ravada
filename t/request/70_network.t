@@ -77,7 +77,7 @@ sub test_list_bridges($vm) {
     is($req->error,'');
 
     my @exp_bridges = sort(_expected_bridges($vm));
-    is_deeply($req->output,\@exp_bridges);
+    is_deeply($req->output,\@exp_bridges) or confess;
 
     my $bridges = rvd_front->list_network_interfaces(
            user => user_admin
