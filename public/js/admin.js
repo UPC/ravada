@@ -556,15 +556,18 @@ ravadaApp.directive("solShowMachine", swMach)
         });
     };
 
-    $scope.action = function(target,action,machineId){
+    $scope.action = function(target,action,machine, confirmed){
         if (action === 'view-new-tab') {
-            window.open('/machine/view/' + machineId + '.html');
+            window.open('/machine/view/' + machine.id + '.html');
         }
         else if (action === 'view') {
-            window.location.assign('/machine/view/' + machineId + '.html');
+            window.location.assign('/machine/view/' + machine.id + '.html');
+        }
+        else if ((action === 'shutdown' || action === 'force_shutdown') && machine.autostart == 1 && !confirmed) {
+            $scope.open_modal('afc_', machine);
         }
         else {
-            $http.get('/'+target+'/'+action+'/'+machineId+'.json')
+            $http.get('/'+target+'/'+action+'/'+machine.id +'.json')
                .then(function(response) {
                    if(response.status == 300 || response.status == 403) {
                    console.error('Reponse error', response.status);
