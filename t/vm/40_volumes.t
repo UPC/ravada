@@ -89,7 +89,7 @@ sub test_add_volume {
         ,size => 512*1024
         ,swap => $swap);
 
-    my ($vm_name) = $vm->name =~ /^(.*)_/;
+    my ($vm_name) = $vm->type;
     my $vmb = rvd_back->search_vm($vm_name);
     ok($vmb,"I can't find a VM ".$vm_name) or return;
     my $domainb = $vmb->search_domain($domain->name);

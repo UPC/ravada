@@ -673,7 +673,7 @@ sub _filter_hds($hd0, $hd1) {
     FOUND1: for my $n ( 1 .. scalar(@devices1)-1 ) {
         my @words = split(/\s+/,$devices1[$n]);
         for my $word0 ( reverse @words ) {
-            next if $word0 =~ /nvidia/;
+            next if $word0 =~ /nvidia/ || $word0 =~ /[\(\)\{\})]/;
             $word0 =~ s/(\d+\:\d+\:\d+)\.\d+/$1/;
             next if $word0 eq $hd1->_data('list_filter');
             $hd1->_data('list_filter' => $word0);
@@ -726,6 +726,8 @@ sub test_change_hd_in_clone($domain) {
     $hd0->_data('list_filter'=>'');
     confess Dumper($hd0) if $hd0->list_devices <2;
 
+    # set both filters empty and make sure mock devices are different
+    $hd1->_data('list_filter'=>'');
     _filter_hds($hd0, $hd1);
 
     die "Error: no available devices in ".$hd0->name
@@ -736,7 +738,7 @@ sub test_change_hd_in_clone($domain) {
 
     my @args = ( uid => user_admin->id ,id_domain => $domain->id);
     my $req = Ravada::Request->clone(@args
-        , number => scalar($hd0->list_available_devices)-1 );
+        , number => ( scalar($hd0->list_available_devices)-1 or 1) );
     wait_request(debug => 0);
     is($req->error,'') or exit;
 

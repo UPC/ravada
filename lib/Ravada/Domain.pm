@@ -2069,19 +2069,33 @@ sub open($class, @args) {
     my $domain;
     eval { $domain = $vm->search_domain($row->{name}, $force) };
     if ( !$domain ) {
-        return if $vm->is_local;
-
-        $vm_local = {};
-        my $vm_class = "Ravada::VM::".$row->{vm};
-        bless $vm_local, $vm_class;
-
-        $vm = $vm_local->new();
-        $domain = $vm->search_domain($row->{name}, $force) or return;
-        $vm_changed = $vm;
+        $domain = _search_domain_in_instances($id, $row->{name}, $force);
     }
     $domain->_insert_db_extra() if $domain && !$domain->is_known_extra();
     $domain->_data('id_vm' => $vm_changed->id) if $vm_changed;
     return $domain;
+}
+
+sub _search_domain_in_instances($id_domain, $name, $force) {
+
+    my ($found, $found_active);
+    for my $instance ( list_instances(undef, $id_domain)) {
+        my $vm;
+        eval { $vm = Ravada::VM->open($instance->{id_vm}) };
+        warn $@ if $@;
+        next if !$vm;
+        my $domain = $vm->search_domain($name, $force);
+        next if !$domain;
+        if ($domain->is_active) {
+            $found_active = $domain;
+            last;
+        }
+        $found = $domain;
+    }
+    $found = $found_active if $found_active;
+    return if !$found;
+    $found->_data('id_vm' => $found->_vm->id);
+    return $found;
 }
 
 sub _check_proper_id_vm($self, $id, $id_vm) {
@@ -3143,6 +3157,7 @@ sub _cascade_remove_base_in_nodes($self) {
     my $req_nodes;
     my $vm_local;
     for my $vm ( $self->list_vms ) {
+        next if $vm->id == $self->_vm->id;
         my @after;
         push @after,(after_request => $req_nodes->id) if $req_nodes;
         $req_nodes = Ravada::Request->remove_base_vm(
@@ -5191,7 +5206,8 @@ sub get_controllers($self) {
     my $info;
     my %controllers = $self->list_controllers();
     for my $name ( sort keys %controllers ) {
-        next if $name eq 'disk' && $self->_vm && $self->_vm->id != $self->_data('id_vm');
+        next if $name eq 'disk' && defined $self->_data('id_vm')
+            && $self->_vm && $self->_vm->id != $self->_data('id_vm');
         $info->{$name} = [$self->get_controller($name)];
     }
 
@@ -5774,7 +5790,7 @@ sub set_base_vm($self, %args) {
         } else {
             my $instance = $vm->search_domain($self->name);
             $instance->_remove_instance($user,1) if $instance;
-            $self->_remove_files_not_shared(@nodes, $self->_vm);
+            $self->_remove_files_not_shared($vm,@nodes, $self->_vm);
             $self->_vm($node2);
             $self->_data('id_vm' => $node2->id);
             $vm->refresh_storage_pools();
@@ -5805,7 +5821,6 @@ sub _check_set_base_reqs($self) {
     while ( my ($id, $id_request) = $sth->fetchrow ) {
         my $req;
         eval { $req = Ravada::Request->open($id_request)};
-        warn $@ if $@;
 
         if (!$req || $req->status() eq 'done') {
             $sth_update->execute($id);
@@ -5813,7 +5828,7 @@ sub _check_set_base_reqs($self) {
     }
 }
 
-sub _remove_files_not_shared($self, @nodes){
+sub _remove_files_not_shared($self, $vm, @nodes){
 
     for my $file ($self->list_volumes,$self->list_files_base) {
         next if $file =~ /\.iso$/;
@@ -5822,11 +5837,12 @@ sub _remove_files_not_shared($self, @nodes){
         my ($dir) = $file =~ m{(.*)/};
         my $shared=0;
         for my $node(@nodes) {
-            $shared++ if $self->_vm->shared_storage($node, $dir);
+            next if $vm->id == $node->id;
+            $shared++ if $vm->shared_storage($node, $dir);
             last if $shared;
         }
         next if $shared;
-        $self->_vm->remove_file($file);
+        $vm->remove_file($file);
     }
 }
 

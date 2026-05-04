@@ -2609,6 +2609,7 @@ Arguments:
 =cut
 
 sub shared_storage($self, $node, $dir) {
+    return 0 if $self->id == $node->id;
     $dir .= '/' if $dir !~ m{/$};
     my $shared_cache = $self->_shared_storage_cache($node, $dir);
     return $shared_cache if defined $shared_cache;

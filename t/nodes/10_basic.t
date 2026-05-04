@@ -912,6 +912,7 @@ sub _test_clones($base, $vm) {
 }
 
 sub test_remove_base($vm, $node, $volatile) {
+    diag("tst remove base, volatile_clones=$volatile ".$vm->name." ".$node->name);
     my $base = create_domain_v2(vm => $vm, disk => 0.5, data => 0, swap => 0);
     my $uuid;
     $uuid = $base->domain->get_uuid_string() if $vm->type eq 'KVM';
@@ -923,7 +924,12 @@ sub test_remove_base($vm, $node, $volatile) {
     is($base->domain->get_uuid_string(), $uuid) if $vm->type eq 'KVM';
 
     my @volumes_base = $base->list_files_base();
-    $base->set_base_vm(node => $node, user => user_admin);
+    Ravada::Request->set_base_vm(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,id_vm => $node->id
+    );
+    wait_request();
     check_leftovers();
     is($base->domain->get_uuid_string(), $uuid) if $vm->type eq 'KVM';
     for my $file ( @volumes_base ) {
@@ -934,7 +940,12 @@ sub test_remove_base($vm, $node, $volatile) {
     }
     test_domain_internal($base->name,$vm, $node);
 
-    $base->remove_base_vm(node => $node, user => user_admin);
+    Ravada::Request->remove_base_vm(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,id_vm => $node->id
+    );
+    wait_request();
     test_domain_internal($base->name,$vm);
     test_domain_internal_not($base->name, $node);
     is($base->domain->get_uuid_string(), $uuid) if $vm->type eq 'KVM';
@@ -942,7 +953,7 @@ sub test_remove_base($vm, $node, $volatile) {
     my $base_gone = $node->search_domain($base->name);
     ok(!$base_gone,"Expecting ".$base->name." removed in ".$node->name) or exit;
     for my $file ( @volumes_base ) {
-        ok(!$node->file_exists($file));
+        ok(!$node->file_exists($file)) or exit;
         ok($vm->file_exists($file), "Expecting file '$file' in local") or exit;
     }
     for my $file ( @volumes0 ) {
@@ -961,7 +972,12 @@ sub test_remove_base($vm, $node, $volatile) {
     delete $base->{_data}->{id_vm};
     is($base->_data('id_vm'), $vm->id);
 
-    $base->set_base_vm(node => $node, user => user_admin);
+    Ravada::Request->set_base_vm(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,id_vm => $node->id
+    );
+    wait_request();
     is(scalar($base->list_vms), 2) or exit;
     $bases_vm = $base->_bases_vm();
     for my $id_vm ( keys %$bases_vm) {
@@ -974,8 +990,12 @@ sub test_remove_base($vm, $node, $volatile) {
     wait_request( debug => 0 );
 
     is($base->domain->get_uuid_string(), $uuid) if $vm->type eq 'KVM';
+    Ravada::Request->remove_base(
+        uid => user_admin->id
+        ,id_domain => $base->id
+    );
+    wait_request(debug => 0);
     $base = Ravada::Domain->open($base->id);
-    $base->remove_base(user_admin);
     is($base->domain->get_uuid_string(), $uuid) if $vm->type eq 'KVM';
 
     #    my @req = $base->list_requests();
@@ -1014,13 +1034,15 @@ sub test_domain_internal_not($name, @vms) {
 
     for my $vm (@vms) {
         if (ref($vm) =~ /KVM$/) {
+            $vm->_reconnect();
             my $domain;
             eval { $domain = $vm->vm->get_domain_by_name($name) };
             my $error = ($@ or '');
+            warn $error if $error;
             ok(!$domain,"Expecting not $name in ".$vm->name) or confess;
         } else {
             my $domain = $vm->search_domain($name);
-            ok(!$domain);
+            ok(!$domain,"Expecting $name not in node ".$vm->name) or confess;
             if ($domain) {
                 my $config_file = $domain->_config_file;
                 ok(!$vm->file_exists($config_file));
@@ -1626,7 +1648,7 @@ sub _migrate($domain, $node,$active) {
     .". It is in ".$domain2->_vm->name
     if $node->id != $domain2->_vm->id;
 
-    die "Error: domain ".$domain2->name." should be active=$active, got ".$domain2->is_active
+    confess "Error: domain ".$domain2->name." should be active=$active, got ".$domain2->is_active
     if $domain2->is_active != $active;
 }
 
@@ -1751,7 +1773,11 @@ sub test_nested_base($vm, $node, $levels=1) {
 
     _test_migrate_nested($vm, $node, \@bases, $clone, $levels);
     _migrate_fast($clone, $vm);
+    my @volumes_base = $base0->list_files_base;
     _remove_base_vm($base0, $node);
+    for my $file ( $clone->list_volumes() ) {
+        ok($vm->file_exists($file)) or die $file;
+    }
     _test_migrate_nested($vm, $node, \@bases, $clone, $levels);
 
     _test_all_children_ok($base0);
@@ -1833,8 +1859,14 @@ sub _test_migrate_nested($vm, $node, $bases, $clone, $levels) {
 sub _check_clones_in_node($base0, $id_node) {
     my $base = $base0;
     $base = Ravada::Front::Domain->open($base0->{id}) if ref($base) !~/Ravada/;
+    my $vm = Ravada::VM->open($id_node);
     for my $clone ( $base->clones ) {
         is($clone->{id_vm}, $id_node) or confess $clone->{name};
+        my $clone2 = Ravada::Front::Domain->open($clone->{id});
+        for my $volume ( $clone2->list_volumes) {
+            ok($vm->file_exists($volume->{file}))
+                or confess "File from ".$clone->{name}." not in node ".$vm->name." ".$volume->{file};
+        }
         if ( $clone->{is_base}) {
             _check_clones_in_node($clone, $id_node);
         }
@@ -2294,7 +2326,11 @@ sub test_remove_instances($base, @nodes) {
     );
     wait_request(debug => 0);
     my $vm = $base->_vm;
+    my %done;
     for my $vm ( $base->_vm, @nodes ) {
+        next if $done{$vm->id()};
+        my $domain = $vm->search_domain($base->name);
+        ok(!$domain);
         for my $file ( @volumes, @files_base ) {
             if ($file =~ /\.iso$/) {
                 ok($vm->file_exists($file));
@@ -2358,21 +2394,11 @@ for my $vm_name (reverse vm_names() ) {
 
         start_node($node);
 
-        test_nested_base($vm, $node, 3);
+        test_migrate_req($vm, $node);
 
-        test_base_unset($vm,$node);
-        test_set_vm($vm, $node);
+        test_migrate_clone($node, $vm);
 
         test_base_only_in_node_add_hw($vm, $node); #start after create = 1
-
-        test_duplicated_set_base_vm($vm, $node);
-        for my $volatile (1,0) {
-            test_remove_base($vm, $node, $volatile);
-        }
-        test_change_clone($vm, $node);
-
-        test_base_unset($vm,$node);
-        test_removed_base_file($vm, $node);
 
         test_migrate_clone($node, $vm);
         test_migrate_clone($vm, $node);

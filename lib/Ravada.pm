@@ -4955,8 +4955,9 @@ sub _cmd_clone($self, $request) {
         if ( $request->defined_arg('number') && $request->defined_arg('number') > 1)
             || (! $request->defined_arg('name') && $request->defined_arg('add_to_pool'));
 
-    my $domain = $self->search_domain_by_id($request->args('id_domain'))
-    or die "Error: Domain ".$request->args('id_domain')." not found";
+    my $domain = Ravada::Domain->open($request->args('id_domain'));
+    die "Error: Domain ".$request->args('id_domain')." not found"
+    if !$domain;
 
     my $args = $request->args();
     $args->{request} = $request;

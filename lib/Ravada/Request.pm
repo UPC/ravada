@@ -294,6 +294,8 @@ our %CMD_VALIDATE = (
     clone => \&_validate_clone
     ,create => \&_validate_create_domain
     ,create_domain => \&_validate_create_domain
+    ,remove_domain => \&_validate_remove_domain
+    ,remove => \&_validate_remove_domain
     ,remove_hardware => \&_validate_remove_hardware
     ,start_domain => \&_validate_start_domain
     ,start => \&_validate_start_domain
@@ -925,6 +927,22 @@ sub _validate($self) {
     $method->($self);
 }
 
+sub _validate_remove_domain($self) {
+    my $id_domain = $self->defined_arg('id_domain');
+    if (!$id_domain) {
+        my $name = $self->defined_arg('name');
+        $id_domain = $self->_search_domain_id($name);
+        if (!defined $id_domain) {
+            $self->output("Already removed");
+            $self->status('done');
+            return;
+        }
+    }
+    my $domain = Ravada::Front::Domain->open($id_domain);
+    $self->_chain_remove_bases_nodes($domain)
+    if $domain->is_base();
+}
+
 sub _validate_remove_base($self) {
     my $id_domain = $self->args('id_domain');
     my $domain = Ravada::Front::Domain->open($id_domain);
@@ -941,21 +959,27 @@ sub _validate_remove_base($self) {
         ) {
         $reqs_base[-1]->status('done');
         $reqs_base[-2]->status('done');
-    } else {
-        my $bases_vm = $domain->_bases_vm(1);
-        my %done;
-        my $req_prev;
-        for my $id_vm ($domain->_data('id_vm'),keys %$bases_vm ) {
-            next if $done{$id_vm}++;
-            my $req = Ravada::Request->remove_base_vm(
-                uid => $self->args('uid')
-                ,id_domain => $id_domain
-                ,id_vm => $id_vm
-            );
-            $req->after_request_ok($req_prev->id) if $req_prev;
-            $self->after_request_ok($req->id);
-            $req_prev = $req;
-        }
+    }
+    $self->_chain_remove_bases_nodes($domain);
+}
+
+sub _chain_remove_bases_nodes($self, $domain) {
+    my $bases_vm = $domain->_bases_vm(1);
+    return if keys %$bases_vm < 2;
+    my %done;
+    my $req_prev;
+    my $req = Ravada::Request->open($self->id);
+    for my $id_vm ($domain->_data('id_vm'),keys %$bases_vm ) {
+        next if $done{$id_vm}++;
+        my $req = Ravada::Request->remove_base_vm(
+            uid => $self->args('uid')
+            ,id_domain => $domain->id
+            ,id_vm => $id_vm
+            ,_force => 1
+        );
+        $req->after_request_ok($req_prev->id) if $req_prev;
+        $self->after_request_ok($req->id);
+        $req_prev = $req;
     }
 }
 
@@ -1597,6 +1621,15 @@ sub set_base_vm {
 
 sub _validate_migrate($req) {
     my $domain = Ravada::Front::Domain->open($req->args('id_domain'));
+    if ($domain->_data('status') ne 'shutdown') {
+        my $req_shutdown = Ravada::Request->shutdown_domain(
+            uid => $req->args('uid')
+            ,id_domain => $domain->id
+            ,_force => 1
+        );
+        $req->after_request_ok($req_shutdown->id);
+    }
+
     if ($domain->_data('id_vm') == $req->args('id_node')) {
         $req->status('done');
         $req->error("Already migrated");
@@ -1609,14 +1642,6 @@ sub _validate_migrate($req) {
         ,after_request => $req->id
     );
 
-    if ($domain->_data('status') ne 'shutdown') {
-        my $req_shutdown = Ravada::Request->shutdown_domain(
-            uid => $req->args('uid')
-            ,id_domain => $domain->id
-            ,_force => 1
-        );
-        $req->after_request_ok($req_shutdown->id);
-    }
     my $id_vm_local = $domain->_id_vm_local();
     die "Error: node local not found for ".$domain->type
     if !defined $id_vm_local;

@@ -115,6 +115,9 @@ sub test_prepare_base {
     };
     is(''.$@,'') or exit;
 
+    $domain->remove_base( user_admin);
+    is($domain->is_base,0);
+
     eval {
         $domain->prepare_base( user_admin );
         $@ = '';

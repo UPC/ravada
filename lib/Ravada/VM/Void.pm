@@ -297,8 +297,9 @@ sub _list_domains_remote($self, %args) {
     my $active = delete $args{active};
 
     confess "Wrong arguments ".Dumper(\%args) if keys %args;
+    my $dir = Ravada::Front::Domain::Void::_config_dir();
 
-    my ($out, $err) = $self->run_command("ls -1 ".$self->dir_img);
+    my ($out, $err) = $self->run_command("ls -1 ".$dir);
 
     my @domain;
     for my $file (split /\n/,$out) {

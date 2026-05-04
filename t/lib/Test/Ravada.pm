@@ -1922,7 +1922,7 @@ sub remove_old_storage_pools_req() {
         wait_request();
         my $out = $req->output;
         next if !$out;
-        my $sp_list = decode_json($out);
+        my $sp_list = $out;
         my $name = base_pool_name();
         for my $sp (@$sp_list) {
             next if $sp->{name} !~ /^$name/;
@@ -1944,7 +1944,7 @@ sub remove_old_storage_pools_void() {
     my $list = LoadFile($file_sp);
     my $name = base_domain_name();
 
-    my @list2 = grep /^$name/, @$list;
+    my @list2 = grep !/^$name/, @$list;
 
     DumpFile($file_sp,\@list2);
 }

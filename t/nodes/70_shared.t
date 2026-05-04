@@ -127,8 +127,26 @@ sub test_change_ram($vm, $node, $start=0, $prepare_base=0, $migrate=0) {
     my $domain = $base;
     if ($prepare_base) {
         $base->prepare_base(user_admin);
-        $base->set_base_vm(vm => $node, user => user_admin);
-        $domain = $base->clone(name => new_domain_name, user => user_admin);
+        Ravada::Request->set_base_vm(
+            uid => user_admin->id
+            ,id_domain => $base->id
+            ,id_vm => $node->id
+        );
+        wait_request();
+
+        ok($vm->search_domain($base->name),"Expecting base in ".$vm->name)
+            or exit;
+        ok($node->search_domain($base->name),"Expecting base ".$base->name
+                ." in ".$node->name." ".$node->type)
+            or exit;
+        my $name = new_domain_name();
+        Ravada::Request->clone(
+            uid => user_admin->id
+            ,id_domain => $base->id
+            ,name => $name
+        );
+        wait_request();
+        $domain = rvd_back->search_domain($name);
     }
     req_migrate($node, $domain, $start) if $migrate;
 
@@ -260,6 +278,7 @@ sub req_start($domain) {
 }
 
 sub req_migrate($node, $domain, $start=0) {
+    confess if !defined $domain;
     my $domain2 = Ravada::Front::Domain->open($domain->id);
     return if $domain2->_data('id_vm') == $node->id;
     my $req = Ravada::Request->migrate(
@@ -270,12 +289,12 @@ sub req_migrate($node, $domain, $start=0) {
         ,start => 1
         ,id_node => $node->id
     );
-    wait_request();
+    wait_request(debug => 0);
     is($req->status,'done');
     is($req->error,'');
 
     my $domain_f = Ravada::Front::Domain->open($domain->id);
-    is($domain_f->_data('id_vm'),$node->id);
+    is($domain_f->_data('id_vm'),$node->id) or confess;
 }
 
 sub import_base($vm) {
@@ -289,8 +308,8 @@ sub import_base($vm) {
 
 sub _check_sp($sp, @nodes) {
     for my $node (@nodes) {
-        my $sp = $node->vm->get_storage_pool_by_name($sp);
-        confess "SP ".$sp->get_name." not active in ".$node->name if !$sp->is_active;
+        my ($sp) = grep {$_->{name} eq $sp} $node->list_storage_pools(1);
+        confess "SP ".$sp." not active in ".$node->name if !$sp->{is_active};
     }
 
 }
@@ -328,7 +347,7 @@ clean();
 
 $Ravada::Domain::MIN_FREE_MEMORY = 256 * 1024;
 
-for my $vm_name ( vm_names() ) {
+for my $vm_name (reverse vm_names() ) {
     my $vm;
     eval { $vm = rvd_back->search_vm($vm_name) };
 
@@ -352,7 +371,7 @@ the file "
         if ($vm && !grep /^$SHARED_SP$/,$vm->list_storage_pools) {
             my $sp = start_storage_pool($vm,$SHARED_SP);
             if (!$sp) {
-                $msg = "SKIPPED: Missing storage pool '$SHARED_SP' in node ".$vm->name;
+                $msg = "SKIPPED: Missing storage pool '$SHARED_SP' in node ".$vm->name." ".$vm->type;
                 $vm = undef;
             }
         }
@@ -382,9 +401,8 @@ the file "
         is($vm->shared_storage($node, $storage_path),1,"Expecting $SHARED_SP shared") or exit;
 
         import_base($vm);
-
-        test_remove_base($vm, $node);
-        _check_sp($SHARED_SP, $vm, $node);
+        $node->default_storage_pool_name($SHARED_SP);
+        test_change_ram($vm,$node, 0, 1, 1);
 
         for my $default_sp ( 0,1 ) {
             $node->default_storage_pool_name('default')     if !$default_sp;
@@ -399,6 +417,9 @@ the file "
                 }
             }
         }
+
+        test_remove_base($vm, $node);
+        test_remove_base($node, $vm);
 
         test_is_shared($vm, $node);
         test_shared($vm, $node);

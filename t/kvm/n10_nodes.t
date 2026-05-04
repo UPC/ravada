@@ -240,6 +240,24 @@ sub test_remove_domain_from_local {
 
     my $vm = rvd_back->search_vm($vm_name);
     my $domain = $vm->search_domain($domain_orig->name);
+    if (!$domain) {
+        my $req = Ravada::Request->migrate(
+            uid => user_admin->id
+            ,id_domain => $domain_orig->id
+            ,id_node => $vm->id
+        );
+        Ravada::Request->migrate(
+            uid => user_admin->id
+            ,id_domain => $domain_orig->id
+            ,id_node => $node->id
+            ,after_request => $req->id
+        );
+        wait_request();
+        $domain = $vm->search_domain($domain_orig->name);
+    }
+
+    confess "Domain ".$domain_orig->name." not found in ".$vm->name
+    if !$domain;
 
     my @volumes = $domain->list_volumes();
 
@@ -533,14 +551,26 @@ sub _create_clone($node) {
     $clone->shutdown_now(user_admin)    if $clone->is_active;
     is($clone->is_active,0);
 
-    eval { $base->set_base_vm(vm => $node, user => user_admin); };
-    is(''.$@,'')    or return;
+    Ravada::Request->set_base_vm(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,id_vm => $node->id
+    );
+    wait_request();
+
     for my $volume ( $clone->list_volumes ) {
         ok(-e $volume,"Expecting volume $volume of machine ".$clone->name);
     }
 
-    eval { $clone->migrate($node); };
-    is(''.$@,'')    or BAIL_OUT();
+    is(''.$@,'')    or return;
+
+    Ravada::Request->migrate(
+        uid => user_admin->id
+        ,id_domain => $clone->id
+        ,id_node => $node->id
+    );
+    wait_request();
+    $clone = Ravada::Domain->open($clone->id);
 
     is($clone->_vm->host, $node->host) or exit;
 
@@ -852,6 +882,7 @@ sub test_clone_not_in_node {
 }
 
 sub test_domain_already_started {
+    diag("test domain already started");
     my ($vm_name, $node) = @_;
 
     my $vm = rvd_back->search_vm($vm_name);
@@ -907,6 +938,7 @@ sub test_domain_already_started {
 
     { # clone is active, it should be found in node
     my $clone3 = rvd_back->search_domain($clone->name);
+    die "Error: clone ".$clone->name." not found " if !$clone3;
     $clone3->check_status();
     is($clone3->id, $clone->id);
     is($clone3->_vm->host , $node->host,"Expecting ".$clone3->name
@@ -1263,9 +1295,9 @@ sub test_status($node) {
     is(''.$@,'',"[".$node->type."] expecting no error on clone shutdown");
 
     diag("test status of local domain");
-    $clone->_set_vm($vm->id, 1);
-    $clone->start(user_admin);
-    is($clone->_vm->name, $vm->name);
+    my $clone2 = $vm->search_domain($clone->name);
+    $clone2->start(user_admin);
+    is($clone2->_vm->name, $vm->name);
 
     my $domain_remote = $node->search_domain($clone->name);
     is($domain_remote->is_active, 0 );
@@ -1317,6 +1349,7 @@ SKIP: {
         remove_node($node);
         next;
     };
+    test_domain_already_started($vm_name, $node);
     test_remove_base($node);
     test_domain_on_remote($vm_name, $node);
     my $domain22 = test_domain($vm_name, $node);
