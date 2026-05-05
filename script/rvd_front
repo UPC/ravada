@@ -3203,68 +3203,68 @@ get '/translations' => sub($c) {
     return $c->render(json => $lang_name);
 };
 
-get '/text/hours' => sub($c) {
-    my $lh = Ravada::I18N->get_handle($USER->language() || 'en');
-    my @options = (
-        {id => 0, title => $lh->maketext('hours')}
-        ,{id => 1, title => $lh->maketext('1 hour')}
-        ,{id => 2, title => $lh->maketext('2 hours')}
-        ,{id => 3, title => $lh->maketext('3 hours')}
-        ,{id => 6, title => $lh->maketext('6 hours')}
-        ,{id => 8, title => $lh->maketext('8 hours')}
-    );
-    return $c->render(json => \@options);
+get '/text/time_options' => sub($c) {
+
+    my $options = _text_options($c);
+
+    my $i18n = $c->stash->{i18n};
+    for my $entry ( keys %$options ) {
+        my @current;
+        for my $item (@{$options->{$entry}}) {
+            $item->[1]= $i18n->localize($item->[1]);
+            push @current, {
+                id => $item->[0]
+                ,title => $item->[1]
+            };
+        }
+        $options->{$entry} = \@current;
+    }
+
+    return $c->render(json => $options);
 };
 
-get '/text/days' => sub($c) {
-    my $lh = Ravada::I18N->get_handle($USER->language() || 'en');
-    my @options = (
-        {id => 0, title => $lh->maketext('days')}
-        ,{id => 1, title => $lh->maketext('1 day')}
-        ,{id => 2, title => $lh->maketext('2 days')}
-        ,{id => 3, title => $lh->maketext('3 days')}
-        ,{id => 6, title => $lh->maketext('6 days')}
-    );
-    return $c->render(json => \@options);
-};
+sub _text_options($c) {
+    return {
+        hours => [
+            [0, 'hours']
+            ,[1, '1 hour']
+            ,[2, '2 hours']
+            ,[3, '3 hours']
+            ,[6, '6 hours']
+            ,[8, '8 hours']
+        ]
+        ,days => [
+            [0, 'days']
+            ,[1, '1 day']
+            ,[2, '2 days']
+            ,[3, '3 days']
+            ,[6, '6 days']
+        ]
+        ,weeks => [
+            [0, 'weeks']
+            ,[1, '1 week']
+            ,[2, '2 weeks']
+            ,[3, '3 weeks']
+            ,[4, '4 weeks']
+        ]
+        ,months => [
+            [0, 'months']
+            ,[1, '1 month']
+            ,[2, '2 months']
+            ,[3, '3 months']
+            ,[4, '4 months']
+        ]
+        ,years => [
+            [0, 'years']
+            ,[1, '1 year']
+            ,[2, '2 years']
+            ,[3, '3 years']
+            ,[4, '4 years']
+        ]
 
-get '/text/weeks' => sub($c) {
-    my $lh = Ravada::I18N->get_handle($USER->language() || 'en');
-    my @options = (
-        {id => 0, title => $lh->maketext('weeks')}
-        ,{id => 1, title => $lh->maketext('1 week')}
-        ,{id => 2, title => $lh->maketext('2 weeks')}
-        ,{id => 3, title => $lh->maketext('3 weeks')}
-        ,{id => 4, title => $lh->maketext('4 weeks')}
-    );
-    return $c->render(json => \@options);
-};
+    };
+}
 
-get '/text/months' => sub($c) {
-    my $lh = Ravada::I18N->get_handle($USER->language() || 'en');
-    my @options = (
-        {id => 0, title => $lh->maketext('months')}
-        ,{id => 1, title => $lh->maketext('1 month')}
-        ,{id => 2, title => $lh->maketext('2 months')}
-        ,{id => 3, title => $lh->maketext('3 months')}
-        ,{id => 6, title => $lh->maketext('6 months')}
-        ,{id => 9, title => $lh->maketext('9 months')}
-    );
-    return $c->render(json => \@options);
-};
-
-get '/text/years' => sub($c) {
-    my $lh = Ravada::I18N->get_handle($USER->language() || 'en');
-    my @options = (
-        {id => 0, title => $lh->maketext('years')}
-        ,{id => 1, title => $lh->maketext('1 year')}
-        ,{id => 2, title => $lh->maketext('2 years')}
-        ,{id => 3, title => $lh->maketext('3 years')}
-        ,{id => 6, title => $lh->maketext('6 years')}
-        ,{id => 9, title => $lh->maketext('9 years')}
-    );
-    return $c->render(json => \@options);
-};
 
 sub _translations($c) {
     my $lang_name = _languages();
