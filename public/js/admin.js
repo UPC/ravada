@@ -1849,30 +1849,27 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.year = 0;
 
         var max_y = 10;
-        $http.get('/text/hours').then(function(response) {
-            $scope.options_h = response.data;
+        var defaultTimeOptions = {
+            hours: [{id:0,title:'hours'},{id:1,title:'1 hour'},{id:2,title:'2 hours'},{id:3,title:'3 hours'},{id:6,title:'6 hours'},{id:8,title:'8 hours'}],
+            days: [{id:0,title:'days'},{id:1,title:'1 day'},{id:2,title:'2 days'},{id:3,title:'3 days'},{id:6,title:'6 days'}],
+            weeks: [{id:0,title:'weeks'},{id:1,title:'1 week'},{id:2,title:'2 weeks'},{id:3,title:'3 weeks'},{id:4,title:'4 weeks'}],
+            months: [{id:0,title:'months'},{id:1,title:'1 month'},{id:2,title:'2 months'},{id:3,title:'3 months'},{id:6,title:'6 months'},{id:9,title:'9 months'}],
+            years: [{id:0,title:'years'},{id:1,title:'1 year'},{id:2,title:'2 years'},{id:3,title:'3 years'},{id:6,title:'6 years'},{id:9,title:'9 years'}]
+        };
+
+        function applyTimeOptions(options) {
+            options = options || {};
+            $scope.options_h = options.hours || defaultTimeOptions.hours;
+            $scope.options_d = options.days || defaultTimeOptions.days;
+            $scope.options_w = options.weeks || defaultTimeOptions.weeks;
+            $scope.options_m = options.months || defaultTimeOptions.months;
+            $scope.options_y = options.years || defaultTimeOptions.years;
+        }
+
+        $http.get('/text/time_options').then(function(response) {
+            applyTimeOptions(response.data);
         }).catch(function() {
-            $scope.options_h = [{id:0,title:'hours'},{id:1,title:'1 hour'},{id:2,title:'2 hours'},{id:3,title:'3 hours'},{id:6,title:'6 hours'},{id:8,title:'8 hours'}];
-        });
-        $http.get('/text/days').then(function(response) {
-            $scope.options_d = response.data;
-        }).catch(function() {
-            $scope.options_d = [{id:0,title:'days'},{id:1,title:'1 day'},{id:2,title:'2 days'},{id:3,title:'3 days'},{id:6,title:'6 days'}];
-        });
-        $http.get('/text/weeks').then(function(response) {
-            $scope.options_w = response.data;
-        }).catch(function() {
-            $scope.options_w = [{id:0,title:'weeks'},{id:1,title:'1 week'},{id:2,title:'2 weeks'},{id:3,title:'3 weeks'},{id:4,title:'4 weeks'}];
-        });
-        $http.get('/text/months').then(function(response) {
-            $scope.options_m = response.data;
-        }).catch(function() {
-            $scope.options_m = [{id:0,title:'months'},{id:1,title:'1 month'},{id:2,title:'2 months'},{id:3,title:'3 months'},{id:6,title:'6 months'},{id:9,title:'9 months'}];
-        });
-        $http.get('/text/years').then(function(response) {
-            $scope.options_y = response.data;
-        }).catch(function() {
-            $scope.options_y = [{id:0,title:'years'},{id:1,title:'1 year'},{id:2,title:'2 years'},{id:3,title:'3 years'},{id:6,title:'6 years'},{id:9,title:'9 years'}];
+            applyTimeOptions();
         });
 
         var url;
