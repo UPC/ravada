@@ -4,7 +4,6 @@ use strict;
 use Carp qw(confess);
 use Data::Dumper;
 use IPC::Run3;
-use Mojo::JSON qw(decode_json);
 use Test::More;
 
 use lib 't/lib';
@@ -107,7 +106,7 @@ sub test_req_list_sp($vm) {
     is($req->status,'done');
     is($req->error,'');
     my $json_out = $req->output;
-    my $pools = decode_json($json_out);
+    my $pools = $json_out;
     for my $pool ( @$pools ) {
         like($pool,qr{^[a-z][a-z0-9]*}) or die Dumper($pools);
     }
@@ -666,7 +665,7 @@ sub test_pool_info($vm) {
     );
     wait_request();
     my $out = $req->output;
-    my $pools = decode_json($out);
+    my $pools = $out;
 
     my $pool = $pools->[0];
     isa_ok($pool,'HASH');
@@ -730,8 +729,7 @@ sub test_pool_dupe($vm) {
     );
     wait_request();
     my $out_json = $req2->output;
-    $out_json = '[]' if !defined $out_json;
-    my $output = decode_json($out_json);
+    my $output = ($out_json or []);
 
     for my $dir ($dir, $dir_link) {
         my @found = grep( {$_->{file} =~ m{^$dir/} } @{$output->{list}});
@@ -786,8 +784,7 @@ sub test_pool_dupe_linked_1($vm) {
     );
     wait_request();
     my $out_json = $req2->output;
-    $out_json = '[]' if !defined $out_json;
-    my $output = decode_json($out_json);
+    my $output = ($out_json or []);
 
     for my $dir ($dir, $dir_link) {
         my @found = grep( {$_->{file} =~ m{^$dir/} } @{$output->{list}});
@@ -822,8 +819,7 @@ sub test_pool_dupe_linked($vm) {
     );
     wait_request();
     my $out_json = $req2->output;
-    $out_json = '[]' if !defined $out_json;
-    my $output = decode_json($out_json);
+    my $output = ($out_json or []);
 
     for my $dir ($dir, $dir_link) {
         my @found = grep( {$_->{file} =~ m{^$dir/} } @{$output->{list}});

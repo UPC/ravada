@@ -42,7 +42,7 @@ sub test_discover($vm) {
     my $out = $req->output;
     like($out,qr/./);
 
-    my $decoded = decode_json($out);
+    my $decoded = $out;
 
     my ($found3) = grep { $_ eq $name } @$decoded;
     ok($found3, "Expecting $name in requested discover for ".$vm->type)

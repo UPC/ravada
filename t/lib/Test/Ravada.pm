@@ -1942,10 +1942,9 @@ sub remove_old_storage_pools_void() {
     return if !-e $file_sp;
 
     my $list = LoadFile($file_sp);
-    my $name = base_domain_name();
+    my $name = base_pool_name();
 
-    my @list2 = grep !/^$name/, @$list;
-
+    my @list2 = grep {$_->{name} !~ /^$name/ }v@$list;
     DumpFile($file_sp,\@list2);
 }
 
