@@ -1866,6 +1866,7 @@ ravadaApp.directive("solShowMachine", swMach)
             $scope.options_y = options.years || defaultTimeOptions.years;
         }
 
+        applyTimeOptions();
         $http.get('/text/time_options').then(function(response) {
             applyTimeOptions(response.data);
         }).catch(function() {
