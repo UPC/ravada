@@ -2398,8 +2398,8 @@ msgstr "2 años"
 msgid "3 years"
 msgstr "3 años"
 
-msgid "6 years"
-msgstr "6 años"
+msgid "4 years"
+msgstr "4 años"
 
-msgid "9 years"
-msgstr "9 años"
+msgid "5 years"
+msgstr "5 años"

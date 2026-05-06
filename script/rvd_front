@@ -3252,7 +3252,8 @@ sub _text_options($c) {
             ,[1, '1 month']
             ,[2, '2 months']
             ,[3, '3 months']
-            ,[4, '4 months']
+            ,[4, '6 months']
+            ,[5, '9 months']
         ]
         ,years => [
             [0, 'years']
@@ -3260,6 +3261,7 @@ sub _text_options($c) {
             ,[2, '2 years']
             ,[3, '3 years']
             ,[4, '4 years']
+            ,[5, '5 years']
         ]
 
     };

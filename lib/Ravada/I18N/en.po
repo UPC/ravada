@@ -2285,8 +2285,8 @@ msgstr "2 years"
 msgid "3 years"
 msgstr "3 years"
 
-msgid "6 years"
-msgstr "6 years"
+msgid "4 years"
+msgstr "4 years"
 
-msgid "9 years"
-msgstr "9 years"
+msgid "5 years"
+msgstr "5 years"
