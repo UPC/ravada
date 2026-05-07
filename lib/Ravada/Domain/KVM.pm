@@ -2528,6 +2528,7 @@ sub _set_controller_network($self, $number, $data) {
     my $type = ( delete $data->{type} or 'NAT' );
     my $network =(delete $data->{network} or 'default');
     my $bridge = (delete $data->{bridge}  or '');
+    my $isolated = _network_port_arguments($data);
 
     confess "Error: unkonwn fields in data ".Dumper($data) if keys %$data;
 
@@ -2545,6 +2546,8 @@ sub _set_controller_network($self, $number, $data) {
     } else {
         die "Error adding network, unknown type '$type'";
     }
+
+    $device .= "<port isolated='$isolated'/>" if $isolated;
 
     $device .=
         "<model type='$driver'/>
@@ -3717,6 +3720,19 @@ sub _change_xml($xml, $name, $data) {
     return $changed;
 }
 
+sub _network_port_arguments($data) {
+    my $isolated = delete $data->{port}->{isolated};
+
+    die "Error: wrong isolated '$isolated'. It must be 'yes' or 'no'"
+    if defined $isolated && !( $isolated eq 'yes' || $isolated eq 'no');
+
+    die "Error: Unknown arguments in port ".Dumper($data->{port}) if keys %{$data->{port}};
+
+    delete $data->{port};
+
+    return $isolated;
+}
+
 sub _change_hardware_network($self, $index, $data) {
     die "Error: index number si required.\n" if !defined $index;
 
@@ -3734,14 +3750,7 @@ sub _change_hardware_network($self, $index, $data) {
      my $driver = lc(delete $data->{driver} or '');
      my $bridge = delete $data->{bridge};
     my $network = delete $data->{network};
-    my $isolated = delete $data->{port}->{isolated};
-
-    die "Error: wrong isolated '$isolated'. It must be 'yes' or 'no'"
-    if defined $isolated && !( $isolated eq 'yes' || $isolated eq 'no');
-
-    die "Error: Unknown arguments in port ".Dumper($data->{port}) if keys %{$data->{port}};
-
-    delete $data->{port};
+    my $isolated = _network_port_arguments($data);
 
     die "Error: Unknown arguments ".Dumper($data) if keys %$data;
 
