@@ -3721,6 +3721,8 @@ sub _change_xml($xml, $name, $data) {
 }
 
 sub _network_port_arguments($data) {
+    return if !exists $data->{port};
+
     my $isolated = delete $data->{port}->{isolated};
 
     die "Error: wrong isolated '$isolated'. It must be 'yes' or 'no'"
