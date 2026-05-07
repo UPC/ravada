@@ -166,8 +166,7 @@ sub test_req_machine_types($vm) {
         ,uid => user_admin->id
     );
     wait_request();
-    my $out_json = $req->output;
-    my $out = decode_json($out_json);
+    my $out = $req->output;
     my $n = 2;
     ok(scalar(keys %$out) >= $n,"Expecting at least $n machine architectures"
         .  Dumper($out));
@@ -183,8 +182,7 @@ sub test_req_machine_types2($vm) {
         ,uid => user_admin->id
     );
     wait_request();
-    my $out_json = $req->output;
-    my $out = decode_json($out_json);
+    my $out = $req->output;
     my $n = 2;
     ok(scalar(keys %$out) >= $n,"Expecting at least $n machine architectures"
         .  Dumper($out));
@@ -213,7 +211,7 @@ sub test_isos($vm) {
     like($req->output,qr/./);
 
     my $machine_types = {};
-    $machine_types = decode_json($req->output());
+    $machine_types = $req->output() if $req->output;
 
     my $isos = rvd_front->list_iso_images();
 
