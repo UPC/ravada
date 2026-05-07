@@ -694,7 +694,7 @@ sub _update_isos {
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
             ,url => 'https://ftp.lysator.liu.se/ubuntu-dvd/xubuntu/releases/26.04.*/release/'
-            ,file_re => 'xubuntu.*desktop.*.iso'
+            ,file_re => 'xubuntu.26.04.*desktop.*.iso'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
 	    ,min_ram => 2
 	    ,min_disk_size => '20'
@@ -706,7 +706,7 @@ sub _update_isos {
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
             ,url => 'https://ftp.lysator.liu.se/ubuntu-dvd/xubuntu/releases/24.04.*/release/'
-            ,file_re => 'xubuntu.*desktop.*.iso'
+            ,file_re => 'xubuntu.24.04.*desktop.*.iso'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
 	    ,min_ram => 2
 	    ,min_disk_size => '20'
