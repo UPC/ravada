@@ -788,8 +788,8 @@ sub list_iso_images {
             if $row->{options};
         $row->{min_ram} = 0.2 if !$row->{min_ram};
 
+        _get_device_re($row);
         lock_keys(%$row);
-        _fix_iso_file_re($row);
 
         $row->{min_swap_size} = 0 if !$row->{min_swap_size};
         push @iso,($row);
@@ -798,21 +798,29 @@ sub list_iso_images {
     return \@iso;
 }
 
-sub _fix_iso_file_re($row) {
+sub _get_device_re($row) {
+
+    return if !$row->{url};
+
     if ($row->{rename_file}) {
-        unlock_keys(%$row);
-        $row->{file_re_orig} = $row->{file_re};
-        lock_keys(%$row);
-        $row->{file_re} = $row->{rename_file};
-    } elsif ($row->{url} && !$row->{file_re} ) {
-        my ($file_re) = $row->{url} =~ m{.*/([^/]+)$};
-        $row->{file_re}= $file_re if $file_re;
+        $row->{device_re} = $row->{rename_file};
+    } elsif ($row->{file_re}) {
+        $row->{device_re} = $row->{file_re};
+    } elsif ($row->{url} ) {
+        my ($url,$file_re) = $row->{url} =~ m{(.*)/([^/]+)$};
+        if ($file_re && $url) {
+            $row->{device_re}= $file_re;
+        }
     }
 
-    if ($row->{file_re}) {
-        $row->{file_re} = '^'.$row->{file_re} unless $row->{file_re} =~ /\^/;
-        $row->{file_re} .= '$' unless $row->{file_re} =~ /\$/;
-    }
+    confess "Error: no device found in $row->{name} from "
+        .($row->{file_re} or '')
+        ." or ".($row->{rename_file} or '')
+        ." or ".$row->{url}
+    if !$row->{device_re};
+
+    $row->{device_re} = '^'.$row->{device_re} unless $row->{device_re} =~ /\^/;
+    $row->{device_re} .= '$' unless $row->{device_re} =~ /\$/;
 
 }
 
@@ -825,13 +833,16 @@ Returns a reference to a list of the ISOs known by the system
 
 sub iso_file ($self, $id_vm, $uid) {
 
+    confess "Error: undefined id node"
+    if !defined $id_vm;
+
     my $key = "list_isos_$id_vm";
     my $cache = $self->_cache_get($key);
     return $cache if $cache;
 
     Ravada::Request->refresh_storage(
         id_vm=> $id_vm
-	,uid => Ravada::Utils::user_daemon->id
+        ,uid => Ravada::Utils->user_daemon->id
     );
 
     my $req = Ravada::Request->list_isos(
@@ -843,7 +854,11 @@ sub iso_file ($self, $id_vm, $uid) {
     return [] if $req->status ne 'done';
 
     my $isos = [];
-    $isos = decode_json($req->output()) if $req->output;
+    eval {
+        $isos = decode_json($req->output())
+        if $req->output && !ref($req->output())
+    };
+    warn $@." for request=".$req->id." ".Dumper($req->output) if $@;
 
     $self->_cache_store($key, $isos);
 
@@ -1219,6 +1234,7 @@ sub list_requests($self, $id_domain_req=undef, $seconds=60) {
                 || $command eq 'list_storage_pools'
                 || $command eq 'list_cpu_models'
                 || $command eq 'list_networks'
+                || $command eq 'rsync_back'
                 ;
         next if ( $command eq 'force_shutdown'
                 || $command eq 'force_reboot'
@@ -1500,7 +1516,7 @@ sub list_network_interfaces($self, %args) {
     }
     return [] if $req->status ne 'done' || !length($req->output);
 
-    my $interfaces = decode_json($req->output());
+    my $interfaces = $req->output;
     $self->{$cache_key} = $interfaces;
 
     return $interfaces;
@@ -1802,7 +1818,7 @@ sub list_cpu_models($self, $uid, $id_domain) {
     return {} if $req->status ne 'done';
 
     my $models= {};
-    $models = decode_json($req->output()) if $req->output;
+    $models = $req->output() if $req->output;
 
     $self->_cache_store($key,$models);
 
@@ -1846,7 +1862,8 @@ sub list_storage_pools($self, $uid, $id_vm, $active=undef) {
     return _filter_active($cache, $active) if $req->status ne 'done';
 
     my $pools = [];
-    $pools = decode_json($req->output()) if $req->output;
+
+    $pools = $req->output() if $req->output;
 
     $self->_cache_store($key,$pools) if scalar(@$pools);
 

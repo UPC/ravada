@@ -31,7 +31,7 @@ my $xml =<<EOT;
   <vcpu placement='static'>2</vcpu>
   <sysinfo type='smbios'/>
   <os>
-    <type arch='x86_64' machine='pc-i440fx-2.11'>hvm</type>
+    <type arch='x86_64' machine='pc-i440fx'>hvm</type>
     <bootmenu enable='yes'/>
     <smbios mode='sysinfo'/>
   </os>
@@ -193,6 +193,12 @@ sub _fix_domain_config($domain) {
 
     my ($uuid) = $doc->findnodes('/domain/uuid/text()');
     $uuid->setData($old_uuid);
+
+    my ($node_type) = $doc->findnodes('/domain/os/type');
+    my $type_re = $node_type->getAttribute('machine');
+    $type_re =~ s/-[\d\.]$//;
+    my $machine = $domain->_vm->_find_machine_type($node_type->getAttribute('arch'), $type_re);
+    $node_type->setAttribute('machine' => $machine);
 
     for my $volume ( $doc->findnodes("/domain/devices/disk/source") ) {
         my $old_file = $volume->getAttribute('file');

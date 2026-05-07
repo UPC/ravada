@@ -17,12 +17,14 @@ my $DIR_SRC = getcwd;
 my $DIR_DST;
 my $DEBIAN = "DEBIAN";
 my $FORCE;
+my $OS;
 my $help;
 my $usage = "$0 [--help] [--force]\n";
 
 GetOptions(
     force => \$FORCE
     ,help => \$help
+    ,'os=s' => \$OS
 ) or die $usage;
 
 if ($help) {
@@ -365,11 +367,13 @@ sub list_dists {
 
     while ( my $file = readdir $dir ) {
         my ($dist) = $file =~ /control-(.*)/;
+        next if !$dist;
+        next if $OS && $dist !~ /$OS/;
         push @dists,($dist) if $dist;
     }
     closedir $dir;
 
-    die "Error: no dists control files found in 'debian' dir"
+    die "Error: no dists control files found in 'debian' dir $OS"
         if !@dists;
 
     return reverse @dists;
@@ -418,7 +422,7 @@ sub copy_identical_releases {
 
 get_fallback();
 
-for my $dist (list_dists) {
+for my $dist (list_dists()) {
 
 $DIR_DST = "$DIR_SRC/../ravada-$VERSION-$dist";
 clean();

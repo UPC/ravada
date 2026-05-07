@@ -35,19 +35,27 @@ sub test_same_node_hibernate($vm, $node1, $node2) {
 }
 
 sub _set_base($node1, $node2) {
-    for my $node ( $node1, $node2 ) {
-        $BASE->set_base_vm(
+
+    for my $node ($BASE->_vm, $node1, $node2 ) {
+        Ravada::Request->set_base_vm(
             id_vm => $node->id
-            ,user => user_admin
+            ,uid => user_admin->id
+            ,id_domain => $BASE->id
         );
     }
+    wait_request();
 
     my $domain = $BASE->clone(
         name => new_domain_name()
         ,user => user_admin
     );
-    $domain->prepare_base(user_admin);
+    Ravada::Request->prepare_base(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request();
     $domain->_data('balance_policy'=>1);
+    $domain->is_public(1);
     return $domain;
 }
 
@@ -58,22 +66,32 @@ sub test_same_node($vm, $node1, $node2, $hibernate=undef) {
     my $domain = _set_base($node1, $node2);
 
     for my $node ( $node1, $node2 ) {
-        $domain->set_base_vm(
+        Ravada::Request->set_base_vm(
             id_vm => $node->id
-            ,user => user_admin
+            ,uid => user_admin->id
+            ,id_domain => $domain->id
         );
+        wait_request(debug => 1);
     }
 
     my ($clone1,@clone) = _create_clones($domain, $user, 4);
     for my $node0 ( $node1, $node2, $vm ) {
 
+        diag("First migrate ".$clone1->name." from ".$domain->_vm->name." to node ".$node0->name);
         _migrate($node0, $clone1);
         Ravada::Request->hybernate(
             uid => $user->id
             ,id_domain => $clone1->id
         ) if $hibernate;
 
+        $clone1 = Ravada::Front::Domain->open($clone1->id);
+        if ($clone1->_data('id_vm') != $node0->id) {
+            diag("Error: could not start clone ".$clone1->name." in node ".$node0->name." ".$node0->id);
+            next;
+        }
+        diag("Expecting other clones go to ".$node0->name);
         for my $clone ( @clone ) {
+            diag("Expecting clone ".$clone->name." go to ".$node0->name);
             my $req_s = Ravada::Request->start_domain(
                 id_domain => $clone->id
                 ,uid => $user->id
@@ -84,10 +102,6 @@ sub test_same_node($vm, $node1, $node2, $hibernate=undef) {
             is($clone_f->_data('id_vm'), $node0->id
                 ,"Expecting ".$clone->name." same node in ".$vm->type)
             or exit;
-        }
-        if ( $hibernate ) {
-            $clone1->remove(user_admin);
-            ($clone1) = _create_clones($domain, $user,1);
         }
         _shutdown($clone1, @clone);
     }
@@ -126,11 +140,23 @@ sub _shutdown(@clones) {
 sub _create_clones($base, $user, $n) {
     my @clone;
     for (1 .. $n ) {
-        my $clone = $base->clone(
-               name => new_domain_name()
-              ,user => $user
-            ,memory => 128*1024
+        my $name = new_domain_name();
+        my $req = Ravada::Request->clone(
+            uid => $user->id
+            ,id_domain => $base->id
+            ,name => $name
         );
+        ok($req->id);
+        wait_request(debug => 0);
+        is($req->status(),'done');
+        is($req->error,'');
+        my $clone;
+        for ( 1 .. 10 ) {
+            $clone = rvd_back->search_domain($name);
+            last if $clone;
+            wait_request( debug => 1);
+        }
+        die "$name not found " if !$clone;
         push @clone,($clone);
     }
     return @clone;
@@ -145,8 +171,7 @@ sub _migrate($node, $clone) {
 
     my $clone_f = Ravada::Front::Domain->open($clone->id);
 
-    return if $clone_f->_data('id_vm') == $node->id;
-
+    delete_request('migrate');
     my $req = Ravada::Request->migrate(
         id_node => $node->id
         ,id_domain => $clone->id
@@ -155,7 +180,6 @@ sub _migrate($node, $clone) {
         ,start => 1
     );
     wait_request(debug => 0);
-    sleep 1;
 }
 ##########################################################################
 

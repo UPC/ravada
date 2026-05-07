@@ -173,9 +173,11 @@ sub name($self) {
     return $self->_data('name') 
 }
 
+# those should run a request
 sub pause               { confess "TODO" }
 sub prepare_base        { confess "TODO" }
 sub remove              { confess "TODO" }
+sub remove_instance     { confess "TODO" }
 sub rename              { confess "TODO" }
 sub resume              { confess "TODO" }
 sub screenshot          { confess "TODO" }

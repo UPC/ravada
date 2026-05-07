@@ -90,7 +90,6 @@ sub test_do_not_overwrite($vm) {
 }
 
 sub _search_free_space($dir) {
-    diag($dir);
     open my $mounts,"<","/proc/mounts" or die $!;
     my $found;
     while (my $line = <$mounts>) {
@@ -193,7 +192,6 @@ sub test_queue_move($vm) {
 
     remove_domain($domain);
     $vm->remove_storage_pool($sp);
-
 }
 
 sub test_queue_change_hw($vm) {
@@ -245,6 +243,11 @@ sub test_move_volume($vm, $domain=undef) {
         ,format => "raw"
         ,size => 1024*10
     );
+    $domain->add_volume( name => new_domain_name().".qcow2"
+        ,format => "qcow2"
+        ,size => 1024*10
+    );
+
     my ($sp, $dir) = _create_storage_pool($vm);
 
     test_fail_nonvol($domain, $sp);
@@ -257,7 +260,6 @@ sub test_move_volume($vm, $domain=undef) {
         my ($filename)= $vol =~ m{.*/(.*)};
 
         if ( -e "$dir/$filename" ) {
-            diag("removing previously copied $dir/$filename");
             unlink("$dir/$filename") or die "$! $dir/$filename";
             $vm->refresh_storage();
         }
@@ -273,6 +275,7 @@ sub test_move_volume($vm, $domain=undef) {
         wait_request( debug => 0);
         is($req->status,'done');
         is($req->error, '');
+        ok(-e "$dir/$filename", "Expecting $dir/$filename") or exit;
         if ($vol =~ /iso$/) {
             ok( -e $vol) or die "Expecting $vol not removed";
         } else {
@@ -299,6 +302,7 @@ sub test_move_volume($vm, $domain=undef) {
     for my $vol (@volumes) {
         ok(!-e $vol);
     }
+    $vm->remove_storage_pool($sp);
 
     $vm->remove_storage_pool($sp);
     rmdir($dir) or die "$! $dir";

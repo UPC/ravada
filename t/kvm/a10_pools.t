@@ -4,7 +4,6 @@ use strict;
 use Carp qw(confess);
 use Data::Dumper;
 use IPC::Run3;
-use Mojo::JSON qw(decode_json);
 use Test::More;
 
 use lib 't/lib';
@@ -23,7 +22,7 @@ my $USER = create_user("foo","bar", 1);
 
 #########################################################################
 
-sub create_pool($vm_name, $dir="/var/tmp/".new_pool_name()) {
+sub create_pool($vm_name, $dir="/var/tmp/$</".new_pool_name()) {
 
     my $vm = rvd_back->search_vm($vm_name) or return;
 
@@ -107,7 +106,7 @@ sub test_req_list_sp($vm) {
     is($req->status,'done');
     is($req->error,'');
     my $json_out = $req->output;
-    my $pools = decode_json($json_out);
+    my $pools = $json_out;
     for my $pool ( @$pools ) {
         like($pool,qr{^[a-z][a-z0-9]*}) or die Dumper($pools);
     }
@@ -234,7 +233,7 @@ sub test_volumes_in_two_pools {
     test_base($domain);
 
     for my $file (@volumes) {
-        ok(-e $file,"Expecting volume $file exists, got : ".(-e $file or 0));
+        ok(-e $file,"Expecting volume $file exists, got : ".(-e $file or 0)) or die $domain->name;
     }
     $domain->remove($USER);
     for my $file (@volumes) {
@@ -666,7 +665,7 @@ sub test_pool_info($vm) {
     );
     wait_request();
     my $out = $req->output;
-    my $pools = decode_json($out);
+    my $pools = $out;
 
     my $pool = $pools->[0];
     isa_ok($pool,'HASH');
@@ -730,8 +729,7 @@ sub test_pool_dupe($vm) {
     );
     wait_request();
     my $out_json = $req2->output;
-    $out_json = '[]' if !defined $out_json;
-    my $output = decode_json($out_json);
+    my $output = ($out_json or []);
 
     for my $dir ($dir, $dir_link) {
         my @found = grep( {$_->{file} =~ m{^$dir/} } @{$output->{list}});
@@ -786,8 +784,7 @@ sub test_pool_dupe_linked_1($vm) {
     );
     wait_request();
     my $out_json = $req2->output;
-    $out_json = '[]' if !defined $out_json;
-    my $output = decode_json($out_json);
+    my $output = ($out_json or []);
 
     for my $dir ($dir, $dir_link) {
         my @found = grep( {$_->{file} =~ m{^$dir/} } @{$output->{list}});
@@ -822,8 +819,7 @@ sub test_pool_dupe_linked($vm) {
     );
     wait_request();
     my $out_json = $req2->output;
-    $out_json = '[]' if !defined $out_json;
-    my $output = decode_json($out_json);
+    my $output = ($out_json or []);
 
     for my $dir ($dir, $dir_link) {
         my @found = grep( {$_->{file} =~ m{^$dir/} } @{$output->{list}});
@@ -871,6 +867,7 @@ SKIP: {
 
     skip($msg,10)   if !$vm;
 
+    test_volumes_in_two_pools($vm_name);
 
     test_create_pool_fail($vm);
 

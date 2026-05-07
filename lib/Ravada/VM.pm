@@ -179,7 +179,8 @@ sub _init_connector {
                                                 && defined $Ravada::Front::CONNECTOR;
 }
 
-sub _dbh($self) {
+sub _dbh($self=undef) {
+    _init_connector();
     return $$CONNECTOR->dbh();
 }
 
@@ -210,6 +211,8 @@ sub open {
         $args{id} = shift;
     }
     my $force = delete $args{force};
+
+    confess "Error: wrong id '$args{id}' " if $args{id} && $args{id} !~ /^\d+$/;
 
     confess "Error: undefind id in ".Dumper(\%args) if !$args{id};
 
@@ -320,7 +323,6 @@ sub BUILD {
     }
     $self->id;
 
-    $self->_which_cache_fetch();
 }
 
 sub _open_type {
@@ -482,7 +484,8 @@ sub _around_create_domain {
     my %args_create = %args;
 
     my $id_owner = delete $args{id_owner} or confess "ERROR: Missing id_owner";
-    my $owner = Ravada::Auth::SQL->search_by_id($id_owner) or confess "Unknown user id: $id_owner";
+    my $owner = Ravada::Auth::SQL->search_by_id($id_owner);
+    die "Unknown user id: $id_owner" if !$owner;
     my $base;
     my $volatile = delete $args{volatile};
     my $id_base = delete $args{id_base};
@@ -514,9 +517,7 @@ sub _around_create_domain {
 
     $self->_check_duplicate_name($name, $volatile);
     if ($id_base) {
-        my $vm_local = $self;
-        $vm_local = $self->new( host => 'localhost') if !$vm_local->is_local;
-        $base = $vm_local->search_domain_by_id($id_base)
+        $base = $self->search_domain_by_id($id_base)
             or confess "Error: I can't find domain $id_base on ".$self->name;
 
         die "Error: user ".$owner->name." can not clone from ".$base->name
@@ -555,20 +556,19 @@ sub _around_create_domain {
 
     return $base->_search_pool_clone($owner) if $from_pool;
 
-    if ($self->is_local && $base && $base->is_base && $args_create{volatile} && !$base->list_host_devices ) {
+    if ($base && $base->is_base) {
         $request->status("balancing")                       if $request;
-        my $vm = $self->balance_vm($owner->id, $base);
+        my $check_hd= ($active or $args_create{volatile} or 0);
+        my $vm = $self->balance_vm($owner->id, $base, undef, $check_hd);
 
         if (!$vm) {
             die "Error: No free nodes available.\n";
         }
-        if (!$vm->is_local) {
-            if ( $base->_base_files_in_vm($vm)
-                 && $base->_check_all_parents_in_node($vm)) {
+        if ( $base->_base_files_in_vm($vm)
+                 && $base->_check_all_base_parents_in_node($vm)) {
                 $self = $vm;
-            }
         }
-        $request->status("creating machine on ".$vm->name)  if $request;
+        $request->status("creating machine on ".$self->name)  if $request;
         $args_create{listen_ip} = $self->listen_ip($remote_ip);
     }
 
@@ -687,10 +687,14 @@ sub _set_alias_unique($self, $alias) {
 }
 
 sub _add_instance_db($self, $id_domain) {
+    _add_instance_db_data($self->id, $id_domain);
+}
+
+sub _add_instance_db_data($id_vm, $id_domain) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domain_instances "
         ." WHERE id_domain=? AND id_vm=?"
     );
-    $sth->execute($id_domain, $self->id);
+    $sth->execute($id_domain, $id_vm);
     my ($row) = $sth->fetchrow;
     return if $row;
 
@@ -698,7 +702,7 @@ sub _add_instance_db($self, $id_domain) {
         ." VALUES (?, ?)"
     );
     eval {
-        $sth->execute($id_domain, $self->id);
+        $sth->execute($id_domain, $id_vm);
     };
     confess $@ if $@;
 }
@@ -798,8 +802,9 @@ sub name {
 
     return $self->_data('name') if defined $self->{_data}->{name};
 
-    my ($ref) = ref($self) =~ /.*::(.*)/;
-    return ($ref or ref($self))."_".$self->host;
+    my ($out,$err) = $self->run_command('hostname');
+    chomp $out;
+    return $out;
 }
 
 =head2 search_domain_by_id
@@ -1059,18 +1064,6 @@ sub _check_require_base {
     my %ignore_requests = map { $_ => 1 } qw(clone refresh_machine set_base_vm start_clones shutdown_clones shutdown force_shutdown refresh_machine_ports set_time open_exposed_ports manage_pools screenshot remove_clones
     list_cpu_models
     );
-    my @requests;
-    for my $req ( $base->list_requests ) {
-        push @requests,($req) if !$ignore_requests{$req->command};
-    }
-    if (@requests) {
-        confess "ERROR: Domain ".$base->name." has ".scalar(@requests)
-                            ." requests.\n"
-                            .Dumper(\@requests)
-            unless scalar @requests == 1 && $request
-                && $requests[0]->id eq $request->id;
-    }
-
 
     die "ERROR: Domain ".$self->name." is not base"
             if !$base->is_base();
@@ -1159,10 +1152,12 @@ sub _get_name_by_id($id) {
 sub _clean($self) {
     my $name = $self->{_data}->{name};
     my $id = $self->{_data}->{id};
+    my $is_active = $self->{_data}->{is_active};
     delete $self->{_data};
     delete $self->{$FIELD_TIMEOUT};
     $self->{_data}->{name} = $name  if $name;
     $self->{_data}->{id} = $id      if $id;
+    $self->{_data}->{is_active} = $is_active;
     return $self;
 }
 
@@ -1218,6 +1213,7 @@ sub _insert_vm_db {
     );
     my %args = @_;
     my $name = ( delete $args{name} or $self->name);
+    cluck $name if $name =~ /localhost/;
     my $host = ( delete $args{hostname} or $self->host );
     my $public_ip = ( delete $args{public_ip} or '' );
     delete $args{vm_type};
@@ -1398,10 +1394,25 @@ Returns wether this virtual manager is in the local host
 =cut
 
 sub is_local($self) {
+    if (ref($self)) {
     return 1 if !$self->host
         || $self->host eq 'localhost'
         || $self->host eq '127.0.0,1'
         ;
+    } elsif ($self =~ /^\d+$/) {
+        my $id=$self;
+        my $sth = _dbh->prepare("SELECT hostname "
+            ." FROM vms "
+            ." WHERE id=?"
+        );
+        $sth->execute($id);
+        my ($host) = $sth->fetchrow;
+        return 1 if !$host
+            || $host eq 'localhost'
+            || $host eq '127.0.0,1'
+        ;
+
+    }
     return 0;
 }
 
@@ -1861,7 +1872,6 @@ sub _do_is_active($self, $force=undef) {
 }
 
 sub _cached_active($self, $value=undef) {
-    $self->_which_cache_flush() if defined $value && $value && !$self->_data('is_active');
     return $self->_data('is_active', $value);
 }
 
@@ -1926,10 +1936,16 @@ sub run_command($self, @command) {
         $command[0] .= " $args" if $args;
     }
     return $self->_run_command_local(@command) if $self->is_local();
+    confess "@command" if !$exec;
 
     my $ssh = $self->_ssh or confess "Error: Error connecting to ".$self->host;
 
-    my ($out, $err) = $ssh->capture2({timeout => 10},join " ",@command);
+    my $timeout = 10;
+
+    $timeout = 60*60 if $command[0] =~ /cp|qemu/;
+    my $t0 = time;
+    my ($out, $err) = $ssh->capture2({timeout => $timeout},join " ",@command);
+
     chomp $err if $err;
     $err = '' if !defined $err;
 
@@ -2375,6 +2391,8 @@ sub balance_vm($self, $uid, $base=undef, $id_domain=undef, $host_devices=1) {
     }
     return $vms_active[0] if scalar(@vms_active)==1;
 
+    die "Error: No free nodes available.\n" if !scalar(@vms_active);
+
     if ($base && $base->_data('balance_policy') == 1 ) {
         my $vm = $self->_balance_already_started($uid, $id_domain, \@vms_active);
         return $vm if $vm;
@@ -2591,6 +2609,7 @@ Arguments:
 =cut
 
 sub shared_storage($self, $node, $dir) {
+    return 0 if $self->id == $node->id;
     $dir .= '/' if $dir !~ m{/$};
     my $shared_cache = $self->_shared_storage_cache($node, $dir);
     return $shared_cache if defined $shared_cache;
@@ -2963,50 +2982,9 @@ sub _list_qemu_bridges($self) {
     return keys %bridge;
 }
 
-sub _which_cache_fetch($self) {
-    my $sth = $self->_dbh->prepare(
-        "SELECT command,path FROM vm_which "
-        ." WHERE id_vm=?"
-    );
-    $sth->execute($self->id);
-    while (my ($command, $path)) {
-        $self->{_which}->{$command} = $path;
-    }
-    $sth->finish;
-}
-
-
-sub _which_cache_get($self, $command) {
-    return $self->{_which}->{$command} if exists $self->{_which} && exists $self->{_which}->{$command};
-}
-
-sub _which_cache_set($self, $command, $path) {
-    $self->{_which}->{$command} = $path;
-
-    eval {
-        my $sth = $self->_dbh->prepare(
-        "INSERT INTO vm_which (id_vm, command, path)"
-        ." VALUES (?,?,?) "
-        );
-        $sth->execute($self->id, $command, $path);
-    };
-    warn("Warning: $@ vm_which = ( ".$self->id.", $command, $path )")
-    if $@ && $@ !~ /Duplicate entry/i
-          && $@ !~ /UNIQUE constraint failed/i
-    ;
-}
-
-sub _which_cache_flush($self) {
-    my $sth = $self->_dbh->prepare(
-        "DELETE FROM vm_which where id_vm=?"
-    );
-    $sth->execute($self->id);
-}
-
 sub _which($self, $command) {
 
-    my $cached = $self->_which_cache_get($command);
-    return $cached if $cached;
+    return $self->{_which}->{$command} if exists $self->{_which} && exists $self->{_which}->{$command};
 
     my $bin_which = $self->{_which}->{which};
     if (!$bin_which) {
@@ -3023,8 +3001,8 @@ sub _which($self, $command) {
     my ($out,$err) = $self->run_command(@cmd);
     chomp $out;
 
-    $self->_which_cache_set($command,$out);
 
+    $self->{_which}->{$command} = $out;
     return $out;
 }
 
@@ -3194,7 +3172,27 @@ sub dir_backup($self) {
             die "Error on mkdir -p $dir_backup $error" if $error;
         }
     }
+    $self->_create_pool_backup($dir_backup);
     return $dir_backup;
+}
+
+sub _create_pool_backup($self, $dir) {
+    my %pool_name;
+    for my $pool ($self->list_storage_pools(1)) {
+        my $path = $pool->{path};
+        if ($path && $path eq $dir) {
+            return;
+        }
+        $pool_name{$pool->{name}}++;
+    }
+    my ($name0) = $dir =~ m{.*/(.*)};
+    my $name = $name0;
+    my $cont=2;
+    for (;;) {
+        last if !$pool_name{$name};
+        $name = $name0."_".$cont++;
+    }
+    $self->create_storage_pool($name, $dir);
 }
 
 sub _follow_link($self, $file) {
@@ -3381,6 +3379,19 @@ sub _set_active_machines_isolated($self, $network) {
             last;
         }
         $domain->_fetch_networking_mode() if $found;
+    }
+}
+
+sub _migrate_domains($self, $id_node) {
+    confess "Error: node undefined" if !defined $id_node;
+    $id_node = $id_node->id if ref($id_node);
+    for my $domain ( $self->list_domains) {
+        Ravada::Request->migrate(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_domain => $domain->id
+            ,id_node => $id_node
+            ,shutdown => 1
+        );
     }
 }
 

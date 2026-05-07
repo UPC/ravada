@@ -35,10 +35,10 @@ sub _post_prepare_base($self, $base_file) {
     return $base_file if ! $self->clone_base_after_prepare;
     return $base_file if !$self->vm->file_exists($base_file);
 
-    $self->_chmod(oct(400),$base_file);
+    $self->_chmod(0o400,$base_file);
 
     $self->vm->refresh_storage_pools();
-    $self->vm->remove_file($self->file);
+    $self->vm->remove_file($self->file) if $self->vm->file_exists($self->file);
 
     my @domain = ();
     @domain = ( domain => $self->domain) if $self->domain;
@@ -91,6 +91,7 @@ sub _new_clone_filename($self,$name0) {
 sub _around_clone($orig, $self, %args) {
     my $name = delete $args{name};
     my $file_clone = ( delete $args{file} or $self->_new_clone_filename($name));
+    my $domain = (delete $args{domain} or $self->domain);
 
     confess "Error: unkonwn args ".Dumper(\%args) if keys %args;
     confess "Error: empty clone filename" if !defined $file_clone || !length($file_clone);
@@ -102,12 +103,18 @@ sub _around_clone($orig, $self, %args) {
         if $self->domain;
 
         confess "Error: file $file_clone already exists in domain $id_domain_file.$we"
-        if !$self->domain || $self->domain->id != $id_domain_file;
+        if !$domain || $domain->id != $id_domain_file;
     }
 
+    my @domain =();
+    if ($domain) {
+        push @domain , ( domain => $domain );
+    } else {
+        push @domain ,( vm => $self->vm )
+    }
     my $ret = $self->new(
         file => $orig->($self, $file_clone)
-        ,vm => $self->vm
+        ,@domain
     );
     $self->_chmod(oct(600), $file_clone);
 
@@ -122,6 +129,7 @@ sub copy_file($self, $src, $dst) {
     my @cmd = ('/bin/cp' ,$src, $dst );
     my ($out, $err) = $self->vm->run_command(@cmd);
     die $err if $err;
+    return $dst;
 }
 
 sub backup($self) {
@@ -132,6 +140,29 @@ sub backup($self) {
         die "Error: I can't backup $vol_backup $err";
     }
     return $vol_backup;
+}
+
+sub _copy_sys($self, $dst, $mode=undef) {
+    my $file = $self->file;
+    if ($self->vm) {
+        my ($out, $err) = $self->vm->run_command("cp",$file,$dst);
+        die $err if $err;
+    } else {
+        copy($file,$dst);
+    }
+    $self->_chmod($mode, $dst) if $mode;
+}
+
+sub _move_sys($self, $dst, $mode=undef) {
+    my $file = $self->file;
+    if ($self->vm) {
+        my ($out, $err) = $self->vm->run_command("mv",$file,$dst);
+        die $err if $err;
+    } else {
+        copy($file,$dst) or die "$! $file -> $dst";
+        unlink $file or die "$! $file";
+    }
+    $self->_chmod($mode, $dst) if $mode;
 }
 
 1;

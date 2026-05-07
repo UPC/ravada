@@ -221,7 +221,7 @@ sub set_info($self, $name, $value) {
 
 sub delete($self) {
     my $file = $self->file;
-    $self->vm->remove_file($file) if $file;
+    $self->vm->remove_file($file) if $file && $self->vm->file_exists($file);
     my $sth = $self->_dbh->prepare("DELETE FROM volumes WHERE file=? AND id_domain=?");
     $sth->execute($file, $self->domain->id);
 }

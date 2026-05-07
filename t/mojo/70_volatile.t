@@ -6,7 +6,6 @@ use Data::Dumper;
 use Test::More;
 use Test::Mojo;
 use Mojo::File 'path';
-use Mojo::JSON qw(decode_json);
 
 use lib 't/lib';
 use Test::Ravada;
@@ -212,7 +211,7 @@ sub _new_network($vm_name,$id_vm) {
         wait_request(debug => 0);
         like($req_new->output , qr/\d+/) or exit;
 
-        $net = decode_json($req_new->output);
+        $net = $req_new->output;
         $net->{ip_address} =~ s/(\d+\.\d+\.)\d+(.*)/$1$cont$2/;
         my $name = $net->{name};
 
@@ -411,7 +410,7 @@ sub _remove_unused_volumes() {
         );
         wait_request();
         next if !$req->output;
-        my $list = decode_json($req->output);
+        my $list = $req->output;
         my @remove;
         for my $entry ( @{$list->{list}} ) {
             my $file = $entry->{file};

@@ -9,7 +9,6 @@ use HTML::Lint;
 use Test::More;
 use Test::Mojo;
 use Mojo::File 'path';
-use Mojo::JSON qw(decode_json);
 
 use lib 't/lib';
 use Test::Ravada;
@@ -54,7 +53,7 @@ sub _test_discover($vm_name) {
     wait_request();
     return if !$req->output;
 
-    my $json = decode_json($req->output);
+    my $json = $req->output;
     my $base_name = base_domain_name();
     my @domains = grep { /^$base_name/ } @$json;
     ok(!scalar(@domains)) or confess Dumper(\@domains);
@@ -266,7 +265,7 @@ $t->ua->inactivity_timeout(900);
 $t->ua->connect_timeout(60);
 remove_old_domains_req(0); # 0=do not wait for them
 
-for my $vm_name (sort @{rvd_front->list_vm_types} ) {
+for my $vm_name (reverse sort @{rvd_front->list_vm_types} ) {
     test_utf8($t, $vm_name);
 }
 

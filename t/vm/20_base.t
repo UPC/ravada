@@ -49,6 +49,8 @@ sub test_create_domain {
         .($domain->name or '<UNDEF>')
         ." for VM $vm_name"
     );
+    $domain->add_volume(type => 'swap', size => 1024*1024, format => 'qcow2');
+    $domain->add_volume(type => 'data', size => 1024*1024, format => 'qcow2');
 
     return $domain;
 }
@@ -68,7 +70,7 @@ sub test_files_base {
     my @files = $domain->list_files_base();
 
     ok(scalar @files == $n_expected,"Expecting $n_expected files base , got "
-            .scalar @files);
+            .scalar @files) or confess;
     return;
 }
 
@@ -776,7 +778,7 @@ sub _test_compare_list($display1, $display2, $domain=undef) {
 sub test_prepare_base {
     my $vm_name = shift;
     my $domain = shift;
-    my $n_volumes = (shift or 1);
+    my $n_volumes = (shift or 3);
 
     test_files_base($domain,0);
     $domain->shutdown_now($USER)    if $domain->is_active();
@@ -910,14 +912,16 @@ sub test_prepare_base_with_cd {
         ,id_owner => user_admin->id
     );
     my @volumes_clone = $clone->list_volumes_info;
+    my %dupe;
     for my $vol (@volumes_clone) {
         like(ref $vol->domain, qr/^Ravada::Domain/);
         like(ref $vol->vm, qr/^Ravada::VM/);
+        die "Duplicated vol ".$vol->file if $dupe{$vol->file}++;
     }
 
     my ($cd_clone ) = grep { defined $_->file && $_->file =~ /\.iso$/ } @volumes_clone;
     ok($cd_clone,"Expecting a CD in clone ".Dumper([ map { delete $_->{domain}; delete $_->{vm}; $_ } @volumes_clone])) or exit;
-    is($cd_clone->info->{target}, $cd_base->[1]) or exit;
+    is($cd_clone->info->{target}, $cd_base->[1]) or die Dumper($clone->name, $cd_clone->info());
 
     $clone->remove(user_admin);
     $domain->remove(user_admin);
@@ -1108,6 +1112,7 @@ sub test_remove_base_level($vm_name) {
     my @clones;
     for ( 1 .. 3 ) {
         my $clone = $base->clone(name => new_domain_name, user => user_admin);
+        _check_volume_mode_domain($clone);
         push @clones,($clone);
     }
 
@@ -1121,6 +1126,7 @@ sub test_remove_base_level($vm_name) {
     for ( 1 .. 3 ) {
         for my $base2 ($base, @clones ) {
             my $clone = $base2->clone(name => new_domain_name, user => user_admin);
+            _check_volume_mode_domain($clone);
             push @clones2,($clone);
         }
     }
@@ -1181,7 +1187,7 @@ sub _do_test_remove_base($domain, $base=undef) {
     ok(!$domain->is_base,"Domain ".$domain->name." should be base") or return;
 
     for my $file (@files) {
-        die $file if $file !~ m{^[0-9a-z_/\-\.]+$};
+        die $file if $file !~ m{^[0-9a-zA-Z_/\-\.]+$};
         if ($file =~ /\.iso$/) {
             ok(-e $file,"Expecting file base '$file' removed" );
         } else {
@@ -1199,8 +1205,15 @@ sub _do_test_remove_base($domain, $base=undef) {
     }
 }
 
+sub _check_volume_mode_domain($domain) {
+    for my $file ( $domain->list_volumes) {
+        _check_volume_mode($file);
+    }
+}
+
 sub _check_volume_mode($file) {
     my $mode = stat($file)->mode;
+    my $fail = 0;
     if ($file =~ /\.iso$/) {
         ok($mode & S_IRUSR); # user can read
 
@@ -1210,11 +1223,12 @@ sub _check_volume_mode($file) {
         ok($mode & S_IRUSR); # User can read
         ok($mode & S_IWUSR); # User can write
 
-        ok(!($mode & S_IRGRP));   # Group can not read
-        ok(!($mode & S_IROTH));  # Others can not read
-        ok(!($mode & S_IWGRP));   # Group can not write
-        ok(!($mode & S_IWOTH));  # Others can not write
+        ok(!($mode & S_IRGRP)) || $fail++;   # Group can not read
+        ok(!($mode & S_IROTH)) || $fail++;  # Others can not read
+        ok(!($mode & S_IWGRP)) || $fail++;   # Group can not write
+        ok(!($mode & S_IWOTH)) || $fail++;  # Others can not write
     }
+    confess $file if $fail;
 
 }
 
@@ -1800,7 +1814,7 @@ sub test_prepare_base_disk_missing($vm) {
 
     my ($two) = grep(!/iso$/i, reverse @volumes);
     unlink $two or die "$! $two";
-    is($vm->file_exists($two),undef);
+    is($vm->file_exists($two),0);
 
     eval {
     $domain->prepare_base(user_admin);
@@ -1947,6 +1961,8 @@ for my $vm_name ( vm_names() ) {
             $BASE = create_domain($vm);
         }
         flush_rules() if !$<;
+        my $domaina = test_create_domain($vm_name);
+        test_prepare_base($vm_name, $domaina);
 
         test_remove_base($vm_name);
         test_remove_base_level($vm_name);# if $ENV{TEST_LONG};
@@ -2007,13 +2023,13 @@ for my $vm_name ( vm_names() ) {
         $domain = undef;
 
         my $domain2 = test_create_domain_swap($vm_name);
-        test_prepare_base($vm_name, $domain2 , 2);
+        test_prepare_base($vm_name, $domain2 , 4);
         $domain2->remove( user_admin );
 
         $domain2 = test_create_domain_swap($vm_name);
         $domain2->start( user_admin );
         $domain2->shutdown_now( user_admin );
-        test_prepare_base($vm_name, $domain2 , 2);
+        test_prepare_base($vm_name, $domain2 , 4);
         $domain2->remove( user_admin );
 
         NEXT:

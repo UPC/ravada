@@ -26,7 +26,8 @@ sub prepare_base($self, $req=undef) {
     my $base_img = $self->base_filename();
     confess $base_img if $base_img !~ /\.ro/;
 
-    confess "Error: '$base_img' already exists" if -e $base_img;
+    confess "Error: '$base_img' already exists"
+    if $self->vm->file_exists($base_img);
     confess if $file_img =~ /\.iso$/i;
 
     my $format;
@@ -35,7 +36,8 @@ sub prepare_base($self, $req=undef) {
     };
 
     if ($format && $format eq 'qcow2') {
-        $self->_copy($base_img, '0400');
+        $self->_copy_sys($base_img, '0400');
+        $self->_move_sys($base_img, '0400');
     } else {
         $self->_convert($base_img, $req);
     }
@@ -68,6 +70,10 @@ sub _convert($self, $dst, $req=undef) {
         .join(" ",@cmd);
     }
 
+}
+
+sub copy($self, @args) {
+    return $self->_copy(@args);
 }
 
 sub _copy($self, $dst, $mode=undef) {
@@ -103,7 +109,7 @@ sub _copy($self, $dst, $mode=undef) {
     $doc->findnodes('/volume/key/text()')->[0]->setData($dst);
     $doc->findnodes('/volume/target/path/text()')->[0]->setData( $dst);
     $doc->findnodes('/volume/target/permissions/mode/text()')->[0]
-        ->setData( $mode ) if $mode;
+        ->setData( sprintf("%o",$mode) ) if $mode;
 
     my $vol_dst;
     my $err;
@@ -122,17 +128,6 @@ sub _copy($self, $dst, $mode=undef) {
     _refresh_sp($self->vm,$vol_dst);
 
     return $vol_dst;
-}
-
-sub _copy_sys($self, $dst, $mode=undef) {
-    my $file = $self->file;
-    if ($self->vm) {
-        my ($out, $err) = $self->vm->run_command("cp",$file,$dst);
-        die $err if $err;
-    } else {
-        copy($file,$dst);
-    }
-    $self->_chmod($mode, $dst) if $mode;
 }
 
 sub clone($self, $file_clone) {
@@ -229,7 +224,8 @@ sub spinoff($self) {
     my $file = $self->file;
     my $volume_tmp  = $self->file.".$$.tmp";
 
-    $self->vm->remove_file($volume_tmp);
+    $self->vm->remove_file($volume_tmp)
+        if $self->vm->file_exists($volume_tmp);
 
     my @cmd = ($QEMU_IMG
         ,'convert'
@@ -255,7 +251,7 @@ sub spinoff($self) {
 sub block_commit($self) {
     my @cmd = ($QEMU_IMG,'commit','-q','-d');
     my ($out, $err) = $self->vm->run_command(@cmd, $self->file);
-    warn $err   if $err;
+    die $err   if $err;
 }
 
 sub _qemu_info($self, $field=undef) {
@@ -317,6 +313,15 @@ sub compact($self, $keep_backup=1) {
     if !$keep_backup;
 
     return int(100*($du_backup-$du)/$du_backup)." % compacted. ";
+}
+
+sub delete($self) {
+    my $vol = $self->vm->search_volume($self->file);
+    if ($vol) {
+        $vol->delete();
+    } else {
+        $self->vm->remove_file($self->file);
+    }
 }
 
 1;
