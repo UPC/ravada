@@ -22,7 +22,7 @@ sub test_downgrade($field) {
     $sth->execute();
     my $req = Ravada::Request->refresh_vms(
         uid => user_admin->id
-        ,after_request => '[3,4]'
+        ,$field => '[3,4]'
     );
     eval {
         rvd_back->_sql_create_tables();
