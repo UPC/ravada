@@ -477,6 +477,10 @@ sub test_domain_requests($t, $base) {
     ok(@$list,"Expecting pending requests for owner");
     for my $request (@$list) {
         is_deeply([sort keys %$request],[qw(command date_req id id_domain status)]);
+        ok($request->{id} =~ /^\d+$/);
+        is($request->{id_domain},$clone->{id});
+        ok($request->{command});
+        isnt($request->{status},'done');
     }
 
     mojo_login($t, $other_user->name,"$$");
