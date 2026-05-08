@@ -2166,7 +2166,7 @@ sub _upgrade_table($self, $table, $field, $definition) {
         print "-" if $FIRST_TIME_RUN && $ENV{TERM};
 
         if ($table eq 'requests' && $field =~ /^after_request/
-            && $row->{TYPE_NAME} =~ /TEXT|CHAR/ && $new_type =~ /int|INTEGER/i) {
+            && $row->{TYPE_NAME} =~ /TEXT|CHAR/i && $new_type =~ /int|INTEGER/i) {
             my $sth_clean = $CONNECTOR->dbh->prepare(
                 "UPDATE requests set $field=NULL "
             );
