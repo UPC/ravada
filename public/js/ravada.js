@@ -523,18 +523,39 @@
               }
             };
 
+            var domainRequestsSocket = null;
+
             var subscribe_domain_requests=function(url, id) {
-                var ws = new WebSocket(url);
+                // Close any previous socket before opening a new one
+                if (domainRequestsSocket && domainRequestsSocket.readyState === WebSocket.OPEN) {
+                    try {
+                        domainRequestsSocket.close();
+                    } catch (e) {
+                        // ignore errors on close
+                    }
+                }
+
+                domainRequestsSocket = new WebSocket(url);
+                var ws = domainRequestsSocket;
                 ws.onopen = function(event) { ws.send('list_domain_requests/'+id) };
                 ws.onmessage = function(event) {
                     var data = JSON.parse(event.data);
                     $scope.$apply(function () {
                         $scope.domain_requests = data;
                     });
-                }
-
+                };
             };
 
+            $scope.$on('$destroy', function () {
+                if (domainRequestsSocket) {
+                    try {
+                        domainRequestsSocket.close();
+                    } catch (e) {
+                        // ignore errors on close
+                    }
+                    domainRequestsSocket = null;
+                }
+            });
             var subscribe_requests = function(url) {
                 var ws = new WebSocket(url);
                 ws.onopen = function(event) { ws.send('list_requests') };
