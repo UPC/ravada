@@ -62,3 +62,5 @@ jobs:
         run: prove -lr t/request/25_create_from_iso.t t/vm/d10_not_download.t
       - name: Test hardware
         run: prove -lr t/request/30_hardware.t
+      - name: Test downgrade
+        run: prove -lr t/downgrade_reqs.t
