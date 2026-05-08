@@ -3203,6 +3203,71 @@ get '/translations' => sub($c) {
     return $c->render(json => $lang_name);
 };
 
+get '/text/time_options' => sub($c) {
+
+    my $options = _text_options($c);
+
+    my $i18n = $c->stash->{i18n};
+    for my $entry ( keys %$options ) {
+        my @current;
+        for my $item (@{$options->{$entry}}) {
+            $item->[1]= $i18n->localize($item->[1]);
+            push @current, {
+                id => $item->[0]
+                ,title => $item->[1]
+            };
+        }
+        $options->{$entry} = \@current;
+    }
+
+    return $c->render(json => $options);
+};
+
+sub _text_options($c) {
+    return {
+        hours => [
+            [0, 'hours']
+            ,[1, '1 hour']
+            ,[2, '2 hours']
+            ,[3, '3 hours']
+            ,[6, '6 hours']
+            ,[8, '8 hours']
+        ]
+        ,days => [
+            [0, 'days']
+            ,[1, '1 day']
+            ,[2, '2 days']
+            ,[3, '3 days']
+            ,[6, '6 days']
+        ]
+        ,weeks => [
+            [0, 'weeks']
+            ,[1, '1 week']
+            ,[2, '2 weeks']
+            ,[3, '3 weeks']
+            ,[4, '4 weeks']
+        ]
+        ,months => [
+            [0, 'months']
+            ,[1, '1 month']
+            ,[2, '2 months']
+            ,[3, '3 months']
+            ,[4, '6 months']
+            ,[5, '9 months']
+        ]
+        ,years => [
+            [0, 'years']
+            ,[1, '1 year']
+            ,[2, '2 years']
+            ,[3, '3 years']
+            ,[4, '4 years']
+            ,[5, '5 years']
+        ]
+
+    };
+}
+
+
 sub _translations($c) {
     my $lang_name = _languages();
     $c->stash(lang_name => $lang_name);
