@@ -478,8 +478,10 @@ sub test_domain_requests($t, $base) {
     for my $request (@$list) {
         is_deeply([sort keys %$request],[qw(command date_req id id_domain status)]);
         ok($request->{id} =~ /^\d+$/);
+        ok($request->{id} > 0);
         is($request->{id_domain},$clone->{id});
         ok($request->{command});
+        like($request->{date_req}, qr/^\d{4}-\d{2}-\d{2}/);
         isnt($request->{status},'done');
     }
 
