@@ -446,6 +446,7 @@ sub test_node_info($vm_name) {
 
 sub test_domain_requests($t, $base) {
     my $user = create_user();
+    my $other_user = create_user();
     my $is_base = $base->is_base();
     if (!$is_base) {
         Ravada::Request->shutdown_domain(uid => user_admin->id
@@ -473,9 +474,16 @@ sub test_domain_requests($t, $base) {
     my $list0 = $t->message->[1];
     my $list= decode_json($list0);
     isa_ok($list,'ARRAY');
-    ok(exists $list->[0]->{id});
-    ok(exists $list->[0]->{command});
-    ok(exists $list->[0]->{id_domain});
+    ok(@$list,"Expecting pending requests for owner");
+    for my $request (@$list) {
+        is_deeply([sort keys %$request],[qw(command date_req id id_domain status)]);
+    }
+
+    mojo_login($t, $other_user->name,"$$");
+    $t->websocket_ok("/ws/subscribe")->send_ok("list_domain_requests/".$clone->{id})->message_ok->finish_ok;
+    is($t->message->[1],'[]');
+
+    mojo_login($t, $user->name,"$$");
 
     my $message = $t->websocket_ok("/ws/subscribe")->send_ok("list_domain_requests/".$clone->{id})
         ->message_ok;
