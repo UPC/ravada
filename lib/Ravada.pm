@@ -2164,6 +2164,14 @@ sub _upgrade_table($self, $table, $field, $definition) {
             ." $row->{TYPE_NAME} -> $new_type \n"
             ." in $table\n$definition\n"  if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
         print "-" if $FIRST_TIME_RUN && $ENV{TERM};
+
+        if ($table eq 'requests' && $field =~ /^after_request/
+            && $row->{TYPE_NAME} =~ /TEXT|CHAR/ && $new_type =~ /int|INTEGER/i) {
+            my $sth_clean = $CONNECTOR->dbh->prepare(
+                "UPDATE requests set $field=NULL "
+            );
+            $sth_clean->execute;
+        }
         $dbh->do("alter table $table change $field $field $definition");
 
         $self->_create_constraints($table, [$field, $constraint]) if $constraint;
