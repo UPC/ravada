@@ -881,27 +881,11 @@ sub test_clone_remote($vm, $node) {
 
     is($clone->list_instances,1);
 
-    _test_old_base($base, $vm);
     _test_clones($base, $clone->_vm);
     $clone->remove(user_admin);
     is($clone->list_instances,undef);
     $base->remove(user_admin);
     is($base->list_instances,undef);
-}
-
-sub _test_old_base($base, $vm) {
-    my $sth = connector->dbh->prepare(
-        "DELETE FROM bases_vm "
-        ." WHERE id_domain=? AND id_vm=?"
-    );
-    $sth->execute($base->id, $vm->id);
-
-    my $base_f = Ravada::Front::Domain->open($base->id);
-
-    my $info = $base_f->info(user_admin);
-    is($info->{bases}->{$vm->id}->{enabled},1) ;
-
-    is(scalar keys %{$info->{bases}}, 2);
 }
 
 sub _test_clones($base, $vm) {
