@@ -2372,7 +2372,7 @@ msgid "Only previously authorized users can log in."
 msgstr "Only previously authorized users can log in."
 
 msgid "You can grant access to users from the users administration form:"
-msgstr "You can grant access to users from the users administration form:"+
+msgstr "You can grant access to users from the users administration form:"
 
 msgid "upload"
 msgstr "upload"
