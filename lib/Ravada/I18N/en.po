@@ -2317,8 +2317,8 @@ msgstr "create"
 msgid "Groups are required to set up bookings. No groups found."
 msgstr "Groups are required to set up bookings. No groups found."
 
-msgid "Groups are required to set up bookings. Some groups where found but no members belong to them."
-msgstr "Groups are required to set up bookings. Some groups where found but no members belong to them."
+msgid "Groups are required to set up bookings. Some groups were found but no members belong to them."
+msgstr "Groups are required to set up bookings. Some groups were found but no members belong to them."
 
 msgid "Add new entries here."
 msgstr "Add new entries here."
