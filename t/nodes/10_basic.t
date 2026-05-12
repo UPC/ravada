@@ -2249,6 +2249,9 @@ sub test_spinoff_remote($vm, $node) {
 }
 
 sub test_base_only_in_node_add_hw($vm, $node) {
+    my $iso = $node->_search_iso( search_id_iso('Alpine%64') );
+    my $device_cdrom = $node->search_volume_path_re(qr($iso->{file_re}));
+    $node->remove_file($device_cdrom);
 
     my $base = _req_create($node);
     Ravada::Request->add_hardware(

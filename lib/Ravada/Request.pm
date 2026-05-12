@@ -315,6 +315,7 @@ our %CMD_VALIDATE = (
     ,remove_base_vm=> \&_validate_remove_base_vm
     ,open_exposed_ports => \&_validate_open_exposed_ports
     ,close_exposed_ports => \&_validate_close_exposed_ports
+    ,download => \&_validate_download
 );
 
 sub _init_connector {
@@ -1132,10 +1133,14 @@ sub _check_downloading($self) {
     my $req_download = $self->_search_request('download', id_iso => $id_iso2);
 
     if ($has_cd && !$req_download) {
+        my @args_vm;
+        push @args_vm,( vm => $self->defined_arg('vm') )        if $self->defined_arg('vm');
+        push @args_vm,( id_vm => $self->defined_arg('id_vm') )  if $self->defined_arg('id_vm');
+
         $req_download = Ravada::Request->download(
             id_iso => $id_iso2
             ,uid => Ravada::Utils::user_daemon->id
-            ,vm => $self->defined_arg('vm')
+            ,@args_vm
         );
     }
     if (! $req_download) {
@@ -1280,6 +1285,12 @@ sub _validate_close_exposed_ports($self) {
     $domain_f->_data('ports_exposed' => 0);
 }
 
+sub _validate_download($self) {
+    if (!$self->defined_arg('id_vm') && !$self->defined_arg('vm')) {
+        $self->error("Error: provide either id_vm or vm");
+        $self->status('done');
+    }
+}
 
 sub _last_insert_id {
     _init_connector();

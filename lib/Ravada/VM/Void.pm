@@ -216,15 +216,8 @@ sub _add_cdrom($self, $domain, %args) {
         $sth->execute($id_iso);
         my $row = $sth->fetchrow_hashref();
         return if !$row->{has_cd};
-        $iso_file = $row->{device};
-        if (!$iso_file) {
-            $iso_file = $row->{name};
-            $iso_file =~ s/\s/_/g;
-            $iso_file=$self->dir_img."/".lc($iso_file).".iso";
-            if (! -e $iso_file ) {
-                $self->write_file($iso_file,Dump({iso => "ISO mock $row->{name}"}));
-            }
-        }
+        $iso_file = $self->search_volume_path_re(qr($row->{file_re}));
+        confess "$row->{file_re} not found in ".$self->name if !$iso_file;
     }
     $iso_file = '' if $iso_file eq '<NONE>';
     $domain->add_volume(
