@@ -2045,10 +2045,11 @@ msgstr ""
 msgid "Choose the virtualization type of the Virtual Machine."
 msgstr "Elige el tipo de virtualización para este tipo de máquinas virtuales."
 
-msgid "This server has reservations for today. Machines from users out of the booking list will be shutdown."
-msgstr ""
-"Este servidor tiene reservas hoy. Las máquinas de usuarios sin reserva serán "
-"apagadas."
+msgid "This server has reservations for today."
+msgstr "Este servidor tiene reservas hoy."
+
+msgid "Machines from users out of the booking list will be shutdown."
+msgstr "Las máquinas de usuarios fuera de la lista de reservas se apagarán."
 
 msgid "Data"
 msgstr "Data"
@@ -2205,13 +2206,6 @@ msgstr ""
 "puede cambiar los parámetros de cualquier máquina virtual clonada de una "
 "base en posesión."
 
-msgid ""
-"This server has reservations for today. Machines from users out of\n"
-"    the booking list will be shutdown."
-msgstr ""
-"Este servidor tiene reservas para hoy. Las máquinas de usuarios fuera de\n"
-"         la lista de reservas se apagarán."
-
 msgid "options"
 msgstr "opciones"
 
@@ -2321,7 +2315,7 @@ msgid "Show Clones"
 msgstr "Mostrar clones"
 
 msgid "This base is available for all users"
-msgstr "Esta base está disponible para todos los ususarios"
+msgstr "Esta base está disponible para todos los usuarios"
 
 msgid "A new clone of this base will be created."
 msgstr "Un nuevo clon de esta base será creado."
@@ -2432,7 +2426,7 @@ msgid "Only previously authorized users can log in."
 msgstr "Solo usuarios previamente autorizados pueden iniciar sesión."
 
 msgid "You can grant access to users from the users administration form:"
-msgstr "Puedes conceder acceso a ususarios desde el formulario de administración de ususarios:"
+msgstr "Puedes conceder acceso a usuarios desde el formulario de administración de usuarios:"
 
 msgid "upload"
 msgstr "subir"
@@ -2470,8 +2464,8 @@ msgstr "Los grupos son necesarios para configurar reservas. No se han encontrado
 msgid "Groups are required to set up bookings. Some groups where found but no members belong to them."
 msgstr "Los grupos son necesarios para configurar reservas. Se encontraron algunos grupos pero no tienen miembros."
 
-msgid " Add new entries here."
-msgstr " Añade aquí nuevas entradas."
+msgid "Add new entries here."
+msgstr "Añade aquí nuevas entradas."
 
 msgid "Upload Users"
 msgstr "Sube Usuarios"
@@ -2597,3 +2591,6 @@ msgstr "4 años"
 
 msgid "5 years"
 msgstr "5 años"
+
+msgid "Used %"
+msgstr "Usado %"

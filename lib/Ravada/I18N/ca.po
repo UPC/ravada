@@ -1962,8 +1962,11 @@ msgstr "La nova contrasenya només pot contenir paraules i nombres"
 msgid "Password and their confirmation do not match!"
 msgstr "La confirmació de la contrasenya no coincideix!"
 
-msgid "This server has reservations for today. Machines from users out of the booking list will be shutdown."
-msgstr "Aquest servidor té reserves per avui. Les màquines d'usuaris fora de la reserva seran aturades."
+msgid "This server has reservations for today."
+msgstr "Aquest servidor té reserves per avui."
+
+msgid "Machines from users out of the booking list will be shutdown."
+msgstr "Les màquines d'usuaris fora de la reserva seràn aturades."
 
 msgid "disabled"
 msgstr "desactivat"
@@ -2247,14 +2250,6 @@ msgstr "Guardar canvis"
 msgid "This booking overlaps already scheduled reservations"
 msgstr "Aquesta reserva es superposa a les reserves ja programades"
 
-#, fuzzy
-msgid ""
-"This server has reservations for today. Machines from users out of\n"
-"    the booking list will be shutdown."
-msgstr ""
-"Aquest servidor té reserves per avui. Màquines d'usuaris fora de\n"
-"    la llista de reserves es tancarà."
-
 msgid "This field is required"
 msgstr "Aquest camp és obligatori"
 
@@ -2488,8 +2483,8 @@ msgstr "Els grups son necessaris per configurar reserves. No s'han trobat grups.
 msgid "Groups are required to set up bookings. Some groups where found but no members belong to them."
 msgstr "Els grups son necessaris per configurar reserves. S'han trobat grups però no tenen membres."
 
-msgid " Add new entries here."
-msgstr " Afegeix aquí noves entrades."
+msgid "Add new entries here."
+msgstr "Afegeix aquí noves entrades."
 
 msgid "Clones will inherit this value unless defined in their options."
 msgstr "Els clons heretaran aquest valor tret que estigui definit a les seves opcions."
@@ -2549,7 +2544,7 @@ msgid "Only previously authorized users can log in."
 msgstr "Només usuaris prèviament autoritzats poden iniciar sessió."
 
 msgid "You can grant access to users from the users administration form:"
-msgstr "Podeu concedir accés a ususaris des del formolari d'administració d'usuaris:"
+msgstr "Podeu concedir accés a usuaris des del formulari d'administració d'usuaris:"
 
 msgid "upload"
 msgstr "pujar"
@@ -2567,7 +2562,7 @@ msgid "Upload Users"
 msgstr "Puja Usuaris"
 
 msgid "Upload a text file with the user names and passwords separated by a colon :"
-msgstr "Puja un fitxer de text amb els noms i les contrasenyes dels ususaris separats per dos punts :"
+msgstr "Puja un fitxer de text amb els noms i les contrasenyes dels usuaris separats per dos punts :"
 
 msgid "Upload"
 msgstr "Pujar"
@@ -2604,3 +2599,6 @@ msgstr "Aquesta màquina està en marxa i no pot ser modificada"
 
 msgid "Current CPUs"
 msgstr "CPUs actuals"
+
+msgid "Used %"
+msgstr "Utilitzat %"

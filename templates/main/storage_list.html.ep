@@ -13,7 +13,7 @@
             <th class="list"><%=l 'Size' %></th>
             <th class="list"><%=l 'Used' %></th>
             <th class="list"><%=l 'Available' %></th>
-            <th class="list"><%=l 'Used' %> %</th>
+            <th class="list"><%=l 'Used %' %></th>
             <th class="list"><%=l 'Path' %></th>
         </tr>
     </thead>

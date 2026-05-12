@@ -1825,8 +1825,11 @@ msgstr "Password and their confirmation do not match!"
 msgid "Today Schedule"
 msgstr "Today Schedule"
 
-msgid "This server has reservations for today. Machines from users out of the booking list will be shutdown."
-msgstr "This server has reservations for today. Machines from users out of the booking list will be shutdown."
+msgid "This server has reservations for today."
+msgstr "This server has reservations for today."
+
+msgid "Machines from users out of the booking list will be shutdown."
+msgstr "Machines from users out of the booking list will be shutdown."
 
 msgid "allowed"
 msgstr "allowed"
@@ -2317,8 +2320,8 @@ msgstr "Groups are required to set up bookings. No groups found."
 msgid "Groups are required to set up bookings. Some groups where found but no members belong to them."
 msgstr "Groups are required to set up bookings. Some groups where found but no members belong to them."
 
-msgid " Add new entries here."
-msgstr " Add new entries here."
+msgid "Add new entries here."
+msgstr "Add new entries here."
 
 msgid "Batch upload"
 msgstr "Batch upload"
@@ -2510,3 +2513,6 @@ msgstr "4 years"
 
 msgid "5 years"
 msgstr "5 years"
+
+msgid "Used %"
+msgstr "Used %"
