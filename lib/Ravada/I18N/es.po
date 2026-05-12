@@ -2461,7 +2461,7 @@ msgstr "Solo Dispositivos Anfitriones"
 msgid "Groups are required to set up bookings. No groups found."
 msgstr "Los grupos son necesarios para configurar reservas. No se han encontrado grupos."
 
-msgid "Groups are required to set up bookings. Some groups where found but no members belong to them."
+msgid "Groups are required to set up bookings. Some groups were found but no members belong to them."
 msgstr "Los grupos son necesarios para configurar reservas. Se encontraron algunos grupos pero no tienen miembros."
 
 msgid "Add new entries here."

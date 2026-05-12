@@ -1966,7 +1966,7 @@ msgid "This server has reservations for today."
 msgstr "Aquest servidor té reserves per avui."
 
 msgid "Machines from users out of the booking list will be shutdown."
-msgstr "Les màquines d'usuaris fora de la reserva seràn aturades."
+msgstr "Les màquines d'usuaris fora de la reserva seran aturades."
 
 msgid "disabled"
 msgstr "desactivat"
@@ -2480,7 +2480,7 @@ msgstr "crear"
 msgid "Groups are required to set up bookings. No groups found."
 msgstr "Els grups son necessaris per configurar reserves. No s'han trobat grups."
 
-msgid "Groups are required to set up bookings. Some groups where found but no members belong to them."
+msgid "Groups are required to set up bookings. Some groups were found but no members belong to them."
 msgstr "Els grups son necessaris per configurar reserves. S'han trobat grups però no tenen membres."
 
 msgid "Add new entries here."
