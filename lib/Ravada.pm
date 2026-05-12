@@ -517,6 +517,21 @@ sub _update_isos {
                    ,arch => 'x86_64'
 
         }
+        ,ubuntu_resolute => {
+                    name => 'Ubuntu 26.04 Resolute Raccoon'
+            ,description => 'Ubuntu 26.04 Resolute Raccoon 64 bits'
+                    ,xml => 'noble-amd64.xml'
+             ,xml_volume => 'focal_fossa64-volume.xml'
+                    ,url => 'http://releases.ubuntu.com/26.04/'
+                ,file_re => '^ubuntu-26.04.*-desktop-amd64.iso'
+                ,sha256_url => '$url/SHA256SUMS'
+          ,min_disk_size => '25'
+          ,min_ram => 6
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+                   ,arch => 'x86_64'
+
+        }
+
 
 
         
@@ -587,13 +602,28 @@ sub _update_isos {
             ,description => 'Alpine Linux 3.23 32 bits ( Minimal Linux Distribution )'
             ,arch => 'i686'
             ,xml => 'alpine-i386.xml'
-            ,xml_volume => 'alpine316_32-volume.xml'
+            ,xml_volume => 'alpine381_32-volume.xml'
             ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.23/releases/x86/'
             ,options => { machine => 'pc-i440fx' }
             ,file_re => 'alpine-standard-3.23.*-x86.iso'
             ,sha256_url => '$url/alpine-standard-3.23.*.iso.sha256'
             ,min_disk_size => '1'
         }
+          ,kubuntu_64_resolute => {
+            name => 'Kubuntu 26.04 Resolute Raccoon'
+            ,description => 'Kubuntu 26.04 Resolute Raccoon 64 bits'
+            ,arch => 'x86_64'
+            ,xml => 'noble-amd64.xml'
+            ,xml_volume => 'focal_fossa64-volume.xml'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/26.04.*/release/'
+            ,file_re => 'kubuntu-26.04.*-desktop-amd64.iso'
+            ,rename_file => 'kubuntu_resolute.iso'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+            ,min_ram => 6
+            ,min_disk_size => '25'
+        }
+
 	      ,kubuntu_64_noble => {
             name => 'Kubuntu 24.04 Noble Nombat'
             ,description => 'Kubuntu 24.04 Noble Nombat 64 bits'
@@ -657,6 +687,18 @@ sub _update_isos {
             ,file_re => 'agama-installer\.x86_64-.*-Leap_16\.0-Build.*\.iso'
 
         }
+        ,xubuntu_resolute => {
+            name => 'Xubuntu 26.04 Resolute Raccoon 64 bits'
+            ,description => 'Xubuntu 26.04 Resolute Raccoon 64 bits'
+            ,arch => 'x86_64'
+            ,xml => 'bionic-amd64.xml'
+            ,xml_volume => 'bionic64-volume.xml'
+            ,url => 'https://ftp.lysator.liu.se/ubuntu-dvd/xubuntu/releases/26.04.*/release/'
+            ,file_re => 'xubuntu.26.04.*desktop.*.iso'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+	    ,min_ram => 2
+	    ,min_disk_size => '20'
+        }
         ,xubuntu_noble => {
             name => 'Xubuntu 24.04 Noble Nombat 64 bits'
             ,description => 'Xubuntu 24.04 Noble Nombat 64 bits'
@@ -664,7 +706,7 @@ sub _update_isos {
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
             ,url => 'https://ftp.lysator.liu.se/ubuntu-dvd/xubuntu/releases/24.04.*/release/'
-            ,file_re => 'xubuntu.*desktop.*.iso'
+            ,file_re => 'xubuntu.24.04.*desktop.*.iso'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
 	    ,min_ram => 2
 	    ,min_disk_size => '20'
@@ -682,9 +724,22 @@ sub _update_isos {
 	     ,min_ram => 2
 	    ,min_disk_size => '20'
         }
+        ,lubuntu_resolute => {
+            name => 'Lubuntu 26.04 Resolute Raccoon'
+            ,description => 'Lubuntu 26.04 Resolute Raccoon 64 bits (LTS)'
+            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/26.04.*/release/'
+            ,file_re => 'lubuntu-26.04.*-desktop-amd64.iso'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,xml => 'yakkety64-amd64.xml'
+            ,xml_volume => 'yakkety64-volume.xml'
+            ,min_disk_size => '10'
+	    ,min_ram => 2
+            ,arch => 'x86_64'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+        }
         ,lubuntu_noble => {
             name => 'Lubuntu 24.04 Noble Nombat'
-            ,description => 'Xubuntu 24.04 Noble Nombat 64 bits (LTS)'
+            ,description => 'Lubuntu 24.04 Noble Nombat 64 bits (LTS)'
             ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/24.04.*/release/'
             ,file_re => 'lubuntu-24.04.*-desktop-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
@@ -2109,6 +2164,14 @@ sub _upgrade_table($self, $table, $field, $definition) {
             ." $row->{TYPE_NAME} -> $new_type \n"
             ." in $table\n$definition\n"  if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
         print "-" if $FIRST_TIME_RUN && $ENV{TERM};
+
+        if ($table eq 'requests' && $field =~ /^after_request/
+            && $row->{TYPE_NAME} =~ /TEXT|CHAR/i && $new_type =~ /int|INTEGER/i) {
+            my $sth_clean = $CONNECTOR->dbh->prepare(
+                "UPDATE requests set $field=NULL "
+            );
+            $sth_clean->execute;
+        }
         $dbh->do("alter table $table change $field $field $definition");
 
         $self->_create_constraints($table, [$field, $constraint]) if $constraint;
@@ -4330,6 +4393,8 @@ sub _domain_working {
     my ($id_domain, $req) = @_;
 
     confess "Missing request" if !defined $req;
+
+    return if $req->command =~ /list_cpu_models/;
 
     if (!$id_domain) {
         $id_domain = $req->defined_arg('id_base');
