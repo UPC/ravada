@@ -165,6 +165,7 @@ sub test_unique_entries() {
 test_unique_entries();
 test_insert_locale();
 test_insert_request();
+test_unique_entries();
 
 SKIP: {
     skip("SKIPPED: Test must run as root",8) if $<;
