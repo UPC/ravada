@@ -154,6 +154,7 @@ sub test_unique_entries() {
         for my $field ( qw(name description url_file_re file_re)) {
             my $value = $row->{$field};
             next if !defined $value;
+            $uniq{$field}->{$value} //= 0;
             ok(!$uniq{$field}->{$value}++,"Expecting unique $field '$value'");
         }
     }
