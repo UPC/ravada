@@ -28,7 +28,7 @@
                         novalidate
                     >
                         <div class="form-group">
-                            <label for="type" required>Type</label>
+                            <label for="type" required><%=l 'Type' %></label>
                             <select name="type" ng-model="type" required>
                                 <option value="sql" selected>plain</option>
                                 <option value="ldap">LDAP</option>
@@ -56,7 +56,7 @@
                                 ng-disabled="!type || !form_upload.users.$touched"
                             >
                             <a type="button" class="btn btn-outline-secondary"
-                                href="/users/register">Cancel</a>
+                                href="/users/register"><%=l 'Cancel' %></a>
                         </div>
                     </form>
 %                   } else {

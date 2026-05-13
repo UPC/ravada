@@ -1962,10 +1962,11 @@ msgstr "La nova contrasenya només pot contenir paraules i nombres"
 msgid "Password and their confirmation do not match!"
 msgstr "La confirmació de la contrasenya no coincideix!"
 
-msgid "This server has reservations for today. Machines from users out of the booking list will be shutdown."
-msgstr ""
-"Aquest servidor té reserves per avui. Les màquines d'usuaris fora de la "
-"reserva seran aturades."
+msgid "This server has reservations for today."
+msgstr "Aquest servidor té reserves per avui."
+
+msgid "Machines from users out of the booking list will be shutdown."
+msgstr "Les màquines d'usuaris fora de la reserva seran aturades."
 
 msgid "disabled"
 msgstr "desactivat"
@@ -2249,14 +2250,6 @@ msgstr "Guardar canvis"
 msgid "This booking overlaps already scheduled reservations"
 msgstr "Aquesta reserva es superposa a les reserves ja programades"
 
-#, fuzzy
-msgid ""
-"This server has reservations for today. Machines from users out of\n"
-"    the booking list will be shutdown."
-msgstr ""
-"Aquest servidor té reserves per avui. Màquines d'usuaris fora de\n"
-"    la llista de reserves es tancarà."
-
 msgid "This field is required"
 msgstr "Aquest camp és obligatori"
 
@@ -2352,7 +2345,7 @@ msgstr "Seguiu aquests passos per a la configuració del client Spice"
 msgid "Share"
 msgstr "Comparteix"
 
-msgid "Mange Host Devices"
+msgid "Manage Host Devices"
 msgstr "Gestionar dispositius amfitrions"
 
 msgid "Compact data volumes daily."
@@ -2362,7 +2355,334 @@ msgid "Auto Compact"
 msgstr "Auto compressió"
 
 msgid "Host Devices"
-msgstr "Dispositiu amfitrió"
+msgstr "Dispositius amfitrions"
 
 msgid "Access denied: user not found or insufficient permissions."
 msgstr "Accés denegat: usuari no trobat o permissos insuficients."
+
+msgid "Add host device"
+msgstr "Afegir dispositiu amfitrió"
+
+msgid "LDAP groups"
+msgstr "Grups LDAP"
+
+msgid "Local groups"
+msgstr "Grups locals"
+
+msgid "Create a group."
+msgstr "Crea un grup."
+
+msgid "This virtual machine has no local group restrictions."
+msgstr "Aquesta màquina virtual no té restriccions locals"
+
+msgid "Routes"
+msgstr "Rutes"
+
+msgid "Storage"
+msgstr "Emmagatzematge"
+
+msgid "list"
+msgstr "llista"
+
+msgid "purge"
+msgstr "purgar"
+
+msgid "default"
+msgstr "per defecte"
+
+msgid "Enabled"
+msgstr "Habilitat"
+
+msgid "Size"
+msgstr "Espai"
+
+msgid "Used"
+msgstr "Utilitzat"
+
+msgid "Available"
+msgstr "Disponible"
+
+msgid "Path"
+msgstr "Ruta"
+
+msgid "New Storage"
+msgstr "Nou emmagatzematge"
+
+msgid "Unused volumes"
+msgstr "Volums no utilitzats"
+
+msgid "Remove Selected"
+msgstr "Esborrar seleccionat"
+
+msgid "back"
+msgstr "enrere"
+
+msgid "IP address"
+msgstr "Adreça IP"
+
+msgid "Netmask"
+msgstr "Màscara de red"
+
+msgid "DHCP start"
+msgstr "Inici DHCP"
+
+msgid "DHCP end"
+msgstr "Final DHCP"
+
+msgid "Auto Start"
+msgstr "Inici automàtic"
+
+msgid "Auto create users"
+msgstr "Crear usuaris automàticament"
+
+msgid "Authenticated users are allowed to log in"
+msgstr "Usuaris autenticats poden inciar sessió"
+
+msgid "Auth OpenID"
+msgstr "Autenticació OpenID"
+
+msgid "Logout URL"
+msgstr "URL de tancament de sessió"
+
+msgid "Charts"
+msgstr "Gràfics"
+
+msgid "share"
+msgstr "comparteix"
+
+msgid "Allow users to clone this base"
+msgstr "Permet als usuaris clonar aquesta base"
+
+msgid "Show the base when the user already created a clone"
+msgstr "Mostra la base quan l'usuari ja ha creat un clon"
+
+msgid "There are no groups defined."
+msgstr "No hi han grups definits."
+
+msgid "This must be enabled in global settings too."
+msgstr "També s'ha d'activar en la configuració global."
+
+msgid "This base is available for all users"
+msgstr "Aquesta base està disponible per tots els usuaris"
+
+msgid "A new clone of this base will be created."
+msgstr "Un nou clon d'aquesta base serà creat."
+
+msgid "new bundle"
+msgstr "nou ramat"
+
+msgid "All the virtual machines in the bundle will share the same private virtual network"
+msgstr "Totes les màquines virtuals en el ramat compartiran la mateixa xarxa privada"
+
+msgid "create"
+msgstr "crear"
+
+msgid "Groups are required to set up bookings. No groups found."
+msgstr "Els grups son necessaris per configurar reserves. No s'han trobat grups."
+
+msgid "Groups are required to set up bookings. Some groups were found but no members belong to them."
+msgstr "Els grups son necessaris per configurar reserves. S'han trobat grups però no tenen membres."
+
+msgid "Add new entries here."
+msgstr "Afegeix aquí noves entrades."
+
+msgid "Clones will inherit this value unless defined in their options."
+msgstr "Els clons heretaran aquest valor tret que estigui definit a les seves opcions."
+
+msgid "Batch upload"
+msgstr "Pujada per lots"
+
+msgid "upload members"
+msgstr "pujar membres"
+
+msgid "New Route"
+msgstr "Nova Ruta"
+
+msgid "storage"
+msgstr "emmagatzematge"
+
+msgid "filter"
+msgstr "filtre"
+
+msgid "apply"
+msgstr "aplicar"
+
+msgid "You must restart already connected virtual machines to apply network changes."
+msgstr "Cal reiniciar les màquines virtuals ja connectades per aplicar els canvis de xarxa."
+
+msgid "available"
+msgstr "disponible"
+
+msgid "Install remmina with RDP plugin to view Windows and Linux virtual machines with RDP."
+msgstr "Instal·lar remmina amb el plugin RDP per veure les màquines virtuals de Windows i Linux amb RDP."
+
+msgid "Another tool that works well with SPICE is remmina."
+msgstr "Una altre eina que funciona bé amb SPICE és remmina."
+
+msgid "If you installed it for RDP support it will work for SPICE too."
+msgstr "Si l'has instal·lat per suport RPD funcionarà també per SPICE."
+
+msgid "RDP works out of the box because the client is installed by default."
+msgstr "RDP funciona des del primer moment perquè el client està instal·lat per defecte."
+
+msgid "Install Microsoft Remote Desktop from the Mac App Store."
+msgstr "Instal·lar Microsoft Remote Desktop des de la Mac App Store."
+
+msgid "list command"
+msgstr "comanda per llistar"
+
+msgid "Auto compact virtual machines."
+msgstr "Auto comprimir màquines virtuals."
+
+msgid "Time when compact will be scheduled."
+msgstr "Hora en la que es programarà la compressió."
+
+msgid "Directory"
+msgstr "Directori"
+
+msgid "Only previously authorized users can log in."
+msgstr "Només usuaris prèviament autoritzats poden iniciar sessió."
+
+msgid "You can grant access to users from the users administration form:"
+msgstr "Podeu concedir accés a usuaris des del formulari d'administració d'usuaris:"
+
+msgid "upload"
+msgstr "pujar"
+
+msgid "Time period"
+msgstr "Període de temps"
+
+msgid "Groups allowed"
+msgstr "Grups permesos"
+
+msgid "Only Host Devices"
+msgstr "Només Dispositius Amfitrions"
+
+msgid "Upload Users"
+msgstr "Puja Usuaris"
+
+msgid "Upload a text file with the user names and passwords separated by a colon :"
+msgstr "Puja un fitxer de text amb els noms i les contrasenyes dels usuaris separats per dos punts :"
+
+msgid "Upload"
+msgstr "Pujar"
+
+msgid "This virtual machine will be prepared as a  base, then cloned."
+msgstr "Aquesta màquina virtual es prepararà com a base i després es clonarà."
+
+msgid "Enables schedule server bookings for exclusive use"
+msgstr "Habilita programar reserves de servidor per ús exclusiu"
+
+msgid "connected"
+msgstr "conectat"
+
+msgid "Session disconnected"
+msgstr "Sessió desconectada"
+
+msgid "connect again"
+msgstr "torna a conectar"
+
+msgid "disconnected"
+msgstr "desconnectat"
+
+msgid "This machine is base and all changes will be applied to its clones."
+msgstr "Aquesta màquina és base i tots els canvis s'aplicaràn als seus clons."
+
+msgid "Private"
+msgstr "Privat"
+
+msgid "Show all"
+msgstr "Mostra tot"
+
+msgid "This machine is running and can't be changed"
+msgstr "Aquesta màquina està en marxa i no pot ser modificada"
+
+msgid "Current CPUs"
+msgstr "CPUs actuals"
+
+msgid "Used %"
+msgstr "Utilitzat %"
+
+msgid "hours"
+msgstr "hores"
+
+msgid "1 hour"
+msgstr "1 hora"
+
+msgid "2 hours"
+msgstr "2 hores"
+
+msgid "3 hours"
+msgstr "3 hores"
+
+msgid "6 hours"
+msgstr "6 hores"
+
+msgid "8 hours"
+msgstr "8 hores"
+
+msgid "days"
+msgstr "dies"
+
+msgid "1 day"
+msgstr "1 dia"
+
+msgid "2 days"
+msgstr "2 dies"
+
+msgid "3 days"
+msgstr "3 dies"
+
+msgid "6 days"
+msgstr "6 dies"
+
+msgid "weeks"
+msgstr "setmanes"
+
+msgid "1 week"
+msgstr "1 setmana"
+
+msgid "2 weeks"
+msgstr "2 setmanes"
+
+msgid "3 weeks"
+msgstr "3 setmanes"
+
+msgid "4 weeks"
+msgstr "4 setmanes"
+
+msgid "months"
+msgstr "mesos"
+
+msgid "1 month"
+msgstr "1 mes"
+
+msgid "2 months"
+msgstr "2 mesos"
+
+msgid "3 months"
+msgstr "3 mesos"
+
+msgid "6 months"
+msgstr "6 mesos"
+
+msgid "9 months"
+msgstr "9 mesos"
+
+msgid "years"
+msgstr "anys"
+
+msgid "1 year"
+msgstr "1 any"
+
+msgid "2 years"
+msgstr "2 anys"
+
+msgid "3 years"
+msgstr "3 anys"
+
+msgid "4 years"
+msgstr "4 anys"
+
+msgid "5 years"
+msgstr "5 anys"

@@ -2045,10 +2045,11 @@ msgstr ""
 msgid "Choose the virtualization type of the Virtual Machine."
 msgstr "Elige el tipo de virtualización para este tipo de máquinas virtuales."
 
-msgid "This server has reservations for today. Machines from users out of the booking list will be shutdown."
-msgstr ""
-"Este servidor tiene reservas hoy. Las máquinas de usuarios sin reserva serán "
-"apagadas."
+msgid "This server has reservations for today."
+msgstr "Este servidor tiene reservas hoy."
+
+msgid "Machines from users out of the booking list will be shutdown."
+msgstr "Las máquinas de usuarios fuera de la lista de reservas se apagarán."
 
 msgid "Data"
 msgstr "Data"
@@ -2205,13 +2206,6 @@ msgstr ""
 "puede cambiar los parámetros de cualquier máquina virtual clonada de una "
 "base en posesión."
 
-msgid ""
-"This server has reservations for today. Machines from users out of\n"
-"    the booking list will be shutdown."
-msgstr ""
-"Este servidor tiene reservas para hoy. Las máquinas de usuarios fuera de\n"
-"         la lista de reservas se apagarán."
-
 msgid "options"
 msgstr "opciones"
 
@@ -2296,7 +2290,7 @@ msgstr "Compartir"
 msgid "Host Devices"
 msgstr "Dispositivos anfitriones"
 
-msgid "Mange Host Devices"
+msgid "Manage Host Devices"
 msgstr "Administrar anfitriones"
 
 msgid "Clones will inherit this value unless defined in their options."
@@ -2319,6 +2313,201 @@ msgstr "Compresión automática"
 
 msgid "Show Clones"
 msgstr "Mostrar clones"
+
+msgid "This base is available for all users"
+msgstr "Esta base está disponible para todos los usuarios"
+
+msgid "A new clone of this base will be created."
+msgstr "Un nuevo clon de esta base será creado."
+
+msgid "This virtual machine has no local group restrictions."
+msgstr "Esta máquina virtual no tiene restricciones locales."
+
+msgid "share"
+msgstr "compartir"
+
+msgid "new bundle"
+msgstr "nuevo racimo"
+
+msgid "All the virtual machines in the bundle will share the same private virtual network"
+msgstr "Todas las máquinas virtuales en el racimo compartirán la misma red virtual privada"
+
+msgid "create"
+msgstr "crear"
+
+msgid "Batch upload"
+msgstr "Subida por lotes"
+
+msgid "upload members"
+msgstr "subir miembros"
+
+msgid "Routes"
+msgstr "Rutas"
+
+msgid "New Route"
+msgstr "Nueva Ruta"
+
+msgid "Storage"
+msgstr "Almacenamiento"
+
+msgid "New Storage"
+msgstr "Nuevo Almacenamiento"
+
+msgid "Enabled"
+msgstr "Habilitado"
+
+msgid "Size"
+msgstr "Tamaño"
+
+msgid "Used"
+msgstr "Usado"
+
+msgid "Available"
+msgstr "Disponible"
+
+msgid "Path"
+msgstr "Ruta"
+
+msgid "Directory"
+msgstr "Directorio"
+
+msgid "back"
+msgstr "atrás"
+
+msgid "Remove Selected"
+msgstr "Eliminar selección"
+
+msgid "Add host device"
+msgstr "Añadir dispositivo anfitrión"
+
+msgid "list command"
+msgstr "comando para listar"
+
+msgid "apply"
+msgstr "aplicar"
+
+msgid "IP address"
+msgstr "Dirección IP"
+
+msgid "Netmask"
+msgstr "Máscara de red"
+
+msgid "DHCP start"
+msgstr "Inicio DHCP"
+
+msgid "DHCP end"
+msgstr "Fin DHCP"
+
+msgid "Auto Start"
+msgstr "Inicio automático"
+
+msgid "You must restart already connected virtual machines to apply network changes."
+msgstr "Debes reiniciar las máquinas virtuales que ya están conectadas para aplicar los cambios de red."
+
+msgid "Auto create users"
+msgstr "Crear usuarios automáticamente"
+
+msgid "Authenticated users are allowed to log in"
+msgstr "Usuarios autenticados pueden iniciar sesión"
+
+msgid "Auth OpenID"
+msgstr "Autenticación OpenID"
+
+msgid "Logout URL"
+msgstr "URL de cierre de sesión"
+
+msgid "Auto compact virtual machines."
+msgstr "Auto comprimir máquinas virtuales."
+
+msgid "Time when compact will be scheduled."
+msgstr "Hora en la que se progamará la compresión."
+
+msgid "Only previously authorized users can log in."
+msgstr "Solo usuarios previamente autorizados pueden iniciar sesión."
+
+msgid "You can grant access to users from the users administration form:"
+msgstr "Puedes conceder acceso a usuarios desde el formulario de administración de usuarios:"
+
+msgid "upload"
+msgstr "subir"
+
+msgid "Charts"
+msgstr "Gráficos"
+
+msgid "Time period"
+msgstr "Periodo de tiempo"
+
+msgid "Install remmina with RDP plugin to view Windows and Linux virtual machines with RDP."
+msgstr "Instalar remmina con el plugin RDP para visualizar las máquinas virtuales de Windows y Linux con RDP."
+
+msgid "Another tool that works well with SPICE is remmina."
+msgstr "Otra herramienta que funciona bien con SPICE es remmina."
+
+msgid "If you installed it for RDP support it will work for SPICE too."
+msgstr "Si lo instalaste para soporte RDP funcionará también para SPICE."
+
+msgid "RDP works out of the box because the client is installed by default."
+msgstr "RDP funciona desde el primer momento porque el cliente está instalado por defecto."
+
+msgid "Install Microsoft Remote Desktop from the Mac App Store."
+msgstr "Instala Microsoft Remote Desktop desde la Mac App Store."
+
+msgid "Groups allowed"
+msgstr "Grupos permitidos"
+
+msgid "Only Host Devices"
+msgstr "Solo Dispositivos Anfitriones"
+
+msgid "Groups are required to set up bookings. No groups found."
+msgstr "Los grupos son necesarios para configurar reservas. No se han encontrado grupos."
+
+msgid "Groups are required to set up bookings. Some groups were found but no members belong to them."
+msgstr "Los grupos son necesarios para configurar reservas. Se encontraron algunos grupos pero no tienen miembros."
+
+msgid "Add new entries here."
+msgstr "Añade aquí nuevas entradas."
+
+msgid "Upload Users"
+msgstr "Sube Usuarios"
+
+msgid "Upload a text file with the user names and passwords separated by a colon :"
+msgstr "Sube un fichero de texto con los nombres y las contraseñas de los usuarios separadas por dos puntos :"
+
+msgid "Upload"
+msgstr "Subir"
+
+msgid "This virtual machine will be prepared as a  base, then cloned."
+msgstr "Esta máquina virtual se preparará como base y después se clonará."
+
+msgid "Enables schedule server bookings for exclusive use"
+msgstr "Habilita programar reservas de servidor para uso exclusivo"
+
+msgid "connected"
+msgstr "conectado"
+
+msgid "Session disconnected"
+msgstr "Sesión desconectada"
+
+msgid "connect again"
+msgstr "vuelve a conectar"
+
+msgid "disconnected"
+msgstr "desconectado"
+
+msgid "This machine is base and all changes will be applied to its clones."
+msgstr "Esta máquina es base y todos los cambios se aplicarán a sus clones."
+
+msgid "Private"
+msgstr "Privado"
+
+msgid "Show all"
+msgstr "Mostrar todo"
+
+msgid "This machine is running and can't be changed"
+msgstr "Esta máquina está en marcha y no puede ser modificada"
+
+msgid "Current CPUs"
+msgstr "CPUs actuales"
 
 msgid "hours"
 msgstr "horas"
@@ -2403,3 +2592,9 @@ msgstr "4 años"
 
 msgid "5 years"
 msgstr "5 años"
+
+msgid "Used %"
+msgstr "Usado %"
+
+msgid "Unused volumes"
+msgstr "Volúmenes sin utilizar"

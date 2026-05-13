@@ -232,6 +232,7 @@ qw(
     prepare_base
     wait_job
     download
+    list_cpu_models
 );
 
 our $TIMEOUT_SHUTDOWN = 120;
@@ -282,7 +283,7 @@ our %COMMAND = (
         limit => 20
         ,priority => 1
         ,commands => ['clone','start','start_clones','shutdown_clones','create','open_iptables','list_network_interfaces','list_isos','ping_backend','refresh_machine'
-            ,'refresh_storage'
+            ,'list_cpu_models','refresh_storage'
         ]
     }
 
@@ -2461,6 +2462,9 @@ sub AUTOLOAD {
 
     confess "Can't locate object method $name via package $self"
         if !ref($self);
+
+    confess "ERROR: Unknown field $name "
+        if !exists $self->{$name} && !exists $FIELD{$name} && !exists $FIELD_RO{$name};
 
     my $value = shift;
     $name =~ tr/[a-z][A-Z]_/_/c;
