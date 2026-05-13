@@ -2427,6 +2427,7 @@ msgstr "This machine is running and can't be changed"
 
 msgid "Current CPUs"
 msgstr "Current CPUs"
+
 msgid "hours"
 msgstr "hours"
 

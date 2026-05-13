@@ -21,17 +21,17 @@
                             {{<%= $item %>._old_name}}
                         </span>
                     </div>
-                    <div class="col-2" align="right">
-                        <a type="button" class="btn btn-outline-secondary" align="right"
-                            href="/admin/<%= $item %>s"><%=l 'back' %></a>
-                    </div>
+                <div class="col-2" align="right" ng-hide="'<%= $item %>' == 'storage'">
+                    <a type="button" class="btn btn-outline-secondary" align="right"
+                        href="/admin/<%= $item %>s"><%=l 'back' %></a>
                 </div>
             </div>
-            <div class="card-body">
-				<div class="row">
-                    %= include "main/settings_generic_tabs"
-				</div>
-                <div class="alert alert-danger" ng-show="error">{{error}}</div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                %= include "main/settings_generic_tabs"
+            </div>
+            <div class="alert alert-danger" ng-show="error">{{error}}</div>
             </div>
         </div>
     </div>

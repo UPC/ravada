@@ -2508,6 +2508,7 @@ msgstr "Esta máquina está en marcha y no puede ser modificada"
 
 msgid "Current CPUs"
 msgstr "CPUs actuales"
+
 msgid "hours"
 msgstr "horas"
 

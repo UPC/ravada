@@ -2602,3 +2602,87 @@ msgstr "CPUs actuals"
 
 msgid "Used %"
 msgstr "Utilitzat %"
+
+msgid "hours"
+msgstr "hores"
+
+msgid "1 hour"
+msgstr "1 hora"
+
+msgid "2 hours"
+msgstr "2 hores"
+
+msgid "3 hours"
+msgstr "3 hores"
+
+msgid "6 hours"
+msgstr "6 hores"
+
+msgid "8 hours"
+msgstr "8 hores"
+
+msgid "days"
+msgstr "dies"
+
+msgid "1 day"
+msgstr "1 dia"
+
+msgid "2 days"
+msgstr "2 dies"
+
+msgid "3 days"
+msgstr "3 dies"
+
+msgid "6 days"
+msgstr "6 dies"
+
+msgid "weeks"
+msgstr "setmanes"
+
+msgid "1 week"
+msgstr "1 setmana"
+
+msgid "2 weeks"
+msgstr "2 setmanes"
+
+msgid "3 weeks"
+msgstr "3 setmanes"
+
+msgid "4 weeks"
+msgstr "4 setmanes"
+
+msgid "months"
+msgstr "mesos"
+
+msgid "1 month"
+msgstr "1 mes"
+
+msgid "2 months"
+msgstr "2 mesos"
+
+msgid "3 months"
+msgstr "3 mesos"
+
+msgid "6 months"
+msgstr "6 mesos"
+
+msgid "9 months"
+msgstr "9 mesos"
+
+msgid "years"
+msgstr "anys"
+
+msgid "1 year"
+msgstr "1 any"
+
+msgid "2 years"
+msgstr "2 anys"
+
+msgid "3 years"
+msgstr "3 anys"
+
+msgid "4 years"
+msgstr "4 anys"
+
+msgid "5 years"
+msgstr "5 anys"
