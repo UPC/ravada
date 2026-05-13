@@ -219,6 +219,7 @@ qw(
     rsync_back
     cleanup
     list_host_devices
+    list_machine_types
     list_storage_pools
     refresh_machine
     refresh_machine_ports
