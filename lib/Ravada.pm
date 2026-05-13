@@ -6322,7 +6322,7 @@ sub _cmd_list_isos($self, $request){
     @isos = sort { "\L$a" cmp "\L$b" } $vm->search_volume_path_re(qr(.*\.iso$))
     if $vm && $vm->vm;
 
-    $request->output(encode_json(\@isos));
+    $request->output(\@isos);
 }
 
 sub _cmd_list_machine_types($self, $request) {

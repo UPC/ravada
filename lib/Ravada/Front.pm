@@ -855,8 +855,7 @@ sub iso_file ($self, $id_vm, $uid) {
 
     my $isos = [];
     eval {
-        $isos = decode_json($req->output())
-        if $req->output && !ref($req->output())
+        $isos = $req->output() if $req->output;
     };
     warn $@." for request=".$req->id." ".Dumper($req->output) if $@;
 
