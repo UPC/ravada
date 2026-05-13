@@ -2594,3 +2594,6 @@ msgstr "5 años"
 
 msgid "Used %"
 msgstr "Usado %"
+
+msgid "Unused volumes"
+msgstr "Volúmenes sin utilizar"

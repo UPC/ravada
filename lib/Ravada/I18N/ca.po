@@ -2408,7 +2408,7 @@ msgstr "Ruta"
 msgid "New Storage"
 msgstr "Nou emmagatzematge"
 
-msgid "Unused Volumes"
+msgid "Unused volumes"
 msgstr "Volums no utilitzats"
 
 msgid "Remove Selected"
