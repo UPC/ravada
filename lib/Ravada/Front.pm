@@ -1787,7 +1787,7 @@ sub list_machine_types($self, $uid, $vm_type) {
     return {} if $req->status ne 'done';
 
     my $types = {};
-    $types = decode_json($req->output()) if $req->output;
+    $types = $req->output() if $req->output;
 
     $self->_cache_store($key,$types);
 
