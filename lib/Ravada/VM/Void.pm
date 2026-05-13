@@ -217,6 +217,13 @@ sub _add_cdrom($self, $domain, %args) {
         my $row = $sth->fetchrow_hashref();
         return if !$row->{has_cd};
         $iso_file = $self->search_volume_path_re(qr($row->{file_re}));
+        if (!$iso_file) {
+            $iso_file = $row->{file_re};
+            $iso_file =~ s/\*/_/g;
+            $iso_file = $self->dir_img()."/".$iso_file;
+            open my $out,">",$iso_file or die "$! $iso_file";
+            close $out;
+        }
         confess "$row->{file_re} not found in ".$self->name if !$iso_file;
     }
     $iso_file = '' if $iso_file eq '<NONE>';

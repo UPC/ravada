@@ -66,3 +66,5 @@ jobs:
         run: prove -lr t/20_volumes.t
       - name: Test downgrade
         run: prove -lr t/downgrade_reqs.t
+      - name: Test Front
+        run: prove -lr t/front/15_misc.t
