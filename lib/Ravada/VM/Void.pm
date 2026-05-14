@@ -1,6 +1,6 @@
 package Ravada::VM::Void;
 
-use Carp qw(carp croak);
+use Carp qw(carp croak cluck);
 use Data::Dumper;
 use Encode;
 use Encode::Locale;
@@ -222,6 +222,7 @@ sub _add_cdrom($self, $domain, %args) {
             $iso_file =~ s/\*/_/g;
             $iso_file = $self->dir_img()."/".$iso_file;
             open my $out,">",$iso_file or die "$! $iso_file";
+            print $out Dump({ iso => $iso_file });
             close $out;
         }
         confess "$row->{file_re} not found in ".$self->name if !$iso_file;
@@ -755,7 +756,7 @@ sub _iso_name($self, $iso, $request=undef, $verbose=0) {
     $name = $self->_storage_path($self->default_storage_pool_name)."/".$name unless $name =~ m{^/};
 
     open my $out,">",$name or die "$! $name";
-    print $out "...\n";
+    print $out Dump({ iso => $name });
     close $out;
 
     return $name;

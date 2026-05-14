@@ -307,6 +307,8 @@ sub test_rebase_clone($vm) {
 clean();
 $ENV{LANG}='C';
 
+unlink '/var/tmp/rvd_void/frankie/alpine-standard-3.23-x86_64.iso';
+
 for my $vm_name (vm_names() ) {
     ok($vm_name);
     SKIP: {
