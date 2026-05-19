@@ -549,7 +549,7 @@ sub _machine_types($vm) {
     like($req->output,qr/./);
 
     my $machine_types = {};
-    $machine_types = decode_json($req->output());
+    $machine_types = $req->output();
 
     return $machine_types;
 }

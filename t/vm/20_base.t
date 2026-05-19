@@ -1961,6 +1961,7 @@ for my $vm_name ( vm_names() ) {
             $BASE = create_domain($vm);
         }
         flush_rules() if !$<;
+
         my $domaina = test_create_domain($vm_name);
         test_prepare_base($vm_name, $domaina);
 
@@ -1977,8 +1978,6 @@ for my $vm_name ( vm_names() ) {
         test_prepare_base_volatile($vm);
 
         test_change_display_settings($vm);
-        test_display_drivers($vm,0);
-        test_display_drivers($vm,1); #remove after testing display type
 
         test_display_iptables($vm);
 

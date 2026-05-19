@@ -62,7 +62,7 @@ sub _chmod($self, $mode, $file=$self->file) {
         my ($out,$err) = $vm->run_command("chmod",$mode_o,$file);
         die $err if $err;
     } else {
-        confess if !-e $file;
+        confess $file if !-e $file;
         chmod $mode,$file or die "$! chmod $mode $file";
     }
 }
@@ -116,6 +116,10 @@ sub _around_clone($orig, $self, %args) {
         file => $orig->($self, $file_clone)
         ,@domain
     );
+    for ( 1 .. 2 ) {
+        last if $self->vm->file_exists($file_clone);
+        sleep 1;
+    }
     $self->_chmod(oct(600), $file_clone);
 
     return $ret;
