@@ -2706,7 +2706,7 @@ msgid "can hibernate own virtual machines."
 msgstr "pot hibernar les seves màquines virtuals."
 
 msgid "can manage all the virtual networks."
-msgstr "pot gestionar totes les màquines virtuals."
+msgstr "pot gestionar totes les xarxes virtuals."
 
 msgid "can get a screenshot from clones of own virtual machines."
 msgstr "pot realitzar una captura de pantalla de clons de les seves màquines virtuals."
