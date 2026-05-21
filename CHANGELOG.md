@@ -13,7 +13,11 @@
 * Verify client status core dumped [\#2293] [\#2303]
 * Port exposing fails [\#2299]
 * Enable setting isolated port on adding network [\#2318]
+* Check connection status in request [\#2303]
+* Exposed ports retry [\#2300] [\#2299]
+* Verify client status core dumped [\#2293] [#2298]
 
 **Refactors**
 
 * Clean requests when downgrading [\#2322]
+* Refactor lock [\#2308]
