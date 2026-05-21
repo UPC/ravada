@@ -32,6 +32,7 @@ if ($help) {
 
 my %COPY_RELEASES = (
     'ubuntu-20.04'=> ['ubuntu-22.04','ubuntu-24.04','ubuntu-26.04']
+    ,'ubuntu-24.04'=> ['ubuntu-26.04']
     ,'debian-10' => ['debian-11','debian-12','debian-13']
 );
 my %DIR = (
