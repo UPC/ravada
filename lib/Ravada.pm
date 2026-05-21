@@ -2164,6 +2164,14 @@ sub _upgrade_table($self, $table, $field, $definition) {
             ." $row->{TYPE_NAME} -> $new_type \n"
             ." in $table\n$definition\n"  if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
         print "-" if $FIRST_TIME_RUN && $ENV{TERM};
+
+        if ($table eq 'requests' && $field =~ /^after_request/
+            && $row->{TYPE_NAME} =~ /TEXT|CHAR/i && $new_type =~ /int|INTEGER/i) {
+            my $sth_clean = $CONNECTOR->dbh->prepare(
+                "UPDATE requests set $field=NULL "
+            );
+            $sth_clean->execute;
+        }
         $dbh->do("alter table $table change $field $field $definition");
 
         $self->_create_constraints($table, [$field, $constraint]) if $constraint;
@@ -4385,6 +4393,8 @@ sub _domain_working {
     my ($id_domain, $req) = @_;
 
     confess "Missing request" if !defined $req;
+
+    return if $req->command =~ /list_cpu_models/;
 
     if (!$id_domain) {
         $id_domain = $req->defined_arg('id_base');

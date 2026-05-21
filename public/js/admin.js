@@ -26,7 +26,7 @@ ravadaApp.directive("solShowMachine", swMach)
         return {
             require: 'ngModel',
             link: function(scope, elm, attrs, ctrl) {
-                ctrl.$parsers.unshift(function(inputText) {
+                function validateIP(inputText, isParser) {
                     var ipformat = /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\/([0-9]|[0-1][0-9]|2[0-4])$/;
                     if(ipformat.test(inputText))
                     {
@@ -38,10 +38,17 @@ ravadaApp.directive("solShowMachine", swMach)
                         //alert("You have entered an invalid IP address!");
                         //document.form1.text1.focus();
                         ctrl.$setValidity('ipformat', false);
-                        return undefined;
+                        return isParser ? undefined : inputText;
                     }
+                }
+
+                ctrl.$parsers.unshift(function(value) {
+                    return validateIP(value, true);
                 });
 
+                ctrl.$formatters.unshift(function(value) {
+                    return validateIP(value, false);
+                });
             }
         };
     });

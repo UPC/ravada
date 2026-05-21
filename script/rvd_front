@@ -2914,14 +2914,18 @@ get '/booking' => sub($c) {
     }
 
     if (!$groups_local && !@groups_ldap) {
+        my $i18n = $c->stash->{i18n};
         return $c->render(template => '/ng-templates/error'
-        ,message => "Groups are required to set up bookings. No groups found. <a href='/group/new'>Add new entries here.</a>"
+        ,message => $i18n->localize("Groups are required to set up bookings. No groups found.")
+        ."<a href='/group/new'>".' '.$i18n->localize("Add new entries here.")."</a>"
     );
     }
 
     if (!$members_found) {
+        my $i18n = $c->stash->{i18n};
         return $c->render(template => '/ng-templates/error'
-            ,message => "Groups are required to set up bookings. Some groups where found but no members belong to them. <a href='/admin/groups'>Add new entries here.</a>"
+            ,message => $i18n->localize("Groups are required to set up bookings. Some groups were found but no members belong to them.")
+            ."<a href='/admin/groups'>".' '.$i18n->localize("Add new entries here.")."</a>"
         )
 
     }

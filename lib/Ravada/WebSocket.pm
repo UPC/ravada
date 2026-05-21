@@ -40,6 +40,7 @@ my %SUB = (
           ,list_machines_user_including_privates => \&_list_machines_user_including_privates
         ,list_bases_anonymous => \&_list_bases_anonymous
                ,list_requests => \&_list_requests
+               ,list_domain_requests => \&_list_domain_requests
                 ,machine_info => \&_get_machine_info
                    ,node_info => \&_get_node_info
                 ,ping_backend => \&_ping_backend
@@ -58,6 +59,7 @@ our %TABLE_CHANNEL = (
     ,list_machines_user_including_privates => ['domains','bookings','booking_entries'
         ,'booking_entry_ldap_groups', 'booking_entry_users','booking_entry_bases']
     ,list_requests => 'requests'
+    ,list_domain_requests => 'requests.id_domain'
     ,machine_info => 'domains'
     ,log_active_domains => 'log_active_domains'
     ,list_networks => 'virtual_networks'
@@ -456,6 +458,31 @@ sub _list_requests($rvd, $args) {
     return $rvd->list_requests;
 }
 
+sub _list_domain_requests($rvd, $args) {
+    my ($id_domain) = $args->{channel} =~ m{/(\d+)};
+    my $domain = $rvd->search_domain_by_id($id_domain) or do {
+        warn "Error: domain $id_domain not found.";
+        return [];
+    };
+
+    my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
+    my $user = Ravada::Auth::SQL->new(name => $login) or die "Error: uknown user $login";
+    return [] unless $user->is_operator || $user->is_admin || $domain->id_owner == $user->id;
+
+    my $sth = $rvd->_dbh->prepare(
+        "SELECT id, id_domain, command, status, date_req FROM requests WHERE id_domain=? "
+        ." AND status <> 'done'"
+        ." ORDER BY date_req "
+    );
+    $sth->execute($id_domain);
+    my @ret;
+
+    while ( my $row = $sth->fetchrow_hashref ) {
+        push @ret,($row);
+    }
+    return \@ret;
+
+}
 sub _get_machine_info($rvd, $args) {
     my ($id_domain) = $args->{channel} =~ m{/(\d+)};
     my $domain = $rvd->search_domain_by_id($id_domain) or do {
@@ -672,12 +699,18 @@ sub _clean_info($self, $key) {
     $self->_old_info($key,0,0);
 }
 
-sub _date_changed_table($self, $table, $id) {
+sub _date_changed_table($self, $table0, $id) {
+    my ($table, $field_id) = $table0 =~ /(.*)\.(.*)/;
+    if (!defined $table ) {
+        $table = $table0;
+        $field_id = 'id';
+    }
+    die "Error: wrong id field '$field_id' " if $field_id !~ /^[a-zA-Z_]+$/;
     my $rvd = $self->ravada;
     my $sth;
     if (defined $id) {
         $sth = $rvd->_dbh->prepare("SELECT MAX(date_changed) FROM $table "
-            ." WHERE id=?");
+            ." WHERE $field_id=?");
         $sth->execute($id);
     } else {
         $sth = $rvd->_dbh->prepare("SELECT MAX(date_changed) FROM $table");
@@ -687,7 +720,9 @@ sub _date_changed_table($self, $table, $id) {
     return ($date or '');
 }
 
-sub _count_table($rvd, $table) {
+sub _count_table($rvd, $table0) {
+    my $table=$table0;
+    $table =~ s/\..*//;
     my $sth = $rvd->_dbh->prepare("SELECT count(*) FROM $table");
     $sth->execute;
     my ($count) = $sth->fetchrow;

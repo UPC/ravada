@@ -9,12 +9,12 @@
     <thead>
         <tr>
             <th></th>
-            <th class="list">Enabled</th>
-            <th class="list">Size</th>
-            <th class="list">Used</th>
-            <th class="list">Available</th>
-            <th class="list">Used %</th>
-            <th class="list">Path</th>
+            <th class="list"><%=l 'Enabled' %></th>
+            <th class="list"><%=l 'Size' %></th>
+            <th class="list"><%=l 'Used' %></th>
+            <th class="list"><%=l 'Available' %></th>
+            <th class="list"><%=l 'Used %' %></th>
+            <th class="list"><%=l 'Path' %></th>
         </tr>
     </thead>
     <tbody>

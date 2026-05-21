@@ -4,8 +4,8 @@
 <h4><%=l 'Today Schedule' %></h4>
 
     <p>
-    <%=l 'This server has reservations for today. Machines from users out of
-    the booking list will be shutdown.' %>
+    <%=l 'This server has reservations for today.' %>
+    <%=l 'Machines from users out of the booking list will be shutdown.' %>
     </p>
 
     <table border="1" bordercolor="darkgray" cellpadding="5">

@@ -1825,12 +1825,11 @@ msgstr "Password and their confirmation do not match!"
 msgid "Today Schedule"
 msgstr "Today Schedule"
 
-msgid ""
-"This server has reservations for today. Machines from users out of\n"
-"    the booking list will be shutdown."
-msgstr ""
-"This server has reservations for today. Machines from users out of\n"
-"         the booking list will be shutdown."
+msgid "This server has reservations for today."
+msgstr "This server has reservations for today."
+
+msgid "Machines from users out of the booking list will be shutdown."
+msgstr "Machines from users out of the booking list will be shutdown."
 
 msgid "allowed"
 msgstr "allowed"
@@ -2177,8 +2176,8 @@ msgstr "Share"
 msgid "Host Devices"
 msgstr "Host Devices"
 
-msgid "Mange Host Devices"
-msgstr "Mange Host Devices"
+msgid "Manage Host Devices"
+msgstr "Manage Host Devices"
 
 msgid "Auto Compact"
 msgstr "Auto Compact"
@@ -2206,6 +2205,228 @@ msgstr "Show Clones"
 
 msgid "starting"
 msgstr "starting"
+
+msgid "Add host device"
+msgstr "Add host device"
+
+msgid "LDAP groups"
+msgstr "LDAP groups"
+
+msgid "Local groups"
+msgstr "Local groups"
+
+msgid "Create a group."
+msgstr "Create a group."
+
+msgid "This virtual machine has no local group restrictions."
+msgstr "This virtual machine has no local group restrictions."
+
+msgid "Routes"
+msgstr "Routes"
+
+msgid "Storage"
+msgstr "Storage"
+
+msgid "list"
+msgstr "list"
+
+msgid "purge"
+msgstr "purge"
+
+msgid "default"
+msgstr "default"
+
+msgid "Enabled"
+msgstr "Enabled"
+
+msgid "Size"
+msgstr "Size"
+
+msgid "Used"
+msgstr "Used"
+
+msgid "Available"
+msgstr "Available"
+
+msgid "Path"
+msgstr "Path"
+
+msgid "New Storage"
+msgstr "New Storage"
+
+msgid "Unused volumes"
+msgstr "Unused volumes"
+
+msgid "Remove Selected"
+msgstr "Remove Selected"
+
+msgid "back"
+msgstr "back"
+
+msgid "IP address"
+msgstr "IP address"
+
+msgid "Netmask"
+msgstr "Netmask"
+
+msgid "DHCP start"
+msgstr "DHCP start"
+
+msgid "DHCP end"
+msgstr "DHCP end"
+
+msgid "Auto Start"
+msgstr "Auto Start"
+
+msgid "Auto create users"
+msgstr "Auto create users"
+
+msgid "Authenticated users are allowed to log in"
+msgstr "Authenticated users are allowed to log in"
+
+msgid "Auth OpenID"
+msgstr "Auth OpenID"
+
+msgid "Logout URL"
+msgstr "Logout URL"
+
+msgid "Charts"
+msgstr "Charts"
+
+msgid "share"
+msgstr "share"
+
+msgid "There are no groups defined."
+msgstr "There are no groups defined."
+
+msgid "A new clone of this base will be created."
+msgstr "A new clone of this base will be created."
+
+msgid "new bundle"
+msgstr "new bundle"
+
+msgid "All the virtual machines in the bundle will share the same private virtual network"
+msgstr "All the virtual machines in the bundle will share the same private virtual network"
+
+msgid "create"
+msgstr "create"
+
+msgid "Groups are required to set up bookings. No groups found."
+msgstr "Groups are required to set up bookings. No groups found."
+
+msgid "Groups are required to set up bookings. Some groups were found but no members belong to them."
+msgstr "Groups are required to set up bookings. Some groups were found but no members belong to them."
+
+msgid "Add new entries here."
+msgstr "Add new entries here."
+
+msgid "Batch upload"
+msgstr "Batch upload"
+
+msgid "upload members"
+msgstr "upload members"
+
+msgid "New Route"
+msgstr "New Route"
+
+msgid "storage"
+msgstr "storage"
+
+msgid "list command"
+msgstr "list command"
+
+msgid "apply"
+msgstr "apply"
+
+msgid "You must restart already connected virtual machines to apply network changes."
+msgstr "You must restart already connected virtual machines to apply network changes."
+
+msgid "available"
+msgstr "available"
+
+msgid "Install remmina with RDP plugin to view Windows and Linux virtual machines with RDP."
+msgstr "Install remmina with RDP plugin to view Windows and Linux virtual machines with RDP."
+
+msgid "Another tool that works well with SPICE is remmina."
+msgstr "Another tool that works well with SPICE is remmina."
+
+msgid "If you installed it for RDP support it will work for SPICE too."
+msgstr "If you installed it for RDP support it will work for SPICE too."
+
+msgid "RDP works out of the box because the client is installed by default."
+msgstr "RDP works out of the box because the client is installed by default."
+
+msgid "Install Microsoft Remote Desktop from the Mac App Store."
+msgstr "Install Microsoft Remote Desktop from the Mac App Store."
+
+msgid "Auto compact virtual machines."
+msgstr "Auto compact virtual machines."
+
+msgid "Time when compact will be scheduled."
+msgstr "Time when compact will be scheduled."
+
+msgid "Directory"
+msgstr "Directory"
+
+msgid "Only previously authorized users can log in."
+msgstr "Only previously authorized users can log in."
+
+msgid "You can grant access to users from the users administration form:"
+msgstr "You can grant access to users from the users administration form:"
+
+msgid "upload"
+msgstr "upload"
+
+msgid "Time period"
+msgstr "Time period"
+
+msgid "Groups allowed"
+msgstr "Groups allowed"
+
+msgid "Only Host Devices"
+msgstr "Only Host Devices"
+
+msgid "Upload Users"
+msgstr "Upload Users"
+
+msgid "Upload a text file with the user names and passwords separated by a colon :"
+msgstr "Upload a text file with the user names and passwords separated by a colon :"
+
+msgid "Upload"
+msgstr "Upload"
+
+msgid "This virtual machine will be prepared as a  base, then cloned."
+msgstr "This virtual machine will be prepared as a  base, then cloned."
+
+msgid "Enables schedule server bookings for exclusive use"
+msgstr "Enables schedule server bookings for exclusive use"
+
+msgid "connected"
+msgstr "connected"
+
+msgid "Session disconnected"
+msgstr "Session disconnected"
+
+msgid "connect again"
+msgstr "connect again"
+
+msgid "disconnected"
+msgstr "disconnected"
+
+msgid "This machine is base and all changes will be applied to its clones."
+msgstr "This machine is base and all changes will be applied to its clones."
+
+msgid "Private"
+msgstr "Private"
+
+msgid "Show all"
+msgstr "Show all"
+
+msgid "This machine is running and can't be changed"
+msgstr "This machine is running and can't be changed"
+
+msgid "Current CPUs"
+msgstr "Current CPUs"
 
 msgid "hours"
 msgstr "hours"
@@ -2290,3 +2511,6 @@ msgstr "4 years"
 
 msgid "5 years"
 msgstr "5 years"
+
+msgid "Used %"
+msgstr "Used %"
