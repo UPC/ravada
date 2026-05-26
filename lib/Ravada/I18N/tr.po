@@ -2197,7 +2197,7 @@ msgstr "Paylaş"
 msgid "Host Devices"
 msgstr "Ana Makineler"
 
-msgid "Mange Host Devices"
+msgid "Manage Host Devices"
 msgstr "Ana Makineleri Yönet"
 
 msgid "Auto Compact"

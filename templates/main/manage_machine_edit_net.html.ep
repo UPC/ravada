@@ -47,4 +47,17 @@
 %       }
         </li>
     </ul>
+
+    <div class="ml-4">
+    <i><%=l 'Port' %></i>
+    <ul class="list-group list-group-horizontal-md">
+        <li class="list-group-item list-group-item-primary"><%=l 'isolated' %></li>
+        <li class="list-group-item">
+            <select ng-model="item.port.isolated"
+                ng-options="option for option in isolated_options"
+                >
+            </select>
+        </li>
+    </ul>
+    </div>
 </div>

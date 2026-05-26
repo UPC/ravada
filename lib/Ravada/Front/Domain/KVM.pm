@@ -313,6 +313,13 @@ sub _get_controller_network($self) {
         } else {
             $name .="o$count";
         }
+
+        my ($port_xml) = $interface->findnodes('port');
+        my @port = ( port => { isolated => 'no' });
+
+        @port = ( port => { isolated => $port_xml->getAttribute('isolated') })
+        if $port_xml && $port_xml->getAttribute('isolated');
+
         $count++;
         push @ret,({
                      type => $type
@@ -320,6 +327,7 @@ sub _get_controller_network($self) {
                   ,driver => $model->getAttribute('type')
                   ,bridge => $source->getAttribute('bridge')
                  ,network => $source->getAttribute('network')
+                 ,@port
                  ,_can_edit => 1
                  ,_can_remove => 1
         });
@@ -504,5 +512,7 @@ sub _os_type_machine($self) {
 sub xml_description($self) {
         return $self->_data_extra('xml');
 }
+
+sub can_hybernate { 1 };
 
 1;

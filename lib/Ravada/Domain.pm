@@ -178,15 +178,14 @@ around 'start' => \&_around_start;
 before 'pause' => \&_allow_shutdown;
  after 'pause' => \&_post_pause;
 
-before 'hybernate' => \&_allow_shutdown;
+before 'hybernate' => \&_allow_hibernate;
  after 'hybernate' => \&_post_hibernate;
 
-before 'hibernate' => \&_allow_shutdown;
+before 'hibernate' => \&_allow_hibernate;
  after 'hibernate' => \&_post_hibernate;
 
 before 'resume' => \&_allow_manage;
  after 'resume' => \&_post_resume;
-
 before 'shutdown' => \&_pre_shutdown;
 after 'shutdown' => \&_post_shutdown;
 
@@ -230,6 +229,7 @@ around 'remove_controller' => \&_around_remove_hardware;
 around 'change_hardware' => \&_around_change_hardware;
 
 around 'name' => \&_around_name;
+around 'ip' => \&_around_ip;
 
 ##################################################
 #
@@ -333,6 +333,7 @@ sub _around_start($orig, $self, @arg) {
     if ( !$self->is_active ) {
         $self->_unlock_host_devices(0);
         $self->_fetch_networking_mode();
+        $self->_data('ports_exposed',0);
     }
 
     $self->_start_preconditions(@arg);
@@ -833,6 +834,31 @@ sub _allow_remove($self, $user) {
 
 }
 
+sub _allow_hibernate($self, @args){
+
+    my %args;
+    if (scalar(@args) == 1 ) {
+        $args{user} = shift @args;
+    } else {
+        %args = @args;
+    }
+    my $user = $args{user} || confess "ERROR: Missing user arg";
+
+    return if $self->id_base && $user->can_hibernate_clone_all();
+
+    if ( $self->id_base() && $user->can_hibernate_clones()) {
+        my $base = Ravada::Domain->open($self->id_base)
+            or die "ERROR: Base domain id: ".$self->id_base." not found";
+        return if $base->id_owner == $user->id;
+    } elsif ($user->can_hibernate_all) {
+        return;
+    }
+
+    confess "User ".$user->name." [".$user->id."] not allowed to hibernate ".$self->name
+        ." owned by ".($self->id_owner or '<UNDEF>')
+            if !$user->can_hibernate($self->id);
+}
+
 sub _allow_shutdown {
     my $self = shift;
     my %args;
@@ -1325,6 +1351,7 @@ sub _access_denied_error($self,$user) {
 }
 
 sub _allowed_start($self, $user) {
+    return if !defined $user;
     return if $user->is_admin || $user->can_view_all;
 
     $self->_access_denied_error($user);
@@ -2194,6 +2221,10 @@ sub display($self, $user) {
 }
 
 sub _display_file_rdp($self,$display) {
+    my $error = '';
+    $error .= "Error: No IP detected for display.\n"   if !$display->{ip};
+    $error .= "Error: No Port detected for display.\n" if !$display->{port};
+    return $error if $error;
 
     my $ret = "screen mode id:i:2
 use multimon:i:0
@@ -2347,8 +2378,10 @@ sub info($self, $user) {
         ,id_vm => $self->_data('id_vm')
         ,auto_compact => ($self->auto_compact or 0)
         ,date_changed => $self->_data('date_changed')
+        ,bundle => ($self->bundle() or undef)
         ,is_volatile => $self->_data('is_volatile')
         ,networking => $self->_data('networking')
+        ,ports_exposed => $self->_data('ports_exposed')
     };
 
     $info->{alias} = ( $self->_data('alias') or $info->{name} );
@@ -3444,6 +3477,7 @@ sub _post_shutdown {
         }
     }
 
+    $self->_data('ports_exposed',0);
     if (defined $timeout && $timeout && !$self->is_removed && $is_active) {
         if ($timeout<2) {
             sleep $timeout;
@@ -3491,6 +3525,8 @@ sub _post_shutdown {
     $self->needs_restart(0) if $self->is_known()
                                 && $self->needs_restart()
                                 && !$is_active;
+
+    $self->_data('ports_exposed',0);
 }
 
 sub _schedule_compact($self) {
@@ -4132,20 +4168,23 @@ Performs an iptables open of all the exposed ports of the domain
 
 sub open_exposed_ports($self, $remote_ip=undef) {
     my @ports = $self->list_ports();
-    return if !@ports;
-    return if !$self->is_active;
-    return if $self->_data('networking') eq 'isolated';
+    if ( !@ports || !$self->is_active || $self->_data('networking') eq 'isolated' ) {
+        $self->_data('ports_exposed', 0);
+        return;
+    }
 
     my $ip = $self->ip;
     if ( ! $ip ) {
         die "Error: No ip in domain ".$self->name.". Retry.\n";
     }
+    $self->_data('ports_exposed', 1);
 
     $self->display_info(Ravada::Utils::user_daemon);
     for my $expose ( @ports ) {
         $self->_open_exposed_port($expose->{internal_port}, $expose->{name}
             ,$expose->{restricted}, $remote_ip);
     }
+    $self->_data('ports_exposed', 2);
 }
 
 sub _close_exposed_port($self,$internal_port_req=undef) {
@@ -4173,6 +4212,7 @@ sub _close_exposed_port($self,$internal_port_req=undef) {
 
     $self->_close_exposed_port_nat($iptables, %port);
     $self->_close_exposed_port_client($iptables, %port);
+    $self->_data('ports_exposed',0) if $self->is_known();
 
     $sth->finish;
 }
@@ -4484,7 +4524,7 @@ sub _post_start {
             ,id_domain => $self->id
             ,retry => 20
             ,remote_ip => $remote_ip
-    ) if $is_active && $remote_ip && $self->list_ports();
+    ) if $remote_ip && $self->list_ports();
 
     if ($self->run_timeout) {
         my $req = Ravada::Request->shutdown_domain(
@@ -6732,9 +6772,7 @@ sub _around_remove_hardware($orig, $self, $hardware, $index=undef, $options=unde
             $self->_delete_db_display_by_driver($driver);
         }
     } else {
-        if ($hardware eq 'filesystem'
-            && $self->_hardware_enabled('filesystem', $index, $options)) {
-
+        if ( $self->_hardware_enabled($hardware, $index, $options)) {
             $orig->($self, $hardware, $index, %$options)
         }
     }
@@ -6747,6 +6785,26 @@ sub _around_remove_hardware($orig, $self, $hardware, $index=undef, $options=unde
     }
     $self->_post_change_hardware( $hardware, $index);
 
+}
+
+sub _around_ip($orig, $self, @args) {
+    my $ip = $self->$orig(@args);
+
+    if (!$self->readonly() && $self->list_ports()) {
+        if ($ip && !$self->_data('ports_exposed')) {
+            $self->_data('ports_exposed' => 1);
+            my $req = Ravada::Request->open_exposed_ports(
+                uid => Ravada::Utils::user_daemon->id
+                ,id_domain => $self->id
+                ,retry => 20
+                ,_force => 1
+            );
+        }
+        if (!$ip && $self->_data('ports_exposed')) {
+            $self->_data('ports_exposed' => 0);
+        }
+    }
+    return $ip;
 }
 
 sub _hardware_enabled($self, $name, $index, $options ) {
@@ -8382,6 +8440,20 @@ sub bundle($self) {
     $sth->execute($self->id);
     my $bundle = $sth->fetchrow_hashref;
     return if !keys %$bundle;
+
+    $sth = $self->_dbh->prepare("SELECT d.id, d.alias, d.name, d.is_base, d.is_public "
+        ." FROM domains_bundle db, domains d"
+        ." WHERE db.id_domain=d.id "
+        ."   AND db.id_bundle=?"
+    );
+    $sth->execute($bundle->{id} );
+
+    my @domains;
+    while (my $domain = $sth->fetchrow_hashref ) {
+        push @domains, ($domain);
+    }
+    $bundle->{members}=\@domains;
+
     lock_hash(%$bundle);
     return $bundle;
 

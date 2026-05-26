@@ -308,7 +308,7 @@
                           <i class="fa fa-desktop"></i>
                        </button>
                       </div>
-                      <div ng-show="machine.is_locked" ng-cloak>Machine <a href="/request/{{machine.is_locked}}.html"><%=l 'locked' %></a></div>
+                      <div ng-show="machine.is_locked" ng-cloak><%=l 'Machine' %> <a href="/request/{{machine.is_locked}}.html"><%=l 'locked' %></a></div>
                       <div ng-show="machine.is_base && !machine.is_locked"
                           ng-cloak><span class="badge badge-pill badge-light"><%=l 'This Machine is a base' %></span></div>
                     </td>

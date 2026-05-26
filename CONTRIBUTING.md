@@ -220,11 +220,11 @@ You may want to ditch everything in your fork
  If you want to get even with main develop branch.
 
 ```sh
-git remote add upstream https://github.com/UPC/ravada
+git remote add upstream git@github.com:UPC/ravada.git
 git fetch upstream
-git checkout develop
-git reset --hard upstream/develop
-git push origin develop --force
+git checkout main
+git reset --hard upstream/main
+git push origin main --force
 ```
 
 ### 11.2 Work in a new fresh branch
@@ -241,14 +241,14 @@ git fetch upstream
 Now we create a new branch:
 
 ```sh
-git checkout develop
-git checkout -b feature/cool_thing upstream/develop
+git checkout main
+git checkout -b feature/cool_thing upstream/main
 ```
 
 Reset this branch, now it will be an exact replica of upstream UPC/develop:
 
 ```sh
-git reset --hard upstream/develop
+git reset --hard upstream/main
 git push --set-upstream origin feature/cool_thing
 ```
 

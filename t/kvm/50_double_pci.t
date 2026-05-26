@@ -20,7 +20,7 @@ sub create_device {
 
 sub test_create_domain_xml {
     my $name = new_domain_name();
-    my $file_xml = (shift or "t/kvm/etc/$name.xml");
+    my $file_xml = shift;
 
     die "Missing '$file_xml'" if !-e $file_xml;
     my $vm = rvd_back->search_vm('KVM');
@@ -95,7 +95,7 @@ SKIP: {
     for my $xml (
         't/kvm/etc/kvm_50_double_pci_0.xml'
         ,'t/kvm/etc/wind10_fail.xml') {
-        my $name = test_create_domain_xml($xml);
+        my $name = test_create_domain_xml(qemu_fix_xml_file($xml));
         next if !$name;
         test_clone_domain($name);
     }

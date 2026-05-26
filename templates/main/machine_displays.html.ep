@@ -42,17 +42,30 @@
             </li>
             <li ng-show="display.display"><b><%=l 'Display URL :' %></b>
                     <a ng-click="copy_password(display.driver); redirect()"
-                        ng-show="display.is_active"
+                        ng-show="display.is_active && display.ip && display.port && display.port>0"
                         href="{{display.display}}">{{display.display}}</a>
                     <i ng-show="!display.is_active" class="fas fa-sync-alt fa-spin"></i>
             </li>
-            <li><b><%=l 'Display IP :' %></b> {{display.ip}} </li>
-            <li><b><%=l 'Display Port :' %></b> {{display.port}} </li>
+            <li><b><%=l 'Display IP :' %></b>
+                <span ng-show="display.ip">{{display.ip}}</span>
+                <span ng-show="!display.ip">
+                    <i><%=l 'Waiting for display IP' %></i>
+                    <i class="fas fa-sync-alt fa-spin"></i></span>
+
+            </li>
+            <li><b><%=l 'Display Port :' %></b>
+                <span ng-show="display.port && display.port>0">{{display.port}}</span>
+                <span ng-show="!display.port || display.port==0">
+                    <i><%=l 'Waiting for display port' %></i>
+                    <i class="fas fa-sync-alt fa-spin"></i></span>
+            </li>
             <li ng-show="display.extra.tls_port"><b><%=l 'Display Port secure :' %></b> {{display.extra.tls_port}} </li>
         </ul>
         <div ng-show="domain.is_active && display.is_active && display.file_extension && display.file_extension.length>0">
             <div>
+
                 <a type="button" class="btn btn-success"
+                    ng-show="display.ip && display.port && display.port>0"
                     ng-click="view=display.driver; copy_password(display.driver); redirect();"
                     href="/machine/display/{{display.driver}}/{{domain.id}}.{{display.file_extension}}">
                         <b><%=l 'view'%></b></a>

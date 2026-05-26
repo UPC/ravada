@@ -73,6 +73,8 @@ sub test_grant_list_clone_on_clone_not_owned($grant, $vm, $user_A, $user_B) {
     
     my $clone = clone($base, $user_B);
     user_admin->grant($user_A,$grant);
+
+    is($user_A->can_list_clones_from_own_base,1);
     my $list = rvd_front->list_machines($user_A);
     
     #test

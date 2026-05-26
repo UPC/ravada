@@ -2047,9 +2047,15 @@ sub _xml_add_uefi($self, $doc, $name) {
     my $ovmf = '/usr/share/OVMF/OVMF_CODE.fd';
 
     my ($type) = $doc->findnodes('/domain/os/type');
-    if ($type->getAttribute('arch') =~ /x86_64/
-            && $type->getAttribute('machine') =~ /pc-q35/) {
+    my $arch = $type->getAttribute('arch');
+    if ( $arch =~ /x86_64/ ) {
+
+        $type->setAttribute('machine' => $self->_find_machine_type($arch, qr/^pc-q35/))
+        if $type->getAttribute('machine') !~ /pc-q35/;
+
         $ovmf = '/usr/share/OVMF/OVMF_CODE_4M.fd';
+    } else {
+        die "Unsupported UEFI in this architecture ".$type->toString();
     }
     my ($text) = $loader->findnodes("text()");
     if ($text) {
@@ -2929,6 +2935,14 @@ sub free_disk($self, $pool_name = undef ) {
         sleep 1;
     }
     return $info->{available};
+}
+
+sub _find_machine_type($self, $arch, $type_re) {
+    my %machine_types = $self->list_machine_types();
+    for my $type ( @{$machine_types{$arch}}) {
+        return $type if $type =~ $type_re;
+    }
+    confess "Error: machine type $type_re not found in architecture $arch";
 }
 
 sub list_machine_types($self) {

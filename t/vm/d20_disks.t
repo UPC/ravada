@@ -580,6 +580,7 @@ sub test_cdrom($vm) {
         for my $bios (undef, 'legacy','uefi') {
             die Dumper($iso) if !$iso->{arch} || !$machine_types->{$iso->{arch}};
             for my $machine ( @{$machine_types->{$iso->{arch}}}) {
+                next if defined $bios && $bios eq 'uefi' && $machine !~ /q35/;
                 my $key = ($bios or '')."-".($machine or '')."-"
                     .$iso->{xml}."-".($iso->{xml_volume} or '');
                 next if $done{$key}++;

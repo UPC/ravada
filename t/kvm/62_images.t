@@ -149,7 +149,7 @@ SKIP: {
     skip $msg,10    if !$vm;
 
     use_ok('Ravada::Domain::KVM');
-    test_settings($vm_name, "t/kvm/etc/winxp.xml" );
+    test_settings($vm_name, qemu_fix_xml_file("t/kvm/etc/winxp.xml"));
 };
 
 end();
