@@ -3418,6 +3418,7 @@ websocket '/ws/subscribe' => sub {
                 , login => $USER->name
                 , remote_ip => _remote_ip($c)
                 , client => _headers($c)
+                , i18n => $c->stash->{i18n} 
             );
     });
 

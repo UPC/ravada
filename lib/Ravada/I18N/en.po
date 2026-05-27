@@ -2514,3 +2514,33 @@ msgstr "5 years"
 
 msgid "Used %"
 msgstr "Used %"
+
+msgid "minutes"
+msgstr "minutes"
+
+msgid "year"
+msgstr "year"
+
+msgid "month"
+msgstr "month"
+
+msgid "week"
+msgstr "week"
+
+msgid "day"
+msgstr "day"
+
+msgid "hour"
+msgstr "hour"
+
+msgid "minute"
+msgstr "minute"
+
+msgid "now"
+msgstr "now"
+
+msgid "Virtual Machine locked"
+msgstr "Virtual Machine locked"
+
+msgid "Show lock details"
+msgstr "Show lock details"

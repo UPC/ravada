@@ -2686,3 +2686,33 @@ msgstr "4 anys"
 
 msgid "5 years"
 msgstr "5 anys"
+
+msgid "minutes"
+msgstr "minuts"
+
+msgid "year"
+msgstr "any"
+
+msgid "month"
+msgstr "mes"
+
+msgid "week"
+msgstr "setmana"
+
+msgid "day"
+msgstr "dia"
+
+msgid "hour"
+msgstr "hora"
+
+msgid "minute"
+msgstr "minut"
+
+msgid "now"
+msgstr "ara"
+
+msgid "Virtual Machine locked"
+msgstr "Màquina Virtual bloquejada"
+
+msgid "Show lock details"
+msgstr "Mostra detalls del bloqueig"

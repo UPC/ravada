@@ -343,7 +343,8 @@ sub list_domains($self, %args) {
         ."      ,d.date_changed"
         ." FROM domains d LEFT JOIN vms "
         ."  ON d.id_vm = vms.id ";
-
+    
+    my $i18n = delete $args{i18n};
     my ($where, $values) = $self->_create_where(\%args);
 
     my $sth = $CONNECTOR->dbh->prepare("$query $where ORDER BY d.id");
@@ -387,6 +388,15 @@ sub list_domains($self, %args) {
                 }
             }
             $row->{date_status_change} = Ravada::Domain::_date_status_change($row->{date_status_change});
+            if (exists $row->{date_status_change}->{duration}
+                && ref($row->{date_status_change}->{duration})
+                && $row->{date_status_change}->{duration}->[0] =~ /^[a-z]+$/i
+                && defined $i18n && $row->{date_status_change}->{duration}->[0]) {
+                $row->{date_status_change}->{duration}->[0] = $i18n->localize($row->{date_status_change}->{duration}->[0]);
+            }
+            if (defined $i18n && $row->{date_status_change}->{duration}->[1]) {
+                $row->{date_status_change}->{duration}->[1] = $i18n->localize($row->{date_status_change}->{duration}->[1]);
+            }
         }
         delete $row->{spice_password};
         push @domains, ($row);

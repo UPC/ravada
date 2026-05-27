@@ -2598,3 +2598,33 @@ msgstr "Usado %"
 
 msgid "Unused volumes"
 msgstr "Volúmenes sin utilizar"
+
+msgid "minutes"
+msgstr "minutos"
+
+msgid "year"
+msgstr "año"
+
+msgid "month"
+msgstr "mes"
+
+msgid "week"
+msgstr "semana"
+
+msgid "day"
+msgstr "día"
+
+msgid "hour"
+msgstr "hora"
+
+msgid "minute"
+msgstr "minuto"
+
+msgid "now"
+msgstr "ahora"
+
+msgid "Virtual Machine locked"
+msgstr "Máquina Virtual bloqueada"
+
+msgid "Show lock details"
+msgstr "Muestra detalles del bloqueo"
