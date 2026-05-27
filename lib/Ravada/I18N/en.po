@@ -1996,41 +1996,41 @@ msgstr "settings"
 msgid "can manage users."
 msgstr "can manage users."
 
-msgid "Can expose virtual machine ports."
-msgstr "Can expose virtual machine ports."
+msgid "can expose virtual machine ports."
+msgstr "can expose virtual machine ports."
 
-msgid "Can rename any virtual machine owned by the user."
-msgstr "Can rename any virtual machine owned by the user."
+msgid "can rename any virtual machine owned by the user."
+msgstr "can rename any virtual machine owned by the user."
 
-msgid "Can rename any virtual machine."
-msgstr "Can rename any virtual machine."
+msgid "can rename any virtual machine."
+msgstr "can rename any virtual machine."
 
-msgid "Can rename clones from virtual machines owned by the user."
-msgstr "Can rename clones from virtual machines owned by the user."
+msgid "can rename clones from virtual machines owned by the user."
+msgstr "can rename clones from virtual machines owned by the user."
 
-msgid "Can shutdown own virtual machines."
-msgstr "Can shutdown own virtual machines."
+msgid "can shutdown own virtual machines."
+msgstr "can shutdown own virtual machines."
 
-msgid "Can reboot own virtual machines."
-msgstr "Can reboot own virtual machines."
+msgid "can reboot own virtual machines."
+msgstr "can reboot own virtual machines."
 
-msgid "Can reboot all virtual machines."
-msgstr "Can reboot all virtual machines."
+msgid "can reboot all virtual machines."
+msgstr "can reboot all virtual machines."
 
-msgid "Can reboot clones own virtual machines."
-msgstr "Can reboot clones own virtual machines."
+msgid "can reboot clones own virtual machines."
+msgstr "can reboot clones own virtual machines."
 
-msgid "Can get a screenshot of own virtual machines."
-msgstr "Can get a screenshot of own virtual machines."
+msgid "can get a screenshot of own virtual machines."
+msgstr "can get a screenshot of own virtual machines."
 
-msgid "Can have an unlimited amount of machines started."
-msgstr "Can have an unlimited amount of machines started."
+msgid "can have an unlimited amount of machines started."
+msgstr "can have an unlimited amount of machines started."
 
-msgid "Can view groups."
-msgstr "Can view groups."
+msgid "can view groups."
+msgstr "can view groups."
 
-msgid "Can manage groups."
-msgstr "Can manage groups."
+msgid "can manage groups."
+msgstr "can manage groups."
 
 msgid "can have their own limit on started machines."
 msgstr "can have their own limit on started machines."
@@ -2544,3 +2544,32 @@ msgstr "Virtual Machine locked"
 
 msgid "Show lock details"
 msgstr "Show lock details"
+msgid "can create disk volumes"
+msgstr "can create disk volumes"
+
+msgid "disk space limit"
+msgstr "disk space limit"
+
+msgid "can create virtual networks."
+msgstr "can create virtual networks."
+
+msgid "can expose ports from any virtual machine."
+msgstr "can expose ports from any virtual machine."
+
+msgid "can expose ports from clones of own virtual machines."
+msgstr "can expose ports from clones of own virtual machines."
+
+msgid "can hibernate own virtual machines."
+msgstr "can hibernate own virtual machines."
+
+msgid "can manage all the virtual networks."
+msgstr "can manage all the virtual networks."
+
+msgid "can get a screenshot from clones of own virtual machines."
+msgstr "can get a screenshot from clones of own virtual machines."
+
+msgid "the user can start and access the screen of any virtual machine"
+msgstr "the user can start and access the screen of any virtual machine"
+
+msgid "Are you sure you want to remove this user?"
+msgstr "Are you sure you want to remove this user?"

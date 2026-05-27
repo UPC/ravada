@@ -1152,41 +1152,41 @@ msgstr "configuracions"
 msgid "can manage users."
 msgstr "pot gestionar usuaris."
 
-msgid "Can expose virtual machine ports."
-msgstr "Pot exposar ports de màquines virtuals."
+msgid "can expose virtual machine ports."
+msgstr "pot exposar ports de màquines virtuals."
 
-msgid "Can rename any virtual machine owned by the user."
-msgstr "Pot canviar el nom de qualsevol màquina virtual propietat de l'usuari."
+msgid "can rename any virtual machine owned by the user."
+msgstr "pot canviar el nom de qualsevol màquina virtual propietat de l'usuari."
 
-msgid "Can rename any virtual machine."
-msgstr "Pot canviar el nom de qualsevol màquina virtual."
+msgid "can rename any virtual machine."
+msgstr "pot canviar el nom de qualsevol màquina virtual."
 
-msgid "Can rename clones from virtual machines owned by the user."
-msgstr "Pot canviar el nom dels clons de màquines virtuals propietat de l'usuari."
+msgid "can rename clones from virtual machines owned by the user."
+msgstr "pot canviar el nom dels clons de màquines virtuals propietat de l'usuari."
 
-msgid "Can shutdown own virtual machines."
-msgstr "Pot apagar les pròpies màquines virtuals."
+msgid "can shutdown own virtual machines."
+msgstr "pot apagar les pròpies màquines virtuals."
 
-msgid "Can reboot own virtual machines."
-msgstr "Pot reiniciar les pròpies màquines virtuals."
+msgid "can reboot own virtual machines."
+msgstr "pot reiniciar les pròpies màquines virtuals."
 
-msgid "Can reboot all virtual machines."
-msgstr "Pot reiniciar totes les màquines virtuals."
+msgid "can reboot all virtual machines."
+msgstr "pot reiniciar totes les màquines virtuals."
 
-msgid "Can reboot clones own virtual machines."
-msgstr "Pot reiniciar les màquines virtuals pròpies dels clons."
+msgid "can reboot clones own virtual machines."
+msgstr "pot reiniciar les màquines virtuals pròpies dels clons."
 
-msgid "Can get a screenshot of own virtual machines."
-msgstr "Poden obtenir una captura de pantalla de màquines virtuals pròpies."
+msgid "can get a screenshot of own virtual machines."
+msgstr "poden obtenir una captura de pantalla de màquines virtuals pròpies."
 
-msgid "Can have an unlimited amount of machines started."
-msgstr "Pot tenir un nombre il·limitat de màquines enceses."
+msgid "can have an unlimited amount of machines started."
+msgstr "pot tenir un nombre il·limitat de màquines enceses."
 
-msgid "Can view groups."
-msgstr "Pot veure grups."
+msgid "can view groups."
+msgstr "pot veure grups."
 
-msgid "Can manage groups."
-msgstr "Pot gestionar grups."
+msgid "can manage groups."
+msgstr "pot gestionar grups."
 
 msgid "can have their own limit on started machines."
 msgstr "pot tenir el seu propi límit a les màquines iniciades."
@@ -2716,3 +2716,32 @@ msgstr "Màquina Virtual bloquejada"
 
 msgid "Show lock details"
 msgstr "Mostra detalls del bloqueig"
+msgid "can create disk volumes"
+msgstr "pot crear volums de disc"
+
+msgid "disk space limit"
+msgstr "espai límit del disc"
+
+msgid "can create virtual networks."
+msgstr "pot crear xarxes virtuals."
+
+msgid "can expose ports from any virtual machine."
+msgstr "pot exposar ports de qualsevol màquina virtual."
+
+msgid "can expose ports from clones of own virtual machines."
+msgstr "pot exposar ports de clons de les seves màquines virtuals."
+
+msgid "can hibernate own virtual machines."
+msgstr "pot hibernar les seves màquines virtuals."
+
+msgid "can manage all the virtual networks."
+msgstr "pot gestionar totes les xarxes virtuals."
+
+msgid "can get a screenshot from clones of own virtual machines."
+msgstr "pot realitzar una captura de pantalla de clons de les seves màquines virtuals."
+
+msgid "the user can start and access the screen of any virtual machine"
+msgstr "l'usuari pot iniciar i accedir a la pantalla de qualsevol màquina virtual"
+
+msgid "Are you sure you want to remove this user?"
+msgstr "Estàs segur de voler eliminar aquest usuari?"

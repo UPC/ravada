@@ -2093,17 +2093,17 @@ msgstr "Serán destruidas al apagarse"
 msgid "volatile"
 msgstr "volátil"
 
-msgid "Can reboot own virtual machines."
-msgstr "Puede reiniciar sus máquinas virtuales."
+msgid "can reboot own virtual machines."
+msgstr "puede reiniciar sus máquinas virtuales."
 
-msgid "Can expose virtual machine ports."
-msgstr "Puede exponer puertos de máquinas virtuales."
+msgid "can expose virtual machine ports."
+msgstr "puede exponer puertos de máquinas virtuales."
 
-msgid "Can rename any virtual machine."
-msgstr "Puede renombrar cualquier máquina virtual."
+msgid "can rename any virtual machine."
+msgstr "puede renombrar cualquier máquina virtual."
 
-msgid "Can shutdown own virtual machines."
-msgstr "Puede apagar sus máquinas virtuales."
+msgid "can shutdown own virtual machines."
+msgstr "puede apagar sus máquinas virtuales."
 
 msgid "can manage users."
 msgstr "puede gestionar usuarios."
@@ -2111,29 +2111,29 @@ msgstr "puede gestionar usuarios."
 msgid "settings"
 msgstr "preferencias"
 
-msgid "Can rename clones from virtual machines owned by the user."
-msgstr "Puede renombrar clones de las máquinas virtuales de su posesión."
+msgid "can rename clones from virtual machines owned by the user."
+msgstr "puede renombrar clones de las máquinas virtuales de su posesión."
 
-msgid "Can rename any virtual machine owned by the user."
-msgstr "Puede renombrar las máquinas virtuales de su posesión."
+msgid "can rename any virtual machine owned by the user."
+msgstr "puede renombrar las máquinas virtuales de su posesión."
 
-msgid "Can reboot all virtual machines."
-msgstr "Puede reiniciar todas máquinas virtuales."
+msgid "can reboot all virtual machines."
+msgstr "puede reiniciar todas máquinas virtuales."
 
-msgid "Can reboot clones own virtual machines."
-msgstr "Puede reiniciar clones de sus máquinas virtuales."
+msgid "can reboot clones own virtual machines."
+msgstr "puede reiniciar clones de sus máquinas virtuales."
 
-msgid "Can get a screenshot of own virtual machines."
-msgstr "Puede tomar una captura de pantalla de sus máquinas virtuales."
+msgid "can get a screenshot of own virtual machines."
+msgstr "puede tomar una captura de pantalla de sus máquinas virtuales."
 
-msgid "Can manage groups."
-msgstr "Puede gestionar grupos."
+msgid "can manage groups."
+msgstr "puede gestionar grupos."
 
-msgid "Can have an unlimited amount of machines started."
-msgstr "Puede tener un número ilimitado de máquinas encendidas."
+msgid "can have an unlimited amount of machines started."
+msgstr "puede tener un número ilimitado de máquinas encendidas."
 
-msgid "Can view groups."
-msgstr "Puede ver grupos."
+msgid "can view groups."
+msgstr "puede ver grupos."
 
 msgid "Search group"
 msgstr "Búsqueda de grupo"
@@ -2628,3 +2628,32 @@ msgstr "Máquina Virtual bloqueada"
 
 msgid "Show lock details"
 msgstr "Muestra detalles del bloqueo"
+msgid "can create disk volumes"
+msgstr "puede crear volúmenes de disco"
+
+msgid "disk space limit"
+msgstr "espacio límite del disco"
+
+msgid "can create virtual networks."
+msgstr "puede crear redes virtuales."
+
+msgid "can expose ports from any virtual machine."
+msgstr "puede exponer puertos de cualquier máquina virtual."
+
+msgid "can expose ports from clones of own virtual machines."
+msgstr "puede exponer puertos de clones de sus máquinas virtuales."
+
+msgid "can hibernate own virtual machines."
+msgstr "puede hibernar sus máquinas virtuales."
+
+msgid "can manage all the virtual networks."
+msgstr "puede gestionar todas las redes virtuales."
+
+msgid "can get a screenshot from clones of own virtual machines."
+msgstr "puede realizar una captura de pantalla de clones de sus máquinas virtuales."
+
+msgid "the user can start and access the screen of any virtual machine"
+msgstr "el usuario puede iniciar y acceder a la pantalla de cualquier máquina virtual"
+
+msgid "Are you sure you want to remove this user?"
+msgstr "¿Estás seguro de querer eliminar este usuario?"
