@@ -2544,3 +2544,18 @@ msgstr "Virtual Machine locked"
 
 msgid "Show lock details"
 msgstr "Show lock details"
+
+msgid "This virtual machine has no LDAP group restrictions."
+msgstr "This virtual machine has no LDAP group restrictions."
+
+msgid "LDAP search field"
+msgstr "LDAP search field"
+
+msgid "read more"
+msgstr "read more"
+
+msgid "dismiss"
+msgstr "dismiss"
+
+msgid "fetch"
+msgstr "fetch"

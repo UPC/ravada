@@ -151,7 +151,7 @@ sub _request($rvd, $args) {
 
 sub _list_machines($rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
-    my $i18n = $args->{i18n} or die "Error: no i18n arg ".Dumper($args);
+    my $i18n = $args->{i18n};
     my $user = Ravada::Auth::SQL->new(name => $login)
         or die "Error: uknown user $login";
 

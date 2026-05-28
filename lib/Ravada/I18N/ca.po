@@ -2716,3 +2716,18 @@ msgstr "Màquina Virtual bloquejada"
 
 msgid "Show lock details"
 msgstr "Mostra detalls del bloqueig"
+
+msgid "This virtual machine has no LDAP group restrictions."
+msgstr "Aquesta màquina virtual no té restriccions de group LDAP."
+
+msgid "LDAP search field"
+msgstr "Camp de cerca LDAP"
+
+msgid "read more"
+msgstr "llegir més"
+
+msgid "dismiss"
+msgstr "descartar"
+
+msgid "fetch"
+msgstr "cercar"
