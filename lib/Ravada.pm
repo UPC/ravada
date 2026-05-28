@@ -231,10 +231,13 @@ sub _add_internal_network($self) {
     my ($found) = $sth->fetchrow;
     return if $found;
 
-    $sth = $CONNECTOR->dbh->prepare("SELECT * FROM networks WHERE name like 'internal%'");
+    my %done;
+    $sth = $CONNECTOR->dbh->prepare("SELECT * FROM networks");
     $sth->execute();
-    ($found) = $sth->fetchrow;
-    return if $found;
+    while ( my $row = $sth->fetchrow_hashref) {
+        return if $row->{name} =~ /^internal/;
+        $done{$row->{address}}++;
+    };
 
     my @cmd = ("ip","route");
     my ($in, $out, $err);
@@ -247,11 +250,10 @@ sub _add_internal_network($self) {
         ." VALUES(?,?,?,1,0)"
     );
     my $n=0;
-    my %done;
     for my $net (split /\n/,$out) {
         next if $net =~ /dev virbr/;
         my ($address) = $net =~ m{(^[\d\.]+/\d+)};
-        next if !$address || $done{address}++;
+        next if !$address || $done{$address}++;
         $sth->execute("internal$n",$address, ++$n+1);
 
     }
