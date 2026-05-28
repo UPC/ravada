@@ -2716,7 +2716,6 @@ msgstr "Màquina Virtual bloquejada"
 
 msgid "Show lock details"
 msgstr "Mostra detalls del bloqueig"
-<<<<<<< HEAD
 
 msgid "This virtual machine has no LDAP group restrictions."
 msgstr "Aquesta màquina virtual no té restriccions de group LDAP."
@@ -2732,7 +2731,7 @@ msgstr "descartar"
 
 msgid "fetch"
 msgstr "cercar"
-=======
+
 msgid "can create disk volumes"
 msgstr "pot crear volums de disc"
 
@@ -2762,4 +2761,3 @@ msgstr "l'usuari pot iniciar i accedir a la pantalla de qualsevol màquina virtu
 
 msgid "Are you sure you want to remove this user?"
 msgstr "Estàs segur de voler eliminar aquest usuari?"
->>>>>>> 62cb75c0796ad64fbd8107974ed3ca47fb7998c9

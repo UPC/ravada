@@ -2544,7 +2544,6 @@ msgstr "Virtual Machine locked"
 
 msgid "Show lock details"
 msgstr "Show lock details"
-<<<<<<< HEAD
 
 msgid "This virtual machine has no LDAP group restrictions."
 msgstr "This virtual machine has no LDAP group restrictions."
@@ -2560,7 +2559,7 @@ msgstr "dismiss"
 
 msgid "fetch"
 msgstr "fetch"
-=======
+
 msgid "can create disk volumes"
 msgstr "can create disk volumes"
 
@@ -2590,4 +2589,3 @@ msgstr "the user can start and access the screen of any virtual machine"
 
 msgid "Are you sure you want to remove this user?"
 msgstr "Are you sure you want to remove this user?"
->>>>>>> 62cb75c0796ad64fbd8107974ed3ca47fb7998c9
