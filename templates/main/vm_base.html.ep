@@ -40,7 +40,6 @@
 <hr>
 <h4><%=l 'Nodes' %></h4>
 
-{{showmachine.bases}}
 <div class="row" ng-repeat="node in nodes">
     <div class="col-md-1" ng-show="{{node.type == showmachine.type}}">
         <input type="checkbox" ng-checked="showmachine.bases[node.id].enabled"
