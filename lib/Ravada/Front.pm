@@ -343,7 +343,7 @@ sub list_domains($self, %args) {
         ."      ,d.date_changed"
         ." FROM domains d LEFT JOIN vms "
         ."  ON d.id_vm = vms.id ";
-    
+
     my $i18n = delete $args{i18n};
     my ($where, $values) = $self->_create_where(\%args);
 
