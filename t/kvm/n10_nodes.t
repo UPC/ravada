@@ -216,15 +216,16 @@ sub test_iptables($node, $remote_ip, $local_ip, $local_port) {
 sub test_domain_on_remote {
     my ($vm_name, $node) = @_;
 
-    my $domain;
-    eval {
-        $domain = $node->create_domain(
-            name => new_domain_name
-            ,id_owner => user_admin->id
-            ,id_iso => search_id_iso('Alpine')
-        );
-    };
-    is($@,'',"Expecting no domain in remote node by now");
+    my $name = new_domain_name();
+    my $req_create = Ravada::Request->create_domain(
+        name => $name
+        ,id_owner => user_admin->id
+        ,id_iso => search_id_iso('Alpine')
+        ,id_vm => $node->id
+    );
+    wait_request();
+    is($req_create->error,'');
+    my $domain = rvd_back->search_domain($name);;
 
     my $req = Ravada::Request->remove_domain(
         uid => user_admin->id

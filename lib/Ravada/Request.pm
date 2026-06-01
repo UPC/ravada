@@ -1815,6 +1815,9 @@ sub _validate_remove_base_vm($req) {
 
     my $domain = Ravada::Front::Domain->open($req->args('id_domain'));
 
+    $req->_chain_previous_set_base($domain);
+    $req->_chain_previous_migrate_children($domain);
+
     my $id_vm = $req->defined_arg('id_vm');
     $id_vm = $req->defined_arg('id_node') if !defined $id_vm;
 
@@ -1831,6 +1834,52 @@ sub _validate_remove_base_vm($req) {
         return;
     }
 
+    $req->_chain_migrate_clones($domain, $id_vm, \@other_vms);
+    $req->_chain_requested_clone( $domain->id);
+}
+
+sub _chain_previous_migrate_children($self, $domain) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id FROM requests "
+        ." WHERE id_domain=?"
+        ."  AND id <> ? "
+        ."  AND ( status='requested' OR status='working' ) "
+        ."  AND ( command = 'migrate' )"
+    );
+    $sth->execute($domain->id, $self->id);
+    while ( my ($id_prev) = $sth->fetchrow ) {
+        $self->_data('after_request_ok' => $id_prev)
+    }
+
+    for my $clone ($domain->clones) {
+        $sth->execute($clone->{id}, $self->id);
+        while ( my ($id_prev) = $sth->fetchrow ) {
+            $self->_data('after_request_ok' => $id_prev)
+        }
+        if ( $clone->{is_base} ) {
+            my $domain2 = Ravada::Front::Domain->open($clone->{id});
+            $self->_chain_previous_migrate_children($domain2)
+        }
+    }
+}
+
+sub _chain_previous_set_base($self, $domain) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id FROM requests "
+        ." WHERE id_domain=?"
+        ."  AND id <> ? "
+        ."  AND ( status='requested' OR status='working' ) "
+        ."  AND ( command = 'prepare_base' OR command='set_base_vm' "
+        ."          OR command='remove_base_vm' )"
+    );
+    $sth->execute($domain->id, $self->id);
+    while ( my ($id_prev) = $sth->fetchrow ) {
+        $self->_data('after_request_ok' => $id_prev)
+    }
+}
+
+sub _chain_migrate_clones($self, $domain, $id_vm, $other_vms) {
+
     my ($req_migrate, $req_rm);
     my ($req_migrate_prev, $req_rm_prev);
 
@@ -1843,7 +1892,7 @@ sub _validate_remove_base_vm($req) {
             $req_migrate = Ravada::Request->migrate(
                 uid => Ravada::Utils::user_daemon->id
                 ,id_domain => $clone->{id}
-                ,id_node => $other_vms[0]
+                ,id_node => $other_vms->[0]
                 ,shutdown => 1
                 ,start => $start
             );
@@ -1863,10 +1912,10 @@ sub _validate_remove_base_vm($req) {
             $req_rm_prev = $req_rm;
         }
     }
-    $req->after_request_ok($req_rm->id) if $req_rm;
-    $req->after_request_ok($req_migrate->id) if $req_migrate;
+    $self->after_request_ok($req_rm->id) if $req_rm;
+    $self->after_request_ok($req_migrate->id) if $req_migrate;
 
-    _chain_requested_clone($req, $domain->id);
+
 }
 
 sub _chain_requested_clone($req, $id_domain) {

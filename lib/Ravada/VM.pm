@@ -466,7 +466,6 @@ sub _connect_ssh($self) {
 
 sub _ssh($self) {
     my $ssh = $self->netssh;
-    return if !$ssh;
     return $ssh if $ssh->check_master;
     warn "WARNING: ssh error '".$ssh->error."'" if $ssh->error;
     $self->netssh->disconnect;

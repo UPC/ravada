@@ -359,6 +359,92 @@ sub _search_request_previous($id_domain, $id_req_prev) {
     }
 }
 
+sub test_chain_children($vm, $node1, $node2) {
+
+    my $base1 = create_domain($vm);
+    $base1->_data('id_vm' => $node1->id);
+
+    my $base2 = create_base($vm);
+    $base2->_data('is_base' => 1);
+    $base2->_data('id_base' => $base1->id);
+    $base2->_data('id_vm' => $node1->id);
+
+    my $clone = create_domain_v2(vm => $vm);
+    $clone->_data('id_base' => $base2->id);
+    $clone->_data('id_vm' => $node1->id);
+
+    my $req_migrate = Ravada::Request->migrate(
+        uid => user_admin->id
+        ,id_domain => $clone->id
+        ,id_node => $node2->id
+    );
+
+    my $req_rm = Ravada::Request->remove_base_vm(
+        uid => user_admin->id
+        ,id_domain => $base1->id
+        ,id_vm => $node1->id
+    );
+    my $requirements = $req_rm->_data('after_request_ok');
+    $requirements = [$requirements] unless ref($requirements);
+
+    my ($found) = grep { $_ == $req_migrate->id } @$requirements;
+    ok($found,"Expecting ".$req_migrate->id." in @$requirements")
+        or die Dumper($requirements);
+    remove_domain_db($base1);
+}
+
+sub test_chain_remove_vm($vm, $node1, $node2) {
+
+    my $base = create_domain($vm);
+
+    $base->_data('id_vm' => $node1->id);
+
+    my $req = Ravada::Request->set_base_vm(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,id_vm => $node2->id
+    );
+
+    my $expected = [ $req->id, $req->after_request_ok];
+    my $req_rm = Ravada::Request->remove_base_vm(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,id_vm => $node2->id
+    );
+    is_deeply($req_rm->_data('after_request_ok'), $expected);
+    $req_rm->_delete();
+
+    $req_rm = Ravada::Request->remove_base_vm(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,id_vm => $node2->id
+    );
+    is_deeply($req_rm->_data('after_request_ok'), $expected);
+
+    $req_rm->_delete();
+
+    $req_rm = Ravada::Request->set_base_vm(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,id_vm => $node2->id
+        ,value => 0
+    );
+    is_deeply($req_rm->_data('after_request_ok'), $expected)
+        or die Dumper($req_rm->_data('after_request_ok'));
+
+    $req_rm->_delete();
+
+    my $req_set = Ravada::Request->set_base_vm(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,id_vm => $node2->id
+        ,value => 1 
+    );
+    is($req_set->id(),$req->id);
+
+    remove_domain_db($base);
+}
+
 ###############################################################################
 
 init();
@@ -370,13 +456,6 @@ for my $vm_name (vm_names() ) {
     SKIP: {
 
         my $msg = "SKIPPED: $vm_name virtual manager not found ".($@ or '');
-        my $REMOTE_CONFIG = remote_config($vm_name);
-        if (!keys %$REMOTE_CONFIG) {
-            my $msg = "skipped, missing the remote configuration for $vm_name in the file "
-                .$Test::Ravada::FILE_CONFIG_REMOTE;
-            diag($msg);
-            skip($msg,10);
-        }
 
         diag($msg)      if !$vm;
         skip($msg,10)   if !$vm;
@@ -386,6 +465,9 @@ for my $vm_name (vm_names() ) {
         isnt($vm->name,'Void_localhost');
         my $node1 = _create_remote_node($vm_name);
         my $node2 = _create_remote_node($vm_name);
+
+        test_chain_remove_vm($vm, $node1, $node2);
+        test_chain_children($vm, $node1, $node2);
 
         test_req_gone($vm);
 
