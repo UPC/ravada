@@ -456,7 +456,7 @@ sub _connect_ssh($self) {
         if ( $ssh->error ) {
             $self->_cached_active(0);
             $self->_data('cached_down' => time);
-            # warn "Error connecting to ".$self->host." : ".$ssh->error();
+            warn "ERROR: connecting to ".$self->host." : ".$ssh->error();
             return;
         }
     }
@@ -466,11 +466,22 @@ sub _connect_ssh($self) {
 
 sub _ssh($self) {
     my $ssh = $self->netssh;
-    return $ssh if $ssh->check_master;
-    warn "WARNING: ssh error '".$ssh->error."'" if $ssh->error;
-    $self->netssh->disconnect;
+    if ($ssh) {
+        return $ssh if $ssh->check_master;
+        warn "WARNING: ssh error '".$ssh->error."'" if $ssh && $ssh->error;
+        $self->netssh->disconnect;
+    }
     $self->clear_netssh();
-    return $self->netssh;
+
+    $ssh = $self->netssh();
+    return $ssh if $ssh && $ssh->check_master();
+
+    $self->disconnect();
+
+    $self->clear_netssh();
+    $ssh = $self->netssh();
+    return $ssh if $ssh;
+    return $self->_connect_ssh();
 }
 
 sub _around_create_domain {

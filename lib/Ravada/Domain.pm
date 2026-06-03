@@ -1320,7 +1320,11 @@ sub _check_tmp_volumes($self) {
         next unless $vol->file && $vol->file =~ /\.(TMP|SWAP)\./;
         next unless $vol->backing_file;
         $vol->delete() ;
+
         my $base = Ravada::Domain->open($self->id_base);
+        die "Error: Base not found for ".$self->name." [id=".$self->id_base."]"
+        if !$base;
+
         my @volumes = $base->list_files_base_target;
         my ($file_base) = grep { $_->[1] eq $vol->info->{target} } @volumes;
         if (!$file_base) {

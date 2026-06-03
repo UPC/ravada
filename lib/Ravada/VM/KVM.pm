@@ -113,8 +113,9 @@ sub _connect {
         my $address = $con_type."+".$transport
                                             ."://".'root@'.$self->host
                                             ."/system";
-        eval {
-            $vm = Sys::Virt->new(
+        for ( 1 .. 3 ) {
+            eval {
+                $vm = Sys::Virt->new(
                                 address => $address
                               ,auth => 1
                               ,credlist => [
@@ -122,7 +123,11 @@ sub _connect {
                                   Sys::Virt::CRED_PASSPHRASE,
                               ]
                           );
-         };
+            };
+            warn $@ if $@;
+            last if $vm && $vm->is_alive;
+            sleep 1;
+        }
         my $error = $@;
         my $is_alive;
         eval { $is_alive = $vm->is_alive if $vm };
@@ -398,7 +403,7 @@ sub remove_file($self,@files) {
             if ($self->file_exists($file)) {
                 $self->_remove_file_os($file);
             } else {
-                warn "Warning: '$file' not found\n";
+                warn "Warning: ".$self->name." '$file' not found\n";
             }
         }
         $vol->delete if $vol;
@@ -602,7 +607,14 @@ sub _file_exists_remote($self, $file) {
     }
 
     confess "Error: invalid file '$file'" if $file =~ /[`;(\[" ]/;
-    my $ssh = $self->_ssh;
+    my $ssh;
+    for ( 1 .. 3 ) {
+        $ssh = $self->_ssh;
+        last if $ssh;
+        warn "retry ssh";
+        $self->disconnect();
+        sleep 1;
+    }
     confess "Error: no _ssh ".$self->name if !$ssh;
     my ($out,$err) = $ssh->capture2("ls $file");
     my @ls = split /\n/,$out;
