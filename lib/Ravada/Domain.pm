@@ -5748,7 +5748,7 @@ sub set_base_vm($self, %args) {
     $id_vm = $vm->id if !defined $id_vm;
 
     die "Error: there are already nodes in this node.\n"
-        if $self->clones(id_vm => $id_vm);
+        if $self->_data('id_vm') == $id_vm || $self->clones(id_vm => $id_vm);
 
     $request->status("working") if $request;
     $vm = Ravada::VM->open($id_vm)  if !$vm;

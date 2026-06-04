@@ -1828,7 +1828,7 @@ sub _validate_remove_base_vm($req) {
         push @other_vms,($id_vm_other) if $id_vm_other != $id_vm && _node_is_active($id_vm_other);
     }
 
-    if ( !@other_vms && $domain->clones ) {
+    if ( !@other_vms && ( $domain->_data('id_vm')==$id_vm || $domain->clones ) ) {
         $req->error("Error: there are no other VMs to migrate clones when removing base "
             .$domain->id." ".$domain->name);
         $req->status('done');
@@ -1882,6 +1882,14 @@ sub _chain_migrate_clones($self, $domain, $id_vm, $other_vms) {
 
     my ($req_migrate, $req_rm);
     my ($req_migrate_prev, $req_rm_prev);
+
+    if ( $domain->_data('id_vm') == $id_vm ) {
+        $req_migrate_prev = Ravada::Request->migrate(
+            uid => user_daemon->id
+            ,id_domain => $domain->id
+            ,id_node => $other_vms->[0]
+        );
+    }
 
     for my $clone ($domain->clones) {
 
