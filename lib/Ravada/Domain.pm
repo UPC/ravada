@@ -5744,9 +5744,13 @@ sub set_base_vm($self, %args) {
 
     confess "ERROR: user required"  if !$user;
 
+    $vm = $node if $node;
+    $id_vm = $vm->id if !defined $id_vm;
+
+    die "Error: there are already nodes in this node.\n"
+        if $self->clones(id_vm => $id_vm);
 
     $request->status("working") if $request;
-    $vm = $node if $node;
     $vm = Ravada::VM->open($id_vm)  if !$vm;
 
     if ( !$vm || !$vm->is_active || !$vm->vm) {

@@ -1817,6 +1817,7 @@ sub _validate_remove_base_vm($req) {
 
     $req->_chain_previous_set_base($domain);
     $req->_chain_previous_migrate_children($domain);
+    $req->_chain_requested_clone( $domain->id);
 
     my $id_vm = $req->defined_arg('id_vm');
     $id_vm = $req->defined_arg('id_node') if !defined $id_vm;
@@ -1835,7 +1836,6 @@ sub _validate_remove_base_vm($req) {
     }
 
     $req->_chain_migrate_clones($domain, $id_vm, \@other_vms);
-    $req->_chain_requested_clone( $domain->id);
 }
 
 sub _chain_previous_migrate_children($self, $domain) {
