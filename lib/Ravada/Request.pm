@@ -1885,7 +1885,7 @@ sub _chain_migrate_clones($self, $domain, $id_vm, $other_vms) {
 
     if ( $domain->_data('id_vm') == $id_vm ) {
         $req_migrate_prev = Ravada::Request->migrate(
-            uid => user_daemon->id
+            uid => Ravada::Utils::user_daemon->id
             ,id_domain => $domain->id
             ,id_node => $other_vms->[0]
         );
