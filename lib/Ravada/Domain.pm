@@ -867,12 +867,12 @@ sub _allow_shutdown {
     }
     my $user = $args{user} || confess "ERROR: Missing user arg";
 
+    return if $user->can_shutdown_all;
+
     if ( $self->id_base() && $user->can_shutdown_clone()) {
-        my $base = Ravada::Domain->open($self->id_base)
+        my $base = Ravada::Front::Domain->open($self->id_base)
             or confess "ERROR: Base domain id: ".$self->id_base." not found";
         return if $base->id_owner == $user->id;
-    } elsif($user->can_shutdown_all) {
-        return;
     }
     confess "User ".$user->name." [".$user->id."] not allowed to shutdown ".$self->name
         ." owned by ".($self->id_owner or '<UNDEF>')
@@ -3057,7 +3057,7 @@ sub clones($self, %filter) {
         lock_hash(%$row);
         push @clones , $row;
     }
-    $self->_data('has_clones' => scalar(@clones));
+    $self->_data('has_clones' => scalar(@clones)) unless %filter;
     return @clones;
 }
 
@@ -5747,8 +5747,10 @@ sub set_base_vm($self, %args) {
     $vm = $node if $node;
     $id_vm = $vm->id if !defined $id_vm;
 
-    die "Error: there are already nodes in this node.\n"
-        if $self->_data('id_vm') == $id_vm || $self->clones(id_vm => $id_vm);
+    $value = 1 if !defined $value;
+
+    die "Error: there are already clones in this node.\n"
+        if !$value && $self->clones(id_vm => $id_vm);
 
     $request->status("working") if $request;
     $vm = Ravada::VM->open($id_vm)  if !$vm;
@@ -5756,10 +5758,6 @@ sub set_base_vm($self, %args) {
     if ( !$vm || !$vm->is_active || !$vm->vm) {
         die "Error: VM ".Ravada::VM::_search_name($id_vm)." not available\n" 
     }
-
-    $value = 1 if !defined $value;
-
-
 
     my $id_request;
     if ($request) {

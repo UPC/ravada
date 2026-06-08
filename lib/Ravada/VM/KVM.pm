@@ -403,7 +403,7 @@ sub remove_file($self,@files) {
             if ($self->file_exists($file)) {
                 $self->_remove_file_os($file);
             } else {
-                warn "Warning: ".$self->name." '$file' not found\n";
+                # warn "Warning: ".$self->name." '$file' not found\n";
             }
         }
         $vol->delete if $vol;

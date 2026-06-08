@@ -4,6 +4,7 @@ use strict;
 use Carp qw(confess);
 use Data::Dumper;
 use Digest::MD5;
+use Storable qw(dclone);
 use Test::More;
 
 use lib 't/lib';
@@ -40,8 +41,17 @@ sub test_graphics($vm, $node) {
 }
 
 sub test_driver_clone($vm, $node, $domain, $driver_name, $option) {
-    $domain->remove_base(user_admin) if $domain->is_base;
-    wait_request();
+    if ( $domain->is_base ) {
+        Ravada::Request->remove_clones(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+        );
+        Ravada::Request->remove_base(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+        );
+        wait_request();
+    }
     my $req = Ravada::Request->set_driver(uid => user_admin->id
         , id_domain => $domain->id
         , id_option => $option->{id}
@@ -51,19 +61,40 @@ sub test_driver_clone($vm, $node, $domain, $driver_name, $option) {
     is($req->error,'');
     is($domain->get_driver($driver_name), $option->{value}
         , $driver_name);
-    $domain->prepare_base(user_admin);
-    $domain->set_base_vm(node => $node, user => user_admin);
+    Ravada::Request->set_base_vm(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,id_vm => $node->id
+    );
 
-    my $clone = $domain->clone(name => new_domain_name, user => user_admin);
-    $clone->migrate($node);
+    my $name = new_domain_name();
+    Ravada::Request->clone(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,name => $name
+    );
+    wait_request();
+    my $clone = rvd_back->search_domain($name);
+    Ravada::Request->migrate(
+        uid => user_admin->id
+        ,id_domain => $clone->id
+        ,id_node => $node->id
+    );
+    wait_request();
     my $clone2 = Ravada::Domain->open($clone->id);
     is($clone2->_vm->id,$node->id);
     is($clone2->get_driver($driver_name), $option->{value}
         , $driver_name);
 
-    $clone->remove(user_admin);
-
-    $domain->remove_base(user_admin);
+    Ravada::Request->remove_clones(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request();
+    Ravada::Request->remove_base(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
     wait_request();
 }
 
@@ -73,14 +104,37 @@ sub test_driver_migrate($vm, $node, $domain, $driver_name) {
             diag("No driver for $driver_name in ".$domain->type);
             next;
     };
-    $domain->prepare_base(user_admin);
-    $domain->set_base_vm(node => $node, user => user_admin);
+
+    # make sure prepare_base and the set_base_vm are chained
+    Ravada::Request->prepare_base(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    ) if !$domain->is_base();
+    Ravada::Request->set_base_vm(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,id_vm => $node->id
+    );
+
+    wait_request(debug => 0);
     for my $option ($driver->get_options) {
         next if defined $domain->get_driver($driver_name)
         && $domain->get_driver($driver_name) eq $option->{value};
 
         # diag("Testing $driver_name $option->{value} then migrate");
-        my $clone = $domain->clone(name => new_domain_name, user => user_admin);
+        my $name = new_domain_name();
+        my $req_clone = Ravada::Request->clone(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+            ,name => $name
+        );
+        wait_request();
+        my $clone;
+        for ( 1 .. 3 ) {
+            $clone = rvd_back->search_domain($name);
+            last if $clone;
+            sleep 1;
+        }
         my $req = Ravada::Request->set_driver(uid => user_admin->id
             , id_domain => $clone->id
             , id_option => $option->{id}
@@ -89,22 +143,28 @@ sub test_driver_migrate($vm, $node, $domain, $driver_name) {
         is($req->status,'done');
         is($req->error,'');
 
-        $clone->migrate($node);
+        Ravada::Request->migrate(
+            uid => user_admin->id
+            ,id_domain => $clone->id
+            ,id_node => $node->id
+        );
+        wait_request();
         my $clone2 = Ravada::Domain->open($clone->id);
         is($clone2->_vm->id,$node->id);
         is($clone2->get_driver($driver_name), $option->{value}
             , $driver_name) or exit;
 
-        $clone->remove(user_admin);
+        Ravada::Request->remove(
+            uid => user_admin->id
+            ,name => $clone->name
+        );
         last unless $ENV{TEST_LONG};
     }
-    $domain->remove_base(user_admin);
-    wait_request();
 }
 
 sub test_drivers_type($type, $vm, $node) {
 
-    my $domain = create_domain($vm->type);
+    my $domain = create_domain($vm);
 
     my $req = Ravada::Request->add_hardware(uid => user_admin->id
                 , id_domain => $domain->id
@@ -156,6 +216,7 @@ sub test_drivers_type($type, $vm, $node) {
         for my $vol (@vols) {
             ok (! -e $vol ) or die "$vol";
         }
+        $domain = Ravada::Domain->open($domain->id);
 
     }
     $domain->remove(user_admin);
@@ -192,6 +253,43 @@ sub _add_hardware($domain) {
     wait_request(debug => 0);
 }
 
+sub _change_disk_size($domain) {
+    $domain->shutdown_now(user_admin) if $domain->is_active;
+
+    my $disk = $domain->info(user_admin)->{hardware}->{disk};
+    my $data = dclone($disk->[0]);
+    my $new_capacity = int($data->{capacity}*3.5);
+    $data->{capacity}=$new_capacity;
+
+    my $req = Ravada::Request->change_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,index => 0
+        ,data => $data
+        ,hardware => 'disk'
+    );
+    wait_request();
+
+    my $domain2 = Ravada::Domain->open($domain->id);
+    my $disk2 = $domain2->info(user_admin)->{hardware}->{disk};
+    my $data2 = dclone($disk2->[0]);
+
+    is($data2->{capacity}, $new_capacity) or die $domain->name;
+
+}
+
+sub _do_test_change_hardware($domain, $hardware) {
+
+    my %sub = (
+        'disk' => \&_change_disk_size
+    );
+    my $sub = $sub{$hardware};
+    if (!$sub) {
+        diag("No method to test change $hardware");
+        return;
+    }
+    $sub->($domain);
+}
 sub test_change_hardware($vm, @nodes) {
     diag("[".$vm->type."] testing remove with ".scalar(@nodes)." node ".join(",",map { $_->name } @nodes));
     my $domain = create_domain($vm);
@@ -230,6 +328,8 @@ sub test_change_hardware($vm, @nodes) {
         my $tls = 0;
         $tls = grep {$_->{driver} =~ /-tls/} @{$info->{hardware}->{$hardware}}
         if $hardware eq 'display';
+
+        _do_test_change_hardware($domain, $hardware);
 
         #TODO disk volumes in Void
         #next if $vm->type eq 'Void' && $hardware =~ /disk|volume/;

@@ -3769,7 +3769,14 @@ sub remove_domain {
             .($name or '')
             ."' , maybe already removed.\n";
 
-            my $domain = Ravada::Front::Domain->open($id);
+            my $domain;
+            eval {
+                $domain = Ravada::Front::Domain->open($id);
+            };
+            warn $@ if $@;
+            if ( !$domain ) {
+                die "Machine $id not found. Maybe already removed.\n";
+            }
             my @volumes = $domain->list_volumes();
             my $vm = Ravada::VM->open($domain->_data('id_vm'));
             die "No vm ".$domain->_data('id_vm') if !$vm || !$vm->vm;
@@ -4171,6 +4178,7 @@ sub process_requests {
         $self->_kill_stale_process();
         $self->_kill_dead_process();
         $self->_timeout_requests();
+        $self->_finish_failed_initialized();
     }
 
     my $sth = $CONNECTOR->dbh->prepare("SELECT id,id_domain,command FROM requests "
@@ -4284,7 +4292,7 @@ sub _timeout_requests($self) {
     my $sth = $CONNECTOR->dbh->prepare(
         "SELECT id,pid, start_time, date_changed "
         ." FROM requests "
-        ." WHERE ( status = 'working' or status = 'stopping' )"
+        ." WHERE ( status = 'working' or status = 'stopping' or status = 'initializing' )"
         ."  AND date_changed >= ? "
         ."  AND command <> 'move_volume'"
         ." ORDER BY date_req "
@@ -4412,6 +4420,31 @@ sub _kill_stale_process($self) {
      }
     $sth->finish;
 }
+
+sub _finish_failed_initialized($self) {
+
+    my $sth = $CONNECTOR->dbh->prepare(
+        "SELECT id,pid,command,start_time "
+        ." FROM requests "
+        ." WHERE start_time<? "
+        ." AND ( status = 'initializing' ) "
+        ." AND ( error IS NOT NULL OR error <> '')"
+    );
+    $sth->execute(time - 2);
+    while (my ($id, $pid, $command, $start_time) = $sth->fetchrow) {
+        next if -e "/proc/$pid";
+        if ($pid == $$ ) {
+            warn "HOLY COW! I should kill pid $pid stale for ".(time - $start_time)
+                ." seconds, but I won't because it is myself";
+            next;
+        }
+        my $request = Ravada::Request->open($id);
+        $request->stop(0); # do not show warning
+        warn "stopping ".$request->id." ".$request->command;
+     }
+    $sth->finish;
+}
+
 
 sub _kill_dead_process($self) {
 
@@ -5710,6 +5743,9 @@ sub _cmd_change_hardware {
             && $data->{n_virt_cpu} <= $info->{max_virt_cpu})
     ;
 
+    die "Error: $hardware can only be changed while machine down.\n"
+    if $hardware eq 'disk' && $domain->is_active;
+
     $domain->change_hardware(
          $request->args('hardware')
         ,$request->defined_arg('index')
@@ -6352,7 +6388,7 @@ sub _cmd_list_cpu_models($self, $request) {
     my $id_domain = $request->args('id_domain');
 
     my $domain = Ravada::Domain->open($id_domain);
-    return [] if !$domain->_vm || !$domain->_vm->can_list_cpu_models();
+    return [] if !$domain || !$domain->_vm || !$domain->_vm->can_list_cpu_models();
 
     my $info = $domain->get_info();
     my $vm = $domain->_vm->vm;

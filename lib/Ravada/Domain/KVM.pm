@@ -331,6 +331,7 @@ sub remove {
 }
 
 sub remove_instance($self, $user) {
+    return if !$self->domain;
     eval {
         $self->domain->destroy() if $self->domain->is_active();
     };

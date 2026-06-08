@@ -1952,11 +1952,12 @@ sub test_nat($vm, $node, $set_localhost_natip=0) {
     $node->_data(nat_ip => '');
 }
 
-sub _download_alpine64 {
+sub _download_alpine64($vm) {
     my $id_iso = search_id_iso('Alpine%64');
 
     my $req = Ravada::Request->download(
              id_iso => $id_iso
+             ,id_vm => $vm->id
     );
     wait_request();
     is($req->error, '');
@@ -1971,7 +1972,7 @@ sub test_displays($vm, $node, $no_builtin=0) {
         return;
         #        $base = create_domain($vm);
     }
-    _download_alpine64();
+    _download_alpine64($vm);
 
     my $domain = $base->clone(name => new_domain_name, user => user_admin);
     my $n_displays = 1;

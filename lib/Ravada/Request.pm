@@ -788,7 +788,7 @@ sub _new_request {
     }
     my %args = @_;
 
-    $args{status} = 'requested';
+    $args{status} = 'initializing';
     $self->{command} = $args{command};
 
     if ($args{name}) {
@@ -996,13 +996,21 @@ sub _validate_remove_hardware($self) {
 
     my $args = $self->args();
 
-    die "Error: you must pass option or index"
-    if !exists $args->{option} && !exists $args->{index}
-    && !defined $args->{option} && !defined $args->{index};
+    if ( !exists $args->{option} && !exists $args->{index}
+        && !defined $args->{option} && !defined $args->{index}) {
 
-    die "Error: attribute value must be defined ".
-        join(" ", map { $_ or '<UNDEF>' } %{$args->{option}})
-    if $args->{option} && grep { !defined } values %{$args->{option}};
+        $self->error("Error: you must pass option or index");
+        $self->status('done');
+        return;
+    }
+
+    if ( $args->{option} && grep { !defined } values %{$args->{option}}) {
+
+        $self->error("Error: attribute value must be defined ".
+        join(" ", map { $_ or '<UNDEF>' } %{$args->{option}}));
+        $self->status('done');
+        return;
+    }
 
 }
 
@@ -1676,6 +1684,15 @@ sub set_base_vm {
 
 sub _validate_migrate($req) {
     my $domain = Ravada::Front::Domain->open($req->args('id_domain'));
+
+    if ( $domain->is_volatile ) {
+
+        $req->_status_error('done'
+                ,"Error: unsupported volatile domains migration."
+            );
+        return;
+    }
+
     if ($domain->_data('status') ne 'shutdown') {
         my $req_shutdown = Ravada::Request->shutdown_domain(
             uid => $req->args('uid')
@@ -1698,8 +1715,10 @@ sub _validate_migrate($req) {
     );
 
     my $id_vm_local = $domain->_id_vm_local();
-    die "Error: node local not found for ".$domain->type
-    if !defined $id_vm_local;
+    if ( !defined $id_vm_local ) {
+        return $req->_status_error('done'
+            ,"Error: node local not found for ".$domain->type);
+    }
 
     my $id_node = $req->args('id_node');
 
@@ -1742,9 +1761,14 @@ sub _validate_set_base_vm($req) {
     return _validate_remove_base_vm($req) if !$value;
 
     my $domain = Ravada::Front::Domain->open($req->args('id_domain'));
+
+    $req->_chain_prepare_base($domain);
+
     my $id_vm_local = $domain->_id_vm_local();
-    die "Error: node local not found for ".$domain->type
-    if !defined $id_vm_local;
+    if ( !defined $id_vm_local ) {
+        return $req->_status_error('done'
+            ,"Error: node local not found for ".$domain->type);
+    }
 
     my $id_vm = $req->defined_arg('id_vm');
     $id_vm = $req->defined_arg('id_node') if !defined $id_vm;
@@ -1769,6 +1793,21 @@ sub _validate_set_base_vm($req) {
         ,id_vm => $id_vm
     );
     $req->after_request_ok($req_prev->id);
+}
+
+sub _chain_prepare_base($self, $domain) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id FROM requests "
+        ." WHERE id_domain=? "
+        ."  AND id <> ? "
+        ."  AND ( command='prepare_base' OR command='post_prepare_base' "
+        ."          OR command='set_base_vm' OR command='remove_base_vm' )"
+        ."  AND ( status='requested' OR status='working' )"
+    );
+    $sth->execute($domain->id, $self->id);
+    while ( my ($id) = $sth->fetchrow ) {
+        $self->after_request($id);
+    }
 }
 
 =head2 remove_base_vm
@@ -1828,14 +1867,15 @@ sub _validate_remove_base_vm($req) {
         push @other_vms,($id_vm_other) if $id_vm_other != $id_vm && _node_is_active($id_vm_other);
     }
 
-    if ( !@other_vms && ( $domain->_data('id_vm')==$id_vm || $domain->clones ) ) {
-        $req->error("Error: there are no other VMs to migrate clones when removing base "
-            .$domain->id." ".$domain->name);
-        $req->status('done');
-        return;
+    if ( $domain->clones ) {
+        if ( !@other_vms ) {
+            $req->error("Error: there are no other VMs to migrate clones when removing base "
+                .$domain->id." ".$domain->name);
+            $req->status('done');
+            return;
+        }
+        $req->_chain_migrate_clones($domain, $id_vm, \@other_vms)
     }
-
-    $req->_chain_migrate_clones($domain, $id_vm, \@other_vms);
 }
 
 sub _chain_previous_migrate_children($self, $domain) {
@@ -2233,19 +2273,21 @@ Stops a request killing the process.
 
 =cut
 
-sub stop($self) {
+sub stop($self, $show_warn=1) {
     my $stale = '';
     my $run_time = '';
     if ($self->start_time) {
         $run_time = time - $self->start_time;
-        $stale = ", stale for $run_time seconds.";
+        $stale = ", stale for $run_time seconds." if $run_time;
     }
     warn "Killing ".$self->command
         ." , pid: ".( $self->pid or '<UNDEF>')
         .$stale
-        ."\n";
+        ."\n" if $show_warn;
     kill (15,$self->pid) if $self->pid;
-    $self->status('done',"Killed start process after $run_time seconds.");
+    $self->status('done');
+    $self->error("Killed start process after $run_time seconds.")
+    if $self->pid;
 }
 
 sub _delete($self) {
