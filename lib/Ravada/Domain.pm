@@ -1441,6 +1441,11 @@ sub _store_display($self, $display, $display_old=undef) {
     } else {
         $self->_insert_display(\%display_new);
     }
+    $self->_cache_dns($display_new{ip});
+}
+
+sub _cache_dns($self, $ip) {
+
 }
 
 sub _get_display($self, $driver) {

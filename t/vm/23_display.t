@@ -6,6 +6,7 @@ use Data::Dumper;
 use Hash::Util qw(lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
 use Mojo::JSON qw(decode_json);
+use Socket;
 use XML::LibXML;
 use Test::More;
 
@@ -80,6 +81,17 @@ sub test_display_conflict($vm) {
     is($display->[0]->{is_active},1);
     is($display->[1]->{is_active},1);
 
+    warn Dumper($display);
+    my @drivers;
+    for my $entry (@$display) {
+        push @drivers,($entry->{driver});
+    }
+    my $hostname = _get_hostname($vm->ip);
+    for my $driver ( @drivers ) {
+        my $display2 = $domain->_get_display($driver);
+        is($display2->{hostname},$hostname) or die Dumper($display2);
+    }
+
     my $port3;
     for ( 1 .. 10 ) {
         $port3 = $domain->exposed_port(22);
@@ -93,6 +105,20 @@ sub test_display_conflict($vm) {
 
     $domain->remove(user_admin);
 
+}
+
+sub _get_hostname($ip) {
+
+    my $name = gethostbyaddr($ip, AF_INET);
+    return $name if $name;
+
+    my ($in, $out, $err);
+    run3(['host',$ip], \$in, \$out, \$err);
+    my ($hostname) = $out =~ /pointer (.*)\./;
+    die "I can't fetch hostname from $out" if !$hostname;
+
+    warn Dumper([$ip, $hostname, $name]);
+    return $hostname;
 }
 
 ######################################################################
