@@ -1082,7 +1082,7 @@ sub _change_hardware_disk($self, $index, $data_new) {
     my $driver;
     $driver = delete $data_new->{bus} if exists $data_new->{bus};
     lock_hash(%$data_new);
-    return $self->_change_driver_disk($index, $driver) if $driver;
+    $self->_change_driver_disk($index, $driver) if $driver;
 
     die "Error: volume $index not found, only ".scalar(@volumes)." found."
         if $index >= scalar(@volumes);
@@ -1090,7 +1090,7 @@ sub _change_hardware_disk($self, $index, $data_new) {
     my $file = $volumes[$index]->{file};
     my $new_file;
     $new_file = $data_new->{file} if exists $data_new->{file};
-    return $self->_change_disk_data($index, file => $new_file) if defined $new_file;
+    $self->_change_disk_data($index, file => $new_file) if defined $new_file;
 
     return if !$file;
     my $data;

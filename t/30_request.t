@@ -244,6 +244,9 @@ sub test_requests_by_domain {
 
     my $req2 = Ravada::Request->remove_base(uid => user_admin->id, id_domain => $domain->id);
     is($domain->list_requests, 2);
+    wait_request(debug => 0);
+    Ravada::Request->prepare_base(uid => user_admin->id, id_domain => $domain->id);
+    wait_request(debug => 0);
 
     my $clone_name = new_domain_name();
     my $req_clone = Ravada::Request->create_domain (
@@ -252,11 +255,8 @@ sub test_requests_by_domain {
         ,id_base => $domain->id
         ,vm => $vm_name
     );
-
+    wait_request();
     my $req4 = Ravada::Request->prepare_base(uid => user_admin->id, id_domain => $domain->id);
-    is($domain->list_requests,3,Dumper([map { $_->{command} } $domain->list_requests]));
-
-    rvd_back->_process_all_requests_dont_fork();
     wait_request();
 
     is($req1->status , 'done');

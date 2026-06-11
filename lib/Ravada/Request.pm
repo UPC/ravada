@@ -968,6 +968,7 @@ sub _validate_remove_base($self) {
         $reqs_base[-1]->status('done');
         $reqs_base[-2]->status('done');
     }
+    $self->_chain_prepare_base($domain);
     $self->_chain_remove_bases_nodes($domain);
 }
 

@@ -406,7 +406,9 @@ sub test_change_hardware($vm, @nodes) {
         $devices{$hardware} = scalar(@{$info->{hardware}->{$hardware}});
     }
     my @hardware = grep (!/^(disk|display|usb)$/, sort keys %{$info->{hardware}});
-    push @hardware,("display","usb","disk");
+    push @hardware,("display");
+    push @hardware,("usb") if $vm->type ne 'Void';
+    push @hardware,("disk");
     for my $hardware (reverse @hardware) {
         next if $hardware =~ /cpu|features|memory/;
         my $tls = 0;

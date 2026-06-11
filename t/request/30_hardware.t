@@ -32,11 +32,12 @@ my $TLS;
 
 ########################################################################
 #
-sub _download_alpine64 {
+sub _download_alpine64($id_vm) {
     my $id_iso = search_id_iso('Alpine%64');
 
     my $req = Ravada::Request->download(
              id_iso => $id_iso
+             ,id_vm => $id_vm
     );
     wait_request();
     is($req->error, '');
@@ -1838,7 +1839,7 @@ for my $vm_name (vm_names()) {
 	    diag("Skipping VM $vm_name in this system");
 	    next;
 	}
-    _download_alpine64() if !$<;
+    _download_alpine64($vm->id) if !$<;
     $TLS = 0;
     $TLS = 1 if check_libvirt_tls() && $vm_name eq 'KVM';
     for my $base ( _create_base($vm) ) {
