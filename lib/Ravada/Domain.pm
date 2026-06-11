@@ -6547,13 +6547,6 @@ sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) 
 
     _fix_hw_ignore_fields($data);
 
-    my $real_id_vm;
-    if ($hardware eq 'disk' && !$self->_vm->is_local) {
-        $real_id_vm = $self->_vm->id;
-        my $vm_local = $self->_vm->new( host => 'localhost' );
-        $self->_set_vm($vm_local, 1);
-    }
-
     my $is_display_builtin;
 
     if ($hardware eq 'display') {
@@ -6587,11 +6580,6 @@ sub _around_change_hardware($orig, $self, $hardware, $index=undef, $data=undef) 
         $self->_redefine_instances() if $self->is_known();
     }
 
-    if ( $real_id_vm ) {
-        my $id_vm = $real_id_vm;
-        my $vm = Ravada::VM->open($id_vm);
-        $self->_set_vm($vm, 1);
-    }
     $self->_post_change_hardware($hardware, $index, $data);
 }
 

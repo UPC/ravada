@@ -2757,7 +2757,13 @@ sub _remove_device($self, $index, $device, $attribute_name0=undef, $attribute_va
     $msg = " $attribute_name0=$attribute_value ".join(",",@found)
     if defined $attribute_name0;
 
-    confess "ERROR: $device $msg ".($index or '<UNDEF>')
+    my $index_text = '<UNDEF>';
+    $index_text = $index if defined $index;
+
+    warn "ERROR: $device $msg $index_text"
+        ." not removed, only ".($ind)." found in ".$self->name;
+
+    confess "ERROR: $device $msg $index_text"
         ." not removed, only ".($ind)." found in ".$self->name."\n";
 }
 

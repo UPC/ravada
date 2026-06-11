@@ -463,7 +463,7 @@ sub _create_storage_pool($id_vm , $vm_name) {
         ,name => $name
         ,directory => $dir
     );
-    wait_request( );
+    wait_request( $req );
     is($req->error,'');
 
     return $name;
