@@ -2222,7 +2222,7 @@ sub test_migrate_standalone($node1, $node2) {
     wait_request();
 
     test_volumes_exist($domain, $node1,1);
-    test_volumes_exist($domain, $node2,1);
+    test_volumes_exist($domain, $node2,0);
 
     test_remove_instances($domain, $node1, $node2);
 }
