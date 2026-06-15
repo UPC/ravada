@@ -1089,6 +1089,9 @@ sub _change_hardware_disk($self, $index, $data_new) {
     $new_file = $data_new->{file} if exists $data_new->{file};
     $self->_change_disk_data($index, file => $new_file) if defined $new_file;
 
+    return if !keys %$data_new
+        || ( keys (%$data_new)==1 && exists $data_new->{file});
+
     return if !$file;
     my $data;
     if ($self->is_local) {

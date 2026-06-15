@@ -2459,19 +2459,36 @@ sub _data($self, $field, $value=undef) {
             my $prev_req_id = $self->{_data}->{$field};
             $value = _push($prev_req_id, $value) if $prev_req_id;
         }
-        $self->{_data}->{$field} = $value;
         my $value0 = $value;
-        eval {
-            $value = encode_json($value) if ref($value);
-        };
-        confess Dumper([$@,$value0]) if $@;
 
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE requests set $field=?"
             ." WHERE id=?"
         );
-        $sth->execute($value, $self->id);
+        for ( 1 .. 2 ) {
+
+            eval {
+                $value = encode_json($value) if ref($value);
+            };
+            confess Dumper([$@,$field,$value0]) if $@;
+
+            eval {
+                $sth->execute($value, $self->id);
+            };
+            last if !$@;
+            if ($@ =~ /Data too long/) {
+                if (ref($value0)) {
+                    if (ref($value0) eq 'ARRAY') {
+                        $#$value0 = $#$value0 / 2;
+                        $value = $value0;
+                    } else {
+                        die $@." ".Dumper([$field,$value0]);
+                    }
+                }
+            }
+        }
         $sth->finish;
+        $self->{_data}->{$field} = $value0;
 
         return $self->{_data}->{$field};
     }

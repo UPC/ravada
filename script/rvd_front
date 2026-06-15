@@ -3456,9 +3456,7 @@ get '/storage/list_unused_volumes' => sub($c) {
     );
     $RAVADA->wait_request($req,180);
     my $output = [];
-    if ($req->output) {
-        $output = decode_json($req->output);
-    }
+    $output = $req->output if $req->output;
     return $c->render( json => $output );
 };
 
