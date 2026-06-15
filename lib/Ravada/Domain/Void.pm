@@ -211,13 +211,11 @@ sub resume {
 }
 
 sub remove($self, $user) {
-
     $self->remove_instance($user);
+    $self->_remove_all_volumes();
 }
 
 sub remove_instance($self, $user) {
-    $self->remove_disks();
-
     my $config_file = $self->_config_file;
     if ($self->_vm->file_exists($config_file)) {
         my ($out, $err) = $self->_vm->run_command("/bin/rm",$config_file);
@@ -226,7 +224,6 @@ sub remove_instance($self, $user) {
     if ($self->_vm->file_exists($config_file.".lock")) {
         $self->_vm->remove_file($config_file.".lock");
     }
-
 }
 
 sub can_hibernate { return 1; }

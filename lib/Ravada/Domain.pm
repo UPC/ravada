@@ -210,6 +210,7 @@ after 'screenshot' => \&_post_screenshot;
 after '_select_domain_db' => \&_post_select_domain_db;
 
 around 'migrate' => \&_around_migrate;
+around 'remove_instance' => \&_around_remove_instance;
 
 around 'get_info' => \&_around_get_info;
 around 'set_max_mem' => \&_around_set_max_mem;
@@ -2818,7 +2819,17 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
         $@ = '';
         eval { $domain = $vm->search_domain($domain_name) } if $vm;
         warn $@ if $@;
-        $domain->_remove_instance($user, $cascade, $instance->{id}) if $domain;
+        if ($domain) {
+            $domain->_remove_instance($user, $cascade, $instance->{id});
+            $domain->_remove_all_volumes();
+        } else {
+            for my $vol ( @{$self->{_volumes}} ) {
+                next if $vol =~ /\.iso$/;
+                $vm->remove_file($vol) if $vm && $vm->vm
+                    && $vm->is_alive && $vm->is_active
+                    && $vm->file_exists($vol);
+            }
+        }
     }
 }
 
@@ -5663,9 +5674,27 @@ sub _post_migrate($self, $node, $request = undef) {
 sub _around_migrate($orig, $self, $node, $request=undef) {
     return if $self->_vm->id == $node->id;
 
+    my $instance = $self->open($self->id);
     $self->_pre_migrate($node, $request);
     $self->$orig($node, $request);
     $self->_post_migrate($node, $request);
+
+    if (!$self->is_base) {
+        my $user = Ravada::Utils::user_daemon();
+        if (defined $request) {
+            $user = Ravada::Auth::SQL->search_by_id($request->args('uid'));
+        }
+        $instance->remove_instance($user, $node);
+    }
+}
+
+sub _around_remove_instance($orig, $self, $user, $node=undef) {
+    die "Error: instance in same node.\n"
+    if defined $node && $self->_vm->id == $node->id;
+
+    $self->$orig($user);
+
+    $self->_remove_files_not_shared();
 }
 
 sub _id_base_in_vm($self, $id_vm) {
@@ -5807,6 +5836,7 @@ sub set_base_vm($self, %args) {
             my $instance = $vm->search_domain($self->name);
             $instance->_remove_instance($user,1) if $instance;
             $self->_remove_files_not_shared($vm,@nodes, $self->_vm);
+            $self->_remove_base_files_not_shared($vm,@nodes, $self->_vm);
             $self->_vm($node2);
             $self->_data('id_vm' => $node2->id);
             $vm->refresh_storage_pools();
@@ -5844,22 +5874,35 @@ sub _check_set_base_reqs($self) {
     }
 }
 
-sub _remove_files_not_shared($self, $vm, @nodes){
+sub _remove_files_not_shared($self, $vm=$self->_vm, @nodes){
 
     for my $file ($self->list_volumes,$self->list_files_base) {
-        next if $file =~ /\.iso$/;
-        next if !$self->_vm->file_exists($file);
-
-        my ($dir) = $file =~ m{(.*)/};
-        my $shared=0;
-        for my $node(@nodes) {
-            next if $vm->id == $node->id;
-            $shared++ if $vm->shared_storage($node, $dir);
-            last if $shared;
-        }
-        next if $shared;
-        $vm->remove_file($file);
+        $self->_do_remove_file_not_shared($file, $vm, @nodes);
     }
+}
+
+sub _remove_base_files_not_shared($self, $vm, @nodes){
+
+    for my $file ($self->list_files_base) {
+        $self->_do_remove_file_not_shared($file, $vm, @nodes);
+    }
+}
+
+
+sub _do_remove_file_not_shared($self, $file, $vm, @nodes) {
+
+    return if $file =~ /\.iso$/;
+    return if !$self->_vm->file_exists($file);
+
+    my ($dir) = $file =~ m{(.*)/};
+    my $shared=0;
+    for my $node(@nodes) {
+        next if $vm->id == $node->id;
+        $shared++ if $vm->shared_storage($node, $dir);
+        last if $shared;
+    }
+    next if $shared;
+    $vm->remove_file($file);
 }
 
 sub _check_all_base_parents_in_node($self, $vm) {

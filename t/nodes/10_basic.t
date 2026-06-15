@@ -715,7 +715,9 @@ sub test_volatile_req($vm, $node) {
         ok(!$vm->file_exists($vol),$vol) or exit;
         ok(!$node->file_exists($vol),$vol." in ".$node->name) or exit;
     }
+    warn 1;
     _remove_domain($base);
+    warn 2;
 }
 
 sub _wait_machine_removed($clone) {
@@ -1389,6 +1391,7 @@ sub test_fill_memory($vm, $node, $migrate, $start=0) {
     );
     wait_request();
     ok($base->_id_base_in_vm($node->id));
+    is($base->list_instances(),2) or die;
 
     my $master_free_memory = $vm->free_memory;
     my $node_free_memory = $node->free_memory;
@@ -1411,7 +1414,7 @@ sub test_fill_memory($vm, $node, $migrate, $start=0) {
             ,memory => int($memory)
             ,start => $start
         );
-        wait_request(debug => 0, check_error => 0);
+        wait_request(debug => 1, check_error => 0);
         like($req->error, qr/^(No free memory|$)/);
         is($req->status,'done');
         push @clones,($clone_name);
@@ -1419,6 +1422,7 @@ sub test_fill_memory($vm, $node, $migrate, $start=0) {
         ok($clone,"Expecting clone $clone_name") or exit;
         $created_in_node++ if $clone->_data('id_vm') == $node->id;
         _check_files_exist($clone);
+
 
         Ravada::Request->migrate( uid => user_admin->id
             ,id_domain => $clone->id
@@ -1442,6 +1446,8 @@ sub test_fill_memory($vm, $node, $migrate, $start=0) {
         $clone = Ravada::Domain->open($clone->id);
         my $node_name = $clone->_vm->name;
         $nodes{$node_name}++;
+
+        diag(Dumper[$clone_name, $clone->_vm->name,\%nodes]);
 
         last if $migrate && exists $nodes{$vm->name} && $nodes{$vm->name} > 2;
         if (!$error && !$clone->is_active) {
@@ -1571,7 +1577,7 @@ sub test_check_instances($vm, $node) {
     is($domain->_vm->id, $node->id);
 
     my @instances3 = $domain->list_instances();
-    is(scalar(@instances3),2, "Expecting 2 instances of ".$domain->name);
+    is(scalar(@instances3),1, "Expecting 1 instances of ".$domain->name);
 
     $domain->remove(user_admin);
 }
@@ -2214,6 +2220,8 @@ sub test_migrate_clone($node1, $node2) {
 sub test_migrate_standalone($node1, $node2) {
 
     my $domain = _req_create($node1, 0); # create and not start
+
+    diag("migrate ".$domain->name." to ".$node2->name);
     my $req = Ravada::Request->migrate(
         uid => user_admin->id
         ,id_domain => $domain->id
@@ -2381,6 +2389,8 @@ for my $vm_name (reverse vm_names() ) {
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
         start_node($node);
+
+        test_fill_memory($vm, $node, 0); # balance
 
         test_base_only_in_node_add_hw($vm, $node); #start after create = 1
 

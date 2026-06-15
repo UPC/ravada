@@ -341,9 +341,6 @@ sub remove_instance($self, $user) {
     };
     warn $@ if $@;
     confess $@ if $@ && $@ !~ /libvirt error code: 42/;
-    eval { $self->remove_disks() if $self->is_known };
-    warn $@ if $@;
-    confess $@ if $@ && $@ !~ /libvirt error code: 42/;
 }
 
 sub _remove_file_image {

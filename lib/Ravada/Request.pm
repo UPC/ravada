@@ -947,8 +947,9 @@ sub _validate_remove_domain($self) {
         }
     }
     my $domain = Ravada::Front::Domain->open($id_domain);
-    $self->_chain_remove_bases_nodes($domain)
-    if $domain->is_base();
+    if ( $domain->is_base() ) {
+        my $req_rm = $self->_chain_remove_bases_nodes($domain)
+    }
 }
 
 sub _validate_remove_base($self) {
@@ -977,10 +978,10 @@ sub _chain_remove_bases_nodes($self, $domain) {
     return if keys %$bases_vm < 2;
     my %done;
     my $req_prev;
-    my $req = Ravada::Request->open($self->id);
+    my $req;
     for my $id_vm ($domain->_data('id_vm'),keys %$bases_vm ) {
         next if $done{$id_vm}++;
-        my $req = Ravada::Request->remove_base_vm(
+        $req = Ravada::Request->remove_base_vm(
             uid => $self->args('uid')
             ,id_domain => $domain->id
             ,id_vm => $id_vm
@@ -990,6 +991,7 @@ sub _chain_remove_bases_nodes($self, $domain) {
         $self->after_request_ok($req->id);
         $req_prev = $req;
     }
+    return $req;
 }
 
 sub _validate_remove_hardware($self) {
@@ -1049,6 +1051,14 @@ sub _validate_prepare_base($self) {
 
     if ($req_create) {
         $req_create->after_request($self->id);
+    }
+    my $domain = Ravada::Front::Domain->open($self->args('id_domain'));
+    if ($domain->is_active) {
+        my $req_shutdown = Ravada::Request->shutdown_domain(
+            uid => $self->args('uid')
+            ,id_domain => $domain->id
+        );
+        $self->after_request_ok($req_shutdown);
     }
 }
 
