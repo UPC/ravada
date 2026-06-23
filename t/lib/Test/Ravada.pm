@@ -2429,7 +2429,11 @@ sub start_node($node) {
 
     ok($domain->_vm->host eq 'localhost');
 
-    $domain->start(user => user_admin, remote_ip => '127.0.0.1')  if !$domain->is_active;
+    my $req_start = Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request();
 
     for ( 1 .. 60 ) {
         last if $node->ping(undef,0); # no cache
@@ -2465,7 +2469,8 @@ sub start_node($node) {
             $domain->shutdown_now(user_admin);
             sleep 2;
         }
-        $domain->start(user => user_admin, remote_ip => '127.0.0.1');
+        $req_start->status('requested');
+        wait_request();
     }
     is($node->_do_is_active,1,"Expecting active node ".$node->name) or exit;
 
@@ -2609,8 +2614,10 @@ sub local_ips($vm) {
     return @ips;
 }
 
-sub shutdown_domain_internal($domain, $nice=0) {
+sub shutdown_domain_internal($domain0, $nice=0) {
+    my $domain = Ravada::Domain->open($domain0->id);
     if ($domain->type eq 'KVM') {
+        return if !$domain->domain->is_active;
         if ($nice) {
             $domain->domain->shutdown();
             for ( 1 .. 60 ) {

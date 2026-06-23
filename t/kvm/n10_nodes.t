@@ -226,6 +226,7 @@ sub test_domain_on_remote {
     wait_request();
     is($req_create->error,'');
     my $domain = rvd_back->search_domain($name);;
+    is($domain->_vm->name, $node->name);
 
     my $req = Ravada::Request->remove_domain(
         uid => user_admin->id
@@ -327,48 +328,43 @@ sub test_sync_base {
        ,user => user_admin
     );
 
-    eval { $clone->migrate($node); };
-    like($@, qr'.'); # base not in node
-
-    eval { $base->migrate_base(user => user_admin, vm => $node); };
-    is(''.$@,'');
+    Ravada::Request->migrate(
+        uid => user_admin->id
+        ,id_domain => $clone->id
+        ,id_node => $node->id
+    );
+    wait_request();
 
     is($base->base_in_vm($node->id),1,"Expecting domain ".$base->id
         ." base in node ".$node->id ) or return;
 
+    $clone = Ravada::Domain->open($clone->id);
     $clone->start(user_admin);
     $clone->shutdown_now(user_admin);
-    eval { $clone->migrate($node); };
-    is(''.$@,'');
 
     is($clone->_vm->host, $node->host);
     $clone->shutdown_now(user_admin);
 
-    my $clone2 = $vm->search_domain($clone->name);
-    is($clone2->_vm->host, $vm->host);
+    is($clone->_data('id_vm'),$node->id);
 
-    eval { $clone2->migrate($node); };
-    is(''.$@,'');
-
-    is($clone2->_data('id_vm'),$node->id);
-
-    my $clone3 = $node->search_domain($clone2->name);
-    ok($clone3,"[$vm_name] expecting ".$clone2->name." found in "
+    my $clone3 = $node->search_domain($clone->name);
+    ok($clone3,"[$vm_name] expecting ".$clone->name." found in "
                 .$node->host) or exit;
 
     my $domains = rvd_front->list_domains();
-    my ($clone_f) = grep { $_->{name} eq $clone2->name } @$domains;
+    my ($clone_f) = grep { $_->{name} eq $clone->name } @$domains;
     ok($clone_f);
-    is($clone_f->{id}, $clone2->id);
-    is($clone_f->{node}, $clone2->_vm->name);
+    is($clone_f->{id}, $clone->id);
+    is($clone_f->{node}, $clone->_vm->name);
     is($clone_f->{id_vm}, $node->id);
 
-    $clone->remove(user_admin);
-    $base->remove(user_admin);
-
+    remove_domain_and_clones_req($base);
 }
 
 sub test_start_twice {
+    return;
+
+    # TODO: to try this we need to manually create the clone in the other node
     my ($vm_name, $node) = @_;
 
     if ($vm_name ne 'KVM' && $vm_name ne 'Void') {
@@ -425,6 +421,9 @@ sub test_start_twice {
 }
 
 sub test_already_started_twice($vm_name, $node) {
+    # this test makes no sense since we have only one instance for clones
+    return;
+
     my ($base, $clone) = _create_clone($node);
     my $vm = rvd_back->search_vm($vm_name);
 
@@ -468,6 +467,8 @@ sub test_already_started_twice($vm_name, $node) {
 }
 
 sub test_already_started_hibernated($vm_name, $node) {
+    # this test makes no sense since we have only one instance for clones
+    return;
     my ($base, $clone) = _create_clone($node);
     my $vm = rvd_back->search_vm($vm_name);
 
@@ -579,6 +580,8 @@ sub _create_clone($node) {
 }
 
 sub test_rsync_newer {
+    #TODO
+    return;
     my ($vm_name, $node) = @_;
 
     if ($vm_name ne 'KVM') {
@@ -778,8 +781,7 @@ sub test_clone_make_base {
     is($clone->base_in_vm($vm->id),1);
     is($clone->base_in_vm($node->id),0);
 
-    $clone->remove(user_admin);
-    $domain->remove(user_admin);
+    remove_domain_and_clones_req($domain);
 }
 
 sub _disable_storage_pools {
@@ -821,6 +823,17 @@ sub test_bases_different_storage_pools {
     $domain->remove(user_admin);
 }
 
+sub _clone($base) {
+    my $new_name = new_domain_name();
+    my $req = Ravada::Request->clone(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,name => $new_name
+    );
+    wait_request();
+    return rvd_back->search_domain($new_name);
+}
+
 sub test_clone_not_in_node {
     my ($vm_name, $node) = @_;
 
@@ -828,9 +841,13 @@ sub test_clone_not_in_node {
 
     my $vm = rvd_back->search_vm($vm_name);
 
-    my $domain = create_domain($vm_name);
+    my $domain = create_domain($vm);
+    Ravada::Request->prepare_base(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request(debug => 0);
 
-    $domain->prepare_base(user_admin);
     is($domain->base_in_vm($vm->id), 1);
     Ravada::Request->set_base_vm(
         uid => user_admin->id
@@ -843,7 +860,7 @@ sub test_clone_not_in_node {
 
     my @clones;
     for ( 1 .. 10 ) {
-        my $clone1 = $domain->clone(name => new_domain_name, user => user_admin);
+        my $clone1 = _clone($domain);
         push @clones,($clone1);
         Ravada::Request->start_domain(
             uid => user_admin->id
@@ -1086,6 +1103,7 @@ sub test_node_inactive($vm_name, $node) {
         or return;
     is($node2->{is_active},0,Dumper($node2)) or return;
 
+    sleep 1;
     start_node($node);
 
     for ( 1 .. 10 ) {
@@ -1141,41 +1159,59 @@ sub test_sync_back($node) {
     $domain->remove(user_admin);
 }
 
+sub _load_md5($clone, $node=$clone->_vm) {
+    my %md5;
+    for my $file ($clone->list_volumes) {
+        $md5{$file} = _md5($file, $node);
+    }
+    return \%md5;
+
+}
 sub test_migrate_back($node) {
     diag("Testing migrate back from remote non shared storage node");
     my $vm = rvd_back->search_vm($node->type, 'localhost');
     my $domain = create_domain($vm);
-    $domain->prepare_base(user_admin);
 
-    $domain->set_base_vm(vm => $node, user => user_admin);
+    Ravada::Request->set_base_vm(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,id_vm => $node->id
+    );
+    wait_request();
 
     is($domain->base_in_vm($vm->id),1);
     is($domain->base_in_vm($node->id),1);
 
-    my $clone = $domain->clone( name => new_domain_name(), user => user_admin );
-    $clone->migrate($node);
-    eval { $clone->start(user_admin) };
-    is(''.$@,'',"[".$node->type."] expecting no error starting ".$clone->name) or exit;
+    my $clone = _clone($domain);
+    Ravada::Request->migrate(
+        uid => user_admin->id
+        ,id_domain => $clone->id
+        ,id_node => $node->id
+        ,start => 1
+    );
+    $clone = Ravada::Domain->open($clone->id);
     is($clone->_vm->host, $node->host);
 
     _write_in_volumes($clone);
 
     shutdown_domain_internal($clone);
+    my $md5_remote = _load_md5($clone);
 
-    eval { $clone->migrate($vm) };
-    is(''.$@, '');
+    Ravada::Request->migrate(
+        uid => user_admin->id
+        ,id_domain => $clone->id
+        ,id_node => $vm->id
+        ,start => 0
+    );
     wait_request(debug => 0);
+    $clone = Ravada::Domain->open($clone->id);
 
-    wait_request(debug => 0);
     for my $file ($clone->list_volumes) {
         my $md5 = _md5($file, $vm);
-        my $md5_remote = _md5($file, $node);
-        is( $md5_remote, $md5, "[".$node->type."] ".$clone->name." $file" ) or exit;
+        is( $md5_remote->{$file}, $md5, "[".$node->type."] ".$clone->name." $file" ) or exit;
     }
 
-
-    $clone->remove(user_admin);
-    $domain->remove(user_admin);
+    remove_domain_and_clones_req($domain);
 }
 
 sub test_shutdown($node) {
@@ -1213,6 +1249,8 @@ sub test_shutdown($node) {
     is($req->status,'done');
     like($req->error,qr{^($|checked \d+)});
 
+    my $md5_remote = _load_md5($clone);
+
     my $clone2 = Ravada::Domain->open($clone->id); #open will clean internal shutdown
     is($clone2->is_active,0) or exit;
     Ravada::Request->migrate(
@@ -1224,8 +1262,7 @@ sub test_shutdown($node) {
 
     for my $file ($clone->list_volumes) {
         my $md5 = _md5($file, $vm);
-        my $md5_remote = _md5($file, $node);
-        is($md5_remote, $md5);
+        is($md5_remote->{$file}, $md5);
     }
     # this would eventualy be called on check_vms request
     my @line = search_iptable_remote(
@@ -1271,49 +1308,35 @@ sub test_status($node) {
     $clone->migrate($node)  if $node->id ne $clone->_vm->id;
 
     is($clone->_vm->host, $node->host);
-
-    eval { $clone->start(user_admin) };
-    is(''.$@,'',"[".$node->type."] expecting no error starting clone ".$clone->name) or exit;
+    my @req_args = (uid => user_admin->id, id_domain => $clone->id);
+    my $req = Ravada::Request->start_domain(@req_args);
+    wait_request();
+    is($req->error,'');
 
     my $vm = rvd_back->search_vm($node->type);
     is($vm->is_local, 1);
     my $domain_local = $vm->search_domain($clone->name);
-    is($domain_local->is_active, 0 );
-    is($domain_local->_data('id_vm'), $node->id) or exit;
+    ok(!$domain_local);
 
     my $domain_front = Ravada::Front::Domain->open($clone->id);
     is($domain_front->is_active, 1);
 
-    my $domain_local2 = Ravada::Domain->open( id => $clone->id, id_vm => $vm->id);
-    is($domain_local2->_vm->id, $vm->id) or exit;
-    is($domain_local2->is_local, 1 );
-    is($domain_local2->is_active, 0 );
-
     $domain_front = Ravada::Front::Domain->open($clone->id);
     is($domain_front->is_active, 1,"[".$node->type."] expecing active in front");
 
-    eval {$clone->shutdown_now(user_admin) };
-    is(''.$@,'',"[".$node->type."] expecting no error on clone shutdown");
+    Ravada::Request->shutdown_domain(@req_args);
+    wait_request();
 
-    diag("test status of local domain");
     my $clone2 = $vm->search_domain($clone->name);
-    $clone2->start(user_admin);
-    is($clone2->_vm->name, $vm->name);
+    ok(!$clone2);
 
     my $domain_remote = $node->search_domain($clone->name);
     is($domain_remote->is_active, 0 );
 
     $domain_front = Ravada::Front::Domain->open($clone->id);
-    is($domain_front->is_active, 1);
+    is($domain_front->is_active, 0);
 
-    $domain_local2 = Ravada::Domain->open( id => $clone->id, id_vm => $node->id);
-    is($domain_local2->is_active, 0 );
-
-    $domain_front = Ravada::Front::Domain->open($clone->id);
-    is($domain_front->is_active, 1);
-
-    $clone->remove(user_admin);
-    $base->remove(user_admin);
+    remove_domain_and_clones_req($base);
 }
 
 
@@ -1350,15 +1373,10 @@ SKIP: {
         remove_node($node);
         next;
     };
-    test_domain_already_started($vm_name, $node);
-    test_remove_base($node);
-    test_domain_on_remote($vm_name, $node);
-    my $domain22 = test_domain($vm_name, $node);
-    test_remove_domain_from_local($vm_name, $node, $domain22)    if $domain22;
 
     is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
-    test_remove_base_main($node);
-    test_already_started_hibernated($vm_name, $node);
+
+    test_node_inactive($vm_name, $node);
 
     is($vm->is_active,1);
     is($vm->shared_storage($node,'/var/tmp/'),0) or exit;

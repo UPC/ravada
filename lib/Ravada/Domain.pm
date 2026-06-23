@@ -612,13 +612,7 @@ sub _start_checks($self, @args) {
             $vm->connect;
             die "Error: node ".$vm->name." is not alive" if !$vm->is_alive;
         };
-        if ($id_vm) {
-            $self->_set_vm($vm);
-        } else {
-            $self->_balance_vm($request, $enable_host_devices)
-            if !$is_volatile;
-        }
-        if ( !$is_volatile && !$self->_vm->is_local() ) {
+        if ( !$is_volatile ) {
             if (!base_in_vm($id_base, $self->_vm->id)) {
                 my $args = {
                     uid => Ravada::Utils::user_daemon->id
@@ -632,8 +626,6 @@ sub _start_checks($self, @args) {
                     ,'set_base_vm', encode_json($args));
             }
 
-            $self->rsync(request => $request)
-                unless defined $id_prev && $self->_vm->id == $id_prev;
         }
     }
     $self->_check_free_vm_memory();
