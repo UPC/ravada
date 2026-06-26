@@ -146,6 +146,23 @@ sub backup($self) {
     return $vol_backup;
 }
 
+sub _move_batch($self, $dst, $req, $mode=undef) {
+    my $file = $self->file;
+    confess "Error: no Virtual Manager" if !$self->vm;
+    my @cmd = (
+        ["mv",$file,$dst]
+    );
+    push @cmd,["chmod",$mode,$dst] if $mode;
+
+    my $id_domain;
+    $id_domain = $self->domain->id if $self->domain;
+
+    my $id_req;
+    $id_req = $req->id if $req;
+
+    $self->vm->queue_command(\@cmd, $id_domain, $id_req);
+}
+
 sub _copy_sys($self, $dst, $mode=undef) {
     my $file = $self->file;
     if ($self->vm) {

@@ -4574,11 +4574,6 @@ sub _execute {
     $request->start_time(time);
     $request->error('');
 
-    if ( $request->error_check_request() ) {
-        $request->status('done');
-        return;
-    }
-
     if ($dont_fork || !$CAN_FORK) {
         $self->_do_execute_command($sub, $request);
         return;

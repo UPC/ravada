@@ -998,7 +998,6 @@ sub prepare_base($self, @args) {
         my @jobs;
         for my $req ($self->list_requests) {
             if ($req->command eq 'wait_job') {
-                $req->after_request($id_req);
                 $id_req = $req->id;
                 push @jobs,($req->id);
             }
@@ -1006,8 +1005,7 @@ sub prepare_base($self, @args) {
         my $req_post = Ravada::Request->post_prepare_base(
             uid => $user->id
             ,id_domain => $self->id
-            ,after_request => $id_req
-            ,check_requests => \@jobs
+            ,after_request_ok => \@jobs
         );
         my $sth = $self->_dbh->prepare(
             "UPDATE requests set after_request=? "
@@ -2071,7 +2069,7 @@ sub open($class, @args) {
         $domain = _search_domain_in_instances($id, $row->{name}, $force);
     }
     $domain->_insert_db_extra() if $domain && !$domain->is_known_extra();
-    $domain->_data('id_vm' => $vm_changed->id) if $vm_changed;
+    $domain->_data('id_vm' => $vm_changed->id) if $domain && $vm_changed;
     return $domain;
 }
 

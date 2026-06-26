@@ -94,7 +94,7 @@ sub test_req_migrate_active($vm, $node1, $node2) {
 }
 
 
-sub test_req_prepare_base($vm, $node1, $node2) {
+sub test_req_set_base_vm($vm, $node1, $node2) {
     my $domain = create_domain($vm);
     $domain->_data('id_vm' => $node1->id);
     my $req = Ravada::Request->set_base_vm(
@@ -445,6 +445,46 @@ sub test_chain_remove_vm($vm, $node1, $node2) {
     remove_domain_db($base);
 }
 
+sub _check_req_recurse($id_req) {
+
+    like($id_req,qr/^[0-9]+$/);
+    my $req = Ravada::Request->open($id_req);
+    ok($req) or return;
+    for my $after ($req->after_request() , $req->after_request_ok ) {
+        next if !$after;
+
+        my @id;
+        if (!ref($after)) {
+            unlike($after,qr/ARRAY/);
+            @id = ( $after );
+        } else {
+            isa_ok($after,'ARRAY');
+            @id = @$after;
+        }
+        for my $id (@id) {
+            _check_req_recurse($id);
+        }
+    }
+}
+
+sub test_req_prepare_base($vm) {
+
+    my $domain = create_domain($vm);
+    $domain->add_volume(swap => 1, size => 10 * 1024, format => 'qcow2');
+    $domain->add_volume(size => 10 * 1024, format => 'qcow2');
+
+    my $req = Ravada::Request->prepare_base(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    _check_req_recurse($req->id);
+    rvd_back->_cmd_prepare_base($req);
+    for my $req2 ($domain->list_requests) {
+        _check_req_recurse($req2->id);
+    }
+    remove_domain($domain);
+}
+
 ###############################################################################
 
 init();
@@ -466,6 +506,8 @@ for my $vm_name (vm_names() ) {
         my $node1 = _create_remote_node($vm_name);
         my $node2 = _create_remote_node($vm_name);
 
+        test_req_prepare_base($vm);
+
         test_chain_remove_vm($vm, $node1, $node2);
         test_chain_children($vm, $node1, $node2);
 
@@ -474,7 +516,7 @@ for my $vm_name (vm_names() ) {
         test_req_failed($vm);
         test_req_prepare_nested($vm, $node1);
         test_req_migrate_nested($vm, $node1);
-        test_req_prepare_base($vm, $node1, $node2);
+        test_req_set_base_vm($vm, $node1, $node2);
         test_req_migrate_active($vm, $node1, $node2);
         test_req_migrate($vm, $node1, $node2);
         $node1->remove();

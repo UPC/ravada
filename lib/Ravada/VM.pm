@@ -1968,14 +1968,24 @@ sub run_command($self, @command) {
     return ($out, $err);
 }
 
-sub _dir_queue {
-    my $dir = "/run/user";
+sub mkdir($self, $dir) {
+    if ($self->is_local) {
+        make_path($dir) or die "$! on mkdir $dir"
+        if ! -e $dir;
+    } elsif (!$self->file_exists($dir)) {
+        my ($output, $error) = $self->run_command("mkdir","-p",$dir);
+        die $error if $error;
+    }
+}
+
+sub _dir_queue($self) {
+    my $dir = "/var/lib/ravada/at";
     if ($<) {
-        $dir .= "/".$<;
+        $dir = "/run/user/$<";
     }
     $dir .="/rvd_queue";
-    mkdir $dir or die "$! on mkdir $dir"
-    if ! -e $dir;
+
+    $self->mkdir($dir);
 
     return $dir;
 }
@@ -1988,9 +1998,9 @@ sub _shell_quote {
     } @_);
 }
 
-sub _new_file_queue {
+sub _new_file_queue($self) {
 
-    return _dir_queue."/".$$.".".time().".".int(rand(100));
+    return $self->_dir_queue()."/".time().".$$.".int(rand(100));
 }
 
 =head2 queue_command
@@ -2014,10 +2024,21 @@ sub _new_file_queue {
 =cut
 
 sub queue_command($self, $command , $id_domain=undef, $id_req=undef ) {
-    my $file_queue = _new_file_queue();
+    my $file_queue = $self->_new_file_queue();
+
+    my $cmd = '';
+    if (ref($command->[0])) {
+        for my $line (@$command) {
+            $cmd .= "\n" if $cmd;
+            $cmd .= _shell_quote(@$line);
+        }
+    }else {
+        $cmd .= _shell_quote(@$command);
+    }
     $self->write_file("$file_queue.sh",
     "#!/bin/sh\n"
-    ._shell_quote(@$command)." > $file_queue.out 2> $file_queue.err"
+    .$cmd
+    ." > $file_queue.out 2> $file_queue.err"
     );
     if ($self->is_local()) {
         chmod(oct(700),"$file_queue.sh") or die "$! chmod $file_queue";

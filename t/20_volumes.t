@@ -78,7 +78,7 @@ sub _test_identical($vm, $file, $base) {
 
 }
 
-sub _test_base_qcow2($volume, $base) {
+sub _test_base_qcow2($volume, $base, $domain=undef) {
 
     my @cmd = ("/usr/bin/qemu-img","info",$base);
     my ($out, $err) = $volume->vm->run_command(@cmd);
@@ -93,10 +93,12 @@ sub _test_base_qcow2($volume, $base) {
 
     like($out,qr/^image:.*\.ro$ext$/m);
 
-    @cmd = ("/usr/bin/qemu-img","info",$volume->file);
-    ($out, $err) = $volume->vm->run_command(@cmd);
-    is($err,'');
-    like($out,qr/backing file:.*\.ro$ext$/m);
+    if ($domain) {
+        @cmd = ("/usr/bin/qemu-img","info",$volume->file);
+        ($out, $err) = $volume->vm->run_command(@cmd);
+        is($err,'') or confess;
+        like($out,qr/backing file:.*\.ro$ext$/m);
+    }
 }
 
 sub _test_base_raw($volume, $base) {
@@ -130,14 +132,18 @@ sub _test_clone_qcow2($vol_base, $clone) {
 }
 
 
-sub test_base($volume) {
+sub test_base($volume, $domain=undef) {
     my ($ext) = $volume->file =~ m{.*\.(.*)};
     $ext = 'qcow2' if $ext =~ m{^(img|raw)};
 
     my $test = $TEST_BASE{$ext} or confess "Error: no test for $ext";
 
     $volume->vm->refresh_storage();
-    my $base = $volume->prepare_base();
+
+    my $base = $volume->base_filename();
+    if (!defined $domain) {
+        $base=$volume->prepare_base();
+    }
 
     if ($ext ne 'iso') {
         if ( $volume->file =~ /\.SWAP\./) {
@@ -148,9 +154,10 @@ sub test_base($volume) {
             like($base,qr{(vd.|\d+)\.ro\.$ext$}, $volume->file) or exit;
         }
     }
+    wait_request(debug => 0);
     $test->($volume, $base);
 
-    _check_volume_mode($volume->file);
+    _check_volume_mode($volume->file) if $domain;
     _check_base_volume_mode($base);
 
     return $base;
@@ -162,7 +169,7 @@ sub _check_base_volume_mode($file) {
 
     ok($mode & S_IRUSR); # User can read
 
-    ok(!($mode & S_IWUSR)); # User can not write
+    ok(!($mode & S_IWUSR)) or die $file; # User can not write
     ok(!($mode & S_IRGRP));   # Group can not read
     ok(!($mode & S_IROTH));  # Others can not read
     ok(!($mode & S_IWGRP));   # Group can not write
@@ -345,6 +352,7 @@ sub test_rebase($volume) {
 }
 
 sub _check_volume_mode($file) {
+    confess "Missing file $file" if !-e $file;
     my $mode = stat($file)->mode;
     if ($file =~ /\.iso$/) {
         ok($mode & S_IRUSR); # user can read
@@ -374,8 +382,16 @@ sub test_defaults($vm, $volume_type=undef) {
         ok(-e $volume->file,$volume->file) or exit;
 
         _check_volume_mode($volume->file);
+    }
 
-        my $file_base = test_base($volume);
+    Ravada::Request->prepare_base(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request();
+    for my $volume ( $domain->list_volumes_info ) {
+
+        my $file_base = test_base($volume, $domain);
         _check_base_volume_mode($file_base);
         _check_volume_mode($volume->file);
 

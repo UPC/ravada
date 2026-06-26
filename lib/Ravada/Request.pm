@@ -601,7 +601,7 @@ sub _check_args {
     my $args = { @_ };
 
     my $valid_args = $VALID_ARG{$sub};
-    for (qw(at after_request after_request_ok retry _no_duplicate _force uid check_requests)) {
+    for (qw(at after_request after_request_ok retry _no_duplicate _force uid )) {
         $valid_args->{$_}=2 if !exists $valid_args->{$_};
     }
 
@@ -845,6 +845,9 @@ sub _new_request {
 
     }
 
+    for my $field (keys %args) {
+        $args{$field} = encode_json($args{$field}) if ref($args{$field});
+    }
     $args{date_changed} = Ravada::Utils::date_now();
     $args{error} = '';
     my $sth = $$CONNECTOR->dbh->prepare(
@@ -1058,7 +1061,7 @@ sub _validate_prepare_base($self) {
             uid => $self->args('uid')
             ,id_domain => $domain->id
         );
-        $self->after_request_ok($req_shutdown);
+        $self->after_request_ok($req_shutdown->id);
     }
 }
 
@@ -2437,7 +2440,12 @@ sub remove($status, %args) {
 sub _push($value, $id) {
     my $list = $value;
     $list = [$list] if !ref($list);
-    push @$list,($id);
+
+    my @id = ($id);
+    if (ref($id)) {
+        @id = @$id;
+    }
+    push @$list,@id;
     return $list;
 }
 
@@ -2460,32 +2468,20 @@ sub _data($self, $field, $value=undef) {
             $value = _push($prev_req_id, $value) if $prev_req_id;
         }
         my $value0 = $value;
+        $value0 = dclone($value) if ref($value);
 
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE requests set $field=?"
             ." WHERE id=?"
         );
-        for ( 1 .. 2 ) {
+        {
 
             eval {
                 $value = encode_json($value) if ref($value);
             };
             confess Dumper([$@,$field,$value0]) if $@;
 
-            eval {
-                $sth->execute($value, $self->id);
-            };
-            last if !$@;
-            if ($@ =~ /Data too long/) {
-                if (ref($value0)) {
-                    if (ref($value0) eq 'ARRAY') {
-                        $#$value0 = $#$value0 / 2;
-                        $value = $value0;
-                    } else {
-                        die $@." ".Dumper([$field,$value0]);
-                    }
-                }
-            }
+            $sth->execute($value, $self->id);
         }
         $sth->finish;
         $self->{_data}->{$field} = $value0;
@@ -2542,33 +2538,6 @@ Refresh request status and data
 
 sub refresh($self) {
     delete $self->{_data};
-}
-
-=head2 error_check_request
-
-Returns errors from requested jobs created from this request
-
-=cut
-
-sub error_check_request($self) {
-    my $check_request = $self->defined_arg('check_requests');
-    return if !$check_request;
-
-    my $error;
-    for my $id_req ( @$check_request ) {
-        my $req = Ravada::Request->open($id_req);
-        next if !$req->error;
-        if ($error) {
-            chomp $error;
-            $error .= "\n";
-        }
-        $error .= $req->error;
-    }
-    return 0 if !$error;
-
-    $self->error($error);
-    return 1;
-
 }
 
 sub AUTOLOAD {
