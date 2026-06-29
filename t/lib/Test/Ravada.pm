@@ -3188,6 +3188,8 @@ sub check_libvirt_tls {
 }
 
 sub ping_backend() {
+    delete_request('update_iso_urls','enforce_limits','refresh_vms'
+        ,'manage_pools');
     for ( 1 .. 3 ) {
         my @now = localtime(time);
         $now[4]++;

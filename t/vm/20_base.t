@@ -1804,6 +1804,36 @@ sub test_already_requested_recent($vm) {
     $domain->remove(user_admin);
 }
 
+sub test_remove_base_twice($vm) {
+    my $domain = create_domain($vm);
+    my $new_domain_name=new_domain_name();
+    my $req = Ravada::Request->clone(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,name => $new_domain_name
+    );
+    wait_request(debug => 0);
+    my $clone;
+    for ( 1 .. 10 ) {
+        $clone = rvd_back->search_domain($new_domain_name);
+        last if $clone;
+        sleep 1;
+    }
+    die "Error: clone $new_domain_name not found" if !$clone;
+    my @args = (
+        uid => user_admin->id
+        ,id_domain => $clone->id
+    );
+    Ravada::Request->prepare_base(@args);
+    wait_request(debug => 0);
+    my $req1 = Ravada::Request->remove_base(@args);
+    sleep 1;
+    my $req2 = Ravada::Request->remove_base(@args);
+    is($req2->id,$req1->id);
+    wait_request(debug => 0);
+    $clone->start(user_admin);
+}
+
 #######################################################################33
 
 for my $db ( 'mysql', 'sqlite' ) {
@@ -1857,6 +1887,8 @@ for my $vm_name ( vm_names() ) {
             $BASE = create_domain($vm);
         }
         flush_rules() if !$<;
+
+        test_remove_base_twice($vm);
 
         test_already_requested($vm);
         test_already_requested_working($vm);
