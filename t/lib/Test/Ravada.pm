@@ -516,7 +516,8 @@ sub new_domain_name {
     for ( ;; ) {
         my $cont = $CONT++;
         $cont = "0$cont"    if length($cont)<2;
-        my $name = base_domain_name()."_$post".$cont;
+        my ($pid) = $$ =~ /(..)/;
+        my $name = base_domain_name()."_$post".$cont."_$pid";
 
         return $name
         if !grep { $_->{name} eq $name } @domains_data;
@@ -524,14 +525,16 @@ sub new_domain_name {
 }
 
 sub new_pool_name {
-    return base_pool_name()."_".$CONT_POOL++;
+    my ($pid) = $$ =~ /(..)/;
+    return base_pool_name()."_".$CONT_POOL++."_$pid";
 }
 
 sub new_volume_name($domain=undef) {
     my $name;
     $name = $domain->name       if $domain;
     $name = new_domain_name()   if !$domain;
-    return $name."_".$CONT_VOL++;
+    my ($pid) = $$ =~ /(..)/;
+    return $name."_".$CONT_VOL++."_$pid";
 }
 
 sub rvd_back($config=undef, $init=1, $sqlite=1) {
@@ -804,7 +807,7 @@ sub _discover() {
                         id_owner => user_admin->id
                         ,vm => $vm_type
                         ,name => $name
-                        ,id_iso => search_id_iso('Alpine%64', $domain->_vm)
+                        ,id_iso => search_id_iso('Alpine%64')
                     );
                     wait_request();
                 }
@@ -1593,6 +1596,7 @@ sub wait_request {
                     } else {
                         my $error = ($req->error or '');
                         next if $error =~ /waiting for processes/i;
+                        next if $error =~ /Killed.*process after/i;
                         if ($req->command =~ m{rsync_back|set_base_vm|start}) {
                             like($error,qr{^($|.*port \d+ already used|.*rsync)}) or confess $req->command;
                         } elsif($req->command eq 'refresh_machine_ports') {

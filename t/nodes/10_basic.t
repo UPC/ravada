@@ -1561,7 +1561,7 @@ sub test_check_instances($vm, $node) {
     is($domain->_vm->id, $node->id);
 
     my @instances = $domain->list_instances();
-    is(scalar(@instances),2);
+    is(scalar(@instances),1);
 
     my $sth = connector->dbh->prepare("DELETE FROM domain_instances WHERE id_domain=?");
     $sth->execute($domain->id);
@@ -2211,7 +2211,8 @@ sub test_migrate_clone($node1, $node2) {
     my $clone2 = Ravada::Domain->open(id => $clone->id);
     is($clone2->_data('id_vm'),$node2->id, "Expecting ".$clone2->name." in ".$node2->name) or die;
     my @instances = $clone2->list_instances();
-    is(@instances,2);
+    is(@instances,1);
+    is(scalar($base->list_instances),1);
 
     test_remove_instances($clone, $node1, $node2);
     test_remove_instances($base, $node1, $node2);
@@ -2228,6 +2229,12 @@ sub test_migrate_standalone($node1, $node2) {
         ,id_node => $node2->id
     );
     wait_request();
+
+    my $sth = connector->dbh->prepare("SELECT count(*) FROM domain_instances "
+        ." WHERE id_domain=?");
+    $sth->execute($domain->id);
+    my ($count) = $sth->fetchrow();
+    is($count,1,"Expecting one instance of ".$domain->name) or exit;
 
     test_volumes_exist($domain, $node1,1);
     test_volumes_exist($domain, $node2,0);
@@ -2389,6 +2396,9 @@ for my $vm_name (reverse vm_names() ) {
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
         start_node($node);
+
+        test_migrate_clone($node, $vm);
+        test_migrate_clone($vm, $node);
 
         test_fill_memory($vm, $node, 0); # balance
 

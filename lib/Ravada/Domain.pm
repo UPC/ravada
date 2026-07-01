@@ -3336,7 +3336,8 @@ sub clone {
 
     if ( !$self->is_base() ) {
         $request->status("working","Preparing base")    if $request;
-        $self->prepare_base(user => $user, with_cd => $with_cd)
+        $self->prepare_base(user => $user, with_cd => $with_cd);
+        $self->post_prepare_base();
     }
 
     my @args_copy = ();
@@ -5685,6 +5686,10 @@ sub _around_remove_instance($orig, $self, $user, $node=undef) {
     $self->$orig($user);
 
     $self->_remove_files_not_shared();
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "DELETE FROM domain_instances WHERE id_vm=?"
+    );
+    $sth->execute($self->_vm->id);
 }
 
 sub _id_base_in_vm($self, $id_vm) {

@@ -140,7 +140,7 @@ sub _new_machine($vm_name, $user, $base_name) {
 
 sub test_clone_utf8_user($t, $vm_name, $name, $utf8_base=0) {
     confess if $name =~ /^\d+/;
-    my $user_name = new_domain_name()."-$$-".$name."-".$N++;
+    my $user_name = new_domain_name().$name."-".$N++;
 
     my $user_db = Ravada::Auth::SQL->new( name => $user_name);
     $user_db->remove();
@@ -153,7 +153,7 @@ sub test_clone_utf8_user($t, $vm_name, $name, $utf8_base=0) {
     if ($utf8_base) {
         $base_name = $user_name;
     } else {
-        $base_name = new_domain_name()."-".$$;
+        $base_name = new_domain_name();
     }
 
     my $domain = _new_machine($vm_name, $user, $base_name);
@@ -218,7 +218,7 @@ sub _test_clone($domain, $base_name, $user) {
 
 sub _test_copy($domain, $base_name) {
     my ($copy, $copy_name);
-    for (1 .. 5 ) {
+    for (1 .. 10 ) {
         $copy_name = $base_name."-copy-".$base_name;
         $t->post_ok("/machine/copy/" => json => {
             id_base=> $domain->id
@@ -228,7 +228,7 @@ sub _test_copy($domain, $base_name) {
 
         ($copy) = rvd_front->search_domain($copy_name);
     }
-    ok($copy);
+    ok($copy,"Expecting $copy_name created") or exit;
     like($copy->_data('name'),qr/^[a-z0-9_\-]+$/);
     unlike($copy->_data('name'),qr/--+/) or exit;
 

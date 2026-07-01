@@ -346,9 +346,9 @@ for my $vm_name (vm_names()) {
         ,id_domain => $base->id
         ,name => new_domain_name()
     );
-    wait_request();
+    wait_request(debug => 1);
 
-    test_add_rm_change_hw($base);
+    test_add_rm_change_hw($base) if $base;
 }
 
 end();

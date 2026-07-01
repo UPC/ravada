@@ -1968,6 +1968,15 @@ sub run_command($self, @command) {
     return ($out, $err);
 }
 
+=head2 mkdir
+
+    Creates a directory
+
+    Arguments: directory name
+
+=cut
+
+
 sub mkdir($self, $dir) {
     if ($self->is_local) {
         make_path($dir) or die "$! on mkdir $dir"
@@ -2075,6 +2084,7 @@ sub queue_command($self, $command , $id_domain=undef, $id_req=undef ) {
 }
 
 sub _queue_at_time($self) {
+    return("now") if !$QUEUE_AT_TIME;
     return ("now","+",$QUEUE_AT_TIME,"minutes");
 }
 

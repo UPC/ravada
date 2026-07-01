@@ -214,6 +214,7 @@ our %CMD_DO_NOT_SEND_ERROR = map { $_ => 1 }
 our %CMD_NO_DUPLICATE = map { $_ => 1 }
 qw(
     clone
+    discover
     set_base_vm
     remove_base_vm
     rsync_back
@@ -311,6 +312,7 @@ our %CMD_VALIDATE = (
     ,compact => \&_validate_compact
     ,spinoff => \&_validate_compact
     ,prepare_base => \&_validate_prepare_base
+    ,post_prepare_base => \&_validate_post_prepare_base
     ,remove_base => \&_validate_remove_base
     ,migrate => \&_validate_migrate
     ,set_base_vm=> \&_validate_set_base_vm
@@ -1037,6 +1039,15 @@ sub _validate_start_domain($self) {
     }
 }
 
+sub _validate_post_prepare_base($self) {
+    for my $command (qw (clone)) {
+        my $req= $self->_search_request($command
+            , id_domain => $self->args('id_domain'));
+
+        $req->after_request($self->id) if $req;
+    }
+}
+
 sub _validate_prepare_base($self) {
     $self->_validate_compact();
 
@@ -1258,20 +1269,30 @@ sub _validate_clone($self
         $self->after_request($req_shutdown->id);
     }
 
-    my ($req_base) = grep { $_->command eq 'prepare_base' }
+    for my $command (qw (wait_job prepare_base post_prepare_base)) {
+        my ($req_base) = grep { $_->command eq $command }
         $base->list_requests;
 
-    $self->after_request($req_base->id) if $req_base;
+        $self->after_request($req_base->id) if $req_base;
 
-    return if $user->is_admin;
-    return if $user->can_clone_all;
+    }
+
     return $self->_status_error('done'
         ,"Error: user ".$user->name." can not clone.")
         if !$user->can_clone();
 
     return $self->_status_error('done'
         ,"Error: ".$base->name." is not public.")
-        if !$base->is_public;
+        if !$base->is_public && !$user->is_admin && !$user->can_clone_all;
+
+    if (!$base->is_base && !$base->id_base) {
+        my $req_prepare = Ravada::Request->prepare_base(
+            uid => $uid
+            ,id_domain => $base->id
+            ,with_cd => $self->defined_arg('with_cd')
+        );
+        $self->after_request_ok($req_prepare->id);
+    }
 }
 
 sub _validate_open_exposed_ports($self) {

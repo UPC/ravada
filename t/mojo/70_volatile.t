@@ -97,7 +97,8 @@ sub bases($vm_name) {
         _download_iso($iso_name);
         for ( 1 .. 2 ) {
             mojo_check_login($t);
-            my $name = new_domain_name()."-".$vm_name."-$$";
+            my ($pid) = $$ =~ /(..)/;
+            my $name = new_domain_name()."-".$vm_name."-$pid";
             $t->post_ok('/new_machine.html' => form => {
                     backend => $vm_name
                     ,id_iso => search_id_iso($iso_name)

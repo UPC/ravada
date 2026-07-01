@@ -1063,7 +1063,11 @@ sub test_clone_with_cd_req {
     my $clone = rvd_back->search_domain($clone_name);
     my @volumes_clone = $clone->list_volumes_info;
     my ($cd_clone ) = grep { $_->file =~ /\.iso$/ } @volumes_clone;
-    ok($cd_clone,"Expecting a CD in clone ".Dumper(\@volumes_clone));
+    for (@volumes_clone) {
+        delete $_->{vm};
+        delete $_->{domain};
+    }
+    ok($cd_clone,"Expecting a CD in clone ".Dumper(\@volumes_clone)) or exit;
 
     $clone->remove(user_admin);
     $domain->remove(user_admin);

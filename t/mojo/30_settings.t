@@ -577,12 +577,16 @@ for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
 
     diag("Testing settings in $vm_name");
 
+    warn 1;
     test_storage_pools($vm_name);
+    warn 2;
     test_nodes( $vm_name );
+    warn 3;
     test_routes( $vm_name );
+    warn 4;
 }
 
-clean_clones();
+remove_old_domains_req(0); # 0=do not wait for them
 remove_old_users();
 remove_networks_req();
 
