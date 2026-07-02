@@ -23,12 +23,16 @@ and X-Forwarded-Proto headers.
 Edit the file */etc/rvd_front.conf* and make sure there is a line with *proxy => 1*
 inside hypnotoad.
 
+Also we set 10 workers by default. Under heavy server stress the proxy may
+timeout, increase the number of workers if you notice this.
+
 ::
 
    hypnotoad => {
        pid_file => '/var/run/ravada/rvd_front.pid'
       ,listen => ['http://*:8081']
       ,proxy => 1
+      ,workers => 10
    }
 
 Restart the front server to reload this configuration:
@@ -79,6 +83,14 @@ Edit /etc/apache2/sites-enabled/default-ssl.conf.
         <VirtualHost _default_:443>
             ProxyRequests Off
             ProxyPreserveHost On
+
+            # static files no need to be served by app server
+            Alias "/css" "/usr/share/ravada/public/css"
+            Alias "/fallback" "/usr/share/ravada/public/fallback"
+            ProxyPass /css  !
+            ProxyPass /fallback !
+
+            # App server
             ProxyPass /ws/ ws://localhost:8081/ws/ keepalive=On
             ProxyPass / http://localhost:8081/ keepalive=On
             ProxyPassReverse / http://localhost:8081/

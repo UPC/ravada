@@ -297,3 +297,22 @@ This has been detected only for users
 of Safari Browser so far, but it may happen to other. It is a good idea to have the
 system time properly synced.
 
+Web frontend returns proxy error
+--------------------------------
+
+If the server is under heavy writing stress, the frontend may return
+an error message about *Proxy Error server timed out*.
+
+You can increase the number of hypnotoad workers in /etc/rvd_front.conf
+
+.. code-block:: yaml
+
+    hypnotoad => {
+    pid_file => '/var/run/ravada/rvd_front.pid'
+    ,listen => ['http://*:8081']
+    ,proxy => 1
+    ,workers => 15
+  }
+
+Also make sure your Apache configuration has the latest performance
+suggestions from `the apache guide <apache.html>`__ .

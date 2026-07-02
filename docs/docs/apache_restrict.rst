@@ -22,13 +22,14 @@ to everything but the allowed networks:
 
 ::
 
-	   <Location />
+       ProxyPass /error !
+       <Location />
 		   Require all denied
 		   Require ip 10.0.0.0/8
 		   Require ip 192.168.1.0/24
 
            ErrorDocument 403 /error/access_restricted.html
-	   </Location>
+       </Location>
 
 
 Allow default
