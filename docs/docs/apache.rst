@@ -84,11 +84,20 @@ Edit /etc/apache2/sites-enabled/default-ssl.conf.
             ProxyRequests Off
             ProxyPreserveHost On
 
+            DocumentRoot /usr/share/ravada/public
+
+            # Uncomment these for custom error messages #######
+            #ProxyPass /error !
+            #Alias "/error" "/var/www/html/error"
+            #
+            ###################################################
+
             # static files no need to be served by app server
-            Alias "/css" "/usr/share/ravada/public/css"
-            Alias "/fallback" "/usr/share/ravada/public/fallback"
             ProxyPass /css  !
             ProxyPass /fallback !
+            ProxyPass /fonts !
+            ProxyPass /img !
+            ProxyPass /js !
 
             # App server
             ProxyPass /ws/ ws://localhost:8081/ws/ keepalive=On

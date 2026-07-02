@@ -22,6 +22,7 @@ to everything but the allowed networks:
 
 ::
 
+       Alias "/error" "/var/www/html/error"
        ProxyPass /error !
        <Location />
 		   Require all denied
