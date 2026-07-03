@@ -315,5 +315,5 @@ You can increase the number of hypnotoad workers in /etc/rvd_front.conf
   }
 
 Also make sure your Apache configuration has the latest performance
-suggestions from `the apache guide <apache.html>`__ including the
-aliasing of the static content.
+suggestions from `the apache guide <apache.html#apache-proxy-configuration>`__
+including the *proxypass* of the static content.
