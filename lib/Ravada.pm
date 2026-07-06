@@ -4424,23 +4424,20 @@ sub _kill_stale_process($self) {
 sub _finish_failed_initialized($self) {
 
     my $sth = $CONNECTOR->dbh->prepare(
-        "SELECT id,pid,command,start_time "
+        "SELECT id "
         ." FROM requests "
-        ." WHERE start_time<? "
-        ." AND ( status = 'initializing' ) "
-        ." AND ( error IS NOT NULL OR error <> '')"
+        ." WHERE "
+        ."   status = 'initializing' "
+        ."   AND (  start_time < ? "
+        ."      OR ( start_time<? "
+        ."          AND ( error IS NOT NULL OR error <> '')"
+        ."      )"
+        ."   )"
     );
-    $sth->execute(time - 2);
-    while (my ($id, $pid, $command, $start_time) = $sth->fetchrow) {
-        next if -e "/proc/$pid";
-        if ($pid == $$ ) {
-            warn "HOLY COW! I should kill pid $pid stale for ".(time - $start_time)
-                ." seconds, but I won't because it is myself";
-            next;
-        }
+    $sth->execute(time-10, time - 2);
+    while (my ($id, $start_time) = $sth->fetchrow) {
         my $request = Ravada::Request->open($id);
-        $request->stop(0); # do not show warning
-        warn "stopping ".$request->id." ".$request->command;
+        $request->status('done');
      }
     $sth->finish;
 }
