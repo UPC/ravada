@@ -5,7 +5,7 @@
 <div id="wrapper">
     %= include 'bootstrap/navigation'
     <div id="page-wrapper" ng-controller="manage_storage_pools"
-                           ng-init="init(<%= $id_vm %>)"
+                           ng-init="init(<%= $id_node %>)"
     >
     <div id="admin-content">
         <div class="row">

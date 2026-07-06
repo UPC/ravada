@@ -674,6 +674,38 @@ sub list_vms($self, $type=undef) {
     return @list;
 }
 
+=head2 list_nodes_active
+
+Returns a list of Active Nodes
+
+=cut
+
+sub list_nodes_active($self, $current=undef) {
+
+    my $sql = "SELECT id,name,hostname,is_active, enabled FROM vms "
+        ." WHERE is_active=1 AND enabled=1";
+
+    my $sth = $CONNECTOR->dbh->prepare($sql." ORDER BY vm_type,name");
+    $sth->execute();
+
+    my $found_selected=0;
+    my @list;
+    while (my $row = $sth->fetchrow_hashref) {
+        delete $row->{vm_type};
+        $row->{_selected} = 0;
+        if ( defined $current && $row->{id} == $current ) {
+            $row->{_selected} = 1;
+            $found_selected++;
+        }
+        lock_hash(%$row);
+        push @list,($row);
+    }
+    $sth->finish;
+    warn "Warning: current '$current' not found"
+        if defined $current && !$found_selected;
+    return @list;
+}
+
 =head2 list_nodes_by_id
 
 Returns a list of Nodes by id

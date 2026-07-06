@@ -11,7 +11,7 @@
              ng-cloak="1"
              ng-controller="settings_<%= $item %>"
              ng-init="init('<%= $id %>', '<%= url_for('ws_subscribe')->to_abs %>'
-                      ,'<%= $id_vm %>')"
+                      ,'<%= $id_node %>')"
         >
             <div class="card-header">
                 <div class="row">

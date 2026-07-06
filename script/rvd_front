@@ -190,6 +190,8 @@ hook before_routes => sub {
 
 
   $c->stash(version => $RAVADA->version);
+  $c->stash(choose_node => 0);
+  $c->stash(id_node => 0);
   my $url = $c->req->url->to_abs->path;
   my $host = $c->req->url->to_abs->host;
   my $widget=( $CONFIG_FRONT->{widget} or $RAVADA->setting('/frontend/widget'));
@@ -494,7 +496,8 @@ get '/admin/storage' => sub($c) {
 
     $c->stash(tab => ($c->param('tab') or ''));
     $c->stash('item' => 'storage');
-    $c->stash('id' => $c->stash('id_vm'));
+    $c->stash('id' => $c->stash('id_node'));
+    $c->stash(choose_node => 1);
 
     return $c->render( template => '/main/settings_generic' );
 
@@ -547,18 +550,17 @@ sub _admin_host_devices($c) {
 };
 
 
-get '/admin/networks/*id_vm' => { id_vm => undef} => sub($c) {
+get '/admin/networks/*id_node' => { id_node => undef} => sub($c) {
 
     return access_denied($c) unless $USER->is_admin
     || $USER->can_create_networks || $USER->can_manage_all_networks;
 
     _add_admin_libs($c);
+    _select_vm($c);
 
-    _select_vm($c) if !defined $c->stash('id_vm');
-
-    Ravada::Request->list_networks(
+    my $req = Ravada::Request->list_networks(
         uid => $USER->id
-        ,id_vm => $c->stash('id_vm')
+        ,id_vm => $c->stash('id_node')
     );
 
     return $c->render( template => '/main/admin_networks' );
@@ -610,6 +612,12 @@ get '/list_storage_pools/(:id_vm)' => sub($c) {
 get '/list_nodes.json' => sub {
     my $c = shift;
     $c->render(json => [$RAVADA->list_vms]);
+};
+
+get '/list_nodes_active.json' => sub {
+    my $c = shift;
+    _select_vm($c) if !$c->session('id_node');
+    $c->render(json => [$RAVADA->list_nodes_active( $c->session('id_node'))]);
 };
 
 get '/list_nodes_by_id.json' => sub {
@@ -694,6 +702,15 @@ get '/node/host_device/remove/(:id)' => sub($c) {
 get '/list_routes.json' => sub {
     my $c = shift;
     $c->render(json => [ Ravada::Route->list_networks ]);
+};
+
+get '/v3/networks/list' => sub($c) {
+
+    return access_denied($c) unless $USER->is_admin
+    || $USER->can_create_networks || $USER->can_manage_all_networks;
+
+    $c->render(json => Ravada::Front->list_networks($c->session('id_node')
+            , $USER->id) );
 };
 
 get '/v2/vm/list_networks/(:id_vm)' => sub {
@@ -1007,6 +1024,16 @@ get '/node/connect/(#id)' => sub {
     return $c->render(json => {id_req => $req->id });
 };
 
+get '/v3/choose_node/(#id)' => sub($c) {
+
+    return access_denied_json($c) if !$USER || !$USER->is_admin;
+    return json_error($c,"Missing node in ".$c->req->url->to_abs->path, 400)
+    if !defined $c->stash('id_node');
+
+    $c->session(id_node => $c->stash('id'));
+
+    return $c->render(json => { id_node => $c->stash('id')});
+};
 
 get '/list_bases.json' => sub {
     my $c = shift;
@@ -3927,24 +3954,41 @@ sub admin {
 };
 
 sub _select_vm($c , $type =undef) {
-    my $sth = $RAVADA->_dbh->prepare("SELECT id,name FROM vms WHERE hostname='localhost' AND vm_type=?");
-    my $types = Ravada::Front::list_vm_types();
-    for my $type ('KVM',@$types) {
-        $sth->execute($type);
-        my ($id, $name) = $sth->fetchrow;
-        next if !$id;
-        $c->stash('id_vm' => $id, vm_name => $name);
+    my $id_node_session = $c->session('id_node');
+    if ($id_node_session) {
+        $c->stash('id_node' => $id_node_session);
         return;
     }
-    $sth = $RAVADA->_dbh->prepare("SELECT id,name FROM vms WHERE vm_type=?");
-    for my $type ('KVM',@$types) {
+
+    $id_node_session = (_select_vm_type($type)
+        or _select_vm_type(@{$RAVADA->list_vm_types})
+        or _select_vm_order(@{$RAVADA->list_vm_types})
+    );
+    $c->session('id_node' => $id_node_session);
+    $c->stash('id_node' => $id_node_session);
+}
+
+sub _select_vm_type(@types) {
+    for my $type (@types) {
+        next if !defined $type;
+        my $sth = $RAVADA->_dbh->prepare(
+            "SELECT id,name FROM vms WHERE vm_type=?"
+        );
         $sth->execute($type);
-        my ($id, $name) = $sth->fetchrow;
-        next if !$id;
-        $c->stash('id_vm' => $id, vm_name => $name);
-        return;
+        my ($id) = $sth->fetchrow;
+        return $id if $id;
     }
-    die "Error: No VM found in @$types";
+}
+
+sub _select_vm_by_order() {
+
+    my $sth = $RAVADA->_dbh->prepare(
+        "SELECT id,name FROM vms ORDER BY id"
+    );
+    $sth->execute();
+    my ($id) = $sth->fetchrow;
+    return $id;
+
 }
 
 sub _count_nodes($c) {
