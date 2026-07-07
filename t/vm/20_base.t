@@ -1832,6 +1832,10 @@ sub test_remove_base_twice($vm) {
     is($req2->id,$req1->id);
     wait_request(debug => 0);
     $clone->start(user_admin);
+    $clone->shutdown_now(user_admin);
+
+    $clone->remove(user_admin);
+    $domain->remove(user_admin);
 }
 
 #######################################################################33
