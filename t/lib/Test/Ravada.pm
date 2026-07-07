@@ -1046,6 +1046,14 @@ sub _remove_old_domains_void {
 
     opendir my $dir, $vm->dir_img or return;
     while ( my $file = readdir($dir) ) {
+        if ($file =~ /\.iso$/) {
+            my $contents;
+            eval { $contents = LoadFile($vm->dir_img."/".$file)};
+            if ($@) {
+                warn $file." ".$@;
+                unlink $vm->dir_img()."/$file" or die "$! $file";
+            }
+        }
         next if $file !~ /^$base_name/;
         my $path = $vm->dir_img."/".$file;
         next if ! -f $path
