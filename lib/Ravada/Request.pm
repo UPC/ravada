@@ -1067,7 +1067,7 @@ sub _validate_prepare_base($self) {
         $req_create->after_request($self->id);
     }
     my $domain = Ravada::Front::Domain->open($self->args('id_domain'));
-    if ($domain->is_active) {
+    if ($domain && $domain->is_active) {
         my $req_shutdown = Ravada::Request->shutdown_domain(
             uid => $self->args('uid')
             ,id_domain => $domain->id

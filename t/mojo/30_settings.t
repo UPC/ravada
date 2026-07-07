@@ -463,7 +463,7 @@ sub _create_storage_pool($id_vm , $vm_name) {
         ,name => $name
         ,directory => $dir
     );
-    wait_request( $req );
+    wait_request( request => $req, background => 1 );
     is($req->error,'');
 
     return $name;
@@ -577,13 +577,9 @@ for my $vm_name (reverse @{rvd_front->list_vm_types} ) {
 
     diag("Testing settings in $vm_name");
 
-    warn 1;
-    test_storage_pools($vm_name);
-    warn 2;
     test_nodes( $vm_name );
-    warn 3;
+    test_storage_pools($vm_name);
     test_routes( $vm_name );
-    warn 4;
 }
 
 remove_old_domains_req(0); # 0=do not wait for them

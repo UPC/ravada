@@ -155,7 +155,7 @@ our %ARG_CREATE_DOM_OPTIONS = (
 );
 
 our %VM_VALID = ( KVM => 1
-    ,Void => 0
+    ,Void => 1
 );
 
 our @NODES;
@@ -525,7 +525,7 @@ sub new_domain_name {
 }
 
 sub new_pool_name {
-    my ($pid) = $$ =~ /(..)/;
+    my ($pid) = $$ =~ /(...)/;
     return base_pool_name()."_".$CONT_POOL++."_$pid";
 }
 
@@ -1597,6 +1597,7 @@ sub wait_request {
                         my $error = ($req->error or '');
                         next if $error =~ /waiting for processes/i;
                         next if $error =~ /Killed.*process after/i;
+                        next if $error =~ /Retry./;
                         if ($req->command =~ m{rsync_back|set_base_vm|start}) {
                             like($error,qr{^($|.*port \d+ already used|.*rsync)}) or confess $req->command;
                         } elsif($req->command eq 'refresh_machine_ports') {

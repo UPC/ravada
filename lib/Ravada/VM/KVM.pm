@@ -585,7 +585,9 @@ sub file_exists($self, $file) {
 
 sub _file_exists_remote($self, $file) {
     my $found = $self->search_volume($file);
-    return 1 if $found;
+    if ( $found && $file eq $found->get_path) {
+        return $found;
+    }
 
     $file = $self->_follow_link($file) unless $file =~ /which$/;
     return 0 if !$self->vm;
