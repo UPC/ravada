@@ -32,8 +32,8 @@
     %   if ( $USER->can_remove_machine($domain->id)) {
         <a class="nav-link remove" id="v-pills-remove-tab" href="#v-pills-remove" data-toggle="pill" role="tab" aria-controls="v-pills-remove" aria-selected="false"><%=l 'Remove' %></a>
     %   }
-    %   if ($USER->is_admin && $domain->is_base && $domain->has_clones){
-        <a class="nav-link" id="v-pills-remove-tab" href="#v-pills-clones" data-toggle="pill" role="tab" aria-controls="v-pills-clones" aria-selected="false"><%=l 'Clones' %></a>
+    %   if ($USER->is_admin && $domain->is_base){
+        <a class="nav-link" id="v-pills-remove-tab" ng-show="showmachine.has_clones" href="#v-pills-clones" data-toggle="pill" role="tab" aria-controls="v-pills-clones" aria-selected="false"><%=l 'Clones' %></a>
 %   }
     %   if ($USER->is_admin){
         <a class="nav-link" id="v-pills-pool-tab" href="#v-pills-pool" data-toggle="pill" role="tab" aria-controls="v-pills-pool" aria-selected="false"
@@ -54,4 +54,4 @@
             ng-show="showmachine.is_base || showmachine.bundle"
         ><%=l 'Bundle' %></a>
     % }
-	</div>
+	</div> 
