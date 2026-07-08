@@ -250,7 +250,7 @@ sub test_prepare_remove($vm) {
 
 sub test_rebase_clone($vm) {
     my $base0 = create_domain($vm);
-    $base0->add_volume( format => 'qcow2' );
+    $base0->add_volume( format => 'qcow2', size => $VOL_SIZE );
 
     Ravada::Request->prepare_base(
         id_domain => $base0->id
@@ -306,6 +306,8 @@ sub test_rebase_clone($vm) {
 
 clean();
 $ENV{LANG}='C';
+
+unlink '/var/tmp/rvd_void/frankie/alpine-standard-3.23-x86_64.iso';
 
 for my $vm_name (vm_names() ) {
     ok($vm_name);

@@ -100,6 +100,12 @@ sub block_commit($self) {
         next if $key =~ /^(origin|capacity|is_base|backing_file)$/;
         $data_bf->{$key} = $data->{$key};
     }
+    my $vol_backing = Ravada::Volume->new(
+            file => $self->backing_file
+            ,domain => $self->domain
+    );
+    $vol_backing->_chmod(0o700);
+
     $self->_save($data_bf, $self->backing_file);
 
 }
@@ -109,4 +115,9 @@ sub compact($self, $keep_backup) {
 
     return $self->info->{target}." 100% compacted. ";
 }
+
+sub copy($self,@args) {
+    return $self->_copy_sys(@args);
+}
+
 1;

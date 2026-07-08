@@ -40,23 +40,21 @@ sub test_down_node($vm, $node) {
     is($req->status, 'done');
     like($req->error, qr{^($|checked)},"Expecting no error after refresh vms");
 
-    warn 1;
-    is($clone[0]->is_active, 0, "Expecting clone not active after node shutdown");
-    warn 2;
+    my $clone_f = Ravada::Front::Domain->open($clone[0]->id);
+    is($clone_f->is_active, 0, "Expecting clone not active after node shutdown");
 
+    start_node($node);
     my@req;
-    for (@clone) {
+    for (@clone, $domain) {
         push @req,(Ravada::Request->remove_domain(uid => user_admin->id
                     , name=> $_->name
         ));
     }
     for my $req (@req) {
-        warn $req->command;
         rvd_back->_process_requests_dont_fork();
         next if $req->status ne 'done';
         is($req->error ,'');
     }
-    $domain->remove(user_admin);
 }
 
 sub test_disabled_node($vm, $node) {

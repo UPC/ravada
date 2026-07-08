@@ -27,6 +27,7 @@ sub test_download($vm, $iso0, $test=0) {
             , id_vm => $vm->id
             #            , delay => 4
             , test => $test
+            , uid => user_admin->id
     );
     is($req1->status, 'requested');
 
@@ -67,6 +68,34 @@ sub test_debians() {
     ok($found,"Expecting some debian entries found");
 }
 
+sub test_fail_download($vm) {
+    my $id_iso = search_id_iso('Alpine');
+    my $sth = connector->dbh->prepare(
+        "SELECT url,file_re FROM iso_images WHERE id=?"
+    );
+    $sth->execute($id_iso);
+    my ($url, $file_re) = $sth->fetchrow;
+
+    $sth = connector->dbh->prepare(
+        "UPDATE iso_images SET url=?,file_re=? WHERE id=?"
+    );
+    $sth->execute('http://localhost/fail/','alpine.iso', $id_iso);
+
+    my $req = Ravada::Request->create_domain(
+        id_owner => user_admin->id()
+        ,id_vm => $vm->id
+        ,id_iso => $id_iso
+        ,name => new_domain_name()
+        ,disk => 1024 * 1024
+    );
+    wait_request( debug => 1, check_error => 0);
+    diag($req->error);
+
+    $sth->execute($url,$file_re, $id_iso);
+
+    like($req->error,qr/No.* found on http.*/);
+}
+
 ##################################################################
 
 SKIP: {
@@ -83,6 +112,9 @@ for my $vm_name ('KVM') {
         }
 
         skip($msg,10)   if !$vm;
+        diag($vm_name);
+
+        test_fail_download($vm);
         $vm->_check_default_storage();
 
         test_debians();
@@ -94,7 +126,7 @@ for my $vm_name ('KVM') {
             #            || $iso->{name} =~ /Mint.*22/i
             #            || $iso->{name} =~ /Mate.* 2/i
             #            || $iso->{name} =~ /De.*an.*12/i;
-            #next unless $iso->{name} =~ /Dev.*an.*12/i;
+            diag($iso->{name});
             test_download($vm, $iso,1);
         }
 }

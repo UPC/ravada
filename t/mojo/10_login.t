@@ -668,7 +668,7 @@ sub _clone_and_base($vm_name, $t) {
     confess if !defined $base;
 
     {
-        my $name = new_domain_name()."-".$vm_name."-$$";
+        my $name = new_domain_name()."-".$vm_name;
         mojo_request_url_post($t,"/machine/copy",{id_base => $base->id, new_name => $name, copy_ram => 0.128, copy_number => 1});
 
         for ( 1 .. 90 ) {
@@ -733,7 +733,8 @@ sub test_clone($base1) {
 sub test_admin_can_do_anything($t, $base) {
 
     my $pass = "$$ $$";
-    my $user = create_user(new_domain_name()."-$$", $pass, 1);
+    my ($pid) = $$ =~ /(..)/;
+    my $user = create_user(new_domain_name()."-$pid", $pass, 1);
 
     login( $user->name, $pass );
 
@@ -801,7 +802,12 @@ sub test_new_machine_empty($t, $vm_name) {
 
             wait_request();
 
-            my $domain = rvd_front->search_domain($name);
+            my $domain;
+            for ( 1 .. 10 ) {
+                $domain = rvd_front->search_domain($name);
+                last if $domain;
+                wait_request();
+            }
             ok($domain);
 
             remove_domain_and_clones_req($domain) if $domain;
@@ -1223,7 +1229,7 @@ test_frontend_non_admin($t);
 
 test_validate_html("/login");
 
-remove_old_domains_req();
+remove_old_domains_req(0);
 
 my $t0 = time;
 diag("starting tests at ".localtime($t0));

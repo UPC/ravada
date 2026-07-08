@@ -3,7 +3,6 @@ use strict;
 
 use Carp qw(confess);
 use Data::Dumper;
-use Mojo::JSON qw(decode_json);
 use Storable qw(dclone);
 use Test::More;
 
@@ -84,7 +83,7 @@ sub test_create_fail ($vm) {
     );
     wait_request(check_error => 0, debug => 0);
     like($req->error,qr/Network is already in use/) or die $name;
-    my $out = decode_json($req->output);
+    my $out = $req->output;
     like($out->{id_network},qr/^\d+$/) or exit;
 
     my ($old) = grep { $_->{id} eq $out->{id_network} } @networks;
@@ -121,7 +120,7 @@ sub test_duplicate_bridge_add($vm, $net) {
         ,id_vm => $vm->id
     );
     wait_request( check_error => 0, debug => 0);
-    is($req->output,'{}');
+    is_deeply($req->output,{});
     like($req->error,qr/already exists/) or exit;
 
     my ($net_created) = grep {$net2->{name} eq $_->{name} }
@@ -204,7 +203,7 @@ sub test_add_network($vm) {
     wait_request(debug => 0);
     like($req_new->output , qr/\d+/) or exit;
 
-    my $net = decode_json($req_new->output);
+    my $net = $req_new->output;
     my $name = $net->{name};
 
     my $user = create_user();
@@ -225,7 +224,7 @@ sub test_add_network($vm) {
     );
     wait_request( debug => 0);
 
-    my $out = decode_json($req->output);
+    my $out = $req->output;
     my($new) = grep { $_->{name} eq $name } $vm->list_virtual_networks();
     ok($new,"Expecting new network $name created") or die Dumper([$vm->list_virtual_networks]);
     isa_ok($out,'HASH')
@@ -262,7 +261,7 @@ sub test_remove_user($vm) {
     );
     wait_request(debug => 0);
 
-    my $data = decode_json($req->output);
+    my $data = $req->output;
     is($data->{id_vm},$vm->id);
 
     my $req_create = Ravada::Request->create_network(
@@ -833,7 +832,7 @@ sub test_new_network($vm) {
         ,name => base_domain_name()."_"
     );
     wait_request();
-    my $data = decode_json($req->output);
+    my $data = $req->output;
     is($data->{id_vm},$vm->id);
 
     my $req_create = Ravada::Request->create_network(
@@ -849,9 +848,9 @@ sub test_new_network($vm) {
         ,name => base_domain_name()."_"
     );
     wait_request();
-    my $new_net = decode_json($req_create->output);
+    my $new_net = $req_create->output;
 
-    my $data2 = decode_json($req2->output);
+    my $data2 = $req2->output;
     for my $field( keys %$data) {
         next if $field =~ /^(id_vm|ip_netmask|is_active|autostart|forward_mode)/;
 

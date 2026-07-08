@@ -67,6 +67,7 @@ sub test_download($iso_name) {
             , id_vm => $vm->id
             #            , delay => 4
             , test => 1
+            , _force => 1
     );
     is($req1->status, 'requested');
 
@@ -117,7 +118,7 @@ sub test_download_iso($vm, $id_iso, $name) {
     rvd_back->_process_all_requests_dont_fork();
     is($req1->status, 'done');
     is($req1->error,'',$iso->{name});
-    like($req1->output,qr/^http.*/);
+    like($req1->output,qr/^http.*/) or exit;
 
 }
 sub test_post_login() {
@@ -139,10 +140,33 @@ sub test_post_login() {
     }
 }
 
+sub test_unique_entries() {
+    my $sth = connector->dbh->prepare("SELECT * FROM iso_images");
+    $sth->execute();
+    my %uniq;
+    while ( my $row = $sth->fetchrow_hashref) {
+        if (defined $row->{url}) {
+            if ( defined $row->{file_re} ) {
+                $row->{url_file_re}=$row->{url}." : ".$row->{file_re};
+            } else {
+                $row->{url_file_re}=$row->{url};
+            }
+        }
+        for my $field ( qw(name description url_file_re file_re)) {
+            my $value = $row->{$field};
+            next if !defined $value;
+            $uniq{$field}->{$value} //= 0;
+            ok(!$uniq{$field}->{$value}++,"Expecting unique $field '$value'");
+        }
+    }
+}
+
 ####################################################################
 
+test_unique_entries();
 test_insert_locale();
 test_insert_request();
+test_unique_entries();
 
 SKIP: {
     skip("SKIPPED: Test must run as root",8) if $<;

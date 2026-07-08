@@ -351,6 +351,7 @@
             $scope.storage_pools=['default'];
             $scope.shared_user_count = -1
             $scope.access_groups=[];
+            $scope.show_lock_details=false;
 
             var fields_option=[ 'volatile_clones','autostart'
                                ,'shutdown_disconnected','balance_policy'
@@ -480,6 +481,7 @@
                         if (!subscribed_extra) {
                             subscribed_extra = true;
                             subscribe_nodes(url,data.type);
+                            subscribe_domain_requests(url, data.id);
                             //subscribe_bases(url);
                         }
                         if ($scope.edit) { $scope.lock_info = true }
@@ -521,6 +523,39 @@
               }
             };
 
+            var domainRequestsSocket = null;
+
+            var subscribe_domain_requests=function(url, id) {
+                // Close any previous socket before opening a new one
+                if (domainRequestsSocket && domainRequestsSocket.readyState === WebSocket.OPEN) {
+                    try {
+                        domainRequestsSocket.close();
+                    } catch (e) {
+                        // ignore errors on close
+                    }
+                }
+
+                domainRequestsSocket = new WebSocket(url);
+                var ws = domainRequestsSocket;
+                ws.onopen = function(event) { ws.send('list_domain_requests/'+id) };
+                ws.onmessage = function(event) {
+                    var data = JSON.parse(event.data);
+                    $scope.$apply(function () {
+                        $scope.domain_requests = data;
+                    });
+                };
+            };
+
+            $scope.$on('$destroy', function () {
+                if (domainRequestsSocket) {
+                    try {
+                        domainRequestsSocket.close();
+                    } catch (e) {
+                        // ignore errors on close
+                    }
+                    domainRequestsSocket = null;
+                }
+            });
             var subscribe_requests = function(url) {
                 var ws = new WebSocket(url);
                 ws.onopen = function(event) { ws.send('list_requests') };
@@ -856,11 +891,11 @@
             $http.get("/machine/public/"+machineId+"/"+value);
           };
           $scope.set_base= function(vmId,machineId, value) {
-            $scope.showmachine.bases[vmId]=value;
             var url = 'set_base_vm';
             if (value == 0 || !value) {
                 url = 'remove_base_vm';
             }
+            $scope.showmachine.bases[vmId]={'enabled': value, 'id_request': -1 };
             $http.get("/machine/"+url+"/" +vmId+ "/" +machineId+".json")
               .then(function(response) {
               });

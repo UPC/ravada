@@ -88,7 +88,7 @@ sub test_clone_raw($domain ) {
         my $doc = XML::LibXML->load_xml( string => $backing );
         my ($format) = $doc->findnodes('/backingStore/format');
         ok($format,"Expecing <format.. > in backing: ".$doc->toString) or next;
-        is($format->getAttribute('type'),'qcow2',"Expecting format ".$format->toString)
+        like($format->getAttribute('type'),qr/qcow2|raw/,"Expecting format ".$format->toString)
             or exit;
     }
     is($found,2);

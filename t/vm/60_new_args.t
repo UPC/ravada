@@ -293,6 +293,7 @@ for my $vm_name ( vm_names() ) {
         skip $msg,10    if !$vm_ok;
 
         use_ok("Ravada::VM::$vm_name");
+
         test_args($vm_name);
         test_small($vm_name, $vm);
     };

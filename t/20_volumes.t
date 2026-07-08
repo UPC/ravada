@@ -36,7 +36,8 @@ my %TEST_CLONE = (
 
 #########################################################
 
-sub _test_base_iso($volume, $base) {
+sub _test_base_iso($volume, $base, $domain=undef) {
+    confess unless defined $base;
     is($base, $volume->file );
 }
 
@@ -44,7 +45,8 @@ sub _test_clone_iso($base, $clone) {
     is($base->file, $clone);
 }
 
-sub _test_base_void($volume, $base) {
+sub _test_base_void($volume, $base, $domain) {
+    confess $base if !-e $base;
     my $info = Load($volume->vm->read_file($base));
     is($info->{is_base},1);
 }
@@ -78,7 +80,7 @@ sub _test_identical($vm, $file, $base) {
 
 }
 
-sub _test_base_qcow2($volume, $base) {
+sub _test_base_qcow2($volume, $base, $domain=undef) {
 
     my @cmd = ("/usr/bin/qemu-img","info",$base);
     my ($out, $err) = $volume->vm->run_command(@cmd);
@@ -93,10 +95,12 @@ sub _test_base_qcow2($volume, $base) {
 
     like($out,qr/^image:.*\.ro$ext$/m);
 
-    @cmd = ("/usr/bin/qemu-img","info",$volume->file);
-    ($out, $err) = $volume->vm->run_command(@cmd);
-    is($err,'');
-    like($out,qr/backing file:.*\.ro$ext$/m);
+    if ($domain) {
+        @cmd = ("/usr/bin/qemu-img","info",$volume->file);
+        ($out, $err) = $volume->vm->run_command(@cmd);
+        is($err,'') or confess;
+        like($out,qr/backing file:.*\.ro$ext$/m);
+    }
 }
 
 sub _test_base_raw($volume, $base) {
@@ -130,14 +134,21 @@ sub _test_clone_qcow2($vol_base, $clone) {
 }
 
 
-sub test_base($volume) {
+sub test_base($volume, $domain=undef) {
     my ($ext) = $volume->file =~ m{.*\.(.*)};
     $ext = 'qcow2' if $ext =~ m{^(img|raw)};
 
     my $test = $TEST_BASE{$ext} or confess "Error: no test for $ext";
 
     $volume->vm->refresh_storage();
-    my $base = $volume->prepare_base();
+
+    my $base;
+    if (!defined $domain) {
+        $base=$volume->prepare_base();
+    } else {
+        $base = $volume->backing_file();
+    }
+    $base=$volume->base_filename unless defined($base);
 
     if ($ext ne 'iso') {
         if ( $volume->file =~ /\.SWAP\./) {
@@ -148,9 +159,10 @@ sub test_base($volume) {
             like($base,qr{(vd.|\d+)\.ro\.$ext$}, $volume->file) or exit;
         }
     }
-    $test->($volume, $base);
+    wait_request(debug => 0);
+    $test->($volume, $base, $domain);
 
-    _check_volume_mode($volume->file);
+    _check_volume_mode($volume->file) if $domain;
     _check_base_volume_mode($base);
 
     return $base;
@@ -162,7 +174,7 @@ sub _check_base_volume_mode($file) {
 
     ok($mode & S_IRUSR); # User can read
 
-    ok(!($mode & S_IWUSR)); # User can not write
+    ok(!($mode & S_IWUSR)) or die $file; # User can not write
     ok(!($mode & S_IRGRP));   # Group can not read
     ok(!($mode & S_IROTH));  # Others can not read
     ok(!($mode & S_IWGRP));   # Group can not write
@@ -298,7 +310,7 @@ sub test_raw($vm, $swap = 0) {
 }
 
 
-sub test_iso($vm) {
+sub test_iso($vm, $base=undef, $domain=undef) {
     use_ok('Ravada::Volume::ISO') or return;
 
     my $iso = $vm->dir_img."/".new_domain_name().".iso";
@@ -337,14 +349,8 @@ sub test_raw_swap($vm) {
     test_raw($vm,1);
 }
 
-sub test_rebase($volume) {
-    my $file_base;
-    eval { $file_base = test_base($volume) };
-    is($@,'');
-    return $file_base;
-}
-
 sub _check_volume_mode($file) {
+    confess "Missing file $file" if !-e $file;
     my $mode = stat($file)->mode;
     if ($file =~ /\.iso$/) {
         ok($mode & S_IRUSR); # user can read
@@ -365,6 +371,7 @@ sub _check_volume_mode($file) {
 
 
 sub test_defaults($vm, $volume_type=undef) {
+    diag("Test default ".($volume_type or ''));
     my $domain = create_domain($vm);
     my @format;
     @format = ( format => $volume_type ) if $vm->type eq 'void' && $volume_type;
@@ -374,18 +381,19 @@ sub test_defaults($vm, $volume_type=undef) {
         ok(-e $volume->file,$volume->file) or exit;
 
         _check_volume_mode($volume->file);
+    }
 
-        my $file_base = test_base($volume);
+    Ravada::Request->prepare_base(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request(debug => 0);
+    for my $volume ( $domain->list_volumes_info ) {
+
+        my $file_base = test_base($volume, $domain);
         _check_base_volume_mode($file_base);
         _check_volume_mode($volume->file);
 
-        delete $volume->{_qemu_info};
-        my $file_rebase = test_rebase($volume);
-        next if !$file_rebase;
-        isnt($file_base, $file_rebase) if $file_base !~ /iso$/;
-        _check_base_volume_mode($file_rebase);
-
-        unlink $file_base or die "$! $file_base" if $file_base !~ /iso$/;
     }
     my $info = $domain->info(user_admin);
     my $disk = $info->{hardware}->{disk};
@@ -399,7 +407,7 @@ sub test_defaults($vm, $volume_type=undef) {
         for my $n ( 0 .. @$disk ) {
             my $dev = $disk->[0];
             my $dev_f = $disk_f->[0];
-            ok(exists $dev->{$field}, "Expecting field $field") or die Dumper($dev);
+            ok(exists $dev->{$field}, "Expecting field $field") or die Dumper([$domain->name,$dev]);
             ok(exists $dev_f->{$field}, "Expecting field $field") or die Dumper($dev_f);
             if ($field eq 'capacity') {
                 like($dev_f->{$field},qr(^\d+[A-Z]$));
@@ -484,10 +492,9 @@ sub test_no_extension($vm) {
 }
 
 sub test_qcow_format($vm) {
-    return if $vm->type ne 'KVM';
     my $base = create_domain($vm);
-    $base->add_volume(type => 'swap', size => 1024*1024);
-    $base->add_volume(type => 'data', size => 1024*1024);
+    $base->add_volume(type => 'swap', size => 1024*1024, format => 'qcow2');
+    $base->add_volume(type => 'data', size => 1024*1024, format => 'qcow2');
     wait_request();
 
     my $clone = $base->clone(
@@ -497,7 +504,7 @@ sub test_qcow_format($vm) {
     my $QEMU_IMG = `which qemu-img`;
     chomp $QEMU_IMG;
     for my $vol ( $clone->list_volumes_info ) {
-        next if $vol->file && $vol->file =~ /iso$/;
+        next if $vol->file && $vol->file =~ /(void|iso)$/;
         my @cmd = ($QEMU_IMG,'create'
             ,'-f','qcow2'
             ,'-F','qcow2'
@@ -511,11 +518,11 @@ sub test_qcow_format($vm) {
         is($bff, 'qcow2');
     }
     eval { $clone->start(user_admin) };
-    is(''.$@,'');
+    is(''.$@,'') or exit;
     $clone->shutdown_now(user_admin);
 
     for my $vol ( $clone->list_volumes_info ) {
-        next if !$vol->file || $vol->file =~ /iso$/;
+        next if !$vol->file || $vol->file =~ /(void|iso)$/;
 
         my @cmd_info = ($QEMU_IMG , 'info', $vol->file);
         my ($out, $err) = $clone->_vm->run_command(@cmd_info);
@@ -543,7 +550,7 @@ sub _remove_domains(@bases) {
 
 init();
 clean();
-for my $vm_name (reverse vm_names() ) {
+for my $vm_name (vm_names() ) {
     my $vm;
     eval {
         $vm = rvd_back->search_vm($vm_name);
@@ -560,6 +567,7 @@ for my $vm_name (reverse vm_names() ) {
 
         init_vm($vm);
 
+        test_defaults($vm,'qcow2');
         test_no_extension($vm);
 
         test_qcow_format($vm);

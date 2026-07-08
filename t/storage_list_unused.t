@@ -52,8 +52,7 @@ sub test_links($vm) {
     );
     wait_request();
     my $out_json = $req2->output;
-    $out_json = '[]' if !defined $out_json;
-    my $output = decode_json($out_json);
+    my $output = ($out_json or []);
     my $found = _search_file($output, $vol);
 
     ok(!$found,"Expecting $vol not found") or die Dumper([$machine->list_volumes]);
@@ -107,8 +106,7 @@ sub test_links_dir($vm, $machine) {
     );
     wait_request();
     my $out_json = $req2->output;
-    $out_json = '[]' if !defined $out_json;
-    my $output = decode_json($out_json);
+    my $output = ($out_json or []);
     for my $exp ($file_link, "$dir_dst/$file" ) {
         my $found = _search_file($output, $exp);
 
@@ -143,8 +141,7 @@ sub test_list_unused_discover($vm, $machine) {
     );
     wait_request();
     my $out_json = $req->output;
-    $out_json = '[]' if !defined $out_json;
-    my $output = decode_json($out_json);
+    my $output = ($out_json or []);
 
     for my $vol (@volumes) {
         my $found = _search_file($output, $vol);
@@ -186,8 +183,7 @@ sub test_list_unused_discover2($vm) {
     );
     wait_request();
     my $out_json = $req->output;
-    $out_json = '[]' if !defined $out_json;
-    my $output = decode_json($out_json);
+    my $output = ($out_json or []);
 
     for my $vol (@volumes) {
         my $found = _search_file($output, $vol);
@@ -217,8 +213,7 @@ sub test_list_unused($vm, $machine, $hidden_vols) {
     );
     wait_request();
     my $out_json = $req->output;
-    $out_json = '[]' if !defined $out_json;
-    my $output = decode_json($out_json);
+    my $output = ($out_json or []);
     my $found = _search_file($output, $file);
 
     ok($found,"Expecting $file found ") or die Dumper($output);
@@ -246,8 +241,7 @@ sub test_page($vm) {
     );
     wait_request();
     my $out_json = $req->output;
-    $out_json = '[]' if !defined $out_json;
-    my $output = decode_json($out_json);
+    my $output = ($out_json or []);
 
     my $req2 = Ravada::Request->list_unused_volumes(
         uid => user_admin->id
@@ -257,8 +251,7 @@ sub test_page($vm) {
     );
     wait_request();
     my $out_json2 = $req2->output;
-    $out_json2 = '[]' if !defined $out_json2;
-    my $output2 = decode_json($out_json2);
+    my $output2 = ($out_json2 or []);
 
     isnt($output2, $output);
 
@@ -402,8 +395,7 @@ sub test_more($vm) {
         );
         wait_request();
         my $out_json = $req->output;
-        $out_json = '{}' if !defined $out_json;
-        my $output = decode_json($out_json);
+        my $output = ($out_json or {});
 
         my $list = $output->{list};
         $more = $output->{more};
@@ -443,7 +435,7 @@ sub test_linked_sp_here($vm) {
     wait_request();
     my $out_json = $req->output;
     $out_json = '{}' if !defined $out_json;
-    my $output = decode_json($out_json);
+    my $output = $out_json;
 
     my $list = $output->{list};
     my @found = grep ($_->{file} =~ /^$new_dir/, @$list);
@@ -488,8 +480,7 @@ sub test_linked_sp($vm) {
     );
     wait_request();
     my $out_json = $req->output;
-    $out_json = '{}' if !defined $out_json;
-    my $output = decode_json($out_json);
+    my $output = ($out_json or {});
 
     my $list = $output->{list};
     my @found = grep ($_->{file} =~ /$new_filename/, @$list);
@@ -565,8 +556,7 @@ sub test_linked_sp_level2($vm) {
     );
     wait_request();
     my $out_json = $req->output;
-    $out_json = '{}' if !defined $out_json;
-    my $output = decode_json($out_json);
+    my $output = ($out_json or {});
 
     my $list = $output->{list};
     my @found = grep ($_->{file} =~ /$new_filename$/, @$list);
@@ -611,8 +601,7 @@ sub test_linked_sp_level0($vm) {
     );
     wait_request();
     my $out_json = $req->output;
-    $out_json = '{}' if !defined $out_json;
-    my $output = decode_json($out_json);
+    my $output = ($out_json or {});
 
     my $list = $output->{list};
     my @found = grep ($_->{file} =~ /$new_filename$/, @$list);
@@ -648,13 +637,22 @@ sub _check_leftovers($vm, $delete=0) {
 
 sub _clean_old_sps($vm) {
     remove_qemu_pools($vm) if $vm->type eq 'KVM';
+    my $base = base_domain_name();
     if ($vm->type eq 'KVM') {
-        my $base = base_domain_name();
         for my $pool ( $vm->vm->list_all_storage_pools()) {
             next if $pool->get_name !~ /^$base/;
             $pool->destroy if $pool->is_active;
             $pool->undefine;
         }
+    }
+    for my $sp ( $vm->list_storage_pools ) {
+        next if $sp !~/^$base/;
+        Ravada::Request->remove_storage_pool(
+            uid => user_admin->id
+            ,id_vm => $vm->id
+            ,name => $sp
+        );
+        wait_request();
     }
 }
 

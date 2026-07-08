@@ -210,18 +210,19 @@ sub resume {
     return $self->_store(is_paused => 0 );
 }
 
-sub remove {
-    my $self = shift;
+sub remove($self, $user) {
+    $self->remove_instance($user);
+    $self->_remove_all_volumes();
+}
 
-    $self->remove_disks();
-
+sub remove_instance($self, $user) {
     my $config_file = $self->_config_file;
     if ($self->_vm->file_exists($config_file)) {
         my ($out, $err) = $self->_vm->run_command("/bin/rm",$config_file);
         warn $err if $err;
     }
     if ($self->_vm->file_exists($config_file.".lock")) {
-        $self->_vm->run_command("/bin/rm",$config_file.".lock");
+        $self->_vm->remove_file($config_file.".lock");
     }
 }
 
@@ -348,7 +349,15 @@ sub shutdown {
     for my $display (@{$hardware->{'display'}}) {
         $display->{port} = 'auto';
     }
+    for my $if (@{$hardware->{'network'}}) {
+        $if->{address} = '';
+    }
+
     $self->_store(hardware => $hardware);
+
+    my $info = $self->_value('info');
+    $info->{ip} = '';
+    $self->_store(info => $info);
 }
 
 sub force_shutdown {
@@ -1070,7 +1079,7 @@ sub _change_hardware_disk($self, $index, $data_new) {
     my $driver;
     $driver = delete $data_new->{bus} if exists $data_new->{bus};
     lock_hash(%$data_new);
-    return $self->_change_driver_disk($index, $driver) if $driver;
+    $self->_change_driver_disk($index, $driver) if $driver;
 
     die "Error: volume $index not found, only ".scalar(@volumes)." found."
         if $index >= scalar(@volumes);
@@ -1078,7 +1087,10 @@ sub _change_hardware_disk($self, $index, $data_new) {
     my $file = $volumes[$index]->{file};
     my $new_file;
     $new_file = $data_new->{file} if exists $data_new->{file};
-    return $self->_change_disk_data($index, file => $new_file) if defined $new_file;
+    $self->_change_disk_data($index, file => $new_file) if defined $new_file;
+
+    return if !keys %$data_new
+        || ( keys (%$data_new)==1 && exists $data_new->{file});
 
     return if !$file;
     my $data;

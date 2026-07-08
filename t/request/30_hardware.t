@@ -32,11 +32,12 @@ my $TLS;
 
 ########################################################################
 #
-sub _download_alpine64 {
+sub _download_alpine64($id_vm) {
     my $id_iso = search_id_iso('Alpine%64');
 
     my $req = Ravada::Request->download(
              id_iso => $id_iso
+             ,id_vm => $id_vm
     );
     wait_request();
     is($req->error, '');
@@ -545,19 +546,16 @@ sub test_add_cdrom($domain) {
         $n++;
     }
 
-    my $data = { device => 'cdrom' , boot => 2 };
     my $file_iso = "/var/tmp/test_30_hardware.iso";
+    my $data = { device => 'cdrom' , boot => 2, file => $file_iso };
     if ($domain->type eq 'KVM') {
         eval { $domain->_set_boot_hd(1) };
         is(''.$@,'') or exit;
         eval { $domain->_set_boot_hd(0) };
         is(''.$@,'') or exit;
-        my $iso = $domain->_vm->_search_iso(search_id_iso('Alpine'));
-        $data->{file} = $iso->{device};
     } else {
         $data->{boot} = 2;
     }
-    $data->{file} = $file_iso if !$data->{file};
     my $found = 0;
     test_add_hardware_request($domain->_vm, $domain,'disk', $data);
 
@@ -571,7 +569,6 @@ sub test_add_cdrom($domain) {
             is($device->info->{boot}, 2, $domain->name) or die Dumper($device->info);
         }
     }
-    unlink $file_iso;
 
 }
 
@@ -696,7 +693,27 @@ sub test_add_network_nat($domain) {
     is($req->error,'');
 }
 
+sub test_add_network_isolated($domain, $isolated) {
+    my $req = Ravada::Request->add_hardware(
+        uid => user_admin->id
+        ,name => 'network'
+        ,id_domain => $domain->id
+        ,data => {
+            driver => 'virtio'
+            ,type => 'NAT'
+            ,network => 'default'
+            ,port => { isolated => $isolated }
+        }
+    );
+    wait_request();
+    is($req->error,'');
+}
+
+
 sub test_add_network($domain) {
+
+    test_add_network_isolated($domain,'yes');
+    test_add_network_isolated($domain,'no');
     test_add_network_bridge($domain);
     test_add_network_nat($domain);
 }
@@ -1822,7 +1839,7 @@ for my $vm_name (vm_names()) {
 	    diag("Skipping VM $vm_name in this system");
 	    next;
 	}
-    _download_alpine64() if !$<;
+    _download_alpine64($vm->id) if !$<;
     $TLS = 0;
     $TLS = 1 if check_libvirt_tls() && $vm_name eq 'KVM';
     for my $base ( _create_base($vm) ) {

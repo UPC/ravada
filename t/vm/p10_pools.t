@@ -342,15 +342,32 @@ sub test_exposed_port($vm) {
     is($req->error,'');
     is($base->is_base,1) or exit;
 
-    my $req_refresh = Ravada::Request->refresh_vms( _no_duplicate => 1);
-    wait_request( debug => 0 ,skip => 'set_time' );
-    is($req_refresh->status, 'done');
-    is(scalar($base->clones), $n);
+    my $clone;
+    for ( 1 .. 10 ) {
+        my $req_refresh = Ravada::Request->refresh_vms( _force => 1);
+        wait_request( debug => 0 ,skip => 'set_time' );
+        is($req_refresh->status, 'done');
+        is(scalar($base->clones), $n);
 
-    my $clone = $base->clone(name => new_domain_name(), user => user_admin);
+        my $name = new_domain_name();
+        my $req_clone = Ravada::Request->clone(
+            uid => user_admin->id
+            ,id_domain => $base->id
+            ,name => $name
+        );
+        wait_request(debug => 0, check_error => 0);
+        ($clone) = grep { $_->{id_owner} == user_admin->id } $base->clones();
+        last if $clone;
+    }
+    ok($clone) or exit;
+    is($clone->{id_owner}, user_admin->id);
 
-    for my $clone ( $base->clones ) {
-        Ravada::Domain->open($clone->{id})->remove(user_admin);
+    for my $clone0 ( $base->clones ) {
+        my $clone2 = Ravada::Domain->open($clone0->{id});
+        ok($clone2->list_ports);
+        my ($port22) = grep { $_->{internal_port} == 22 } $clone2->list_ports();
+        ok($port22);
+        $clone2->remove(user_admin);
     }
     $base->remove(user_admin);
 

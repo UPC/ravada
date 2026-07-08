@@ -138,9 +138,9 @@ sub test_list_remote($node, $migrate=0) {
 
     my $base = create_domain($vm);
     $base->prepare_base(user_admin);
-    $base->set_base_vm(vm => $node, user => user_admin);
     my $domain = $base->clone(name => new_domain_name, user => user_admin);
 
+    $base->set_base_vm(vm => $node, user => user_admin);
     $domain->migrate($node);
     is($domain->_vm->host, $node->host);
 

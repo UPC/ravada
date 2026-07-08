@@ -55,6 +55,15 @@ sub test_create_domain {
     return $domain;
 }
 
+sub _remove_base($domain) {
+    return if !$domain->is_base;
+    for my $clone0 ( $domain->clones ) {
+        my $clone = Ravada::Domain->open($clone0->{id});
+        $clone->remove(user_admin);
+    }
+    $domain->remove_base($USER);
+}
+
 sub test_add_volume {
     my $vm = shift;
     my $domain = shift;
@@ -62,6 +71,7 @@ sub test_add_volume {
     my $swap = shift;
 
     $domain->shutdown_now($USER) if $domain->is_active;
+    _remove_base($domain) if $domain->is_base;
 
     my @volumes = $domain->list_volumes();
 
@@ -79,7 +89,7 @@ sub test_add_volume {
         ,size => 512*1024
         ,swap => $swap);
 
-    my ($vm_name) = $vm->name =~ /^(.*)_/;
+    my ($vm_name) = $vm->type;
     my $vmb = rvd_back->search_vm($vm_name);
     ok($vmb,"I can't find a VM ".$vm_name) or return;
     my $domainb = $vmb->search_domain($domain->name);
@@ -114,7 +124,7 @@ sub test_backing_store($domain) {
         for my $backing_store ($disk->findnodes('backingStore')) {
             $found_bs++;
             my ($format) = $backing_store->findnodes('format');
-            ok($format) or die "Expecting format in backing store ".$backing_store->toString();
+            ok($format) or die "Expecting format in backing store ".$disk->toString();
 
             my ($source) = $backing_store->findnodes('source');
             ok($source) or die "Expecting source in backing store ".$backing_store->toString();
@@ -635,17 +645,6 @@ sub _check_backing_store($xml, $name=undef) {
     return 1;
 }
 
-sub _convert_file_to_raw($vm, @files) {
-    for my $file ( @files ) {
-        my $file_dst = "$file.raw";
-        my @cmd = ('qemu-img','convert',"-O","raw",$file,$file_dst);
-        my ($out, $err) = $vm->run_command(@cmd);
-        die $err if $err;
-        copy($file_dst,$file) or die "$! $file_dst -> $file";
-        unlink $file_dst or die "$! $file_dst";
-    }
-}
-
 sub _create_domain_no_backing_store($vm) {
     #standalone has no backingStore entries
     my $standalone = create_domain($vm);
@@ -658,9 +657,6 @@ sub _create_domain_no_backing_store($vm) {
     my $base = create_domain($vm);
     $base->add_volume(type => 'TMP' , format => 'raw', size => 1024 * 10);
     $base->prepare_base(user_admin);
-
-    my ($file) = grep { /TMP/ } $base->list_files_base;
-    _convert_file_to_raw($vm, $file);
 
     my $base_doc = _remove_backing_store($base->get_xml_base);
     my $sth = connector->_dbh->prepare(

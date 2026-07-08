@@ -9,7 +9,7 @@ Ravada::Request - Requests library for Ravada
 
 =cut
 
-use Carp qw(confess cluck);
+use Carp qw(confess cluck carp);
 use Data::Dumper;
 use Hash::Util qw(lock_hash);
 use JSON::XS;
@@ -67,7 +67,7 @@ our %VALID_ARG = (
      ,spinoff => { id_domain => 1, uid => 1 }
      ,pause_domain => $args_manage
     ,resume_domain => {%$args_manage, remote_ip => 1 }
-    ,remove_domain => $args_manage
+    ,remove_domain => {%$args_manage, id_domain => 2 }
     ,restore_domain => { id_domain => 1, uid => 1 }
     ,shutdown_domain => { name => 2, id_domain => 2, uid => 1, timeout => 2, at => 2
                        , check => 2
@@ -97,7 +97,7 @@ our %VALID_ARG = (
     ,remove_storage_pool => { uid => 1, id_vm => 1, name => 1}
     ,check_storage => { uid => 1 }
     ,create_storage_pool => { uid => 1, id_vm => 1, name => 1, directory => 1 }
-    ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2 }
+    ,set_base_vm=> {uid => 1, id_vm=> 1, id_domain => 1, value => 2, migrate => 2 }
     ,cleanup => { timeout => 2 }
     ,clone => { uid => 1, id_domain => 1, name => 2, memory => 2, number => 2, volatile => 2, id_owner => 2
                 # If base has pools, from_pool = 1 if undefined
@@ -137,6 +137,7 @@ our %VALID_ARG = (
     ,migrate => { uid => 1, id_node => 1, id_domain => 1, start => 2, remote_ip => 2
         ,shutdown => 2, shutdown_timeout => 2
     }
+    ,post_migrate => { uid => 1, id_node => 1, id_domain => 1 }
     ,compact => { uid => 1, id_domain => 1 , keep_backup => 2 }
       ,purge => { uid => 1, id_domain => 1 }
       ,backup => { uid => 1, id_domain => 1, compress => 2}
@@ -207,14 +208,19 @@ our %CMD_SEND_MESSAGE = map { $_ => 1 }
             create_network change_network remove_network
     );
 
+our %CMD_DO_NOT_SEND_ERROR = map { $_ => 1 }
+    qw(refresh_machine_ports);
+
 our %CMD_NO_DUPLICATE = map { $_ => 1 }
 qw(
     clone
+    discover
     set_base_vm
     remove_base_vm
     rsync_back
     cleanup
     list_host_devices
+    list_machine_types
     list_storage_pools
     refresh_machine
     refresh_machine_ports
@@ -227,6 +233,7 @@ qw(
     prepare_base
     wait_job
     download
+    list_cpu_models
 );
 
 our $TIMEOUT_SHUTDOWN = 120;
@@ -269,13 +276,16 @@ our %COMMAND = (
             ,'remove_domain', 'remove', 'refresh_machine_ports'
             ,'connect_node','start_node','shutdown_node'
             ,'post_login'
+            ,'migrate','post_migrate'
         ]
     }
 
     ,important=> {
         limit => 20
         ,priority => 1
-        ,commands => ['clone','start','start_clones','shutdown_clones','create','open_iptables','list_network_interfaces','list_isos','ping_backend','refresh_machine']
+        ,commands => ['clone','start','start_clones','shutdown_clones','create','open_iptables','list_network_interfaces','list_isos','ping_backend','refresh_machine'
+            ,'list_cpu_models','refresh_storage'
+        ]
     }
 
     ,iptables => {
@@ -290,6 +300,8 @@ our %CMD_VALIDATE = (
     clone => \&_validate_clone
     ,create => \&_validate_create_domain
     ,create_domain => \&_validate_create_domain
+    ,remove_domain => \&_validate_remove_domain
+    ,remove => \&_validate_remove_domain
     ,remove_hardware => \&_validate_remove_hardware
     ,start_domain => \&_validate_start_domain
     ,start => \&_validate_start_domain
@@ -300,7 +312,14 @@ our %CMD_VALIDATE = (
     ,compact => \&_validate_compact
     ,spinoff => \&_validate_compact
     ,prepare_base => \&_validate_prepare_base
+    ,post_prepare_base => \&_validate_post_prepare_base
     ,remove_base => \&_validate_remove_base
+    ,migrate => \&_validate_migrate
+    ,set_base_vm=> \&_validate_set_base_vm
+    ,remove_base_vm=> \&_validate_remove_base_vm
+    ,open_exposed_ports => \&_validate_open_exposed_ports
+    ,close_exposed_ports => \&_validate_close_exposed_ports
+    ,download => \&_validate_download
 );
 
 sub _init_connector {
@@ -433,8 +452,10 @@ sub remove_domain {
     my $class=ref($proto) || $proto;
 
     my %args = @_;
-    confess "Missing domain name"   if !$args{name};
-    confess "Name is not scalar"    if ref($args{name});
+    confess "Missing domain name or id"
+    if !$args{name} && !$args{id_domain};
+
+    confess "Name is not scalar"    if $args{name} && ref($args{name});
     confess "Missing uid"           if !$args{uid};
 
     for (keys %args) {
@@ -582,7 +603,7 @@ sub _check_args {
     my $args = { @_ };
 
     my $valid_args = $VALID_ARG{$sub};
-    for (qw(at after_request after_request_ok retry _no_duplicate _force uid check_requests)) {
+    for (qw(at after_request after_request_ok retry _no_duplicate _force uid )) {
         $valid_args->{$_}=2 if !exists $valid_args->{$_};
     }
 
@@ -727,7 +748,7 @@ sub _duplicated_request($self=undef, $command=undef, $args=undef) {
     }
     confess "Error: missing command " if !$command;
     #    delete $args_d->{uid} unless $command eq 'clone';
-    delete $args_d->{uid} if $command =~ /(cleanup|refresh_vms|set_base_vm)/;
+    delete $args_d->{uid} if $command =~ /(cleanup|refresh_vms|set_base_vm|remove_base_vm)/;
     delete $args_d->{uid} if exists $args_d->{uid} && !defined $args_d->{uid};
     delete $args_d->{at};
     delete $args_d->{status};
@@ -769,7 +790,7 @@ sub _new_request {
     }
     my %args = @_;
 
-    $args{status} = 'requested';
+    $args{status} = 'initializing';
     $self->{command} = $args{command};
 
     if ($args{name}) {
@@ -826,6 +847,9 @@ sub _new_request {
 
     }
 
+    for my $field (keys %args) {
+        $args{$field} = encode_json($args{$field}) if ref($args{$field});
+    }
     $args{date_changed} = Ravada::Utils::date_now();
     $args{error} = '';
     my $sth = $$CONNECTOR->dbh->prepare(
@@ -846,7 +870,7 @@ sub _new_request {
 
     my $request;
     eval { $request = $self->open($self->{id}) };
-    warn $@ if $@ && $@ !~ /I can't find id=/;
+    warn "Error in request=$self->{id} $@" if $@ && $@ !~ /I can't find id=/;
     return if !$request;
     $request->_validate();
     $request->status('requested') if $request->status ne'done';
@@ -916,6 +940,23 @@ sub _validate($self) {
     $method->($self);
 }
 
+sub _validate_remove_domain($self) {
+    my $id_domain = $self->defined_arg('id_domain');
+    if (!$id_domain) {
+        my $name = $self->defined_arg('name');
+        $id_domain = $self->_search_domain_id($name);
+        if (!defined $id_domain) {
+            $self->output("Already removed");
+            $self->status('done');
+            return;
+        }
+    }
+    my $domain = Ravada::Front::Domain->open($id_domain);
+    if ( $domain->is_base() ) {
+        my $req_rm = $self->_chain_remove_bases_nodes($domain)
+    }
+}
+
 sub _validate_remove_base($self) {
     my $id_domain = $self->args('id_domain');
     my $domain = Ravada::Front::Domain->open($id_domain);
@@ -933,6 +974,29 @@ sub _validate_remove_base($self) {
         $reqs_base[-1]->status('done');
         $reqs_base[-2]->status('done');
     }
+    $self->_chain_prepare_base($domain);
+    $self->_chain_remove_bases_nodes($domain);
+}
+
+sub _chain_remove_bases_nodes($self, $domain) {
+    my $bases_vm = $domain->_bases_vm(1);
+    return if keys %$bases_vm < 2;
+    my %done;
+    my $req_prev;
+    my $req;
+    for my $id_vm ($domain->_data('id_vm'),keys %$bases_vm ) {
+        next if $done{$id_vm}++;
+        $req = Ravada::Request->remove_base_vm(
+            uid => $self->args('uid')
+            ,id_domain => $domain->id
+            ,id_vm => $id_vm
+            ,_force => 1
+        );
+        $req->after_request_ok($req_prev->id) if $req_prev;
+        $self->after_request_ok($req->id);
+        $req_prev = $req;
+    }
+    return $req;
 }
 
 sub _validate_remove_hardware($self) {
@@ -940,13 +1004,21 @@ sub _validate_remove_hardware($self) {
 
     my $args = $self->args();
 
-    die "Error: you must pass option or index"
-    if !exists $args->{option} && !exists $args->{index}
-    && !defined $args->{option} && !defined $args->{index};
+    if ( !exists $args->{option} && !exists $args->{index}
+        && !defined $args->{option} && !defined $args->{index}) {
 
-    die "Error: attribute value must be defined ".
-        join(" ", map { $_ or '<UNDEF>' } %{$args->{option}})
-    if $args->{option} && grep { !defined } values %{$args->{option}};
+        $self->error("Error: you must pass option or index");
+        $self->status('done');
+        return;
+    }
+
+    if ( $args->{option} && grep { !defined } values %{$args->{option}}) {
+
+        $self->error("Error: attribute value must be defined ".
+        join(" ", map { $_ or '<UNDEF>' } %{$args->{option}}));
+        $self->status('done');
+        return;
+    }
 
 }
 
@@ -967,14 +1039,40 @@ sub _validate_start_domain($self) {
     }
 }
 
+sub _validate_post_prepare_base($self) {
+    for my $command (qw (clone)) {
+        my $req= $self->_search_request($command
+            , id_domain => $self->args('id_domain'));
+
+        $req->after_request($self->id) if $req;
+    }
+}
+
 sub _validate_prepare_base($self) {
     $self->_validate_compact();
+
+    for my $command (qw (prepare_base post_prepare_base
+        set_base_vm remove_base_vm )) {
+
+        my $req= $self->_search_request($command
+            , id_domain => $self->args('id_domain'));
+
+        $self->after_request($req->id) if $req;
+    }
 
     my $req_create = $self->_search_request('create'
         , id_base=> $self->args('id_domain'));
 
     if ($req_create) {
         $req_create->after_request($self->id);
+    }
+    my $domain = Ravada::Front::Domain->open($self->args('id_domain'));
+    if ($domain && $domain->is_active) {
+        my $req_shutdown = Ravada::Request->shutdown_domain(
+            uid => $self->args('uid')
+            ,id_domain => $domain->id
+        );
+        $self->after_request_ok($req_shutdown->id);
     }
 }
 
@@ -1070,16 +1168,20 @@ sub _check_downloading($self) {
     my $req_download = $self->_search_request('download', id_iso => $id_iso2);
 
     if ($has_cd && !$req_download) {
+        my @args_vm;
+        push @args_vm,( vm => $self->defined_arg('vm') )        if $self->defined_arg('vm');
+        push @args_vm,( id_vm => $self->defined_arg('id_vm') )  if $self->defined_arg('id_vm');
+
         $req_download = Ravada::Request->download(
             id_iso => $id_iso2
             ,uid => Ravada::Utils::user_daemon->id
-            ,vm => $self->defined_arg('vm')
+            ,@args_vm
         );
     }
     if (! $req_download) {
         _mark_iso_downloaded($id_iso2);
     } else {
-        $self->after_request($req_download->id);
+        $self->after_request_ok($req_download->id);
     }
     $sth = $$CONNECTOR->dbh->prepare("SELECT args FROM requests"
             ." WHERE id=?"
@@ -1140,6 +1242,12 @@ sub _validate_clone($self
                 , $id_base= $self->args('id_domain')
                 , $uid=$self->args('uid')) {
 
+    my $number = $self->defined_arg('number');
+    if (defined $number && ($number !~ /^\d+$/ || $number<1) )  {
+        $self->error("Error: $number clones requested");
+        $self->status('done');
+        return;
+    }
     my $base = Ravada::Front::Domain->open($id_base);
 
     if ( !$uid ) {
@@ -1153,21 +1261,80 @@ sub _validate_clone($self
         $self->error("Error: user id='$uid' does not exist");
         return;
     }
+    if ($base->is_active) {
+        my $req_shutdown = Ravada::Request->shutdown_domain(
+            uid => $uid
+            ,id_domain => $base->id
+        );
+        $self->after_request($req_shutdown->id);
+    }
 
-    my ($req_base) = grep { $_->command eq 'prepare_base' }
+    for my $command (qw (wait_job prepare_base post_prepare_base)) {
+        my ($req_base) = grep { $_->command eq $command }
         $base->list_requests;
 
-    $self->after_request($req_base->id) if $req_base;
+        $self->after_request($req_base->id) if $req_base;
 
-    return if $user->is_admin;
-    return if $user->can_clone_all;
+    }
+
     return $self->_status_error('done'
         ,"Error: user ".$user->name." can not clone.")
         if !$user->can_clone();
 
     return $self->_status_error('done'
         ,"Error: ".$base->name." is not public.")
-        if !$base->is_public;
+        if !$base->is_public && !$user->is_admin && !$user->can_clone_all;
+
+    if (!$base->is_base && !$base->id_base) {
+        my $req_prepare = Ravada::Request->prepare_base(
+            uid => $uid
+            ,id_domain => $base->id
+            ,with_cd => $self->defined_arg('with_cd')
+        );
+        $self->after_request_ok($req_prepare->id);
+    }
+}
+
+sub _validate_open_exposed_ports($self) {
+
+    my $id_domain = $self->defined_arg('id_domain');
+    return if !$id_domain;
+
+    my $domain_f;
+    eval { $domain_f = Ravada::Front::Domain->open($id_domain) };
+    if ($@) {
+        my ($line) = $@ =~ m{(.*)}m;
+        chomp $line;
+        $self->error($line);
+        $self->status('done');
+        return;
+    }
+    $domain_f->_data('ports_exposed' => 1);
+}
+
+sub _validate_close_exposed_ports($self) {
+
+    my $id_domain = $self->defined_arg('id_domain');
+    return if !$id_domain;
+
+    my $domain_f;
+    eval { $domain_f = Ravada::Front::Domain->open($id_domain) };
+    if ($@) {
+        my ($line) = $@ =~ m{(.*)}m;
+        chomp $line;
+        $self->error($line);
+        $self->status('done');
+        return;
+    }
+
+    $domain_f->_data('ports_exposed' => 0);
+}
+
+sub _validate_download($self) {
+    if (!$self->defined_arg('id_vm') && !$self->defined_arg('vm')) {
+        $self->error("Error: provide either id_vm or vm");
+        $self->status('done');
+    }
 }
 
 sub _last_insert_id {
@@ -1217,7 +1384,8 @@ sub status {
     }
 
     $self->_send_message($status, $message)
-        if $CMD_SEND_MESSAGE{$self->command} || $self->error ;
+        if $CMD_SEND_MESSAGE{$self->command}
+            || ( $self->error && !$CMD_DO_NOT_SEND_ERROR{$self->command});
 
     if ($status eq 'done' && $date_changed && $date_changed eq $self->date_changed) {
         sleep 1;
@@ -1544,9 +1712,137 @@ sub set_base_vm {
     my $id_vm = $args->{id_vm};
     $id_vm = $args->{id_node} if exists $args->{id_node} && $args->{id_node};
 
-    $domain->_set_base_vm_db($id_vm, $args->{value}, $req->id);
+    $domain->_set_base_vm_db($id_vm, undef, $req->id);
 
     return $req;
+}
+
+sub _validate_migrate($req) {
+    my $domain = Ravada::Front::Domain->open($req->args('id_domain'));
+
+    if ( $domain->is_volatile ) {
+
+        $req->_status_error('done'
+                ,"Error: unsupported volatile domains migration."
+            );
+        return;
+    }
+
+    if ($domain->_data('status') ne 'shutdown') {
+        my $req_shutdown = Ravada::Request->shutdown_domain(
+            uid => $req->args('uid')
+            ,id_domain => $domain->id
+            ,_force => 1
+        );
+        $req->after_request_ok($req_shutdown->id);
+    }
+
+    if ($domain->_data('id_vm') == $req->args('id_node')) {
+        $req->status('done');
+        $req->error("Already migrated");
+        return;
+    }
+    my $req_post = Ravada::Request->post_migrate(
+        uid => $req->args('uid')
+        ,id_domain => $domain->id
+        ,id_node => $req->args('id_node')
+        ,after_request => $req->id
+    );
+
+    my $id_vm_local = $domain->_id_vm_local();
+    if ( !defined $id_vm_local ) {
+        return $req->_status_error('done'
+            ,"Error: node local not found for ".$domain->type);
+    }
+
+    my $id_node = $req->args('id_node');
+
+    unless ($id_node==$id_vm_local || $domain->_data('id_vm')==$id_vm_local) {
+        my $req_local = Ravada::Request->migrate(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_domain => $domain->id
+            ,id_node => $id_vm_local
+            ,shutdown => 1
+        );
+        $req->after_request_ok($req_local->id);
+    }
+
+    if ($domain->_data('id_base')) {
+        my $base = Ravada::Front::Domain->open($domain->_data('id_base'));
+        if (!$base->base_in_vm($id_node)) {
+            my $req_prev = Ravada::Request->set_base_vm(
+                uid => $req->args('uid')
+                ,id_domain => $base->id
+                ,id_vm => $id_node
+            );
+            $req->_data('after_request_ok' => $req_prev->id);
+        }
+    }
+
+}
+
+
+sub _validate_set_base_vm($req) {
+
+    my $value;
+    if ( $req->command eq 'set_base_vm') {
+        $value = 1;
+        my $args = $req->args();
+        $value = $args->{value} if exists $args->{value};
+    } elsif ($req->command eq 'remove_base_vm') {
+        $value = 0;
+    }
+
+    return _validate_remove_base_vm($req) if !$value;
+
+    my $domain = Ravada::Front::Domain->open($req->args('id_domain'));
+
+    $req->_chain_prepare_base($domain);
+
+    my $id_vm_local = $domain->_id_vm_local();
+    if ( !defined $id_vm_local ) {
+        return $req->_status_error('done'
+            ,"Error: node local not found for ".$domain->type);
+    }
+
+    my $id_vm = $req->defined_arg('id_vm');
+    $id_vm = $req->defined_arg('id_node') if !defined $id_vm;
+
+    my $bases_vm = $domain->_bases_vm();
+    if ( $id_vm != $id_vm_local && !$bases_vm->{$id_vm_local}) {
+        my $req_local = Ravada::Request->set_base_vm(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_domain => $domain->id
+            ,id_vm => $id_vm_local
+        );
+        $req->after_request_ok($req_local->id);
+    }
+
+    return if !$domain->id_base;
+    my $base = Ravada::Front::Domain->open($domain->id_base);
+    return if $base->base_in_vm($id_vm);
+
+    my $req_prev = Ravada::Request->set_base_vm(
+        uid => Ravada::Utils::user_daemon->id
+        ,id_domain => $base->id
+        ,id_vm => $id_vm
+    );
+    $req->after_request_ok($req_prev->id);
+}
+
+sub _chain_prepare_base($self, $domain) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id FROM requests "
+        ." WHERE id_domain=? "
+        ."  AND id <> ? "
+        ."  AND ( command='prepare_base' OR command='post_prepare_base' "
+        ."          OR command='set_base_vm' OR command='remove_base_vm' )"
+        ."  AND ( status='requested' OR status='working' )"
+    );
+    $sth->execute($domain->id, $self->id);
+    while ( my ($id) = $sth->fetchrow ) {
+        $self->after_request($id);
+    }
 }
 
 =head2 remove_base_vm
@@ -1565,11 +1861,162 @@ sub remove_base_vm {
     my $self = {};
     bless($self,$class);
 
-    return $self->_new_request(
+    my $req = $self->_new_request(
             command => 'remove_base_vm'
              , args => $args
     );
 
+    my $id_vm = $req->defined_arg('id_vm');
+    $id_vm = $req->defined_arg('id_node') if !defined $id_vm;
+
+    my $domain = Ravada::Front::Domain->open($req->args('id_domain'));
+    $domain->_set_base_vm_db($id_vm, undef, $req->id);
+
+    return $req;
+}
+
+sub _node_is_active($id) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id FROM vms WHERE enabled=1 AND is_active=1 "
+        ." AND id=?"
+    );
+    $sth->execute($id);
+    my ($found) = $sth->fetchrow;
+    return $found;
+}
+
+sub _validate_remove_base_vm($req) {
+
+    my $domain = Ravada::Front::Domain->open($req->args('id_domain'));
+
+    $req->_chain_previous_set_base($domain);
+    $req->_chain_previous_migrate_children($domain);
+    $req->_chain_requested_clone( $domain->id);
+
+    my $id_vm = $req->defined_arg('id_vm');
+    $id_vm = $req->defined_arg('id_node') if !defined $id_vm;
+
+    my $bases_vm = $domain->_bases_vm(1);
+    my @other_vms;
+    for my $id_vm_other (keys %$bases_vm) {
+        push @other_vms,($id_vm_other) if $id_vm_other != $id_vm && _node_is_active($id_vm_other);
+    }
+
+    if ( $domain->clones ) {
+        if ( !@other_vms ) {
+            $req->error("Error: there are no other VMs to migrate clones when removing base "
+                .$domain->id." ".$domain->name);
+            $req->status('done');
+            return;
+        }
+        $req->_chain_migrate_clones($domain, $id_vm, \@other_vms)
+    }
+}
+
+sub _chain_previous_migrate_children($self, $domain) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id FROM requests "
+        ." WHERE id_domain=?"
+        ."  AND id <> ? "
+        ."  AND ( status='requested' OR status='working' ) "
+        ."  AND ( command = 'migrate' )"
+    );
+    $sth->execute($domain->id, $self->id);
+    while ( my ($id_prev) = $sth->fetchrow ) {
+        $self->_data('after_request_ok' => $id_prev)
+    }
+
+    for my $clone ($domain->clones) {
+        $sth->execute($clone->{id}, $self->id);
+        while ( my ($id_prev) = $sth->fetchrow ) {
+            $self->_data('after_request_ok' => $id_prev)
+        }
+        if ( $clone->{is_base} ) {
+            my $domain2 = Ravada::Front::Domain->open($clone->{id});
+            $self->_chain_previous_migrate_children($domain2)
+        }
+    }
+}
+
+sub _chain_previous_set_base($self, $domain) {
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT id FROM requests "
+        ." WHERE id_domain=?"
+        ."  AND id <> ? "
+        ."  AND ( status='requested' OR status='working' ) "
+        ."  AND ( command = 'prepare_base' OR command='set_base_vm' "
+        ."          OR command='remove_base_vm' )"
+    );
+    $sth->execute($domain->id, $self->id);
+    while ( my ($id_prev) = $sth->fetchrow ) {
+        $self->_data('after_request_ok' => $id_prev)
+    }
+}
+
+sub _chain_migrate_clones($self, $domain, $id_vm, $other_vms) {
+
+    my ($req_migrate, $req_rm);
+    my ($req_migrate_prev, $req_rm_prev);
+
+    if ( $domain->_data('id_vm') == $id_vm ) {
+        $req_migrate_prev = Ravada::Request->migrate(
+            uid => Ravada::Utils::user_daemon->id
+            ,id_domain => $domain->id
+            ,id_node => $other_vms->[0]
+        );
+    }
+
+    for my $clone ($domain->clones) {
+
+        # migrate clones to other vms
+        if ( $clone->{id_vm} == $id_vm ) {
+            my $start = 0;
+            $start = 1 if $clone->{status} eq 'active';
+            $req_migrate = Ravada::Request->migrate(
+                uid => Ravada::Utils::user_daemon->id
+                ,id_domain => $clone->{id}
+                ,id_node => $other_vms->[0]
+                ,shutdown => 1
+                ,start => $start
+            );
+            $req_migrate->after_request_ok($req_migrate_prev->id) if $req_migrate_prev;
+            $req_migrate_prev = $req_migrate;
+        }
+
+        # remove child bases
+        if ( $clone->{is_base} ) {
+            $req_rm = Ravada::Request->remove_base_vm(
+                uid => Ravada::Utils::user_daemon->id
+                ,id_domain => $clone->{id}
+                ,id_vm => $id_vm
+            );
+            $req_rm->after_request_ok($req_migrate->id) if $req_migrate;
+            $req_rm->after_request_ok($req_rm_prev->id) if $req_rm_prev;
+            $req_rm_prev = $req_rm;
+        }
+    }
+    $self->after_request_ok($req_rm->id) if $req_rm;
+    $self->after_request_ok($req_migrate->id) if $req_migrate;
+
+
+}
+
+sub _chain_requested_clone($req, $id_domain) {
+
+    for my $req_clone (
+        $req->_search_request('clone', id_domain => $id_domain)
+        , $req->_search_request('create_domain', id_base => $id_domain)
+    ) {
+        next if $req_clone->status eq 'done';
+
+        # if it is requested chain after this one
+        if ($req_clone->status eq 'requested') {
+            $req_clone->after_request($req->id);
+        # if running, chain this request after
+        } elsif ($req_clone->status() eq 'running') {
+            $req->after_request($req_clone->id);
+        }
+    }
 }
 
 
@@ -1824,8 +2271,8 @@ sub done_recently($self, $seconds=60,$command=undef, $args=undef) {
         delete $args_found_d->{at};
 
         next if join(".",sort keys %$args_d) ne join(".",sort keys %$args_found_d);
-        my $args_d_s = join(".",map { $args_d->{$_} } sort keys %$args_d);
-        my $args_found_s = join(".",map {$args_found_d->{$_} } sort keys %$args_found_d);
+        my $args_d_s = join(".",map { $args_d->{$_} or '' } sort keys %$args_d);
+        my $args_found_s = join(".",map {$args_found_d->{$_} or '' } sort keys %$args_found_d);
         next if $args_d_s ne $args_found_s;
 
         return Ravada::Request->open($id);
@@ -1861,19 +2308,21 @@ Stops a request killing the process.
 
 =cut
 
-sub stop($self) {
+sub stop($self, $show_warn=1) {
     my $stale = '';
     my $run_time = '';
     if ($self->start_time) {
         $run_time = time - $self->start_time;
-        $stale = ", stale for $run_time seconds.";
+        $stale = ", stale for $run_time seconds." if $run_time;
     }
     warn "Killing ".$self->command
         ." , pid: ".( $self->pid or '<UNDEF>')
         .$stale
-        ."\n";
+        ."\n" if $show_warn;
     kill (15,$self->pid) if $self->pid;
-    $self->status('done',"Killed start process after $run_time seconds.");
+    $self->status('done');
+    $self->error("Killed start process after $run_time seconds.")
+    if $self->pid;
 }
 
 sub _delete($self) {
@@ -1906,22 +2355,40 @@ sub requirements_done($self) {
 
     my $ok = 0;
     if ($after_request) {
-        $ok = 0;
-        my $req;
-        eval { $req = Ravada::Request->open($self->after_request) };
-        die $@ if $@ && $@!~ /I can't find|not found/i;
-        $ok = 1 if !$req || $req->status eq 'done';
+        $ok = $self->_requirements_done_ids($after_request);
+        return 0 if !$ok;
     }
     if ($after_request_ok) {
-        $ok = 0;
-        my $req = Ravada::Request->open($self->after_request_ok);
-        if ($req->status eq 'done' && $req->error ) {
-            $self->status('done');
-            $self->error($req->error);
-        }
-        $ok = 1 if $req->status eq 'done' && ( !defined $req->error || $req->error eq '' );
+        $ok = $self->_requirements_done_ids($after_request_ok, 1);
     }
     return $ok;
+}
+
+sub _requirements_done_ids($self, $ids, $propagate=undef) {
+
+    $ids = [ $ids ] unless ref($ids) eq 'ARRAY';
+
+    my $fail = 0;
+    for my $id (@$ids) {
+        next if !_req_exists($id);
+        my $req = Ravada::Request->open($id);
+        if ($req->status eq 'done' && $req->error ) {
+            if ($propagate) {
+                $self->status('done');
+                $self->error($req->error);
+            }
+        }
+        return 0 if $req->status() ne 'done';
+    }
+    return 1;
+}
+
+sub _req_exists($id) {
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id FROM requests WHERE id=?");
+    $sth->execute($id);
+    my ($ok) = $sth->fetchrow();
+    return 1 if $ok;
+    return 0 if !$ok;
 }
 
 =head2 redo
@@ -1991,9 +2458,21 @@ sub remove($status, %args) {
     }
 }
 
+sub _push($value, $id) {
+    my $list = $value;
+    $list = [$list] if !ref($list);
+
+    my @id = ($id);
+    if (ref($id)) {
+        @id = @$id;
+    }
+    push @$list,@id;
+    return $list;
+}
+
 sub _data($self, $field, $value=undef) {
-    confess if $field eq 'after_request' && defined $value
-    && $value == $self->id;
+    confess "Error: recursive requirement" if $field =~ /after_request/ && defined $value
+    && length($value) && $value == $self->id;
 
     if (defined $value
         && (
@@ -2005,15 +2484,30 @@ sub _data($self, $field, $value=undef) {
         confess "ERROR: field $field is read only"
             if $FIELD_RO{$field};
 
-        $self->{_data}->{$field} = $value;
+        if ($field =~ /^after_request/) {
+            my $prev_req_id = $self->{_data}->{$field};
+            $value = _push($prev_req_id, $value) if $prev_req_id;
+        }
+        my $value0 = $value;
+        $value0 = dclone($value) if ref($value);
+
         my $sth = $$CONNECTOR->dbh->prepare(
             "UPDATE requests set $field=?"
             ." WHERE id=?"
         );
-        $sth->execute($value, $self->id);
-        $sth->finish;
+        {
 
-        return $value;
+            eval {
+                $value = encode_json($value) if ref($value);
+            };
+            confess Dumper([$@,$field,$value0]) if $@;
+
+            $sth->execute($value, $self->id);
+        }
+        $sth->finish;
+        $self->{_data}->{$field} = $value0;
+
+        return $self->{_data}->{$field};
     }
     return $self->{_data}->{$field}
     if exists $self->{_data}->{$field} && defined $self->{_data}->{$field};
@@ -2043,6 +2537,17 @@ sub _select_db($self) {
 
     return if !$row;
 
+    for my $key (keys %$row) {
+        my $value = $row->{$key};
+        next if !defined $value || $value !~ /^[\[\{}]/;
+        my $value_decoded;
+        eval {
+            $value_decoded = decode_json($value);
+        };
+        warn "Error decoding '$value' for request id=$row->{id} $@" if $@;
+        $row->{$key} = $value_decoded if defined $value_decoded;
+    }
+
     return $row;
 }
 
@@ -2054,33 +2559,6 @@ Refresh request status and data
 
 sub refresh($self) {
     delete $self->{_data};
-}
-
-=head2 error_check_request
-
-Returns errors from requested jobs created from this request
-
-=cut
-
-sub error_check_request($self) {
-    my $check_request = $self->defined_arg('check_requests');
-    return if !$check_request;
-
-    my $error;
-    for my $id_req ( @$check_request ) {
-        my $req = Ravada::Request->open($id_req);
-        next if !$req->error;
-        if ($error) {
-            chomp $error;
-            $error .= "\n";
-        }
-        $error .= $req->error;
-    }
-    return 0 if !$error;
-
-    $self->error($error);
-    return 1;
-
 }
 
 sub AUTOLOAD {
@@ -2101,6 +2579,9 @@ sub AUTOLOAD {
 
     confess "Can't locate object method $name via package $self"
         if !ref($self);
+
+    confess "ERROR: Unknown field $name "
+        if !exists $self->{$name} && !exists $FIELD{$name} && !exists $FIELD_RO{$name};
 
     my $value = shift;
     $name =~ tr/[a-z][A-Z]_/_/c;

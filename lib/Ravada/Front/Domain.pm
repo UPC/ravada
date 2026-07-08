@@ -173,9 +173,11 @@ sub name($self) {
     return $self->_data('name') 
 }
 
+# those should run a request
 sub pause               { confess "TODO" }
 sub prepare_base        { confess "TODO" }
 sub remove              { confess "TODO" }
+sub remove_instance     { confess "TODO" }
 sub rename              { confess "TODO" }
 sub resume              { confess "TODO" }
 sub screenshot          { confess "TODO" }
@@ -269,4 +271,18 @@ sub set_time($self) {
         , retry => 10
     );
 }
+
+sub ip($self) {
+    my $info = $self->info(Ravada::Utils->user_daemon);
+    return $info->{ip} if exists $info->{ip};
+    my @network = $self->_get_controller_network();
+    return '' if !@network;
+
+    for my $net (@network) {
+        return $net->{address} if exists $net->{address} && $net->{address};
+    }
+
+    return '';
+}
+
 1;

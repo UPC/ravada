@@ -148,6 +148,7 @@ sub test_compact_clone($vm) {
 #######################################################
 
 init();
+clean();
 
 test_settings();
 if ($>)  {

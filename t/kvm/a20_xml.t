@@ -75,6 +75,9 @@ SKIP: {
     my @volumes = $clone->list_volumes();
     is(scalar @volumes,1);
 
+    $clone->remove(user_admin);
+    $clone=undef;
+    $domain->remove_base(user_admin);
     $domain->add_volume( name => $domain->name.'.vdb' , size => 1000 *1024);
 
     my @volumes_domain = $domain->list_volumes();
@@ -87,10 +90,9 @@ SKIP: {
 
     if ($clone2) {
         my @volumes_clone2= $clone2->list_volumes();
-        is(scalar @volumes_clone2, 1);
+        is(scalar @volumes_clone2, 2);
     }
 
-    $clone->remove( user_admin );
     $clone2->remove( user_admin );
     $domain->remove_base( user_admin );
 

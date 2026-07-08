@@ -93,7 +93,7 @@
                 <a type="button" class="btn btn-primary text-white"
                     ng-show="!machine.is_base && !machine.action && !machine.is_active && machine.can_prepare_base"
                     ng-click="machine.action='prepare'"
-                    >Prepare base
+                    ><%=l 'Prepare base' %>
                 </a>
                 <div ng-show="machine.action=='prepare'">
                     <%=l 'Preparing a base will create a template for all the users to clone.' %>

@@ -28,7 +28,7 @@ sub test_queue_fail($vm) {
         uid => user_admin->id
         ,id_domain => $domain->id
     );
-    rvd_back->_process_requests_dont_fork();
+    rvd_back->_process_requests_dont_fork(1);
     is($req->error,'');
     is($req->status(),'done');
 
@@ -37,7 +37,7 @@ sub test_queue_fail($vm) {
 
     for my $vol ( $domain->list_volumes ) {
         if( $vol =~ /\.(img|raw|qcow2)$/ ) {
-            unlink $vol or die "$! $vol";
+            unlink $vol or die "$! $vol";# if -e $vol;
         }
     }
     my @req = $domain->list_requests();
@@ -45,11 +45,15 @@ sub test_queue_fail($vm) {
 
     # failed so no is not base now neither
     is($domain->is_base,0);
+    my $found_error_in_wait=0;
     for my $req2 (@req) {
         is($req2->status,'done');
+        next if $req2->command eq 'wait_job' && !$req2->error;
+        $found_error_in_wait++;
         like($req2->error,qr'.',$req2->id." ".$req2->command." id_domain=".$req2->defined_arg('id_domain'))
             or exit;
     }
+    ok($found_error_in_wait);
 
     remove_domain($domain);
 
@@ -64,7 +68,7 @@ sub test_queue($vm) {
         $domain->add_volume( format => 'qcow2', size => 1*1024*1024);
     }
 
-    my $n_vols_raw = scalar( grep {$_ =~ /img|raw/ } $domain->list_volumes);
+    my $n_vols_raw = scalar( grep {$_ =~ /img|raw|qcow/ } $domain->list_volumes);
     my $req = Ravada::Request->prepare_base(
         uid => user_admin->id
         ,id_domain => $domain->id
@@ -92,8 +96,10 @@ sub test_queue($vm) {
     wait_request(debug => 0);
 
     for my $req (@req) {
-        if ($req->command eq 'wait_job' || $req->command eq 'post_prepare_base') {
-            ok($req->after_request,$req->id." ".$req->command);
+        if ($req->command eq 'wait_job') {
+            ok($req->after_request,$req->id." ".$req->command) or die $domain->name;
+        } else {
+            ok($req->after_request_ok,$req->id." ".$req->command) or die $domain->name;
         }
         my $args = $req->args;
         if ($req->command eq 'wait_job') {
@@ -147,6 +153,7 @@ for my $vm_name ( vm_names() ) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
+        diag('###########################################################');
         diag("test $vm_name");
 
         # TODO

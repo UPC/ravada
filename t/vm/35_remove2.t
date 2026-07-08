@@ -70,9 +70,31 @@ sub _clone($base, $name=new_domain_name) {
     );
 }
 
+sub _check_volumes_different($d1, $d2) {
+
+    my %vols_d1 = sort $d1->list_volumes;
+    my %vols_d2 = sort $d2->list_volumes;
+    for my $vol (keys %vols_d1) {
+        ok(!exists $vols_d2{$vol}) or die $vol;
+    }
+    for my $vol (keys %vols_d2) {
+        ok(!exists $vols_d1{$vol}) or die $vol;
+    }
+
+}
+
+sub _check_backing_file($d) {
+    for my $vol0 ($d->list_volumes_info) {
+        ok($vol0->backing_file) or die $vol0->{file};
+        like($vol0->backing_file(),qr/\.ro\./);
+    }
+
+}
+
 sub test_remove_rename($vm) {
     Test::Ravada::_check_leftovers_domains();
     my $base= create_domain($vm->type);
+    $base->add_volume(format => 'qcow2', size => 1*1024*1024);
     my $name = new_domain_name();
     my $base2 = _clone($base, $name);
     $base2->prepare_base(user_admin);
@@ -87,9 +109,15 @@ sub test_remove_rename($vm) {
     is($@,'') or exit;
     $clone2 = rvd_back->search_domain($name);
     ok($clone2);
-    $clone2->remove(user_admin);
 
-    for my $vol (@volumes_base, $base2->list_volumes) {
+    _check_volumes_different($clone2, $base2);
+    _check_backing_file($clone2);
+
+    $clone2->remove(user_admin);
+    for my $vol (reverse $base2->list_volumes) {
+        ok( -e $vol,$vol) or die $base2->name;
+    }
+    for my $vol (@volumes_base) {
         ok( -e $vol,$vol);
     }
 

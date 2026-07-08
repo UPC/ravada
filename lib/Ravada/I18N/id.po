@@ -2343,7 +2343,7 @@ msgstr "Bagikan"
 msgid "Follow these steps for Spice client setup"
 msgstr "Ikuti langkah-langkah berikut untuk pengaturan klien Spice"
 
-msgid "Mange Host Devices"
+msgid "Manage Host Devices"
 msgstr "Kelola Perangkat Host"
 
 msgid "Auto Compact"

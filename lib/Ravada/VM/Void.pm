@@ -1,10 +1,11 @@
 package Ravada::VM::Void;
 
-use Carp qw(carp croak);
+use Carp qw(carp croak cluck);
 use Data::Dumper;
 use Encode;
 use Encode::Locale;
 use Fcntl qw(:flock O_WRONLY O_EXCL O_CREAT);
+use File::Copy qw(copy);
 use Hash::Util qw(lock_hash);
 use IPC::Run3 qw(run3);
 use Moose;
@@ -141,7 +142,9 @@ sub create_domain {
                 ,is_base => 1
                 ,vm => $domain_base->_vm
             );
-            my $vol_clone = $vol_base->clone(name => "$args{name}-$target");
+            my $vol_clone = $vol_base->clone(name => "$args{name}-$target"
+                ."-".Ravada::Utils::random_name()
+            );
             $domain->add_volume(name => $vol_clone->name
                               , target => $target
                                 , file => $vol_clone->file
@@ -213,15 +216,16 @@ sub _add_cdrom($self, $domain, %args) {
         $sth->execute($id_iso);
         my $row = $sth->fetchrow_hashref();
         return if !$row->{has_cd};
-        $iso_file = $row->{device};
+        $iso_file = $self->search_volume_path_re(qr($row->{file_re}));
         if (!$iso_file) {
-            $iso_file = $row->{name};
-            $iso_file =~ s/\s/_/g;
-            $iso_file=$self->dir_img."/".lc($iso_file).".iso";
-            if (! -e $iso_file ) {
-                $self->write_file($iso_file,Dump({iso => "ISO mock $row->{name}"}));
-            }
+            $iso_file = $row->{file_re};
+            $iso_file =~ s/\*/_/g;
+            $iso_file = $self->dir_img()."/".$iso_file;
+            open my $out,">",$iso_file or die "$! $iso_file";
+            print $out Dump({ iso => $iso_file });
+            close $out;
         }
+        confess "$row->{file_re} not found in ".$self->name if !$iso_file;
     }
     $iso_file = '' if $iso_file eq '<NONE>';
     $domain->add_volume(
@@ -294,8 +298,9 @@ sub _list_domains_remote($self, %args) {
     my $active = delete $args{active};
 
     confess "Wrong arguments ".Dumper(\%args) if keys %args;
+    my $dir = Ravada::Front::Domain::Void::_config_dir();
 
-    my ($out, $err) = $self->run_command("ls -1 ".$self->dir_img);
+    my ($out, $err) = $self->run_command("ls -1 ".$dir);
 
     my @domain;
     for my $file (split /\n/,$out) {
@@ -705,7 +710,10 @@ Returns true if the file exists in this virtual manager storage
 =cut
 
 sub file_exists( $self, $file ) {
-    return -e $file if $self->is_local;
+    if ( $self->is_local) {
+        return 1 if -e $file;
+        return 0;
+    }
 
     my $ssh = $self->_ssh;
     confess "Error: no ssh connection to ".$self->name if ! $ssh;
@@ -729,6 +737,7 @@ sub _search_iso($self, $id, $device = undef) {
     $sth->execute($id);
     my $row = $sth->fetchrow_hashref;
     $row->{device} = $device if defined $device;
+    Ravada::Front::_get_device_re($row);
     return $row;
 }
 
@@ -747,7 +756,7 @@ sub _iso_name($self, $iso, $request=undef, $verbose=0) {
     $name = $self->_storage_path($self->default_storage_pool_name)."/".$name unless $name =~ m{^/};
 
     open my $out,">",$name or die "$! $name";
-    print $out "...\n";
+    print $out Dump({ iso => $name });
     close $out;
 
     return $name;
@@ -877,7 +886,8 @@ sub remove_storage_pool($self, $name) {
     $self->write_file($file_sp, Dump( \@sp2));
 }
 
-sub copy_file($self, $orig, $dst) {
+sub copy_file($self, $orig, $dst, %args) {
+    my $mode = delete $args{mode};
     if ($self->is_local) {
         copy($orig, $dst) or die "$! $orig $dst";
     } else {

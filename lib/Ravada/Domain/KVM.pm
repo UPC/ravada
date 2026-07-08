@@ -298,19 +298,7 @@ sub remove {
 
     my @volumes;
     if (!$self->is_removed ) {
-       my @vols_info;
-       for ( 1 .. 10 ) {
-           eval { @vols_info = $self->list_volumes_info };
-           last if !$@;
-           warn "WARNING: remove, volumes info: $@";
-           sleep 1;
-       }
-       for my $vol ( @vols_info ) {
-            push @volumes,($vol->{file})
-                if exists $vol->{file}
-                   && exists $vol->{device}
-                   && $vol->{device} eq 'file';
-        }
+       @volumes = grep (/!\.iso$/,$self->list_volumes());
     }
 
     if (!$self->is_removed && $self->domain && $self->domain->is_active) {
@@ -342,6 +330,18 @@ sub remove {
 
 }
 
+sub remove_instance($self, $user) {
+    return if !$self->domain;
+    eval {
+        $self->domain->destroy() if $self->domain->is_active();
+    };
+    warn $@ if $@;
+    eval {
+        $self->domain->undefine(Sys::Virt::Domain::UNDEFINE_NVRAM)    if $self->domain;# && !$self->is_removed 
+    };
+    warn $@ if $@;
+    confess $@ if $@ && $@ !~ /libvirt error code: 42/;
+}
 
 sub _remove_file_image {
     my $self = shift;
@@ -393,8 +393,14 @@ sub _disk_device($self, $with_info=undef, $attribute=undef, $value=undef) {
 
         my ($boot_node) = $disk->findnodes('boot');
         my $info = {};
-        eval { $info = $self->_volume_info($file)
-            if $file && ( $device eq 'disk' or $device eq 'cdrom') };
+        eval {
+            $info = $self->_volume_info($file)
+            if $with_info
+                && $file && ( $device eq 'disk' or $device eq 'cdrom') 
+                && ( !defined $self->_data('id_vm')
+                    || $self->_vm->id == $self->_data('id_vm'))
+        }
+        ;
         die $@ if $@ && $@ !~ /not found/i;
         $info->{device} = $device;
         if (!$info->{name} ) {
@@ -576,9 +582,10 @@ sub _set_backing_store($self, $disk, $backing_file) {
 
 sub _set_volumes_backing_store($self) {
     my $doc = XML::LibXML->load_xml(string
-            => $self->xml_description(Sys::Virt::Domain::XML_INACTIVE))
+            => $self->domain->get_xml_description(Sys::Virt::Domain::XML_INACTIVE))
         or die "ERROR: $!\n";
 
+    my ($uuid) = $doc->findnodes("/domain/uuid/text()");
     my @volumes_info = grep { defined($_) && $_->file } $self->list_volumes_info;
     my %vol = map { $_->file => $_ } @volumes_info;
     for my $disk ($doc->findnodes('/domain/devices/disk')) {
@@ -2528,6 +2535,7 @@ sub _set_controller_network($self, $number, $data) {
     my $type = ( delete $data->{type} or 'NAT' );
     my $network =(delete $data->{network} or 'default');
     my $bridge = (delete $data->{bridge}  or '');
+    my $isolated = _network_port_arguments($data);
 
     confess "Error: unkonwn fields in data ".Dumper($data) if keys %$data;
 
@@ -2545,6 +2553,8 @@ sub _set_controller_network($self, $number, $data) {
     } else {
         die "Error adding network, unknown type '$type'";
     }
+
+    $device .= "<port isolated='$isolated'/>" if $isolated;
 
     $device .=
         "<model type='$driver'/>
@@ -2744,7 +2754,13 @@ sub _remove_device($self, $index, $device, $attribute_name0=undef, $attribute_va
     $msg = " $attribute_name0=$attribute_value ".join(",",@found)
     if defined $attribute_name0;
 
-    confess "ERROR: $device $msg ".($index or '<UNDEF>')
+    my $index_text = '<UNDEF>';
+    $index_text = $index if defined $index;
+
+    warn "ERROR: $device $msg $index_text"
+        ." not removed, only ".($ind)." found in ".$self->name;
+
+    confess "ERROR: $device $msg $index_text"
         ." not removed, only ".($ind)." found in ".$self->name."\n";
 }
 
@@ -2884,7 +2900,8 @@ sub _check_uuid($self, $doc, $node) {
 
     my @other_uuids;
     for my $domain ($node->vm->list_all_domains, $self->_vm->vm->list_all_domains) {
-        push @other_uuids,($domain->get_uuid_string);
+        push @other_uuids,($domain->get_uuid_string)
+        unless $domain->get_name eq $self->name;
     }
     return if !(grep /^$uuid$/,@other_uuids);
 
@@ -2902,6 +2919,7 @@ sub _check_machine($self,$doc, $node) {
     my ($machine_bare) = $machine =~ /(.*)-\d+\.\d+$/;
     my %machine_types = $node->list_machine_types;
     my $new_machine = $machine;
+    return $new_machine if !defined $machine_bare;
 
     my $arch = $os_type->getAttribute('arch');
     for my $try ( @{$machine_types{$arch}} ) {
@@ -2970,6 +2988,11 @@ sub is_removed($self) {
 }
 
 sub internal_id($self) {
+    confess "ERROR: Missing internal domain"    if !$self->domain;
+    return $self->domain->get_id();
+}
+
+sub _internal_uuid($self) {
     confess "ERROR: Missing internal domain"    if !$self->domain;
     return $self->domain->get_id();
 }
@@ -3717,6 +3740,21 @@ sub _change_xml($xml, $name, $data) {
     return $changed;
 }
 
+sub _network_port_arguments($data) {
+    return if !exists $data->{port};
+
+    my $isolated = delete $data->{port}->{isolated};
+
+    die "Error: wrong isolated '$isolated'. It must be 'yes' or 'no'"
+    if defined $isolated && !( $isolated eq 'yes' || $isolated eq 'no');
+
+    die "Error: Unknown arguments in port ".Dumper($data->{port}) if keys %{$data->{port}};
+
+    delete $data->{port};
+
+    return $isolated;
+}
+
 sub _change_hardware_network($self, $index, $data) {
     die "Error: index number si required.\n" if !defined $index;
 
@@ -3734,14 +3772,7 @@ sub _change_hardware_network($self, $index, $data) {
      my $driver = lc(delete $data->{driver} or '');
      my $bridge = delete $data->{bridge};
     my $network = delete $data->{network};
-    my $isolated = delete $data->{port}->{isolated};
-
-    die "Error: wrong isolated '$isolated'. It must be 'yes' or 'no'"
-    if defined $isolated && !( $isolated eq 'yes' || $isolated eq 'no');
-
-    die "Error: Unknown arguments in port ".Dumper($data->{port}) if keys %{$data->{port}};
-
-    delete $data->{port};
+    my $isolated = _network_port_arguments($data);
 
     die "Error: Unknown arguments ".Dumper($data) if keys %$data;
 
@@ -4346,12 +4377,20 @@ sub get_stats($self) {
 
     my $mem;
     my $cpu_time;
-    my $mem_stats = $self->domain->memory_stats();
+    my @cpu_stats;
+    @cpu_stats = $self->domain->get_cpu_stats(-1,1)
+            if Ravada::Front->setting(undef,'/backend/stats/cpu');
+
+    $cpu_time = int($cpu_stats[0]->{cpu_time}/1024/1024);
+
+    my $mem_stats;
+    $mem_stats = $self->domain->memory_stats()
+            if Ravada::Front->setting('/backend/stats/memory');
+
     if (exists $mem_stats->{rss} && exists $mem_stats->{actual_balloon}) {
         $mem = int(($mem_stats->{rss}/$mem_stats->{actual_balloon})*100);
     }
-    my @cpu_stats = $self->domain->get_cpu_stats(-1,1);
-    $cpu_time = int($cpu_stats[0]->{cpu_time}/1024/1024);
+
     return ($cpu_time, $mem);
 }
 
