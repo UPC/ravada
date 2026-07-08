@@ -1597,6 +1597,7 @@ sub wait_request {
                 $t0 = time;
                 $done{$req->{id}}++;
                 if ($check_error && $req->command ne 'set_time') {
+                    next if $req->error =~ /unable to execute QEMU agent command 'guest-set-time': this feature or command is not currently supported/;
                     if ($req->command =~ /remove/) {
                         like($req->error,qr(^$|Unknown domain|Domain not found)) or confess $req->command;
                     } elsif($req->command eq 'set_time') {
