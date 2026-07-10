@@ -2720,11 +2720,8 @@ msgstr "Estàs segur de voler eliminar aquest usuari?"
 msgid "Shutdown confirmation"
 msgstr "Confirmació de tancament"
 
-msgid "Attention this machine has the autostart option activated!"
+msgid "Warning this machine has the autostart option activated!"
 msgstr "Atenció aquesta màquina té l'opció d'inici automàtic activada!"
 
 msgid "Are you sure you want to shutdown the machine?"
 msgstr "Estàs segur de voler apagar la màquina?"
-
-msgid "Are you sure you want to shutdown the machine "
-msgstr "Estàs segur de voler apagar la màquina "

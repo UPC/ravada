@@ -97,10 +97,10 @@
                         <div class="modal-content">
                             <div class="modal-header">
                                 <h4 class="modal-title"><%=l 'Shutdown confirmation' %></h4>
-                                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                                <button type="button" class="close" data-dismiss="modal" aria-label="<%=l 'Close' %>">&times;</button>
                             </div>
                             <div class="modal-body">
-                                <p><%=l 'Are you sure you want to shutdown the machine ' %> {{machine.name}} <%=l '?' %> </p>
+                                <p><%=l 'Are you sure you want to shutdown the machine?' %></p>
                             </div>
                             <div class="modal-footer">
                                 <button type="button" ng-click="action(machine, machine.pending_shutdown_action, true)" class="btn btn-danger" data-dismiss="modal"><%=l 'Yes' %></button>
@@ -114,7 +114,7 @@
                 <a type="button" class="btn btn-primary text-white"
                     ng-show="!machine.is_base && !machine.action && !machine.is_active && machine.can_prepare_base"
                     ng-click="machine.action='prepare'"
-                    >Prepare base
+                    ><%=l 'Prepare base' %>
                 </a>
                 <div ng-show="machine.action=='prepare'">
                     <%=l 'Preparing a base will create a template for all the users to clone.' %>

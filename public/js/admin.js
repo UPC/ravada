@@ -571,7 +571,7 @@ ravadaApp.directive("solShowMachine", swMach)
             window.location.assign('/machine/view/' + machine.id + '.html');
         }
         else if ((action === 'shutdown' || action === 'force_shutdown') && machine.autostart == 1 && !confirmed) {
-            $scope.maadminchine_to_confirm = machine; 
+            $scope.machine_to_confirm = machine; 
             $scope.action_to_confirm = action;
             $('#global_autostart_modal').modal('show'); 
             return;

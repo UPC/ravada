@@ -2644,11 +2644,8 @@ msgstr "purgar"
 msgid "Shutdown confirmation"
 msgstr "Confirmación de apagado"
 
-msgid "Attention this machine has the autostart option activated!"
+msgid "Warning this machine has the autostart option activated!"
 msgstr "¡Atención esta máquina tiene la opción de autoarranque activada!"
 
 msgid "Are you sure you want to shutdown the machine?"
 msgstr "¿Estás seguro de querer apagar la máquina?"
-
-msgid "Are you sure you want to shutdown the machine "
-msgstr "¿Estás seguro de querer apagar la máquina "

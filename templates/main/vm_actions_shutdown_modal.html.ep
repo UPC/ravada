@@ -3,10 +3,10 @@
         <div class="modal-content">
             <div class="modal-header">
                 <h4 class="modal-title"><%=l 'Shutdown confirmation' %></h4>
-                <button type="button" class="close" data-dismiss="modal">&times;</button>
+                <button type="button" class="close" data-dismiss="modal" aria-label="<%=l 'Close' %>">&times;</button>
             </div>
             <div class="modal-body">
-                <p><%=l 'Attention this machine has the autostart option activated!' %> </p>
+                <p><%=l 'Warning this machine has the autostart option activated!' %> </p>
                 <p><%=l 'Are you sure you want to shutdown the machine?' %> </p>
             </div>
             <div class="modal-footer">

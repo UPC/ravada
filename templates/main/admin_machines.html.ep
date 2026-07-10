@@ -6,14 +6,15 @@
         <div ng-controller="machinesPage" ng-init="subscribe_all('<%= url_for('ws_subscribe')->to_abs %>');n_clones_hide=<%= $n_clones_hide %>;check_netdata='<%= $check_netdata %>'"
             id="controller"
         >
-        <div class="modal fade" id="global_autostart_modal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal fade" id="global_autostart_modal" tabindex="-1" role="dialog" aria-hidden="true" aria-labelledby="global_autostart_modal_title">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h4 class="modal-title"><%=l 'Shutdown confirmation' %></h4>
+                    <h4 class="modal-title" id="global_autostart_modal_title"><%=l 'Shutdown confirmation' %></h4>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="<%=l 'Close' %>">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <p><%=l 'Attention this machine has the autostart option activated!' %></p>
+                    <p><%=l 'Warning this machine has the autostart option activated!' %></p>
                     <p><%=l 'Are you sure you want to shutdown the machine?' %> </p>
                 </div>
                 <div class="modal-footer">

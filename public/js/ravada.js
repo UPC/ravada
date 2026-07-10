@@ -174,7 +174,7 @@
                     }
                 }
             };
-            
+
             $scope.action = function(machine, action, confirmed) {
                 machine.action = false;
                 if (action == 'start') {
@@ -194,13 +194,18 @@
                         } else {
                         window.location.assign('/machine/clone/' + machine.id + '.html');
                         }
-                    }                    
+                    }
                 } else if ( action == 'restore' ) {
                     $scope.host_restore = machine.clone.id;
                     $scope.host_shutdown = 0;
                     $scope.host_force_shutdown = 0;
                 } else if (action == 'shutdown' || action == 'hibernate' || action == 'force_shutdown' || action == 'reboot') {
-                    if (machine.autostart == 1 && (action == 'shutdown' || action == 'force_shutdown') && !confirmed) {
+                    if (machine.clone && machine.clone.autostart == 1 && (action == 'shutdown' || action == 'force_shutdown') && !confirmed) {
+                        machine.pending_shutdown_action = action;
+                        $('#afc_' + machine.id).modal('show');
+                        return;
+                    }
+                    else if (machine.autostart == 1 && (action == 'shutdown' || action == 'force_shutdown') && !confirmed) {
                         machine.pending_shutdown_action = action;
                         $('#afc_' + machine.id).modal('show');
                         return;

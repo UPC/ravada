@@ -2554,11 +2554,8 @@ msgstr "Minutes of grace time before shutdown."
 msgid "Shutdown confirmation"
 msgstr "Shutdown confirmation"
 
-msgid "Attention this machine has the autostart option activated!"
-msgstr "Attention this machine has the autostart option activated!"
+msgid "Warning this machine has the autostart option activated!"
+msgstr "Warning this machine has the autostart option activated!"
 
 msgid "Are you sure you want to shutdown the machine?"
 msgstr "Are you sure you want to shutdown the machine?"
-
-msgid "Are you sure you want to shutdown the machine "
-msgstr "Are you sure you want to shutdown the machine "
