@@ -34,7 +34,7 @@
             <button type="button" class="btn btn-secondary text-white mr-2"
                 ng-click="start_clones_prompt=0"
             ><%=l 'Cancel' %></button>
-        
+
             <button type="button" class="btn btn-primary text-white" 
                 ng-click="request('start_clones',{ 'id_domain': showmachine.id, 'at': isPastTime(exec_time) ? '' : getUnixTimeFromDate(exec_time), 'exec_sequentially': exec_sequentially }); start_clones_prompt=0"
             ><%=l 'Yes, start all clones' %></button>

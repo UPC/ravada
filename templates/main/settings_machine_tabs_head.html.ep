@@ -24,7 +24,7 @@
         <a class="nav-link" id="v-pills-copy-tab" href="#v-pills-copy" data-toggle="pill" role="tab" aria-controls="v-pills-copy" aria-selected="false"><%=l 'Copy' %></a>
     %   }
     %   if ( $USER->can_expose_ports($domain->id)) {
-        <a class="nav-link ports" id="v-pills-remove-tab" href="#v-pills-ports" data-toggle="pill" role="tab" aria-controls="v-pills-ports" aria-selected="false"><%=l 'Ports' %></a>
+        <a class="nav-link ports" id="v-pills-ports-tab" href="#v-pills-ports" data-toggle="pill" role="tab" aria-controls="v-pills-ports" aria-selected="false"><%=l 'Ports' %></a>
     %   }
     %   if ( $USER->is_admin()) {
         <a class="nav-link access" id="v-pills-access-tab" href="#v-pills-access" data-toggle="pill" role="tab" aria-controls="v-pills-access" aria-selected="false"><%=l 'Access' %></a>
@@ -33,7 +33,7 @@
         <a class="nav-link remove" id="v-pills-remove-tab" href="#v-pills-remove" data-toggle="pill" role="tab" aria-controls="v-pills-remove" aria-selected="false"><%=l 'Remove' %></a>
     %   }
     %   if ($USER->is_admin && $domain->is_base){
-        <a class="nav-link" id="v-pills-remove-tab" ng-show="showmachine.has_clones" href="#v-pills-clones" data-toggle="pill" role="tab" aria-controls="v-pills-clones" aria-selected="false"><%=l 'Clones' %></a>
+        <a class="nav-link" id="v-pills-clones-tab" ng-show="showmachine.has_clones" href="#v-pills-clones" data-toggle="pill" role="tab" aria-controls="v-pills-clones" aria-selected="false"><%=l 'Clones' %></a>
 %   }
     %   if ($USER->is_admin){
         <a class="nav-link" id="v-pills-pool-tab" href="#v-pills-pool" data-toggle="pill" role="tab" aria-controls="v-pills-pool" aria-selected="false"
@@ -54,4 +54,4 @@
             ng-show="showmachine.is_base || showmachine.bundle"
         ><%=l 'Bundle' %></a>
     % }
-	</div> 
+	</div>
