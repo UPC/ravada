@@ -2515,6 +2515,51 @@ msgstr "5 years"
 msgid "Used %"
 msgstr "Used %"
 
+msgid "minutes"
+msgstr "minutes"
+
+msgid "year"
+msgstr "year"
+
+msgid "month"
+msgstr "month"
+
+msgid "week"
+msgstr "week"
+
+msgid "day"
+msgstr "day"
+
+msgid "hour"
+msgstr "hour"
+
+msgid "minute"
+msgstr "minute"
+
+msgid "now"
+msgstr "now"
+
+msgid "Virtual Machine locked"
+msgstr "Virtual Machine locked"
+
+msgid "Show lock details"
+msgstr "Show lock details"
+
+msgid "This virtual machine has no LDAP group restrictions."
+msgstr "This virtual machine has no LDAP group restrictions."
+
+msgid "LDAP search field"
+msgstr "LDAP search field"
+
+msgid "read more"
+msgstr "read more"
+
+msgid "dismiss"
+msgstr "dismiss"
+
+msgid "fetch"
+msgstr "fetch"
+
 msgid "can create disk volumes"
 msgstr "can create disk volumes"
 

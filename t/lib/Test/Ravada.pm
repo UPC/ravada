@@ -901,7 +901,9 @@ sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
         }
     }
     my $req_rm;
-    $req_rm = Ravada::Request->remove_base(uid => user_admin->id, id_domain => $domain->id)
+    $req_rm = Ravada::Request->remove_base(
+        uid => Ravada::Utils::user_daemon->id
+        ,id_domain => $domain->id)
     if $domain->is_base;
 
     my @after_req;
@@ -909,7 +911,7 @@ sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
     @after_req = ( after_request => $req_rm->id ) if $req_rm;
     my $req= Ravada::Request->remove_domain(
         name => $domain->name
-        ,uid => user_admin->id
+        ,uid => Ravada::Utils::user_daemon->id
         ,@after_req
     );
     wait_request(debug => 0) if $wait;

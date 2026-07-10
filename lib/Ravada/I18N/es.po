@@ -2599,6 +2599,51 @@ msgstr "Usado %"
 msgid "Unused volumes"
 msgstr "Volúmenes sin utilizar"
 
+msgid "minutes"
+msgstr "minutos"
+
+msgid "year"
+msgstr "año"
+
+msgid "month"
+msgstr "mes"
+
+msgid "week"
+msgstr "semana"
+
+msgid "day"
+msgstr "día"
+
+msgid "hour"
+msgstr "hora"
+
+msgid "minute"
+msgstr "minuto"
+
+msgid "now"
+msgstr "ahora"
+
+msgid "Virtual Machine locked"
+msgstr "Máquina Virtual bloqueada"
+
+msgid "Show lock details"
+msgstr "Muestra detalles del bloqueo"
+
+msgid "This virtual machine has no LDAP group restrictions."
+msgstr "Esta máquina virtual no tiene restricciones de grupo LDAP."
+
+msgid "LDAP search field"
+msgstr "Campo de búsqueda LDAP"
+
+msgid "read more"
+msgstr "leer más"
+
+msgid "dismiss"
+msgstr "descartar"
+
+msgid "fetch"
+msgstr "buscar"
+
 msgid "can create disk volumes"
 msgstr "puede crear volúmenes de disco"
 

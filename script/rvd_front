@@ -2192,13 +2192,15 @@ get '/list_ldap_attributes/(#cn)' => sub {
     my $field = $Ravada::CONFIG->{ldap}->{field};
     $field = 'cn' if !defined $field;
     my $return;
+    my $i18n = $c->stash->{i18n};
+
 
     if ( $@ ) {
         my $error = $@;
         $error =~ s/(.*) at lib\/Ravada.*/$1/;
         $return = { error => $error };
     } elsif (!$user) {
-        $return = { error => "User not found" };
+        $return = { error => $i18n->localize("User not found") };
     } else {
         my $values;
         for my $attribute ( sort $user->attributes ) {
@@ -3418,6 +3420,7 @@ websocket '/ws/subscribe' => sub {
                 , login => $USER->name
                 , remote_ip => _remote_ip($c)
                 , client => _headers($c)
+                , i18n => $c->stash->{i18n}
             );
     });
 

@@ -2687,6 +2687,51 @@ msgstr "4 anys"
 msgid "5 years"
 msgstr "5 anys"
 
+msgid "minutes"
+msgstr "minuts"
+
+msgid "year"
+msgstr "any"
+
+msgid "month"
+msgstr "mes"
+
+msgid "week"
+msgstr "setmana"
+
+msgid "day"
+msgstr "dia"
+
+msgid "hour"
+msgstr "hora"
+
+msgid "minute"
+msgstr "minut"
+
+msgid "now"
+msgstr "ara"
+
+msgid "Virtual Machine locked"
+msgstr "Màquina Virtual bloquejada"
+
+msgid "Show lock details"
+msgstr "Mostra detalls del bloqueig"
+
+msgid "This virtual machine has no LDAP group restrictions."
+msgstr "Aquesta màquina virtual no té restriccions de grup LDAP."
+
+msgid "LDAP search field"
+msgstr "Camp de cerca LDAP"
+
+msgid "read more"
+msgstr "llegir més"
+
+msgid "dismiss"
+msgstr "descartar"
+
+msgid "fetch"
+msgstr "cercar"
+
 msgid "can create disk volumes"
 msgstr "pot crear volums de disc"
 
