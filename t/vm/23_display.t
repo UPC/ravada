@@ -32,14 +32,18 @@ sub test_display_conflict($vm) {
     my ($display_builtin) = @{$domain->info(user_admin)->{hardware}->{display}};
     $domain->shutdown_now(user_admin);
 
-    my $req = Ravada::Request->add_hardware(
-          uid => user_admin->id
-        ,name => 'display'
-        ,data => { driver => 'x2go' }
-        ,id_domain =>$domain->id
-    );
-    wait_request(check_error => 0);
-    is($req->status,'done');
+    for my $driver ('x2go','rdp') {
+
+        my $req = Ravada::Request->add_hardware(
+            uid => user_admin->id
+            ,name => 'display'
+            ,data => { driver => $driver }
+            ,id_domain =>$domain->id
+        );
+        wait_request(check_error => 0);
+        is($req->status,'done');
+        is($req->error,'');
+    }
 
     my $port = $domain->exposed_port(22);
     my $sth = connector->dbh->prepare("UPDATE domain_ports SET public_port=NULL "
@@ -64,24 +68,24 @@ sub test_display_conflict($vm) {
     wait_request(debug => 0);
 
     for my $n ( 1 .. 3 ) {
-        diag($n);
         my $display = $domain->info(user_admin)->{hardware}->{display};
         last if defined $display->[0]->{port}
             && defined $display->[1]->{port}
+            && defined $display->[2]->{port}
             && $display->[0]->{port} ne $display->[1]->{port};
         Ravada::Request->refresh_machine(uid => user_admin->id
             ,id_domain=> $domain->id
             ,_force => 1
         );
-        wait_request(debug => 1);
+        wait_request(debug => 0);
     }
 
     my $display = $domain->info(user_admin)->{hardware}->{display};
+
     isnt($display->[0]->{port}, $display->[1]->{port}) or die Dumper($display);
     is($display->[0]->{is_active},1);
     is($display->[1]->{is_active},1);
 
-    warn Dumper($display);
     my @drivers;
     for my $entry (@$display) {
         push @drivers,($entry->{driver});
@@ -89,7 +93,10 @@ sub test_display_conflict($vm) {
     my $hostname = _get_hostname($vm->ip);
     for my $driver ( @drivers ) {
         my $display2 = $domain->_get_display($driver);
+        next if keys %$display2;
         is($display2->{hostname},$hostname) or die Dumper($display2);
+
+        _check_display_file($domain, $driver);
     }
 
     my $port3;
@@ -107,17 +114,30 @@ sub test_display_conflict($vm) {
 
 }
 
+sub _check_display_file($domain, $driver) {
+    if ($driver eq 'spice') {
+        my $file = $domain->_display_file_spice($driver);
+        warn $file;
+        my $file_tls = $domain->_display_file_spice($driver,1);
+        warn $file_tls;
+    } elsif ($driver eq 'rdp') {
+        my $file = $domain->_display_file_rdp($driver);
+        warn $file;
+    } else {
+        diag("No test for display $driver");
+    }
+}
+
 sub _get_hostname($ip) {
 
     my $name = gethostbyaddr($ip, AF_INET);
-    return $name if $name;
+    return $name if $name && $name !~ /\d+\.\d+\.\d+/;
 
     my ($in, $out, $err);
     run3(['host',$ip], \$in, \$out, \$err);
     my ($hostname) = $out =~ /pointer (.*)\./;
     die "I can't fetch hostname from $out" if !$hostname;
 
-    warn Dumper([$ip, $hostname, $name]);
     return $hostname;
 }
 
@@ -175,6 +195,5 @@ for my $db ( 'mysql', 'sqlite' ) {
         }
     }
 }
-
 end();
 done_testing();

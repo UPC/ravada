@@ -25,6 +25,7 @@ use Moose::Role;
 use NetAddr::IP;
 use IPC::Run3 qw(run3);
 use RRDs;
+use Socket;
 use Storable qw(dclone);
 use Time::Piece;
 
@@ -1436,17 +1437,43 @@ sub _store_display($self, $display, $display_old=undef) {
     confess "Error: tls displays should be secondary"
     if $driver =~ /-tls/ && exists $display_new{is_secondary} && !$display_new{is_secondary};
    #warn "updating ".Dumper($display_old,\%display_new);
+    if (!exists $display_new{hostname}) {
+        unlock_hash(%display_new);
+        $display_new{hostname} = $self->_cache_dns($display_new{ip});
+        lock_hash(%display_new);
+    }
     if ($display_old) {
         $self->_update_display(\%display_new, $display_old);
     } else {
         $self->_insert_display(\%display_new);
     }
-    $self->_cache_dns($display_new{ip});
 }
 
 sub _cache_dns($self, $ip) {
+    my $name = $self->{_dns}->{$ip};
+    return $name if defined $name;
 
+    $name = _get_hostname($ip);
+
+    warn "Error: name for $ip not found" if !$name;
+
+    $self->{_dns}->{$ip} = $name;
+    return $name;
 }
+
+sub _get_hostname($ip) {
+
+    my $name = gethostbyaddr($ip, AF_INET);
+    return $name if $name && $name !~ /\d+\.\d+\.\d+/;
+
+    my ($in, $out, $err);
+    run3(['host',$ip], \$in, \$out, \$err);
+    my ($hostname) = $out =~ /pointer (.*)\./;
+    die "I can't fetch hostname from $out" if !$hostname;
+
+    return $hostname;
+}
+
 
 sub _get_display($self, $driver) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domain_displays "
