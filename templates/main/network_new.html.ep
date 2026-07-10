@@ -9,7 +9,7 @@
     <div class="page-header">
         <div class="card"
              ng-controller="settings_network"
-             ng-init="new_network(<%= $id_vm %>)"
+             ng-init="new_network(<%= $id_node %>)"
         >
         <div class="card-header">
             <h2><%=l 'New network' %></h2>

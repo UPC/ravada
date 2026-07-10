@@ -704,7 +704,7 @@ get '/list_routes.json' => sub {
     $c->render(json => [ Ravada::Route->list_networks ]);
 };
 
-get '/v3/networks/list' => sub($c) {
+get '/v2/networks/list' => sub($c) {
 
     return access_denied($c) unless $USER->is_admin
     || $USER->can_create_networks || $USER->can_manage_all_networks;
@@ -3471,9 +3471,13 @@ get '/booking/(#template).html' => sub($c) {
     return $c->render( template => '/booking/'.$c->stash('template'));
 };
 
-get '/storage/list_pools/(:id_vm)' => sub($c) {
-    my $query = $c->req->query_params;
-    my $pools = $RAVADA->list_storage_pools($USER->id, $c->stash('id_vm'));
+get '/v2/storage/list/:id_node' => {id_node => undef } => sub($c) {
+
+    if (!defined $c->stash('id_node')) {
+        $c->stash('id_node' => $c->session('id_node'));
+    }
+
+    my $pools = $RAVADA->list_storage_pools($USER->id, $c->stash('id_node'));
     return $c->render( json => $pools );
 };
 
@@ -3493,7 +3497,7 @@ get '/storage/list_unused_volumes' => sub($c) {
     return $c->render( json => $output );
 };
 
-any '/storage/new/(:id_vm)' => sub($c) {
+any '/storage/new' => sub($c) {
     _add_admin_libs($c);
 
     return $c->render(template => "/main/storage_new");
@@ -3930,6 +3934,13 @@ sub admin {
             $c->stash( monitoring => 1 ) if $c->session('monitoring');
         }
     }
+    if ( $page =~ /^(networks|storage)$/ ) {
+
+        $c->stash(choose_node => 1);
+        _select_vm($c);
+
+    }
+
     if ($page eq 'nodes') {
         return access_denied($c) unless $USER->is_admin;
         Ravada::Request->refresh_vms();
@@ -3945,9 +3956,6 @@ sub admin {
 
         $c->stash( csp => $csp , csp_advanced => $csp_advanced);
         $c->stash(url_login => "/login");
-    }
-    if ($page eq 'storage') {
-        _select_vm($c);
     }
     return _admin_host_devices($c) if ($page eq 'hostdev');
     $c->render( template => 'main/admin_'.$page);
@@ -4213,9 +4221,9 @@ sub access_denied {
 
 sub _access_denied { return access_denied(@_) }
 
-sub json_error($c, $error) {
+sub json_error($c, $error, $status=200) {
     $USER->send_message($error);
-    $c->render(json => {error => $error } );
+    $c->render(status => $status, json => {error => $error } );
 }
 
 sub base_id {

@@ -59,42 +59,80 @@ sub test_connect_node($t) {
     is($req->status(),'done');
 }
  
+sub _get_item($t, $item) {
+    $t->get_ok("/v2/$item/list")->status_is(200);
+    my $body = $t->tx->res->body;
+    die $body if !$t->success();
+
+    my @items = decode_json($body);
+
+    return @items;
+
+}
+
+sub _test_new_storage($t, $name) {
+}
+
+sub _test_new_network($t, $name) {
+
+}
+
+
+sub test_new($t, $item) {
+
+    diag("/$item/new");
+    $t->get_ok("/$item/new")->status_is(200);
+
+    my %sub = (
+        storage => \&_test_new_storage
+        ,network => \&_test_new_network
+    );
+    my $sub = $sub{$item};
+    confess "Error: no test for new $item" if !$sub;
+
+    my $name = new_domain_name();
+    $sub->($t, $name);
+
+}
+
 sub test_choose_node($t) {
 
     my $body_json = _list_nodes_active($t);
     die "Error: I need more than one node ".Dumper($body_json)
     unless scalar (@$body_json)>1;
 
+    my ($selected1) = grep { $_->{_selected}} @$body_json;
+
+    ok($selected1,"Expecting one _selected node")
+    or die Dumper($body_json);
+
+    my ($new_node) = grep { $_->{id} != $selected1->{id}} @$body_json;
+
     $t->get_ok("/admin/networks/")->status_is(200);
     $t->get_ok("/admin/storage/")->status_is(200);
 
-    $t->get_ok("/v3/networks/list")->status_is(200);
-    my $body_networks1 = $t->tx->res->body;
-    die $body_networks1 if !$t->success();
-
-    my @networks1 = decode_json($body_networks1);
-
-
-    my ($selected) = grep { $_->{_selected}} @$body_json;
-
-    ok($selected,"Expecting one _selected node")
-    or die Dumper($body_json);
-
-    my ($new_node) = grep { $_->{id} != $selected->{id}} @$body_json;
+    my @networks1 = _get_item($t,'networks');
+    my @storage1 = _get_item($t,'storage');
 
     $t->get_ok("/v3/choose_node/".$new_node->{id})->status_is(200);
 
     my $body_json2 = _list_nodes_active($t);
 
     my ($selected2) = grep { $_->{_selected}} @$body_json2;
+    isnt($selected2, $selected1);
     ok($selected2,"Expecting one _selected") or die Dumper($body_json2);
     is($selected2->{name}, $new_node->{name}) or exit;
 
-    my $body_networks2 = $t->tx->res->body;
-    my @networks2 = decode_json($body_networks2);
-
+    my @networks2 = _get_item($t,'networks');
     isnt(join('',@networks1), join('',@networks2));
 
+    test_new($t,'network');
+    test_new($t,'storage');
+
+    my @storage2= _get_item($t,'storage');
+    isnt(join('',@storage1), join('',@storage2));
+
+    $t->get_ok("/v3/choose_node/".$selected1->{id})->status_is(200);
 }
 
 ##############################################################################3
