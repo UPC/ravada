@@ -563,15 +563,21 @@ ravadaApp.directive("solShowMachine", swMach)
         });
     };
 
-    $scope.action = function(target,action,machineId){
+    $scope.action = function(target,action,machine, confirmed){
         if (action === 'view-new-tab') {
-            window.open('/machine/view/' + machineId + '.html');
+            window.open('/machine/view/' + machine.id + '.html');
         }
         else if (action === 'view') {
-            window.location.assign('/machine/view/' + machineId + '.html');
+            window.location.assign('/machine/view/' + machine.id + '.html');
+        }
+        else if ((action === 'shutdown' || action === 'force_shutdown') && machine.autostart == 1 && !confirmed) {
+            $scope.machine_to_confirm = machine; 
+            $scope.action_to_confirm = action;
+            $('#global_autostart_modal').modal('show'); 
+            return;
         }
         else {
-            $http.get('/'+target+'/'+action+'/'+machineId+'.json')
+            $http.get('/'+target+'/'+action+'/'+machine.id+'.json')
                .then(function(response) {
                    if(response.status == 300 || response.status == 403) {
                    console.error('Reponse error', response.status);
@@ -583,6 +589,15 @@ ravadaApp.directive("solShowMachine", swMach)
                     }
                 })
             ;
+        }
+    };
+    $scope.prepare_shutdown = function(machine, action_name) {
+        if (machine.autostart == 1) {
+            $scope.machine_to_confirm = machine;
+            $scope.action_to_confirm = action_name;
+            $('#global_autostart_modal').modal('show');
+        } else {
+            $scope.action('machine', action_name, machine, true);
         }
     };
     $scope.set_autostart= function(machineId, value) {
