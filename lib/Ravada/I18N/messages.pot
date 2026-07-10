@@ -2708,3 +2708,6 @@ msgstr ""
 
 msgid "starting"
 msgstr ""
+
+msgid "Yes, start all clones"
+msgstr ""
