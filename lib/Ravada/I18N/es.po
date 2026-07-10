@@ -2673,3 +2673,24 @@ msgstr "el usuario puede iniciar y acceder a la pantalla de cualquier máquina v
 
 msgid "Are you sure you want to remove this user?"
 msgstr "¿Estás seguro de querer eliminar este usuario?"
+
+msgid "Minutes of grace time before shutdown."
+msgstr "Minutos de gracia antes de apagado."
+
+msgid "Shutdown grace time"
+msgstr "Tiempo de gracia de apagado"
+
+msgid "list"
+msgstr "lista"
+
+msgid "purge"
+msgstr "purgar"
+
+msgid "Shutdown confirmation"
+msgstr "Confirmación de apagado"
+
+msgid "Warning this machine has the autostart option activated!"
+msgstr "¡Atención esta máquina tiene la opción de autoarranque activada!"
+
+msgid "Are you sure you want to shutdown the machine?"
+msgstr "¿Estás seguro de querer apagar la máquina?"

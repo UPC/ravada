@@ -47,7 +47,7 @@
 
     };
 
-    function suppFormCtrl($scope){
+        function suppFormCtrl($scope){
 	this.user = {};
         $scope.showErr = false;
         $scope.isOkey = function() {
@@ -194,12 +194,23 @@
                         } else {
                         window.location.assign('/machine/clone/' + machine.id + '.html');
                         }
-                    }                    
+                    }
                 } else if ( action == 'restore' ) {
                     $scope.host_restore = machine.clone.id;
                     $scope.host_shutdown = 0;
                     $scope.host_force_shutdown = 0;
                 } else if (action == 'shutdown' || action == 'hibernate' || action == 'force_shutdown' || action == 'reboot') {
+                    if (machine.clone && machine.clone.autostart == 1 && (action == 'shutdown' || action == 'force_shutdown') && !confirmed) {
+                        machine.pending_shutdown_action = action;
+                        $('#afc_' + machine.id).modal('show');
+                        return;
+                    }
+                    else if (machine.autostart == 1 && (action == 'shutdown' || action == 'force_shutdown') && !confirmed) {
+                        machine.pending_shutdown_action = action;
+                        $('#afc_' + machine.id).modal('show');
+                        return;
+                    }
+
                     $scope.host_restore = 0;
                     var id=machine.id;
                     if (machine.clone) {
@@ -332,6 +343,7 @@
                     subscribe_list_bookings(url);
                 }
             };
+            $scope.tmp_action = null;
             $scope.only_public = false;
             $scope.toggle_only_public=function() {
                     $scope.only_public = !$scope.only_public;
@@ -506,15 +518,21 @@
               return string;
             };
 
-            $scope.action = function(target,action,machineId,params){
+            $scope.action = function(target,action,machine,params){
+              params = params || {};
+
               if (action === 'view-new-tab') {
-                  window.open('/machine/view/' + machineId + '.html');
+                  window.open('/machine/view/' + machine.id + '.html');
               }
               else if (action === 'view') {
-                  window.location.assign('/machine/view/' + machineId + '.html');
+                  window.location.assign('/machine/view/' + machine.id + '.html');
               }
+                else if (action === 'shutdown' && machine.autostart == 1 && !params.confirmed) {
+                    $scope.pending_shutdown_params = params;
+                    $('#shutdownModal').modal('show');
+                }
               else {
-                  $http.get('/'+target+'/'+action+'/'+machineId+'.json'+'?'+this.getQueryStringFromObject(params))
+                  $http.get('/'+target+'/'+action+'/'+machine.id+'.json'+'?'+this.getQueryStringFromObject(params))
                     .then(function() {
                     }, function(data,status) {
                           console.error('Repos error', status, data);
@@ -522,6 +540,8 @@
                     });
               }
             };
+            $scope.tmp_action = null;
+            $scope.force = null;
 
             var domainRequestsSocket = null;
 
