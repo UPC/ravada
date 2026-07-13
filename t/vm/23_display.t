@@ -66,6 +66,7 @@ sub test_display_conflict($vm) {
 
     $domain->start( remote_ip => '1.1.1.1' , user => user_admin);
     wait_request(debug => 0);
+    wait_ip($domain);
 
     for my $n ( 1 .. 3 ) {
         my $display = $domain->info(user_admin)->{hardware}->{display};
