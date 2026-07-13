@@ -86,6 +86,7 @@ sub test_display_conflict($vm) {
     is($display->[0]->{is_active},1);
     is($display->[1]->{is_active},1);
 
+    $domain->start(user_admin);
     my @drivers;
     for my $entry (@$display) {
         push @drivers,($entry->{driver});
@@ -93,10 +94,10 @@ sub test_display_conflict($vm) {
     my $hostname = _get_hostname($vm->ip);
     for my $driver ( @drivers ) {
         my $display2 = $domain->_get_display($driver);
-        next if keys %$display2;
+        next if !keys %$display2;
         is($display2->{hostname},$hostname) or die Dumper($display2);
 
-        _check_display_file($domain, $driver);
+        _check_display_file($domain, $display2);
     }
 
     my $port3;
@@ -114,15 +115,54 @@ sub test_display_conflict($vm) {
 
 }
 
-sub _check_display_file($domain, $driver) {
-    if ($driver eq 'spice') {
-        my $file = $domain->_display_file_spice($driver);
-        warn $file;
-        my $file_tls = $domain->_display_file_spice($driver,1);
-        warn $file_tls;
+sub _check_display_file_rdp($domain, $display) {
+    my $driver = $display->{driver};
+    my $address;
+    for ( 1 .. 10 ) {
+        my $display2 = $domain->_get_display($driver);
+        my $file = $domain->_display_file_rdp($display2);
+        ($address) = $file =~ m{^full address:.:(.*?)\:\d+$}ms;
+        last if $address;
+        my $req = Ravada::Request->open_exposed_ports(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+        );
+        $req->status('requested') if $req->status() eq 'done';
+        my $req2 = Ravada::Request->refresh_machine(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+        );
+        $req2->status('requested') if $req2->status() eq 'done';
+
+        wait_request(debug => 1, request => $req);
+        sleep 1;
+    }
+
+
+    is($address, _get_hostname($domain->_vm->ip)) or exit;
+}
+
+sub _check_display_file_spice($domain, $display) {
+    my $file = $domain->_display_file_spice($display);
+    my ($address) = $file =~ m{^host=(.*?)$}ms;
+
+    is($address, _get_hostname($domain->_vm->ip));
+
+}
+
+
+sub _check_display_file($domain, $display) {
+    my $driver = $display->{driver};
+    if ($driver =~ /^spice/) {
+        _check_display_file_spice($domain, $display);
     } elsif ($driver eq 'rdp') {
-        my $file = $domain->_display_file_rdp($driver);
-        warn $file;
+        Ravada::Request->start_domain(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+        );
+        wait_request(debug => 0);
+        wait_ip($domain);
+        _check_display_file_rdp($domain, $display);
     } else {
         diag("No test for display $driver");
     }

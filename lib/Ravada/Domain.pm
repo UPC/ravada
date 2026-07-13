@@ -2258,6 +2258,9 @@ sub _display_file_rdp($self,$display) {
     $error .= "Error: No Port detected for display.\n" if !$display->{port};
     return $error if $error;
 
+    my $ip = $display->{ip};
+    $ip = $display->{hostname} if exists $display->{hostname} && $display->{hostname};
+
     my $ret = "screen mode id:i:2
 use multimon:i:0
 desktopwidth:i:1280
@@ -2281,7 +2284,7 @@ disable menu anims:i:1
 disable themes:i:0
 disable cursor setting:i:0
 bitmapcachepersistenable:i:1
-full address:s:".$display->{ip}.":".$display->{port}."\n"
+full address:s:$ip:".$display->{port}."\n"
 ."audiomode:i:0
 redirectprinters:i:0
 redirectcomports:i:0
@@ -2323,10 +2326,13 @@ sub _display_file_spice($self,$display, $tls = 0) {
     confess "I can't find ip port in ".Dumper($display)
         if !$display->{ip} || !$display->{port};
 
+    my $ip = $display->{ip};
+    $ip = $display->{hostname} if exists $display->{hostname} && $display->{hostname};
+
     my $ret =
         "[virt-viewer]\n"
         ."type=spice\n"
-        ."host=".$display->{ip}."\n";
+        ."host=$ip\n";
     if ($tls) {
         confess "Error: display $display->{driver} no TLS "
         unless $display->{driver} =~ /tls/;
