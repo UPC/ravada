@@ -914,13 +914,13 @@ sub _update_isos {
             ,options => { machine => 'pc-q35'}
         }
 	,parrot_xfce_amd64 => {
-            name => 'Parrot Home Edition XFCE 7.1'
-            ,description => 'Parrot Home Edition XFCE 7.1 64 Bits'
+            name => 'Parrot Home Edition XFCE 7.3'
+            ,description => 'Parrot Home Edition XFCE 7.3 64 Bits'
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://download.parrot.sh/parrot/iso/7.1/'
-            ,file_re => 'Parrot-home-7\.1.*_amd64\.iso'
+            ,url => 'https://download.parrot.sh/parrot/iso/7.3/'
+            ,file_re => 'Parrot-home-7\.3.*_amd64\.iso'
             ,sha256_url => '$url/signed-hashes.txt'
             ,min_disk_size => '15'
         }
@@ -1586,7 +1586,9 @@ sub _update_table($self, $table, $field, $data, $verbose=0) {
 sub _remove_old_isos {
     my $self = shift;
     for my $sql (
-        "DELETE FROM iso_images "
+        "Delete FROM iso_images "
+            ."WHERE url like 'https://download.parrot.sh/parrot/iso/7.1/'"
+        ,"DELETE FROM iso_images "
             ."  WHERE url like '%debian-9.0%iso'"
         ,"DELETE FROM iso_images"
             ."  WHERE name like 'Debian%' "
