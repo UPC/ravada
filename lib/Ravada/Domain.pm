@@ -1471,7 +1471,10 @@ sub _get_hostname($ip) {
     my ($in, $out, $err);
     run3(['host',$ip], \$in, \$out, \$err);
     my ($hostname) = $out =~ /pointer (.*)\./;
-    die "I can't fetch hostname from $out" if !$hostname;
+    if (!$hostname) {
+        warn "I can't fetch hostname from $out" if !$hostname;
+        return $ip;
+    }
 
     return $hostname;
 }
