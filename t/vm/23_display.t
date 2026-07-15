@@ -171,12 +171,15 @@ sub _check_display_file($domain, $display) {
 
 sub _get_hostname($ip) {
 
+    return $ip if $ip !~ /^\d+\.\d+\.\d+\.\d+$/;
+
     my $name = gethostbyaddr($ip, AF_INET);
     return $name if $name && $name !~ /\d+\.\d+\.\d+/;
 
     my ($in, $out, $err);
     run3(['host',$ip], \$in, \$out, \$err);
     my ($hostname) = $out =~ /pointer (.*)\./;
+    ($hostname) = $out =~ /pointer (.*)\./;
     die "I can't fetch hostname from $out" if !$hostname;
 
     return $hostname;

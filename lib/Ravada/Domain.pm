@@ -1463,6 +1463,8 @@ sub _cache_dns($self, $ip) {
 
 sub _get_hostname($ip) {
 
+    return $ip if $ip !~ /^\d+\.\d+\.\d+\.\d+$/;
+
     my $name = gethostbyaddr($ip, AF_INET);
     return $name if $name && $name !~ /\d+\.\d+\.\d+/;
 
