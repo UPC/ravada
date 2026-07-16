@@ -850,7 +850,7 @@ msgstr "El tiempo de espera de la sesión finalizo"
 msgid "Keep in mind that there may be users using a clone"
 msgstr "Ten en cuenta que puede que haya usuarios usando los clones"
 
-msgid "Yes, shutwdown all the clones"
+msgid "Yes, shutdown all the clones"
 msgstr "Sí, apagar todos los clones"
 
 msgid "Shutdown all clones"

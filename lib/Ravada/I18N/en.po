@@ -904,7 +904,7 @@ msgstr "Shutdown all clones"
 msgid "Keep in mind that there may be users using a clone"
 msgstr "Keep in mind that there may be users using a clone"
 
-msgid "Yes, shutwdown all the clones"
+msgid "Yes, shutdown all the clones"
 msgstr "Yes, shutdown all the clones"
 
 msgid "Waiting for machine to start"
