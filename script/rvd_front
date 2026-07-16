@@ -3500,6 +3500,7 @@ get '/storage/list_unused_volumes' => sub($c) {
 any '/storage/new' => sub($c) {
     _add_admin_libs($c);
 
+    _select_vm($c);
     return $c->render(template => "/main/storage_new");
 };
 

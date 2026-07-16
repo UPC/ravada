@@ -4,13 +4,13 @@
 <body id="page-top" data-spy="scroll" data-target="fixed-top" role="document">
 <div id="wrapper">
     %= include 'bootstrap/navigation'
-<div id="page-wrapper">
-        <!--BASES AND DOMAINS LIST-->
-    <div class="page-header">
-        <div class="card"
+<div id="page-wrapper"
              ng-controller="settings_network"
              ng-init="new_network(<%= $id_node %>)"
-        >
+            >
+        <!--BASES AND DOMAINS LIST-->
+    <div class="page-header">
+        <div class="card">
         <div class="card-header">
             <h2><%=l 'New network' %></h2>
         </div>

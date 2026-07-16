@@ -70,18 +70,24 @@ sub _get_item($t, $item) {
 
 }
 
-sub _test_new_storage($t, $name) {
+sub _test_new_storage($t, $name, $id_node_exp) {
+
+    $t->get_ok("/storage/new")->status_is(200);
+    my $init = $t->tx->res->dom->at('div#page-wrapper')->attr('ng-init');
+    my ($id_node) = $init =~ /init\((\d+)/;
+    is($id_node, $id_node_exp);
 }
 
-sub _test_new_network($t, $name) {
+sub _test_new_network($t, $name, $id_node_exp) {
+    $t->get_ok("/network/new")->status_is(200);
+    my $init = $t->tx->res->dom->at('div#page-wrapper')->attr('ng-init');
+    my ($id_node) = $init =~ /.+\((\d+)/;
+    is($id_node, $id_node_exp, $init);
 
 }
 
 
-sub test_new($t, $item) {
-
-    diag("/$item/new");
-    $t->get_ok("/$item/new")->status_is(200);
+sub test_new($t, $item, $id_node) {
 
     my %sub = (
         storage => \&_test_new_storage
@@ -91,7 +97,7 @@ sub test_new($t, $item) {
     confess "Error: no test for new $item" if !$sub;
 
     my $name = new_domain_name();
-    $sub->($t, $name);
+    $sub->($t, $name, $id_node);
 
 }
 
@@ -126,8 +132,8 @@ sub test_choose_node($t) {
     my @networks2 = _get_item($t,'networks');
     isnt(join('',@networks1), join('',@networks2));
 
-    test_new($t,'network');
-    test_new($t,'storage');
+    test_new($t,'storage',$selected2->{id});
+    test_new($t,'network',$selected2->{id});
 
     my @storage2= _get_item($t,'storage');
     isnt(join('',@storage1), join('',@storage2));
