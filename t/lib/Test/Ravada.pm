@@ -806,7 +806,7 @@ sub _discover() {
 sub remove_old_domains_req($wait=1, $run_request=0) {
     my $base_name = base_domain_name();
     delete_request( 'enforce_limits', 'set_time', 'refresh_vm' );
-    _discover() if $discover;
+    _discover();
     my $machines = rvd_front->list_machines(user_admin);
     my @machines2 = _leftovers();
     my @reqs;
