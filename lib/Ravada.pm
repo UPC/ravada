@@ -7309,14 +7309,20 @@ sub _cmd_close_exposed_ports($self, $request) {
                 ." WHERE id=?"
             );
             while (my ($id) = $sth->fetchrow) {
+                my $updated;
                 for ( 1 .. 10 ) {
                     my $port = $domain->_vm->_new_free_port();
-                    eval {
-                        $sth_update->execute($port, $id);
-                    };
-                    last if !$@;
-                    warn "$port $@";
+                    my $ok = eval { $sth_update->execute($port, $id); 1 };
+                    if ($ok) {
+                        $updated = 1;
+                        last;
+                    }
+                    next if ( $@ =~ /Duplicate entry .*for key.*public/   # mysql
+                        || $@ =~ /UNIQUE constraint failed.*public/      # sqlite
+                    );
+                    die $@;
                 }
+                die "Error: unable to allocate a free public_port for id=$id" if !$updated;
             }
         }
 
