@@ -2754,8 +2754,6 @@ sub _list_used_ports_sql($self, $used_port) {
         my $tls_port;
         $tls_port = $extra->{tls_port} if $extra && $extra->{tls_port};
         $used_port->{$tls_port}++ if $tls_port;
-        next if !defined $port || !defined $tls_port;
-
     };
 
 }

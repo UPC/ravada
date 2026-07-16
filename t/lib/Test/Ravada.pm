@@ -803,7 +803,7 @@ sub _discover() {
     wait_request(debug => 0);
 }
 
-sub remove_old_domains_req($wait=1, $run_request=0, $discover=1) {
+sub remove_old_domains_req($wait=1, $run_request=0) {
     my $base_name = base_domain_name();
     delete_request( 'enforce_limits', 'set_time', 'refresh_vm' );
     _discover() if $discover;
@@ -812,7 +812,7 @@ sub remove_old_domains_req($wait=1, $run_request=0, $discover=1) {
     my @reqs;
     for my $machine ( @$machines, @machines2) {
         next unless $machine->{name} =~ /$base_name/;
-        remove_domain_and_clones_req($machine,$wait,0);
+        remove_domain_and_clones_req($machine,$wait);
     }
     wait_request(debug => 0);
 
