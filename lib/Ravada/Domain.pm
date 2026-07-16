@@ -53,6 +53,8 @@ our $TTL_REMOVE_VOLATILE = 60;
 our $DEBUG_RSYNC = 0;
 our $DIR_RRD = "/var/lib/ravada_rrd";
 
+our %CACHE_HOSTNAME;
+
 _init_connector();
 
 requires 'name';
@@ -1465,16 +1467,22 @@ sub _get_hostname($ip) {
 
     return $ip if $ip !~ /^\d+\.\d+\.\d+\.\d+$/;
 
+    return $CACHE_HOSTNAME{$ip} if exists $CACHE_HOSTNAME{$ip};
+
     my $name = gethostbyaddr($ip, AF_INET);
-    return $name if $name && $name !~ /\d+\.\d+\.\d+/;
+    if ( $name && $name !~ /\d+\.\d+\.\d+/ ) {
+        $CACHE_HOSTNAME{$ip} = $name;
+        return $name;
+    }
 
     my ($in, $out, $err);
     run3(['host',$ip], \$in, \$out, \$err);
     my ($hostname) = $out =~ /pointer (.*)\./;
     if (!$hostname) {
         warn "I can't fetch hostname from $out" if !$hostname;
-        return $ip;
+        $hostname = $ip;
     }
+    $CACHE_HOSTNAME{$ip} = $hostname;
 
     return $hostname;
 }
@@ -2435,6 +2443,8 @@ sub info($self, $user) {
         eval {
             my @display = $self->display_info($user);
             $info->{display} = $display[0];
+            $info->{display}->{hostname} = _get_hostname($info->{display}->{ip})
+                if $info->{display}->{ip};
         };
         die $@ if $@ && $@ !~ /not allowed/i;
     }
