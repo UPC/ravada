@@ -54,7 +54,7 @@ sub test_connect_node($t) {
     my $args = decode_json($body);
     like($args->{request},qr/^\d+$/);
 
-    wait_request(debug => 1, check_error => 0);
+    wait_request(debug => 0, check_error => 0);
     my $req = Ravada::Request->open($args->{request});
     is($req->status(),'done');
 }
@@ -141,6 +141,111 @@ sub test_choose_node($t) {
     $t->get_ok("/v3/choose_node/".$selected1->{id})->status_is(200);
 }
 
+sub _connect_node($name) {
+    my ($node) = grep { $_->{name} eq $name } rvd_front->list_vms();
+    return if !$node;
+    Ravada::Request->connect_node(
+        uid => user_admin->id
+        ,id_node => $node->{id}
+    );
+    wait_request(debug => 0);
+    return 1;
+}
+
+sub _remote_node_up() {
+    my $sth = connector->dbh->prepare(
+        "SELECT id,name,enabled,is_active "
+        ." FROM vms WHERE hostname <> 'localhost'"
+    );
+    $sth->execute();
+
+    warn 11;
+    while (my ($id,$name, $enabled, $is_active) = $sth->fetchrow) {
+        diag("Node $name [ $id ] enable=$enabled active=$is_active");
+        return $id if $enabled && $is_active;
+        my $domain = rvd_front->search_domain($name);
+        next if !$domain;
+        Ravada::Request->start_domain(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+        );
+        wait_request(debug => 0);
+        wait_ip($domain->id);
+        return _connect_node($domain->name);
+    };
+    warn 12;
+    return 0;
+}
+
+sub _create_new_node($t) {
+    return if _remote_node_up();
+    for my $n ( '1', '2') {
+        my $name = 'ztest-'.$n;
+        my $domain = rvd_front->search_domain($name);
+        warn $name;
+        if ( $domain ) {
+            rvd_front->add_node(
+                name => 'ztest-'.$n
+                ,'hostname' => '192.168.122.15'.$n
+                ,'vm_type' => 'KVM'
+            );
+            wait_request();
+        }
+        last if _connect_node($name);
+    }
+}
+
+sub _choose_remote_node($t) {
+
+    my $body_json = _list_nodes_active($t);
+
+    my ($selected) = grep { $_->{_selected}} @$body_json;
+
+    return if $selected->{hostname} ne 'localhost' && $selected->{hostname} !~ /^127\./;
+
+    my ($new_node) = grep {
+        $_->{hostname} ne 'localhost'
+        && $_->{hostname} !~ /^127/
+    } @$body_json;
+
+    return $new_node if $new_node;
+
+    if ( !$new_node ) {
+        _create_new_node($t);
+        $body_json = _list_nodes_active($t);
+
+        ($new_node) = grep {
+            $_->{hostname} ne 'localhost'
+            && $_->{hostname} !~ /^127/
+        } @$body_json;
+
+        return $new_node if $new_node;
+    }
+
+    die "Error: can not select active remote node ".Dumper($body_json);
+}
+
+sub test_node_gone($t) {
+    my $node = _choose_remote_node($t);
+
+    my $new_name = new_domain_name();
+
+    rvd_front->add_node(
+        name => $new_name
+        ,'hostname' => $node->{hostname}
+        ,'vm_type' => 'Void'
+    );
+    wait_request();
+
+    my ($new_node) = grep { $_->{name} eq $new_name } rvd_front->list_vms();
+    $t->get_ok("/v3/choose_node/".$new_node->{id})->status_is(200);
+    $t->get_ok('/v1/node/remove/'.$new_node->{id})->status_is(200);
+
+    my $body_json = _list_nodes_active($t);
+    my ($selected) = grep { $_->{_selected}} @$body_json;
+    isnt($selected->{id}, $node->{id});
+}
+ 
 ##############################################################################3
 
 $ENV{MOJO_MODE} = 'development';
@@ -157,6 +262,7 @@ $PASSWORD = "$$ $$";
 
 mojo_login($t,$USERNAME, $PASSWORD);
 
+test_node_gone($t);
 test_choose_node($t);
 test_connect_node($t);
 

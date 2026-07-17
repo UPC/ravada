@@ -12,7 +12,7 @@
             <div class="col-md-8"><h2><%=l 'Storage' %></h2></div>
             <div class="col-md-4" align="right">
                   <h2><a type="button"
-                         class="btn btn-success" href="/storage/new/<%= $id_vm %>">
+                         class="btn btn-success" href="/storage/new">
                             <b><%=l 'New Storage' %></b></a>
                   </h2>
             </div>

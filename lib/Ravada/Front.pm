@@ -12,7 +12,7 @@ Ravada::Front - Web Frontend library for Ravada
 use Carp qw(carp);
 use DateTime;
 use DateTime::Format::DateParse;
-use Hash::Util qw(lock_hash);
+use Hash::Util qw(lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
 use JSON::XS;
 use Moose;
@@ -701,8 +701,11 @@ sub list_nodes_active($self, $current=undef) {
         push @list,($row);
     }
     $sth->finish;
-    warn "Warning: current '$current' not found"
-        if defined $current && !$found_selected;
+    if ( defined $current && !$found_selected ) {
+        warn "Warning: Node id '$current' not active\n";
+        unlock_hash(%{$list[0]});
+        $list[0]->{_selected} = 1;
+    }
     return @list;
 }
 

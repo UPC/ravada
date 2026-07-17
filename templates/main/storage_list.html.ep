@@ -45,6 +45,6 @@
 
 <h2><a type="button"
     ng-show="storage_pools"
-    class="btn btn-success" href="/storage/new/<%= $id_node %>">
+    class="btn btn-success" href="/storage/new">
                             <b><%=l 'New Storage' %></b></a>
 </h2>
