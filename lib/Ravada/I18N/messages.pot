@@ -2720,3 +2720,9 @@ msgstr ""
 
 msgid "Warning this machine has the autostart option activated!"
 msgstr ""
+
+msgid "Now"
+msgstr ""
+
+msgid "Later"
+msgstr ""

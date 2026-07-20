@@ -2773,3 +2773,9 @@ msgstr "Atenció aquesta màquina té l'opció d'inici automàtic activada!"
 
 msgid "Are you sure you want to shutdown the machine?"
 msgstr "Estàs segur de voler apagar la màquina?"
+
+msgid "Now"
+msgstr "Ara"
+
+msgid "Later"
+msgstr "Després"
