@@ -908,7 +908,7 @@ msgstr "Spegni tutti i cloni"
 msgid "Keep in mind that there may be users using a clone"
 msgstr "Tieni presente che potrebbero esserci utenti che utilizzano un clone"
 
-msgid "Yes, shutwdown all the clones"
+msgid "Yes, shutdown all the clones"
 msgstr "Sì, spegni tutti i cloni"
 
 msgid "Waiting for machine to start"
