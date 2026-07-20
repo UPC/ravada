@@ -44,7 +44,7 @@
                 > <label><%=l 'Exec clones sequentially' %></label>
             </div>
         </div>
-
+        
         <button type="button" class="btn btn-secondary text-white mr-2"
             ng-click="start_clones_prompt=0"
         ><%=l 'Cancel' %></button>

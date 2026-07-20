@@ -857,7 +857,7 @@ msgstr "Italià"
 msgid "Vietnamese"
 msgstr "Vietnamita"
 
-msgid "Yes, shutwdown all the clones"
+msgid "Yes, shutdown all the clones"
 msgstr "Sí, apagueu tots els clons"
 
 msgid "Keep in mind that there may be users using a clone"
