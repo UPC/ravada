@@ -3,6 +3,7 @@
 %= include 'bootstrap/header'
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
     <div id="wrapper">
+        %= include 'bootstrap/navigation'
         <div ng-controller="machinesPage" ng-init="subscribe_all('<%= url_for('ws_subscribe')->to_abs %>');n_clones_hide=<%= $n_clones_hide %>;check_netdata='<%= $check_netdata %>'"
             id="controller"
         >
@@ -25,7 +26,6 @@
             </div>
         </div>
     </div>
-    %= include 'bootstrap/navigation'
     <div id="page-wrapper">
       <div id="admin-content">
 <div class="panel-body">
