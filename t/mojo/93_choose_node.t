@@ -220,7 +220,6 @@ sub _remote_node_up() {
     );
     $sth->execute();
 
-    warn 11;
     while (my ($id,$name, $enabled, $is_active) = $sth->fetchrow) {
         diag("Node $name [ $id ] enable=$enabled active=$is_active");
         return $id if $enabled && $is_active;
@@ -234,7 +233,6 @@ sub _remote_node_up() {
         wait_ip($domain->id);
         return _connect_node($domain->name);
     };
-    warn 12;
     return 0;
 }
 
@@ -243,7 +241,6 @@ sub _create_new_node($t) {
     for my $n ( '1', '2') {
         my $name = 'ztest-'.$n;
         my $domain = rvd_front->search_domain($name);
-        warn $name;
         if ( $domain ) {
             rvd_front->add_node(
                 name => 'ztest-'.$n
