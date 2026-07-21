@@ -1028,7 +1028,7 @@ get '/v3/choose_node/(#id)' => sub($c) {
 
     return access_denied_json($c) if !$USER || !$USER->is_admin;
     return json_error($c,"Missing node in ".$c->req->url->to_abs->path, 400)
-    if !defined $c->stash('id_node');
+    if !defined $c->stash('id');
 
     $c->session(id_node => $c->stash('id'));
 
