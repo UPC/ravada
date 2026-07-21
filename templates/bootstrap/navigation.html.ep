@@ -3,7 +3,7 @@
         ng-controller="navigation"
         ng-init="init(
             '<%= url_for('ws_subscribe')->to_abs %>'
-            ,<%= ($_user && $_user->is_admin && $id_node ) || 0 %>
+            ,<%= ($choose_node && $_user && $_user->is_admin && $id_node) || 0 %>
         )"
         class="navbar \
 % if ($navbar_custom) {
