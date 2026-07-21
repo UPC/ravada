@@ -113,7 +113,7 @@
                 });
                 if (data.status == 'done') {
                     ws.close();
-                    if (data.error || data.error.length) {
+                    if (data.error && data.error.length) {
                         $scope.$apply(function () {
                             list_nodes_active($scope.id_node_orig);
                             select_current_node($scope.id_node_orig);
