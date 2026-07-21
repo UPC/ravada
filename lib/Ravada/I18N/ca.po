@@ -675,7 +675,7 @@ msgid "The machine will turn off after this time"
 msgstr "La màquina s'apagarà després d'aquest temps"
 
 msgid "Cancel"
-msgstr "cancel·lar"
+msgstr "Cancel·lar"
 
 msgid "Please enter the following information to create the account"
 msgstr "Introduïu la informació següent per crear el compte"
@@ -857,7 +857,7 @@ msgstr "Italià"
 msgid "Vietnamese"
 msgstr "Vietnamita"
 
-msgid "Yes, shutwdown all the clones"
+msgid "Yes, shutdown all the clones"
 msgstr "Sí, apagueu tots els clons"
 
 msgid "Keep in mind that there may be users using a clone"
@@ -2761,3 +2761,21 @@ msgstr "l'usuari pot iniciar i accedir a la pantalla de qualsevol màquina virtu
 
 msgid "Are you sure you want to remove this user?"
 msgstr "Estàs segur de voler eliminar aquest usuari?"
+
+msgid "Yes, start all clones"
+msgstr "Sí, iniciar tots els clons"
+
+msgid "Shutdown confirmation"
+msgstr "Confirmació de tancament"
+
+msgid "Warning this machine has the autostart option activated!"
+msgstr "Atenció aquesta màquina té l'opció d'inici automàtic activada!"
+
+msgid "Are you sure you want to shutdown the machine?"
+msgstr "Estàs segur de voler apagar la màquina?"
+
+msgid "Now"
+msgstr "Ara"
+
+msgid "Later"
+msgstr "Després"

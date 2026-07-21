@@ -216,6 +216,7 @@ sub _get_clone_info($user, $base, $clone = Ravada::Front::Domain->open($base->{i
                         ,is_active => $clone->is_active
                         ,screenshot => $clone->_data('screenshot')
                         ,date_changed => $clone->_data('date_changed')
+                        ,autostart=> $clone->_data('autostart')
         };
 
     $c->{can_hibernate} = ($clone->is_active && !$clone->is_volatile);
