@@ -65,6 +65,6 @@
             ng-click="shutdown_clones=0"
         ><%=l 'No' %></button>
         <button type="button" class="btn btn-danger text-white" ng-click="request('shutdown_clones',{ 'id_domain': showmachine.id, 'at': exec_mode === 'now' ? '' : getUnixTimeFromDate(exec_time) });shutdown_clones=0"
-        ><%=l 'Yes, shutwdown all the clones' %></button>
+        ><%=l 'Yes, shutdown all the clones' %></button>
     </div>
 </div>
