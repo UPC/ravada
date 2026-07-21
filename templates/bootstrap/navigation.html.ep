@@ -19,7 +19,7 @@ navbar-dark bg-dark fixed-top navbar-expand-lg navbar-inverse">
                     <div ng-show="list_nodes && list_nodes.length>1"
                         ng-cloak
                     >
-                    <select ng-model="current_node"
+                    <select ng-model="current_node" aria-label="<%= l 'Select node' %>"
                         ng-hide="choose_node_msg"
                         ng-change="select_node()"
                         ng-options="node.name for node in list_nodes | orderBy: 'name'">
