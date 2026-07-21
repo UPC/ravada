@@ -353,8 +353,9 @@
 
         function singleMachinePageC($scope, $http, $interval, request, $location) {
             $scope.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            $scope.exec_time_start = new Date();
-            $scope.exec_time = new Date();
+            var now = new Date();
+            now.setSeconds(0, 0);
+            $scope.exec_time = now;
             $scope.edit = "";
             $scope.lock_info = false;
             $scope.topology = false;
@@ -377,6 +378,13 @@
             $scope.getUnixTimeFromDate = function(date) {
                 date = (date instanceof Date) ? date : date ? new Date(date) : new Date();
                 return date.getTime() / 1000;
+            };
+
+            $scope.setFutureTime = function() {
+                var futureDate = new Date();
+                futureDate.setMinutes(futureDate.getMinutes() + 5);
+                futureDate.setSeconds(0, 0);
+                $scope.exec_time = futureDate;
             };
 
             $scope.isPastTime = function(date, now_date) {

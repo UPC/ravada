@@ -2674,6 +2674,9 @@ msgstr "el usuario puede iniciar y acceder a la pantalla de cualquier máquina v
 msgid "Are you sure you want to remove this user?"
 msgstr "¿Estás seguro de querer eliminar este usuario?"
 
+msgid "Yes, start all clones"
+msgstr "Sí, iniciar todos los clones"
+
 msgid "Minutes of grace time before shutdown."
 msgstr "Minutos de gracia antes de apagado."
 
@@ -2694,3 +2697,9 @@ msgstr "¡Atención esta máquina tiene la opción de autoarranque activada!"
 
 msgid "Are you sure you want to shutdown the machine?"
 msgstr "¿Estás seguro de querer apagar la máquina?"
+
+msgid "Now"
+msgstr "Ahora"
+
+msgid "Later"
+msgstr "Después"

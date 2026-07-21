@@ -2590,6 +2590,9 @@ msgstr "the user can start and access the screen of any virtual machine"
 msgid "Are you sure you want to remove this user?"
 msgstr "Are you sure you want to remove this user?"
 
+msgid "Yes, start all clones"
+msgstr "Yes, start all clones"
+
 msgid "Shutdown grace time"
 msgstr "Shutdown grace time"
 
@@ -2604,3 +2607,9 @@ msgstr "Warning this machine has the autostart option activated!"
 
 msgid "Are you sure you want to shutdown the machine?"
 msgstr "Are you sure you want to shutdown the machine?"
+
+msgid "Now"
+msgstr "Now"
+
+msgid "Later"
+msgstr "Later"

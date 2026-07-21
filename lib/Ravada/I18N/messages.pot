@@ -2709,6 +2709,9 @@ msgstr ""
 msgid "starting"
 msgstr ""
 
+msgid "Yes, start all clones"
+msgstr ""
+
 msgid "Are you sure you want to shutdown the machine?"
 msgstr ""
 
@@ -2716,4 +2719,10 @@ msgid "Shutdown confirmation"
 msgstr ""
 
 msgid "Warning this machine has the autostart option activated!"
+msgstr ""
+
+msgid "Now"
+msgstr ""
+
+msgid "Later"
 msgstr ""
