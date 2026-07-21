@@ -1,7 +1,6 @@
 use warnings;
 use strict;
 
-use Carp qw(confess);
 use Data::Dumper;
 use HTML::Lint;
 use Test::More;
@@ -106,12 +105,11 @@ sub test_clone($base,$expected=0) {
     my @clones0 = $base->clones();
     my $expected_status = 200;
     $expected_status = 403 if !$expected;
-
     $t->get_ok("/machine/clone/".$base->id.".html")->status_is($expected_status);
     wait_request();
 
     my @clones = $base->clones();
-    is(scalar(@clones),scalar(@clones0)+$expected) or confess;
+    is(scalar(@clones),scalar(@clones0)+$expected);
 
     if (scalar(@clones)>scalar(@clones0)) {
         my $req= Ravada::Request->remove_domain(
