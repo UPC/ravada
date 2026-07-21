@@ -702,10 +702,11 @@ sub list_nodes_active($self, $current=undef) {
         push @list,($row);
     }
     $sth->finish;
-    if ( defined $current && !$found_selected ) {
+    if ( defined $current && !$found_selected && @list ) {
         warn "Warning: Node id '$current' not active\n";
         unlock_hash(%{$list[0]});
         $list[0]->{_selected} = 1;
+        lock_hash(%{$list[0]});
     }
     return @list;
 }
