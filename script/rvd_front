@@ -2473,12 +2473,7 @@ get '/machine/set_access/(#id_domain)/(#id_access)/(#allowed)/(#last)' => sub {
 
 ##############################################
 
-post '/request/(:name)/' => sub {
-    my $c = shift;
-    my $name = $c->stash('name');
-
-    my $args = decode_json($c->req->body);
-    my $wait = delete $args->{_wait};
+sub _check_request_args($c, $name, $args) {
 
     for (qw(remote_ip uid)) {
         confess "Error: $_ should not be provided".Dumper($args)
@@ -2487,6 +2482,23 @@ post '/request/(:name)/' => sub {
     if ($name =~ /^(start_clones|open_exposed_ports)/) {
         $args->{remote_ip} = _remote_ip($c);
     }
+
+    my %req_id_vm = map { $_ => 1 } qw( create_storage_pool remove_storage_pool
+        create_network remove_network);
+    if ($req_id_vm{$name} && !exists $args->{id_vm}) {
+        $args->{id_vm} = $c->session('id_node');
+    }
+}
+
+post '/request/(:name)/' => sub {
+    my $c = shift;
+    my $name = $c->stash('name');
+
+    my $args = decode_json($c->req->body);
+    my $wait = delete $args->{_wait};
+
+    _check_request_args($c, $name, $args);
+
     app->log->info($USER->name." requesting $name ".encode_json($args)) if $CONFIG_FRONT->{log}->{log};
     my $req;
 

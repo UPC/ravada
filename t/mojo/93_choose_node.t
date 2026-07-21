@@ -60,13 +60,16 @@ sub test_connect_node($t) {
 }
  
 sub _get_item($t, $item) {
+
+    $item = 'networks' if $item eq 'network';
+
     $t->get_ok("/v2/$item/list")->status_is(200);
     my $body = $t->tx->res->body;
-    die $body if !$t->success();
+    die "/v2/$item/list" if !$t->success();
 
-    my @items = decode_json($body);
+    my $items = decode_json($body);
 
-    return @items;
+    return @$items;
 
 }
 
@@ -76,6 +79,9 @@ sub _test_new_storage($t, $name, $id_node_exp) {
     my $init = $t->tx->res->dom->at('div#page-wrapper')->attr('ng-init');
     my ($id_node) = $init =~ /init\((\d+)/;
     is($id_node, $id_node_exp);
+
+    $t->post_ok("/request/create_storage_pool/" => json => { name => $name , directory => "/var/tmp"})
+        ->status_is(200);
 }
 
 sub _test_new_network($t, $name, $id_node_exp) {
@@ -84,8 +90,32 @@ sub _test_new_network($t, $name, $id_node_exp) {
     my ($id_node) = $init =~ /.+\((\d+)/;
     is($id_node, $id_node_exp, $init);
 
+    $t->post_ok("/request/create_network/" => json => { data => { name => $name } })
+        ->status_is(200);
+
 }
 
+sub _test_remove($t, $item, $name, $id) {
+
+    my $req = "remove_$item";
+
+    my $args = { id => $id};
+
+    if ($item eq 'storage') {
+        $req = "remove_storage_pool";
+        $args = { name => $name };
+    } else {
+        confess if !defined $id
+    }
+
+    $t->post_ok("/request/$req" => json =>  $args )
+        ->status_is(200);
+
+    my @elements = _get_item($t, $item);
+
+    my ($found) = grep { $_->{name} eq $name } @elements;
+    ok(!$found, "Expecting $item $name not found in ".Dumper(@elements)) or exit;
+}
 
 sub test_new($t, $item, $id_node) {
 
@@ -99,6 +129,14 @@ sub test_new($t, $item, $id_node) {
     my $name = new_domain_name();
     $sub->($t, $name, $id_node);
 
+    my @elements = _get_item($t, $item);
+
+    my ($found) = grep { $_->{name} eq $name } @elements;
+    ok($found,"Expecting $item $name in node $id_node");
+
+    confess Dumper($found) if !defined $found->{id};
+
+    _test_remove($t, $item, $name, $found->{id});
 }
 
 sub test_choose_node($t) {

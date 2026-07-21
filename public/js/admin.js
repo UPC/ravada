@@ -1263,7 +1263,6 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.directory_valid=true;
 
         $scope.init=function(id_vm, url) {
-            $scope.id_vm = id_vm;
             url_ws = url;
         };
         $scope.check_name = function(name) {
@@ -1283,7 +1282,6 @@ ravadaApp.directive("solShowMachine", swMach)
             }
             $http.post('/request/create_storage_pool/'
                 ,JSON.stringify({
-                    'id_vm': $scope.id_vm
                     ,'name': $scope.name
                     ,'directory': $scope.directory})
             ).then(function(response) {
