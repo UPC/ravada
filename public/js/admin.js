@@ -1282,7 +1282,7 @@ ravadaApp.directive("solShowMachine", swMach)
             }
             $http.post('/request/create_storage_pool/'
                 ,JSON.stringify({
-                    ,'name': $scope.name
+                    'name': $scope.name
                     ,'directory': $scope.directory})
             ).then(function(response) {
                 if (response.data.ok == 1 ) {

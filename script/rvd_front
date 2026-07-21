@@ -751,7 +751,7 @@ any '/network/new' => sub($c) {
     return $c->render( template => '/main/network_new' );
 };
 
-any '/v2/network/new/#id_vm' => sub($c) {
+any '/v2/network/new' => sub($c) {
 
     return access_denied($c) unless $USER->is_admin
     || $USER->can_create_networks || $USER->can_manage_all_networks;
@@ -764,7 +764,7 @@ any '/v2/network/new/#id_vm' => sub($c) {
 
     my $req = Ravada::Request->new_network(
         uid => $USER->id
-        ,id_vm => $c->stash('id_vm')
+        ,id_vm => $c->session('id_node')
         ,name => $name
     );
     $RAVADA->wait_request($req);
@@ -2484,7 +2484,7 @@ sub _check_request_args($c, $name, $args) {
     }
 
     my %req_id_vm = map { $_ => 1 } qw( create_storage_pool remove_storage_pool
-        create_network remove_network);
+        new_network create_network remove_network);
     if ($req_id_vm{$name} && !exists $args->{id_vm}) {
         $args->{id_vm} = $c->session('id_node');
     }

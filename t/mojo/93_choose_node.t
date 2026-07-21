@@ -80,8 +80,25 @@ sub _test_new_storage($t, $name, $id_node_exp) {
     my ($id_node) = $init =~ /init\((\d+)/;
     is($id_node, $id_node_exp);
 
-    $t->post_ok("/request/create_storage_pool/" => json => { name => $name , directory => "/var/tmp"})
+    $t->post_ok("/request/create_storage_pool" => json => { name => $name , directory => "/var/tmp"})
         ->status_is(200);
+
+    _test_request($t, $id_node_exp);
+
+}
+
+sub _test_request($t, $id_node=undef) {
+    my $body = $t->tx->res->body;
+    my $content = decode_json($body);
+    my $req = Ravada::Request->open($content->{request});
+
+    if (defined $id_node) {
+        is($req->args('id_vm'), $id_node) or die Dumper($req->args());
+    }
+    wait_request(debug => 1, request => $req);
+    is($req->status(),'done');
+    is($req->error,'');
+    return $req;
 }
 
 sub _test_new_network($t, $name, $id_node_exp) {
@@ -90,9 +107,16 @@ sub _test_new_network($t, $name, $id_node_exp) {
     my ($id_node) = $init =~ /.+\((\d+)/;
     is($id_node, $id_node_exp, $init);
 
-    $t->post_ok("/request/create_network/" => json => { data => { name => $name } })
+    $t->post_ok("/request/new_network" => json => { name => $name});
+    my $req = _test_request($t, $id_node_exp);
+
+    my $data = decode_json($req->output);
+
+    $t->post_ok("/request/create_network/" => json =>
+        { data => $data })
         ->status_is(200);
 
+    _test_request($t, $id_node_exp);
 }
 
 sub _test_remove($t, $item, $name, $id) {
@@ -111,10 +135,11 @@ sub _test_remove($t, $item, $name, $id) {
     $t->post_ok("/request/$req" => json =>  $args )
         ->status_is(200);
 
+    _test_request($t);
     my @elements = _get_item($t, $item);
 
     my ($found) = grep { $_->{name} eq $name } @elements;
-    ok(!$found, "Expecting $item $name not found in ".Dumper(@elements)) or exit;
+    ok(!$found, "Expecting $item $name not found in ".Dumper([map { $_->{name}} @elements])) or exit;
 }
 
 sub test_new($t, $item, $id_node) {
@@ -132,9 +157,7 @@ sub test_new($t, $item, $id_node) {
     my @elements = _get_item($t, $item);
 
     my ($found) = grep { $_->{name} eq $name } @elements;
-    ok($found,"Expecting $item $name in node $id_node");
-
-    confess Dumper($found) if !defined $found->{id};
+    ok($found,"Expecting $item $name in node $id_node") or exit;
 
     _test_remove($t, $item, $name, $found->{id});
 }
