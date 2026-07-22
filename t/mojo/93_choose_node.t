@@ -162,6 +162,26 @@ sub test_new($t, $item, $id_node) {
     _test_remove($t, $item, $name, $found->{id});
 }
 
+sub test_choose_node_wrong($t) {
+    my $body_json = _list_nodes_active($t);
+    die "Error: I need more than one node ".Dumper($body_json)
+    unless scalar (@$body_json)>1;
+
+    my %ids;
+    for (@$body_json) {
+        $ids{$_->{id}}++;
+    }
+
+    my $id_wrong=1;
+    for (;;) {
+        last if !exists $ids{$id_wrong};
+        $id_wrong++;
+    }
+
+    $t->get_ok("/v3/choose_node/")->status_is(404);
+    $t->get_ok("/v3/choose_node/".$id_wrong)->status_is(400);
+}
+
 sub test_choose_node($t) {
 
     my $body_json = _list_nodes_active($t);
@@ -320,6 +340,7 @@ $PASSWORD = "$$ $$";
 
 mojo_login($t,$USERNAME, $PASSWORD);
 
+test_choose_node_wrong($t);
 test_node_gone($t);
 test_choose_node($t);
 test_connect_node($t);
