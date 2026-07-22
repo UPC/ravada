@@ -105,7 +105,6 @@
             ws.onmessage = function(event) {
                 var data = JSON.parse(event.data);
                 $scope.$apply(function() {
-                    $scope.req_count++
                     if (data.output && data.output != '') {
                         $scope.choose_node_msg = data.output;
                     }
