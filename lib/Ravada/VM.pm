@@ -937,6 +937,16 @@ sub _ip_a($self, $dev) {
     warn "Warning $dev not found in active interfaces";
 }
 
+sub list_networks($self) {
+    my @networks;
+    my ($out, $err) = $self->run_command_cache("/sbin/ip","route");
+    for my $line ( split( /\n/, $out ) ) {
+        my ($net) = $line =~ m{^\s*(\d+\.\d+\.\d+\.\d+)/\d+ dev};
+        push @networks, ($net) if $net;
+    }
+    return @networks;
+
+}
 sub _interface_ip($self, $remote_ip=undef) {
     return '127.0.0.1' if $remote_ip && $remote_ip =~ /^127\./;
     my ($out, $err) = $self->run_command_cache("/sbin/ip","route");

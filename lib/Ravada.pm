@@ -231,10 +231,18 @@ sub _add_internal_network($self) {
     my ($found) = $sth->fetchrow;
     return if $found;
 
-    $sth = $CONNECTOR->dbh->prepare("SELECT * FROM networks WHERE name like 'internal%'");
+    $sth = $CONNECTOR->dbh->prepare("SELECT name,address FROM networks ORDER by name");
     $sth->execute();
-    ($found) = $sth->fetchrow;
-    return if $found;
+    my %done_address;
+    my %done_name;
+    my $n=0;
+    while (my ($name,$adress)= $sth->fetchrow) {
+        $done_address{$adress}++;
+        $done_name{$name}++;
+        if ($name =~ /^internal(\d+)/) {
+            $n=$1+1 if $1>$n;
+        }
+    }
 
     my @cmd = ("ip","route");
     my ($in, $out, $err);
@@ -246,14 +254,17 @@ sub _add_internal_network($self) {
         ."(name, address, n_order, all_domains, requires_password)"
         ." VALUES(?,?,?,1,0)"
     );
-    my $n=0;
-    my %done;
     for my $net (split /\n/,$out) {
         next if $net =~ /dev virbr/;
         my ($address) = $net =~ m{(^[\d\.]+/\d+)};
-        next if !$address || $done{address}++;
-        $sth->execute("internal$n",$address, ++$n+1);
-
+        next if !$address || $done_address{$address}++;
+        my $name;
+        for (;;) {
+            $name = "internal$n";
+            last if !exists $done_name{$name};
+            $n++;
+        }
+        $sth->execute($name,$address, ++$n+1);
     }
 }
 

@@ -3087,6 +3087,7 @@ sub list_virtual_networks($self) {
 
 sub new_network($self, $name='net') {
     my @networks = $self->list_virtual_networks();
+    my @networks_phisical = $self->list_networks();
 
     my %base = (
         name => $name
@@ -3103,7 +3104,9 @@ sub new_network($self, $name='net') {
                 $value =~ s/(.*)\.\d+$/$1/;
                 $old{$value}=1;
             }
-
+        }
+        if ($field eq 'ip_address') {
+            map { s/\.\d+$// ;$old{$_}++ } @networks_phisical;
         }
         if ( $field eq 'name' && $name ne 'net' ) {
             my $value = $base{$field};
