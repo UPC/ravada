@@ -48,13 +48,17 @@
             });
         }
 
-        var select_current_node =function(id_node) {
+        var select_current_node = function(id_node) {
+            if (!$scope.list_nodes || !$scope.list_nodes.length) return;
+            var selected = null;
             for (var i = 0; i < $scope.list_nodes.length; i++) {
+                if ($scope.list_nodes[i]._selected) selected = $scope.list_nodes[i];
                 if ($scope.list_nodes[i].id == id_node) {
                     $scope.current_node = $scope.list_nodes[i];
                     return;
                 }
             }
+            $scope.current_node = selected || $scope.list_nodes[0];
         }
 
         $scope.select_node = function () {

@@ -617,7 +617,13 @@ get '/list_nodes.json' => sub {
 get '/list_nodes_active.json' => sub {
     my $c = shift;
     _select_vm($c) if !$c->session('id_node');
-    $c->render(json => [$RAVADA->list_nodes_active( $c->session('id_node'))]);
+    my $current = $c->session('id_node');
+    my @nodes = $RAVADA->list_nodes_active($current);
+    if (@nodes) {
+        my ($selected) = grep { $_->{_selected} } @nodes;
+        $c->session(id_node => $selected->{id}) if $selected && (!defined $current || $current != $selected->{id});
+    }
+    $c->render(json => \@nodes);
 };
 
 get '/list_nodes_by_id.json' => sub {
