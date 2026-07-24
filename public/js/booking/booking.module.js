@@ -21,5 +21,8 @@ angular.module("ravada.booking", ['ui.bootstrap','angularMoment','angularjsToast
     .service("apiEntry",svcEntry)
     .service("apiLDAP",svcLDAP)
     .service("apiLocal",svcLocal)
-    .run( amMoment => amMoment.changeLocale('en') );
+    .run( amMoment => {
+        const lang = document.documentElement.lang || 'en';
+        amMoment.changeLocale(lang);
+    });
 

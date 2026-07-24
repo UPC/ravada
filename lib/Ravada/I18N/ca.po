@@ -2779,3 +2779,12 @@ msgstr "Ara"
 
 msgid "Later"
 msgstr "Després"
+
+msgid "Today"
+msgstr "Avui"
+
+msgid "Clear"
+msgstr "Esborra"
+
+msgid "LDAP groups allowed"
+msgstr "Grups LDAP permesos"

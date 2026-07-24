@@ -45,7 +45,7 @@
                            ng-click="$ctrl.openCal('ini_opened')"
                            ng-change="$ctrl.updateDates()"
                            is-open="$ctrl.cal.ini_opened"
-                           ng-required="true" close-text="Close"/>
+                           ng-required="true" current-text="<%=l 'Today' %>" clear-text="<%=l 'Clear' %>" close-text="<%=l 'Close' %>"/>
                 </div>
             </div>
             <!-- repeat until date -->

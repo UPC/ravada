@@ -4,6 +4,8 @@
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
 
 <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/angular-i18n/1.8.2/angular-locale_<%= stash('language') || (stash('i18n') ? stash('i18n')->{language} : 'es') %>.js"></script>
+
 <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular-resource.min.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular-animate.min.js"></script>
 <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.8.2/angular-aria.min.js"></script>
@@ -35,6 +37,8 @@
 <script src="/fallback/bootstrap.min.js"></script>
 
 <script src="/fallback/angular-1.8.2/angular.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/angular-i18n/1.8.2/angular-locale_<%= stash('language') || (stash('i18n') ? stash('i18n')->{language} : 'es') %>.js"></script>
+
 <script src="/fallback/angular-1.8.2/angular-resource.min.js"></script>
 <script src="/fallback/angular-1.8.2/angular-animate.min.js"></script>
 <script src="/fallback/angular-1.8.2/angular-aria.min.js"></script>

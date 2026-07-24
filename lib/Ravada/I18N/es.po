@@ -2703,3 +2703,12 @@ msgstr "Ahora"
 
 msgid "Later"
 msgstr "Después"
+
+msgid "Today"
+msgstr "Hoy"
+
+msgid "Clear"
+msgstr "Limpiar"
+
+msgid "LDAP groups allowed"
+msgstr "Grupos LDAP permitidos"

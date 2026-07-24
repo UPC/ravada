@@ -2613,3 +2613,12 @@ msgstr "Now"
 
 msgid "Later"
 msgstr "Later"
+
+msgid "Today"
+msgstr "Today"
+
+msgid "Clear"
+msgstr "Clear"
+
+msgid "LDAP groups allowed"
+msgstr "LDAP groups allowed"

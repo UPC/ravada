@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html ng-app="ravada.app">
+<html ng-app="ravada.app" lang="<%= stash('language') || (stash('i18n') ? stash('i18n')->{language} : 'es') %>">
 %= include 'bootstrap/header'
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="docum
 ent">
