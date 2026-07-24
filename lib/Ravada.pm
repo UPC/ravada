@@ -6114,7 +6114,7 @@ sub _cmd_connect_node($self, $request) {
     die "I can't ping $hostname\n"
         if !$node || ! $node->ping();
 
-    $request->error("Ping ok. Trying to connect to $hostname");
+    $request->_data(output => "Ping ok. Trying to connect to $hostname");
     my ($out, $err);
     eval {
         ($out, $err) = $node->run_command('/bin/true');
@@ -6129,7 +6129,8 @@ sub _cmd_connect_node($self, $request) {
         die $err if $err;
     }
     $node->connect() && do {
-        $request->error("Connection OK");
+        $request->_data(output => "Connection OK");
+        $request->error("");
         $node->_data('cached_down' => 0);
     };
 }

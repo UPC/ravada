@@ -12,7 +12,7 @@ Ravada::Front - Web Frontend library for Ravada
 use Carp qw(carp);
 use DateTime;
 use DateTime::Format::DateParse;
-use Hash::Util qw(lock_hash);
+use Hash::Util qw(lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
 use JSON::XS;
 use Moose;
@@ -672,6 +672,42 @@ sub list_vms($self, $type=undef) {
         push @list,($row);
     }
     $sth->finish;
+    return @list;
+}
+
+=head2 list_nodes_active
+
+Returns a list of Active Nodes
+
+=cut
+
+sub list_nodes_active($self, $current=undef) {
+
+    my $sql = "SELECT id,name,hostname,is_active, enabled FROM vms "
+        ." WHERE is_active=1 AND enabled=1";
+
+    my $sth = $CONNECTOR->dbh->prepare($sql." ORDER BY vm_type,name");
+    $sth->execute();
+
+    my $found_selected=0;
+    my @list;
+    while (my $row = $sth->fetchrow_hashref) {
+        delete $row->{vm_type};
+        $row->{_selected} = 0;
+        if ( defined $current && $row->{id} == $current ) {
+            $row->{_selected} = 1;
+            $found_selected++;
+        }
+        lock_hash(%$row);
+        push @list,($row);
+    }
+    $sth->finish;
+    if ( defined $current && !$found_selected && @list ) {
+        warn "Warning: Node id '$current' not active\n";
+        unlock_hash(%{$list[0]});
+        $list[0]->{_selected} = 1;
+        lock_hash(%{$list[0]});
+    }
     return @list;
 }
 

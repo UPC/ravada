@@ -31,6 +31,106 @@
             .controller("notifCrtl", notifCrtl)
             .controller("run_domain_req",run_domain_req_ctrl)
             .controller("login",login_ctrl)
+            .controller("navigation",navigation_ctrl)
+
+    function navigation_ctrl($scope, $http, $interval, $timeout) {
+        $scope.init = function(url, id_node) {
+            if (!id_node) return;
+            $scope.url_ws= url;
+            $scope.id_node_orig = id_node;
+            list_nodes_active(id_node);
+        }
+
+        var list_nodes_active = function(id_node) {
+            $http.get('/list_nodes_active.json').then(function(response) {
+                $scope.list_nodes= response.data;
+                select_current_node(id_node);
+            });
+        }
+
+        var select_current_node = function(id_node) {
+            if (!$scope.list_nodes || !$scope.list_nodes.length) return;
+            var selected = null;
+            for (var i = 0; i < $scope.list_nodes.length; i++) {
+                if ($scope.list_nodes[i]._selected) selected = $scope.list_nodes[i];
+                if ($scope.list_nodes[i].id == id_node) {
+                    $scope.current_node = $scope.list_nodes[i];
+                    return;
+                }
+            }
+            $scope.current_node = selected || $scope.list_nodes[0];
+        }
+
+        $scope.select_node = function () {
+            $scope.choose_node_error='';
+            $http.post('/request/connect_node'
+                , JSON.stringify({ 'id_node': $scope.current_node.id
+                    ,'_force': 1
+                })
+            ).then(
+                    function(response) {
+                        if (response.data.error) {
+                            $scope.choose_node_error = "Failed to connect to node "
+                                +response.data.error;
+                            list_nodes_active($scope.id_node_orig);
+                        } else {
+                            $scope.choose_node_msg = "Connecting to node "
+                                +$scope.current_node.name;
+                            subscribe_request(response.data.request);
+                        }
+                    }
+                );
+        };
+
+        var choose_node = function() {
+
+            $http.get('/v3/choose_node/'+$scope.current_node.id).then(
+                function(response) {
+                    $scope.choose_node_msg = '';
+                    window.location.reload();
+                }
+
+            )
+                .catch(function(error) {
+                    $scope.choose_node_error = "Failed to load node "
+                        +"'"+$scope.current_node.name+"'"
+                        +" "+error.statusText;
+
+                    if (error.status== 403) {
+                        window.location.reload();
+                    }
+                });
+
+        }
+
+        var subscribe_request = function(id_request) {
+            var ws = new WebSocket($scope.url_ws);
+            ws.onopen = function(event) { ws.send('request/'+id_request) };
+            ws.onmessage = function(event) {
+                var data = JSON.parse(event.data);
+                $scope.$apply(function() {
+                    if (data.output && data.output != '') {
+                        $scope.choose_node_msg = data.output;
+                    }
+                    $scope.choose_node_error = data.error;
+                });
+                if (data.status == 'done') {
+                    ws.close();
+                    if (data.error && data.error.length) {
+                        $scope.$apply(function () {
+                            list_nodes_active($scope.id_node_orig);
+                            select_current_node($scope.id_node_orig);
+                            $scope.choose_node_msg = '';
+                            $scope.choose_node_error = data.error;
+                        });
+                    } else {
+                        choose_node();
+                    }
+                }
+            }
+
+        }
+    };
 
     function newMachineCtrl($scope, $http) {
 
