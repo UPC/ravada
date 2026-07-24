@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html ng-app="ravada.app" lang="<%= stash('language') || (stash('i18n') ? stash('i18n')->{language} : 'es') %>">
+<html ng-app="ravada.app">
 %= include 'bootstrap/header'
 <body role="document">
     %= include 'bootstrap/navigation'
