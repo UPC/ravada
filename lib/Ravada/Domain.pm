@@ -1471,21 +1471,18 @@ sub _get_hostname($ip) {
 
     my $packed_ip = inet_aton($ip);
     my $name = $packed_ip ? gethostbyaddr($packed_ip, AF_INET) : undef;
-    if ( $name && $name !~ /\d+\.\d+\.\d+/ ) {
-        $CACHE_HOSTNAME{$ip} = $name;
-        return $name;
+    if ( ! $name || $name =~ /\d+\.\d+\.\d+/ ) {
+        my ($in, $out, $err);
+        run3(['host',$ip], \$in, \$out, \$err);
+        ($name) = $out =~ /pointer (.*)\./;
+    }
+    if (!$name || $name !~ /^[A-Za-z0-9._-]+$/) {
+        $name = $ip;
     }
 
-    my ($in, $out, $err);
-    run3(['host',$ip], \$in, \$out, \$err);
-    my ($hostname) = $out =~ /pointer (.*)\./;
-    if (!$hostname) {
-        warn "I can't fetch hostname from $out";
-        $hostname = $ip;
-    }
-    $CACHE_HOSTNAME{$ip} = $hostname;
+    $CACHE_HOSTNAME{$ip} = $name;
+    return $name;
 
-    return $hostname;
 }
 
 
