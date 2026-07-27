@@ -2788,3 +2788,18 @@ msgstr "Esborra"
 
 msgid "LDAP groups allowed"
 msgstr "Grups LDAP permesos"
+
+msgid "No devices found"
+msgstr "No s'han trobat dispositius"
+
+msgid "found"
+msgstr "trobats"
+
+msgid "Storage Pool"
+msgstr "Emmagatzematge"
+
+msgid "There are no machines that match the selection"
+msgstr "No hi ha cap màquina que coincideixi amb la selecció"
+
+msgid "more"
+msgstr "més"

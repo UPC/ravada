@@ -2622,3 +2622,18 @@ msgstr "Clear"
 
 msgid "LDAP groups allowed"
 msgstr "LDAP groups allowed"
+
+msgid "No devices found"
+msgstr "No devices found"
+
+msgid "found"
+msgstr "found"
+
+msgid "Storage Pool"
+msgstr "Storage Pool"
+
+msgid "There are no machines that match the selection"
+msgstr "There are no machines that match the selection"
+
+msgid "more"
+msgstr "more"
