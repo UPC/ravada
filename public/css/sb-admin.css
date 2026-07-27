@@ -527,3 +527,7 @@ label.small_row {
 ul.no-bullets {
   list-style-type: none; /* Remove bullets */
 }
+
+.light {
+    color: lightgray;
+}

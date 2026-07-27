@@ -850,7 +850,7 @@ msgstr "El tiempo de espera de la sesión finalizo"
 msgid "Keep in mind that there may be users using a clone"
 msgstr "Ten en cuenta que puede que haya usuarios usando los clones"
 
-msgid "Yes, shutwdown all the clones"
+msgid "Yes, shutdown all the clones"
 msgstr "Sí, apagar todos los clones"
 
 msgid "Shutdown all clones"
@@ -2599,6 +2599,51 @@ msgstr "Usado %"
 msgid "Unused volumes"
 msgstr "Volúmenes sin utilizar"
 
+msgid "minutes"
+msgstr "minutos"
+
+msgid "year"
+msgstr "año"
+
+msgid "month"
+msgstr "mes"
+
+msgid "week"
+msgstr "semana"
+
+msgid "day"
+msgstr "día"
+
+msgid "hour"
+msgstr "hora"
+
+msgid "minute"
+msgstr "minuto"
+
+msgid "now"
+msgstr "ahora"
+
+msgid "Virtual Machine locked"
+msgstr "Máquina Virtual bloqueada"
+
+msgid "Show lock details"
+msgstr "Muestra detalles del bloqueo"
+
+msgid "This virtual machine has no LDAP group restrictions."
+msgstr "Esta máquina virtual no tiene restricciones de grupo LDAP."
+
+msgid "LDAP search field"
+msgstr "Campo de búsqueda LDAP"
+
+msgid "read more"
+msgstr "leer más"
+
+msgid "dismiss"
+msgstr "descartar"
+
+msgid "fetch"
+msgstr "buscar"
+
 msgid "can create disk volumes"
 msgstr "puede crear volúmenes de disco"
 
@@ -2628,3 +2673,33 @@ msgstr "el usuario puede iniciar y acceder a la pantalla de cualquier máquina v
 
 msgid "Are you sure you want to remove this user?"
 msgstr "¿Estás seguro de querer eliminar este usuario?"
+
+msgid "Yes, start all clones"
+msgstr "Sí, iniciar todos los clones"
+
+msgid "Minutes of grace time before shutdown."
+msgstr "Minutos de gracia antes de apagado."
+
+msgid "Shutdown grace time"
+msgstr "Tiempo de gracia de apagado"
+
+msgid "list"
+msgstr "lista"
+
+msgid "purge"
+msgstr "purgar"
+
+msgid "Shutdown confirmation"
+msgstr "Confirmación de apagado"
+
+msgid "Warning this machine has the autostart option activated!"
+msgstr "¡Atención esta máquina tiene la opción de autoarranque activada!"
+
+msgid "Are you sure you want to shutdown the machine?"
+msgstr "¿Estás seguro de querer apagar la máquina?"
+
+msgid "Now"
+msgstr "Ahora"
+
+msgid "Later"
+msgstr "Después"

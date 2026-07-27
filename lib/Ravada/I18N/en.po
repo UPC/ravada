@@ -904,7 +904,7 @@ msgstr "Shutdown all clones"
 msgid "Keep in mind that there may be users using a clone"
 msgstr "Keep in mind that there may be users using a clone"
 
-msgid "Yes, shutwdown all the clones"
+msgid "Yes, shutdown all the clones"
 msgstr "Yes, shutdown all the clones"
 
 msgid "Waiting for machine to start"
@@ -2515,6 +2515,51 @@ msgstr "5 years"
 msgid "Used %"
 msgstr "Used %"
 
+msgid "minutes"
+msgstr "minutes"
+
+msgid "year"
+msgstr "year"
+
+msgid "month"
+msgstr "month"
+
+msgid "week"
+msgstr "week"
+
+msgid "day"
+msgstr "day"
+
+msgid "hour"
+msgstr "hour"
+
+msgid "minute"
+msgstr "minute"
+
+msgid "now"
+msgstr "now"
+
+msgid "Virtual Machine locked"
+msgstr "Virtual Machine locked"
+
+msgid "Show lock details"
+msgstr "Show lock details"
+
+msgid "This virtual machine has no LDAP group restrictions."
+msgstr "This virtual machine has no LDAP group restrictions."
+
+msgid "LDAP search field"
+msgstr "LDAP search field"
+
+msgid "read more"
+msgstr "read more"
+
+msgid "dismiss"
+msgstr "dismiss"
+
+msgid "fetch"
+msgstr "fetch"
+
 msgid "can create disk volumes"
 msgstr "can create disk volumes"
 
@@ -2544,3 +2589,27 @@ msgstr "the user can start and access the screen of any virtual machine"
 
 msgid "Are you sure you want to remove this user?"
 msgstr "Are you sure you want to remove this user?"
+
+msgid "Yes, start all clones"
+msgstr "Yes, start all clones"
+
+msgid "Shutdown grace time"
+msgstr "Shutdown grace time"
+
+msgid "Minutes of grace time before shutdown."
+msgstr "Minutes of grace time before shutdown."
+
+msgid "Shutdown confirmation"
+msgstr "Shutdown confirmation"
+
+msgid "Warning this machine has the autostart option activated!"
+msgstr "Warning this machine has the autostart option activated!"
+
+msgid "Are you sure you want to shutdown the machine?"
+msgstr "Are you sure you want to shutdown the machine?"
+
+msgid "Now"
+msgstr "Now"
+
+msgid "Later"
+msgstr "Later"

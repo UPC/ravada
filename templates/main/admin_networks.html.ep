@@ -3,9 +3,9 @@
 %= include 'bootstrap/header'
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
 <div id="wrapper">
-    %= include 'bootstrap/navigation'
+    %= include 'bootstrap/navigation', choose_node => 1
     <div id="page-wrapper" ng-controller='manage_networks'
-        ng-init="init('<%= $id_vm %>')"
+        ng-init="init('<%= $id_node %>')"
         class="card"
         >
     <div class="card-header border">
