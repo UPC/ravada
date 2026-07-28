@@ -1,6 +1,6 @@
     <div class="nav flex-column nav-pills bg-light" id="v-pills-tab" role="tablist" aria-orientation="vertical">
     %   if (($USER->can_change_settings($domain->id))) {
-        <a class="nav-link <%= $active_actions %>" id="v-pills-actions-tab" ng-hide="showmachine.is_base" href="#v-pills-actions" data-toggle="pill" role="tab" aria-controls="v-pills-actions" aria-selected="<%= $active_actions ? 'true' : 'false' %>" ng-disabled="edit"><%=l 'Actions' %></a>
+        <a class="nav-link <%= $active_actions %>" id="v-pills-actions-tab" ng-if="showmachine && !showmachine.is_base" href="#v-pills-actions" data-toggle="pill" role="tab" aria-controls="v-pills-actions" aria-selected="<%= $active_actions ? 'true' : 'false' %>" ng-disabled="edit"><%=l 'Actions' %></a>
     %   }
     %   if ($USER->can_change_settings($domain->id)) {
         <a class="nav-link <%= $active_description %>" id="v-pills-description-tab" href="#v-pills-description" data-toggle="pill" role="tab" aria-controls="v-pills-description" aria-selected="false"><%=l 'Description' %></a>
@@ -15,7 +15,7 @@
         <a class="nav-link" id="v-pills-hardware-tab" href="#v-pills-hardware" data-toggle="pill" role="tab" aria-controls="v-pills-hardware" aria-selected="false"><%=l 'Hardware' %></a>
     %	}
     %   if ($USER->can_change_settings($domain->id)) {
-        <a class="nav-link" id="v-pills-screenshot-tab" ng-hide="showmachine.is_base" href="#v-pills-screenshot" data-toggle="pill" role="tab" aria-controls="v-pills-screenshot" aria-selected="false"><%=l 'Screenshot' %></a>
+        <a class="nav-link" id="v-pills-screenshot-tab" ng-if="showmachine && !showmachine.is_base" href="#v-pills-screenshot" data-toggle="pill" role="tab" aria-controls="v-pills-screenshot" aria-selected="false"><%=l 'Screenshot' %></a>
     %   }
     %   if ($USER->is_admin && !$domain->is_volatile) {
         <a class="nav-link" id="v-pills-base-tab" href="#v-pills-base" data-toggle="pill" role="tab" aria-controls="v-pills-base" aria-selected="false"><%=l 'Base' %></a>
@@ -33,7 +33,7 @@
         <a class="nav-link remove" id="v-pills-remove-tab" href="#v-pills-remove" data-toggle="pill" role="tab" aria-controls="v-pills-remove" aria-selected="false"><%=l 'Remove' %></a>
     %   }
     %   if ($USER->is_admin()){
-        <a class="nav-link" id="v-pills-clones-tab" ng-show="showmachine.has_clones && showmachine.is_base" href="#v-pills-clones" data-toggle="pill" role="tab" aria-controls="v-pills-clones" aria-selected="false"><%=l 'Clones' %></a>
+        <a class="nav-link" id="v-pills-clones-tab" ng-if="showmachine.has_clones && showmachine.is_base" href="#v-pills-clones" data-toggle="pill" role="tab" aria-controls="v-pills-clones" aria-selected="false"><%=l 'Clones' %></a>
 %   }
     %   if ($USER->is_admin){
         <a class="nav-link" id="v-pills-pool-tab" href="#v-pills-pool" data-toggle="pill" role="tab" aria-controls="v-pills-pool" aria-selected="false"
@@ -44,7 +44,7 @@
         ><%=l 'Host Devices' %></a>
 %   }
     % if ( $monitoring && $USER->is_admin()) {
-        <a class="nav-link" id="v-pills-monitoring-tab" ng-show="showmachine.is_active" href="#v-pills-monitoring" data-toggle="pill" role="tab" aria-controls="v-pills-monitoring" aria-selected="false"><%=l 'System overview' %></a>
+        <a class="nav-link" id="v-pills-monitoring-tab" ng-if="showmachine && showmachine.is_active" href="#v-pills-monitoring" data-toggle="pill" role="tab" aria-controls="v-pills-monitoring" aria-selected="false"><%=l 'System overview' %></a>
     %   }
 
         <a class="nav-link" id="v-pills-share-tab" ng-click="refresh_machine()" href="#v-pills-share" data-toggle="pill" role="tab" aria-controls="v-pills-share" aria-selected="false"><%=l 'Share' %></a>
