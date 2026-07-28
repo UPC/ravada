@@ -21,8 +21,12 @@ angular.module("ravada.booking", ['ui.bootstrap','angularMoment','angularjsToast
     .service("apiEntry",svcEntry)
     .service("apiLDAP",svcLDAP)
     .service("apiLocal",svcLocal)
-    .run( amMoment => {
-        const lang = document.documentElement.lang || 'en';
-        amMoment.changeLocale(lang);
+    .run( (amMoment, moment) => {
+         const rawLang = document.documentElement.lang || 'en';
+         const normalized = rawLang.toLowerCase().replace(/_/g, '-').replace(/@/g, '-');
+         const locales = (moment && typeof moment.locales === 'function') ? moment.locales() : [];
+         const base = normalized.split('-')[0];
+         const resolved = locales.includes(normalized) ? normalized : (locales.includes(base) ? base : 'en');
+         amMoment.changeLocale(resolved);
     });
 

@@ -2732,7 +2732,7 @@ msgid "available"
 msgstr "disponible"
 
 msgid "There are no machines that match the selection"
-msgstr "No hay máquinas que coincidan con la seleción"
+msgstr "No hay máquinas que coincidan con la selección"
 
 msgid "more"
 msgstr "más"
