@@ -169,7 +169,7 @@ GetOptions (       help => \$help
            ,'shutdown'=> \$SHUTDOWN_DOMAIN
           ,'hibernate'=> \$HIBERNATE_DOMAIN
              ,'remove:s'=> \$REMOVE_DOMAIN
-             ,'remove_clones=s' => \$REMOVE_CLONES
+             ,'remove-clones=s' => \$REMOVE_CLONES
              ,'recursive' => \$RECURSIVE
          ,'disconnected'=> \$DISCONNECTED
         ,'remove-user=s'=> \$REMOVE_USER
@@ -756,7 +756,7 @@ sub hibernate(@domains) {
     exit;
 }
 
-sub remove_clones($REMOVE_CLONES,$RECURSIVE) {
+sub remove_clones($REMOVE_CLONES) {
     $RECURSIVE //= 0;
     my $ravada = Ravada->new(%CONFIG);
     my $sth_getinfo = $ravada->_dbh->prepare(
@@ -774,7 +774,7 @@ sub remove_clones($REMOVE_CLONES,$RECURSIVE) {
     }
 
     if ($isbase == 1) {
-        remove_clones_rec($domainid, $ravada,$RECURSIVE);
+        remove_clones_rec($domainid, $ravada);
     }
 
     else {
@@ -783,7 +783,7 @@ sub remove_clones($REMOVE_CLONES,$RECURSIVE) {
 
 }
 
-sub remove_clones_rec($id_parent, $ravada, $RECURSIVE) {
+sub remove_clones_rec($id_parent, $ravada) {
 
     my $sth_getclones = $ravada->_dbh->prepare(
         "SELECT id, name, is_base ".
@@ -806,7 +806,7 @@ sub remove_clones_rec($id_parent, $ravada, $RECURSIVE) {
 
         if ($isbase) {
             if($RECURSIVE) {
-            remove_clones_rec($clone_id, $ravada,$RECURSIVE);
+            remove_clones_rec($clone_id, $ravada);
             }
         } 
         else {
