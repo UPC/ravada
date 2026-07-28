@@ -6,6 +6,7 @@ use Data::Dumper;
 use IPC::Run3;
 use JSON::XS;
 use Test::More;
+use YAML qw(LoadFile);
 
 use lib 't/lib';
 use Test::Ravada;
@@ -17,6 +18,11 @@ use_ok('Ravada');
 
 my $BASE_NAME = "zz-test-base-alpine-q35-uefi";
 my $BASE;
+my $FILE_CONFIG_BRIDGE = "t/etc/bridge.conf";
+
+my $CONFIG_BRIDGE;
+$CONFIG_BRIDGE =  LoadFile($FILE_CONFIG_BRIDGE)
+if -e $FILE_CONFIG_BRIDGE;
 
 #######################################################################
 
@@ -43,6 +49,20 @@ sub _wait_ip($domain) {
     confess "Error : no ip for ".$domain->name;
 }
 
+sub _set_mac_address($domain) {
+    return if ! $CONFIG_BRIDGE || !exists $CONFIG_BRIDGE->{mac};
+    if ($domain->type eq 'KVM') {
+        my $doc = XML::LibXML->load_xml( string => $domain->xml_description());
+        my ($dev) = $doc->findnodes('/domain/devices/interface[@type="bridge"]/mac');
+        $dev->setAttribute('address' => $CONFIG_BRIDGE->{mac});
+        $domain->reload_config($doc);
+    } elsif( $domain->type eq 'Void') {
+        return;
+    } else {
+        die "I don't know how to set mac for ".$domain->type;
+    }
+}
+
 sub _set_bridge($vm, $domain) {
     my @bridges = $vm->_list_bridges();
     my $req = Ravada::Request->change_hardware(
@@ -57,6 +77,7 @@ sub _set_bridge($vm, $domain) {
         }
     );
     wait_request();
+    _set_mac_address($domain);
     return $bridges[0];
 }
 
@@ -155,12 +176,142 @@ sub test_bridge($vm) {
 
 }
 
+sub _get_alternate_ip {
+    my ($in, $out, $err);
+    run3(["ip","route"],\$in, \$out,\ $err);
+
+    my ($ip) = $out =~ /^\d+\.\d+.* dev virbr.*link src (\d+\.\d+\.\d+\.\d+)/m;
+
+    return $ip if $ip;
+
+    warn "Warning: I can't find an alternate ip from $out. Using localhost" if !$ip;
+
+    return '127.0.0.1';
+
+}
+
+# Test scenario with NAT and Display_ip ########################################
+#
+sub test_bridge_nat($vm) {
+
+    my $nat_ip = '198.18.1.33';
+    my $display_ip = _get_alternate_ip();
+    $vm->nat_ip($nat_ip);
+    $vm->display_ip($display_ip);
+
+    diag("NAT IP: ".$vm->nat_ip." , display_ip: ".$vm->display_ip);
+
+    my $domain= $BASE->clone(name => new_domain_name, user => user_admin);
+    is($domain->has_nat_interfaces,1,"Expecting ".$domain->name." has nat "
+        .$vm->name);
+    _set_bridge($vm, $domain);
+    is($domain->has_nat_interfaces,0,"Expecting ".$domain->name." has no nat "
+        .$vm->name) or exit;
+
+    my $internal_port = 22;
+    my $name = "foo";
+    $domain->expose(port => $internal_port, restricted => 1, name => 'ssh');
+
+    my $remote_ip = '10.0.0.1';
+    $domain->start(user => user_admin, remote_ip => $remote_ip);
+    _wait_ip($domain);
+
+    Ravada::Request->start_domain(uid => user_admin->id
+        ,id_domain => $domain->id
+        ,remote_ip => $remote_ip
+    );
+    wait_request(debug => 0);
+    exit;
+
+    my $internal_ip = _wait_ip($domain);
+    $domain->ip;
+    wait_request(debug => 0);
+
+    my $ip_info = $domain->ip_info();
+    ok($ip_info->{type} eq 'bridge');
+
+    my $internal_net = $internal_ip;
+    $internal_net =~ s{(.*)\.\d+$}{$1.0/24};
+
+    my $local_ip = $vm->ip;
+    my $exposed_port = $domain->exposed_port($internal_port);
+    my $public_port = $exposed_port->{public_port};
+
+    ok($public_port) or die $domain->name;
+
+    isnt($exposed_port->{public_port}, $internal_port) or exit;
+
+    my ($in, $out, $err);
+    run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
+    die $err if $err;
+    my @out = split /\n/,$out;
+    is(grep(/^DNAT.*$local_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out),1)
+        or die Dumper(\@out);
+
+    run3(['iptables','-t','nat','-L','POSTROUTING','-n'],\($in, $out, $err));
+    die $err if $err;
+    @out = split /\n/,$out;
+    is(grep(/^SNAT.* 0.0.0.0\/0\s+$internal_ip\s+tcp dpt\:$internal_port to\:$local_ip$/,@out),1);
+
+    run3(['iptables-save','-t','nat'],\($in, $out, $err));
+    @out = grep /SNAT/, split/\n/,$out;
+    warn "SNAT: ".Dumper([grep /SNAT/, @out]);
+
+    run3(['iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    die $err if $err;
+    @out = split /\n/,$out;
+    is(grep(m{^ACCEPT.*$internal_net\s+state NEW},@out),1) or die $out;
+
+    run3(['iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    die $err if $err;
+    @out = split /\n/,$out;
+    is(grep(m{^ACCEPT.*$remote_ip\s+$internal_ip.*dpt:$internal_port},@out),1) or die $out;
+    is(grep(m{^DROP.*0.0.0.0.+$internal_ip.*dpt:$internal_port},@out),1) or die $out;
+
+    diag("Shutdown ".$domain->name);
+    Ravada::Request->shutdown_domain(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,timeout => 2
+    );
+    wait_request();
+    for ( 1.. 10 ) {
+        run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
+        die $err if $err;
+        @out = split /\n/,$out;
+        warn "DNAT 0 ".Dumper([grep /^DNAT/,@out]);
+
+        last if(!grep(/^DNAT.*$local_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out));
+
+        wait_request();
+    }
+
+    run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
+    die $err if $err;
+    @out = split /\n/,$out;
+
+    is(grep(/^DNAT.*$local_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out),0)
+        or die Dumper(\@out);
+
+    run3(['iptables','-t','nat','-L','POSTROUTING','-n'],\($in, $out, $err));
+    die $err if $err;
+    @out = split /\n/,$out;
+    is(grep(/^SNAT.* 0.0.0.0\/0\s+$internal_ip\s+tcp dpt\:$internal_port to\:$local_ip$/,@out),0)
+        or die Dumper([ grep /^SNAT/, @out]);
+
+    $vm->nat_ip('');
+    $vm->display_ip('');
+    remove_domain($domain);
+    diag("done");
+}
+
+
 ######################################################################
 
 init();
 clean();
 
-for my $vm_name ( reverse vm_names() ) {
+for my $vm_name ( vm_names() ) {
 
     SKIP: {
         my $vm = rvd_back->search_vm($vm_name);
@@ -179,6 +330,7 @@ for my $vm_name ( reverse vm_names() ) {
 
         flush_rules() if !$<;
         _import_base($vm);
+        test_bridge_nat($vm);
         test_bridge($vm);
     }
 }

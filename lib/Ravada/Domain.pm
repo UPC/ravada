@@ -7668,6 +7668,7 @@ sub _check_port($self, $port, $ip=$self->ip, $request=undef) {
 
     return 1 if $err =~ /succeeded!/;
     return 0 if $err =~ /failed/;
+    warn "nc -z -v -w 1 $ip $port";
     warn $err;
     return 0;
 }
