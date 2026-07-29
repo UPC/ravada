@@ -312,7 +312,7 @@ sub test_bridge_nat($vm) {
 init();
 clean();
 
-for my $vm_name ( vm_names() ) {
+for my $vm_name ( reverse vm_names() ) {
 
     SKIP: {
         my $vm = rvd_back->search_vm($vm_name);
