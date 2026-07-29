@@ -179,8 +179,8 @@ sub test_bridge($vm) {
 
 sub _get_alternate_ip {
     my ($in, $out, $err);
-    run3(["ip","route"],\$in, \$out,\ $err);
-
+    run3(["ip","route"], \$in, \$out, \$err);
+    die $err if $err;
     my ($ip) = $out =~ /^\d+\.\d+.* dev virbr.*link src (\d+\.\d+\.\d+\.\d+)/m;
 
     return $ip if $ip;
