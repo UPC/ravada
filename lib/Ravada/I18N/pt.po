@@ -448,7 +448,7 @@ msgstr ""
 msgid "Drivers"
 msgstr "Drivers"
 
-msgid "Yes, shutwdown all the clones"
+msgid "Yes, shutdown all the clones"
 msgstr "Sim, desligar todos os clones"
 
 msgid "Keep in mind that there may be users using a clone"

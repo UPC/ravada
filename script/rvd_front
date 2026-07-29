@@ -190,6 +190,8 @@ hook before_routes => sub {
 
 
   $c->stash(version => $RAVADA->version);
+  $c->stash(choose_node => 0);
+  $c->stash(id_node => 0);
   my $url = $c->req->url->to_abs->path;
   my $host = $c->req->url->to_abs->host;
   my $widget=( $CONFIG_FRONT->{widget} or $RAVADA->setting('/frontend/widget'));
@@ -494,7 +496,8 @@ get '/admin/storage' => sub($c) {
 
     $c->stash(tab => ($c->param('tab') or ''));
     $c->stash('item' => 'storage');
-    $c->stash('id' => $c->stash('id_vm'));
+    $c->stash('id' => $c->stash('id_node'));
+    $c->stash(choose_node => 1);
 
     return $c->render( template => '/main/settings_generic' );
 
@@ -547,18 +550,17 @@ sub _admin_host_devices($c) {
 };
 
 
-get '/admin/networks/*id_vm' => { id_vm => undef} => sub($c) {
+get '/admin/networks/*id_node' => { id_node => undef} => sub($c) {
 
     return access_denied($c) unless $USER->is_admin
     || $USER->can_create_networks || $USER->can_manage_all_networks;
 
     _add_admin_libs($c);
+    _select_vm($c);
 
-    _select_vm($c) if !defined $c->stash('id_vm');
-
-    Ravada::Request->list_networks(
+    my $req = Ravada::Request->list_networks(
         uid => $USER->id
-        ,id_vm => $c->stash('id_vm')
+        ,id_vm => $c->stash('id_node')
     );
 
     return $c->render( template => '/main/admin_networks' );
@@ -610,6 +612,18 @@ get '/list_storage_pools/(:id_vm)' => sub($c) {
 get '/list_nodes.json' => sub {
     my $c = shift;
     $c->render(json => [$RAVADA->list_vms]);
+};
+
+get '/list_nodes_active.json' => sub {
+    my $c = shift;
+    _select_vm($c) if !$c->session('id_node');
+    my $current = $c->session('id_node');
+    my @nodes = $RAVADA->list_nodes_active($current);
+    if (@nodes) {
+        my ($selected) = grep { $_->{_selected} } @nodes;
+        $c->session(id_node => $selected->{id}) if $selected && (!defined $current || $current != $selected->{id});
+    }
+    $c->render(json => \@nodes);
 };
 
 get '/list_nodes_by_id.json' => sub {
@@ -696,6 +710,15 @@ get '/list_routes.json' => sub {
     $c->render(json => [ Ravada::Route->list_networks ]);
 };
 
+get '/v2/networks/list' => sub($c) {
+
+    return access_denied($c) unless $USER->is_admin
+    || $USER->can_create_networks || $USER->can_manage_all_networks;
+
+    $c->render(json => Ravada::Front->list_networks($c->session('id_node')
+            , $USER->id) );
+};
+
 get '/v2/vm/list_networks/(:id_vm)' => sub {
     my $c = shift;
 
@@ -734,7 +757,7 @@ any '/network/new' => sub($c) {
     return $c->render( template => '/main/network_new' );
 };
 
-any '/v2/network/new/#id_vm' => sub($c) {
+any '/v2/network/new' => sub($c) {
 
     return access_denied($c) unless $USER->is_admin
     || $USER->can_create_networks || $USER->can_manage_all_networks;
@@ -747,7 +770,7 @@ any '/v2/network/new/#id_vm' => sub($c) {
 
     my $req = Ravada::Request->new_network(
         uid => $USER->id
-        ,id_vm => $c->stash('id_vm')
+        ,id_vm => $c->session('id_node')
         ,name => $name
     );
     $RAVADA->wait_request($req);
@@ -1007,6 +1030,21 @@ get '/node/connect/(#id)' => sub {
     return $c->render(json => {id_req => $req->id });
 };
 
+get '/v3/choose_node/(#id)' => sub($c) {
+
+    return access_denied_json($c) if !$USER || !$USER->is_admin;
+    return json_error($c,"Missing node in ".$c->req->url->to_abs->path, 400)
+    if !defined $c->stash('id');
+
+    my @nodes = $RAVADA->list_nodes_active( $c->session('id_node'));
+    my ($found) = grep { $_->{id} == $c->stash('id')} @nodes;
+    return json_error($c,"Unknown node ".$c->req->url->to_abs->path, 400)
+    if !$found;
+
+    $c->session(id_node => $c->stash('id'));
+
+    return $c->render(json => { id_node => $c->stash('id')});
+};
 
 get '/list_bases.json' => sub {
     my $c = shift;
@@ -2192,13 +2230,15 @@ get '/list_ldap_attributes/(#cn)' => sub {
     my $field = $Ravada::CONFIG->{ldap}->{field};
     $field = 'cn' if !defined $field;
     my $return;
+    my $i18n = $c->stash->{i18n};
+
 
     if ( $@ ) {
         my $error = $@;
         $error =~ s/(.*) at lib\/Ravada.*/$1/;
         $return = { error => $error };
     } elsif (!$user) {
-        $return = { error => "User not found" };
+        $return = { error => $i18n->localize("User not found") };
     } else {
         my $values;
         for my $attribute ( sort $user->attributes ) {
@@ -2444,12 +2484,7 @@ get '/machine/set_access/(#id_domain)/(#id_access)/(#allowed)/(#last)' => sub {
 
 ##############################################
 
-post '/request/(:name)/' => sub {
-    my $c = shift;
-    my $name = $c->stash('name');
-
-    my $args = decode_json($c->req->body);
-    my $wait = delete $args->{_wait};
+sub _check_request_args($c, $name, $args) {
 
     for (qw(remote_ip uid)) {
         confess "Error: $_ should not be provided".Dumper($args)
@@ -2458,6 +2493,23 @@ post '/request/(:name)/' => sub {
     if ($name =~ /^(start_clones|open_exposed_ports)/) {
         $args->{remote_ip} = _remote_ip($c);
     }
+
+    my %req_id_vm = map { $_ => 1 } qw( create_storage_pool remove_storage_pool
+        new_network create_network remove_network);
+    if ($req_id_vm{$name} && !exists $args->{id_vm}) {
+        $args->{id_vm} = $c->session('id_node');
+    }
+}
+
+post '/request/(:name)/' => sub {
+    my $c = shift;
+    my $name = $c->stash('name');
+
+    my $args = decode_json($c->req->body);
+    my $wait = delete $args->{_wait};
+
+    _check_request_args($c, $name, $args);
+
     app->log->info($USER->name." requesting $name ".encode_json($args)) if $CONFIG_FRONT->{log}->{log};
     my $req;
 
@@ -2914,14 +2966,18 @@ get '/booking' => sub($c) {
     }
 
     if (!$groups_local && !@groups_ldap) {
+        my $i18n = $c->stash->{i18n};
         return $c->render(template => '/ng-templates/error'
-        ,message => "Groups are required to set up bookings. No groups found. <a href='/group/new'>Add new entries here.</a>"
+        ,message => $i18n->localize("Groups are required to set up bookings. No groups found.")
+        ."<a href='/group/new'>".' '.$i18n->localize("Add new entries here.")."</a>"
     );
     }
 
     if (!$members_found) {
+        my $i18n = $c->stash->{i18n};
         return $c->render(template => '/ng-templates/error'
-            ,message => "Groups are required to set up bookings. Some groups where found but no members belong to them. <a href='/admin/groups'>Add new entries here.</a>"
+            ,message => $i18n->localize("Groups are required to set up bookings. Some groups were found but no members belong to them.")
+            ."<a href='/admin/groups'>".' '.$i18n->localize("Add new entries here.")."</a>"
         )
 
     }
@@ -3203,6 +3259,71 @@ get '/translations' => sub($c) {
     return $c->render(json => $lang_name);
 };
 
+get '/text/time_options' => sub($c) {
+
+    my $options = _text_options($c);
+
+    my $i18n = $c->stash->{i18n};
+    for my $entry ( keys %$options ) {
+        my @current;
+        for my $item (@{$options->{$entry}}) {
+            $item->[1]= $i18n->localize($item->[1]);
+            push @current, {
+                id => $item->[0]
+                ,title => $item->[1]
+            };
+        }
+        $options->{$entry} = \@current;
+    }
+
+    return $c->render(json => $options);
+};
+
+sub _text_options($c) {
+    return {
+        hours => [
+            [0, 'hours']
+            ,[1, '1 hour']
+            ,[2, '2 hours']
+            ,[3, '3 hours']
+            ,[6, '6 hours']
+            ,[8, '8 hours']
+        ]
+        ,days => [
+            [0, 'days']
+            ,[1, '1 day']
+            ,[2, '2 days']
+            ,[3, '3 days']
+            ,[6, '6 days']
+        ]
+        ,weeks => [
+            [0, 'weeks']
+            ,[1, '1 week']
+            ,[2, '2 weeks']
+            ,[3, '3 weeks']
+            ,[4, '4 weeks']
+        ]
+        ,months => [
+            [0, 'months']
+            ,[1, '1 month']
+            ,[2, '2 months']
+            ,[3, '3 months']
+            ,[4, '6 months']
+            ,[5, '9 months']
+        ]
+        ,years => [
+            [0, 'years']
+            ,[1, '1 year']
+            ,[2, '2 years']
+            ,[3, '3 years']
+            ,[4, '4 years']
+            ,[5, '5 years']
+        ]
+
+    };
+}
+
+
 sub _translations($c) {
     my $lang_name = _languages();
     $c->stash(lang_name => $lang_name);
@@ -3350,6 +3471,7 @@ websocket '/ws/subscribe' => sub {
                 , login => $USER->name
                 , remote_ip => _remote_ip($c)
                 , client => _headers($c)
+                , i18n => $c->stash->{i18n}
             );
     });
 
@@ -3373,9 +3495,13 @@ get '/booking/(#template).html' => sub($c) {
     return $c->render( template => '/booking/'.$c->stash('template'));
 };
 
-get '/storage/list_pools/(:id_vm)' => sub($c) {
-    my $query = $c->req->query_params;
-    my $pools = $RAVADA->list_storage_pools($USER->id, $c->stash('id_vm'));
+get '/v2/storage/list/:id_node' => {id_node => undef } => sub($c) {
+
+    if (!defined $c->stash('id_node')) {
+        $c->stash('id_node' => $c->session('id_node'));
+    }
+
+    my $pools = $RAVADA->list_storage_pools($USER->id, $c->stash('id_node'));
     return $c->render( json => $pools );
 };
 
@@ -3395,9 +3521,10 @@ get '/storage/list_unused_volumes' => sub($c) {
     return $c->render( json => $output );
 };
 
-any '/storage/new/(:id_vm)' => sub($c) {
+any '/storage/new' => sub($c) {
     _add_admin_libs($c);
 
+    _select_vm($c);
     return $c->render(template => "/main/storage_new");
 };
 
@@ -3832,6 +3959,13 @@ sub admin {
             $c->stash( monitoring => 1 ) if $c->session('monitoring');
         }
     }
+    if ( $page =~ /^(networks|storage)$/ ) {
+
+        $c->stash(choose_node => 1);
+        _select_vm($c);
+
+    }
+
     if ($page eq 'nodes') {
         return access_denied($c) unless $USER->is_admin;
         Ravada::Request->refresh_vms();
@@ -3848,32 +3982,46 @@ sub admin {
         $c->stash( csp => $csp , csp_advanced => $csp_advanced);
         $c->stash(url_login => "/login");
     }
-    if ($page eq 'storage') {
-        _select_vm($c);
-    }
     return _admin_host_devices($c) if ($page eq 'hostdev');
     $c->render( template => 'main/admin_'.$page);
 };
 
 sub _select_vm($c , $type =undef) {
-    my $sth = $RAVADA->_dbh->prepare("SELECT id,name FROM vms WHERE hostname='localhost' AND vm_type=?");
-    my $types = Ravada::Front::list_vm_types();
-    for my $type ('KVM',@$types) {
-        $sth->execute($type);
-        my ($id, $name) = $sth->fetchrow;
-        next if !$id;
-        $c->stash('id_vm' => $id, vm_name => $name);
+    my $id_node_session = $c->session('id_node');
+    if ($id_node_session) {
+        $c->stash('id_node' => $id_node_session);
         return;
     }
-    $sth = $RAVADA->_dbh->prepare("SELECT id,name FROM vms WHERE vm_type=?");
-    for my $type ('KVM',@$types) {
+
+    $id_node_session = (_select_vm_type($type)
+        or _select_vm_type(@{$RAVADA->list_vm_types})
+        or _select_vm_order(@{$RAVADA->list_vm_types})
+    );
+    $c->session('id_node' => $id_node_session);
+    $c->stash('id_node' => $id_node_session);
+}
+
+sub _select_vm_type(@types) {
+    for my $type (@types) {
+        next if !defined $type;
+        my $sth = $RAVADA->_dbh->prepare(
+            "SELECT id,name FROM vms WHERE vm_type=?"
+        );
         $sth->execute($type);
-        my ($id, $name) = $sth->fetchrow;
-        next if !$id;
-        $c->stash('id_vm' => $id, vm_name => $name);
-        return;
+        my ($id) = $sth->fetchrow;
+        return $id if $id;
     }
-    die "Error: No VM found in @$types";
+}
+
+sub _select_vm_by_order() {
+
+    my $sth = $RAVADA->_dbh->prepare(
+        "SELECT id,name FROM vms ORDER BY id"
+    );
+    $sth->execute();
+    my ($id) = $sth->fetchrow;
+    return $id;
+
 }
 
 sub _count_nodes($c) {
@@ -4099,9 +4247,9 @@ sub access_denied {
 
 sub _access_denied { return access_denied(@_) }
 
-sub json_error($c, $error) {
+sub json_error($c, $error, $status=200) {
     $USER->send_message($error);
-    $c->render(json => {error => $error } );
+    $c->render(status => $status, json => {error => $error } );
 }
 
 sub base_id {
@@ -4527,9 +4675,9 @@ sub shutdown_machine {
     if ($domain) {
         my $req;
         $req = Ravada::Request->force_shutdown_domain(id_domain => $domain->id, uid => $USER->id)
-            if ($c->param('force'));
+            if ($c->param('force') eq 'true');
         $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id)
-            unless ($c->param('force'));
+            unless ($c->param('force') eq 'true');
         $id_req = $req->id if $req;
     }
     return $c->redirect_to('/machines') if $type eq 'html';

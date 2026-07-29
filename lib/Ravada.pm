@@ -231,10 +231,13 @@ sub _add_internal_network($self) {
     my ($found) = $sth->fetchrow;
     return if $found;
 
-    $sth = $CONNECTOR->dbh->prepare("SELECT * FROM networks WHERE name like 'internal%'");
+    my %done;
+    $sth = $CONNECTOR->dbh->prepare("SELECT * FROM networks");
     $sth->execute();
-    ($found) = $sth->fetchrow;
-    return if $found;
+    while ( my $row = $sth->fetchrow_hashref) {
+        return if $row->{name} =~ /^internal/;
+        $done{$row->{address}}++;
+    };
 
     my @cmd = ("ip","route");
     my ($in, $out, $err);
@@ -247,11 +250,10 @@ sub _add_internal_network($self) {
         ." VALUES(?,?,?,1,0)"
     );
     my $n=0;
-    my %done;
     for my $net (split /\n/,$out) {
         next if $net =~ /dev virbr/;
         my ($address) = $net =~ m{(^[\d\.]+/\d+)};
-        next if !$address || $done{address}++;
+        next if !$address || $done{$address}++;
         $sth->execute("internal$n",$address, ++$n+1);
 
     }
@@ -404,16 +406,27 @@ sub _update_isos {
                     ,md5_url => ''
                     ,md5 => '1d6bdf5cbc6ca98c31f02d23e418dd96'
         },
+	arch_2603 => {
+                    name => 'Arch Linux 26.03'
+            ,description => 'Arch Linux 2026.03.01 64 bits'
+                   ,arch => 'x86_64'
+                    ,xml => 'bionic-amd64.xml'
+             ,xml_volume => 'bionic64-volume.xml'
+                    ,url => 'https://archive.archlinux.org/iso/2026.03.01/'
+                    ,file_re => 'archlinux-2026.03.01-x86_64.iso'
+		    ,sha256_url => '$url/sha256sums.txt'
+        },
 	mate_noble => {
                     name => 'Ubuntu Mate 24.04 Noble Numbat 64 bits'
-            ,description => 'Ubuntu Mate 24.04 Noble Nubat m64 bits'
+            ,description => 'Ubuntu Mate 24.04 Noble Numbat 64 bits'
                    ,arch => 'x86_64'
                     ,xml => 'noble-amd64.xml'
              ,xml_volume => 'focal_fossa64-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/24.04.*/release/ubuntu-mate-24.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
-                ,min_ram => 3
+                ,min_ram => 4
+		,min_disk_size => '20'
         },
 	mate_jammy=> {
                     name => 'Ubuntu Mate 22.04 Jammy Jellyfish 64 bits'
@@ -424,7 +437,8 @@ sub _update_isos {
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/22.04.*/release/ubuntu-mate-22.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
-                ,min_ram => 1
+                ,min_ram => 4
+		,min_disk_size => '20'
         },
 
 	mate_focal_fossa => {
@@ -436,7 +450,8 @@ sub _update_isos {
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/20.04.*/release/ubuntu-mate-20.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
-                ,min_ram => 1
+                ,min_ram => 4
+		,min_disk_size => '20'
         },
         mate_bionic => {
                     name => 'Ubuntu Mate 18.04 Bionic 64 bits'
@@ -446,7 +461,8 @@ sub _update_isos {
              ,xml_volume => 'bionic64-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/18.04.*/release/ubuntu-mate-18.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
-                ,min_ram => 1
+                ,min_ram => 4
+		,min_disk_size => '20'
         },
         mate_bionic_i386 => {
                     name => 'Ubuntu Mate 18.04 Bionic 32 bits'
@@ -456,7 +472,8 @@ sub _update_isos {
              ,xml_volume => 'bionic32-volume.xml'
                     ,url => 'http://cdimage.ubuntu.com/ubuntu-mate/releases/18.04.*/release/ubuntu-mate-18.04.*-desktop-i386.iso'
                 ,sha256_url => '$url/SHA256SUMS'
-                ,min_ram => 1
+                ,min_ram => 4
+		,min_disk_size => '20'
         },
 	,focal_fossa=> {
                     name => 'Ubuntu 20.04 Focal Fossa'
@@ -467,8 +484,8 @@ sub _update_isos {
                     ,url => 'http://releases.ubuntu.com/20.04/'
                 ,file_re => '^ubuntu-20.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
-          ,min_disk_size => '9'
-          ,min_ram => 1
+          ,min_disk_size => '25'
+          ,min_ram => 4
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
                    ,arch => 'x86_64'
         }
@@ -481,7 +498,7 @@ sub _update_isos {
                     ,url => 'http://releases.ubuntu.com/22.04/'
                 ,file_re => '^ubuntu-22.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
-          ,min_disk_size => '14'
+          ,min_disk_size => '25'
           ,min_ram => 4
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
                    ,arch => 'x86_64'
@@ -496,12 +513,27 @@ sub _update_isos {
                     ,url => 'http://releases.ubuntu.com/24.04/'
                 ,file_re => '^ubuntu-24.04.*-desktop-amd64.iso'
                 ,sha256_url => '$url/SHA256SUMS'
-          ,min_disk_size => '14'
+          ,min_disk_size => '25'
           ,min_ram => 4
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
                    ,arch => 'x86_64'
 
         }
+        ,ubuntu_resolute => {
+                    name => 'Ubuntu 26.04 Resolute Raccoon'
+            ,description => 'Ubuntu 26.04 Resolute Raccoon 64 bits'
+                    ,xml => 'noble-amd64.xml'
+             ,xml_volume => 'focal_fossa64-volume.xml'
+                    ,url => 'http://releases.ubuntu.com/26.04/'
+                ,file_re => '^ubuntu-26.04.*-desktop-amd64.iso'
+                ,sha256_url => '$url/SHA256SUMS'
+          ,min_disk_size => '25'
+          ,min_ram => 6
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+                   ,arch => 'x86_64'
+
+        }
+
 
 
         
@@ -555,9 +587,48 @@ sub _update_isos {
         ,sha256_url => '$url/alpine-standard-3.16.*.iso.sha256'
             ,min_disk_size => '1'
         }
+	,alpine323_64 => {
+            name => 'Alpine 3.23 64 bits'
+            ,description => 'Alpine Linux 3.23 64 bits ( Minimal Linux Distribution )'
+            ,arch => 'x86_64'
+            ,xml => 'alpine-amd64.xml'
+            ,xml_volume => 'alpine381_64-volume.xml'
+            ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.23/releases/x86_64/'
+            ,file_re => 'alpine-standard-3.23.*-x86_64.iso'
+            ,sha256_url => '$url/alpine-standard-3.23.*.iso.sha256'
+            ,min_disk_size => '2'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+        }
+        ,alpine323_32 => {
+            name => 'Alpine 3.23 32 bits'
+            ,description => 'Alpine Linux 3.23 32 bits ( Minimal Linux Distribution )'
+            ,arch => 'i686'
+            ,xml => 'alpine-i386.xml'
+            ,xml_volume => 'alpine381_32-volume.xml'
+            ,url => 'http://dl-cdn.alpinelinux.org/alpine/v3.23/releases/x86/'
+            ,options => { machine => 'pc-i440fx' }
+            ,file_re => 'alpine-standard-3.23.*-x86.iso'
+            ,sha256_url => '$url/alpine-standard-3.23.*.iso.sha256'
+            ,min_disk_size => '1'
+        }
+          ,kubuntu_64_resolute => {
+            name => 'Kubuntu 26.04 Resolute Raccoon'
+            ,description => 'Kubuntu 26.04 Resolute Raccoon 64 bits'
+            ,arch => 'x86_64'
+            ,xml => 'noble-amd64.xml'
+            ,xml_volume => 'focal_fossa64-volume.xml'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,url => 'http://cdimage.ubuntu.com/kubuntu/releases/26.04.*/release/'
+            ,file_re => 'kubuntu-26.04.*-desktop-amd64.iso'
+            ,rename_file => 'kubuntu_resolute.iso'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+            ,min_ram => 6
+            ,min_disk_size => '25'
+        }
+
 	      ,kubuntu_64_noble => {
             name => 'Kubuntu 24.04 Noble Nombat'
-            ,description => 'Kubuntu 22.04 Noble Nombat 64 bits'
+            ,description => 'Kubuntu 24.04 Noble Nombat 64 bits'
             ,arch => 'x86_64'
             ,xml => 'noble-amd64.xml'
             ,xml_volume => 'focal_fossa64-volume.xml'
@@ -566,8 +637,8 @@ sub _update_isos {
             ,file_re => 'kubuntu-24.04.*-desktop-amd64.iso'
             ,rename_file => 'kubuntu_noble.iso'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
-            ,min_ram => 3
-            ,min_disk_size => 11
+            ,min_ram => 4
+            ,min_disk_size => '25'
         }
 
 	      ,kubuntu_64_jammy => {
@@ -581,8 +652,8 @@ sub _update_isos {
             ,file_re => 'kubuntu-22.04.*-desktop-amd64.iso'
             ,rename_file => 'kubuntu_jammy.iso'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
-            ,min_ram => 3
-            ,min_disk_size => 11
+            ,min_ram => 4
+            ,min_disk_size => '25'
         }
 	      ,kubuntu_64_focal_fossa => {
             name => 'Kubuntu 20.04 Focal Fossa 64 bits'
@@ -595,7 +666,8 @@ sub _update_isos {
             ,file_re => 'kubuntu-20.04.*-desktop-amd64.iso'
             ,rename_file => 'kubuntu_focal_fossa_64.iso'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
-                ,min_ram => 1
+                ,min_ram => 4
+		,min_disk_size => '25'
         }
         ,suse_15 => {
             name => "openSUSE Leap 15"
@@ -603,9 +675,31 @@ sub _update_isos {
             ,arch => 'x86_64'
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
-            ,url => 'https://download.opensuse.org/distribution/leap/15.4/iso/'
+            ,url => 'https://download.opensuse.org/distribution/leap/15.6/iso/'
             ,file_re => 'openSUSE-Leap-15.\d-NET-x86_64-Current.iso'
 
+        }
+	,suse_16 => {
+            name => "openSUSE Leap 16"
+            ,description => "openSUSE Leap 16 64 bits"
+            ,arch => 'x86_64'
+            ,xml => 'bionic-amd64.xml'
+            ,xml_volume => 'bionic64-volume.xml'
+            ,url => 'https://download.opensuse.org/distribution/leap/16.0/installer/iso/'
+            ,file_re => 'agama-installer\.x86_64-.*-Leap_16\.0-Build.*\.iso'
+
+        }
+        ,xubuntu_resolute => {
+            name => 'Xubuntu 26.04 Resolute Raccoon 64 bits'
+            ,description => 'Xubuntu 26.04 Resolute Raccoon 64 bits'
+            ,arch => 'x86_64'
+            ,xml => 'bionic-amd64.xml'
+            ,xml_volume => 'bionic64-volume.xml'
+            ,url => 'https://ftp.lysator.liu.se/ubuntu-dvd/xubuntu/releases/26.04.*/release/'
+            ,file_re => 'xubuntu.26.04.*desktop.*.iso'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
+	    ,min_ram => 2
+	    ,min_disk_size => '20'
         }
         ,xubuntu_noble => {
             name => 'Xubuntu 24.04 Noble Nombat 64 bits'
@@ -614,8 +708,10 @@ sub _update_isos {
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
             ,url => 'https://ftp.lysator.liu.se/ubuntu-dvd/xubuntu/releases/24.04.*/release/'
-            ,file_re => 'xubuntu.*desktop.*.iso'
+            ,file_re => 'xubuntu.24.04.*desktop.*.iso'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
+	    ,min_ram => 2
+	    ,min_disk_size => '20'
         }
         ,xubuntu_bionic => {
             name => 'Xubuntu 18.04 Bionic Beaver 32 bits'
@@ -627,16 +723,32 @@ sub _update_isos {
             ,url => 'http://archive.ubuntu.com/ubuntu/dists/bionic/main/installer-i386/current/images/netboot/'
             ,file_re => 'mini.iso'
             ,rename_file => 'xubuntu_bionic_32.iso'
+	     ,min_ram => 2
+	    ,min_disk_size => '20'
+        }
+        ,lubuntu_resolute => {
+            name => 'Lubuntu 26.04 Resolute Raccoon'
+            ,description => 'Lubuntu 26.04 Resolute Raccoon 64 bits (LTS)'
+            ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/26.04.*/release/'
+            ,file_re => 'lubuntu-26.04.*-desktop-amd64.iso'
+            ,sha256_url => '$url/SHA256SUMS'
+            ,xml => 'yakkety64-amd64.xml'
+            ,xml_volume => 'yakkety64-volume.xml'
+            ,min_disk_size => '10'
+	    ,min_ram => 2
+            ,arch => 'x86_64'
+            ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
         ,lubuntu_noble => {
             name => 'Lubuntu 24.04 Noble Nombat'
-            ,description => 'Xubuntu 24.04 Noble Nombat 64 bits (LTS)'
+            ,description => 'Lubuntu 24.04 Noble Nombat 64 bits (LTS)'
             ,url => 'http://cdimage.ubuntu.com/lubuntu/releases/24.04.*/release/'
             ,file_re => 'lubuntu-24.04.*-desktop-amd64.iso'
             ,sha256_url => '$url/SHA256SUMS'
             ,xml => 'yakkety64-amd64.xml'
             ,xml_volume => 'yakkety64-volume.xml'
             ,min_disk_size => '10'
+	    ,min_ram => 1
             ,arch => 'x86_64'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
@@ -672,6 +784,17 @@ sub _update_isos {
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
             ,arch => 'i686'
+        }
+	,debian_stretch_64 => {
+            name =>'Debian 9 Stretch 64 bits'
+            ,description => 'Debian 9 Stretch 64 bits (XFCE desktop)'
+            ,url => 'https://cdimage.debian.org/cdimage/archive/^9\.1\d+.*\d$/amd64/iso-cd/'
+            ,file_re => 'debian-9.[\d\.]+-amd64-xfce-CD-1.iso'
+            ,md5_url => '$url/MD5SUMS'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+            ,arch => 'x86_64'
         }
         ,debian_buster_64=> {
             name =>'Debian 10 Buster 64 bits'
@@ -758,28 +881,6 @@ sub _update_isos {
             ,min_ram => 3
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
         }
-        ,devuan_beowulf_amd64=> {
-            name =>'Devuan 10 Beowulf 64 bits'
-            ,description => 'Devuan Beowulf Desktop Live (amd64)'
-            ,arch => 'x86_64'
-            ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_beowulf/desktop-live/'
-            ,file_re => 'devuan_beowulf_.*_amd64_desktop-live.iso'
-            ,sha256_url => '$url/SHASUMS.txt'
-            ,xml => 'jessie-amd64.xml'
-            ,xml_volume => 'jessie-volume.xml'
-            ,min_disk_size => '10'
-        }
-        ,devuan_beowulf_i386=> {
-            name =>'Devuan 10 Beowulf 32 bits'
-            ,description => 'Devuan Beowulf Desktop Live (i386)'
-            ,arch => 'i686'
-            ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_beowulf/desktop-live/'
-            ,file_re => 'devuan_beowulf_.*_i386_desktop-live.iso'
-            ,sha256_url => '$url/SHASUMS.txt'
-            ,xml => 'jessie-i386.xml'
-            ,xml_volume => 'jessie-volume.xml'
-            ,min_disk_size => '10'
-        }
         ,devuan_daedalus_amd64=> {
             name =>'Devuan 12 Daedalus 64 bits'
             ,description => 'Devuan Daedalus Desktop Live (amd64)'
@@ -801,17 +902,27 @@ sub _update_isos {
             ,xml_volume => 'jessie-volume.xml'
             ,min_disk_size => '10'
         }
-
-        ,parrot_xfce_amd64 => {
-            name => 'Parrot Home Edition XFCE'
-            ,description => 'Parrot Home Edition XFCE 64 Bits'
+	 ,devuan_excalibur_amd64=> {
+            name =>'Devuan 13 Excalibur 64 bits'
+            ,description => 'Devuan Excalibur Desktop Live (amd64)'
+            ,arch => 'x86_64'
+            ,url => 'http://tw1.mirror.blendbyte.net/devuan-cd/devuan_excalibur/desktop-live/'
+            ,file_re => 'devuan_excalibur_.*_amd64_desktop-live.iso'
+            ,xml => 'jessie-amd64.xml'
+            ,xml_volume => 'jessie-volume.xml'
+            ,min_disk_size => '10'
+            ,options => { machine => 'pc-q35'}
+        }
+	,parrot_xfce_amd64 => {
+            name => 'Parrot Home Edition XFCE 7.3'
+            ,description => 'Parrot Home Edition XFCE 7.3 64 Bits'
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://download.parrot.sh/parrot/iso/6.*/'
-            ,file_re => 'Parrot-home-6.*_amd64.iso'
-            ,sha256_url => ''
-            ,min_disk_size => '11'
+            ,url => 'https://download.parrot.sh/parrot/iso/7.3/'
+            ,file_re => 'Parrot-home-7\.3.*_amd64\.iso'
+            ,sha256_url => '$url/signed-hashes.txt'
+            ,min_disk_size => '15'
         }
         ,kali_64 => {
             name => "Kali Linux $year"
@@ -1476,7 +1587,9 @@ sub _update_table($self, $table, $field, $data, $verbose=0) {
 sub _remove_old_isos {
     my $self = shift;
     for my $sql (
-        "DELETE FROM iso_images "
+        "Delete FROM iso_images "
+            ."WHERE url like 'https://download.parrot.sh/parrot/iso/7.1/'"
+        ,"DELETE FROM iso_images "
             ."  WHERE url like '%debian-9.0%iso'"
         ,"DELETE FROM iso_images"
             ."  WHERE name like 'Debian%' "
@@ -1896,12 +2009,12 @@ sub _add_grants($self) {
     $self->_add_grant('screenshot_clones', 0,"can get a screenshot from clones of own virtual machines.");
     $self->_add_grant('start_many',0,"can have an unlimited amount of machines started.");
     $self->_add_grant('expose_ports',0,"can expose virtual machine ports.");
-    $self->_add_grant('expose_ports_clones',0,"Can expose ports from clones of own virtual machines.");
-    $self->_add_grant('expose_ports_all',0,"Can expose ports from any virtual machine.");
+    $self->_add_grant('expose_ports_clones',0,"can expose ports from clones of own virtual machines.");
+    $self->_add_grant('expose_ports_all',0,"can expose ports from any virtual machine.");
     $self->_add_grant('view_groups',0,'can view groups.');
     $self->_add_grant('manage_groups',0,'can manage groups.');
     $self->_add_grant('start_limit',0,"can have their own limit on started machines.", 1, 0);
-    $self->_add_grant('view_all',0,"The user can start and access the screen of any virtual machine");
+    $self->_add_grant('view_all',0,"the user can start and access the screen of any virtual machine");
     $self->_add_grant('create_disk',0,'can create disk volumes');
     $self->_add_grant('quota_disk',0,'disk space limit',1);
     $self->_add_grant('create_networks',0,'can create virtual networks.');
@@ -2056,6 +2169,14 @@ sub _upgrade_table($self, $table, $field, $definition) {
             ." $row->{TYPE_NAME} -> $new_type \n"
             ." in $table\n$definition\n"  if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
         print "-" if $FIRST_TIME_RUN && $ENV{TERM};
+
+        if ($table eq 'requests' && $field =~ /^after_request/
+            && $row->{TYPE_NAME} =~ /TEXT|CHAR/i && $new_type =~ /int|INTEGER/i) {
+            my $sth_clean = $CONNECTOR->dbh->prepare(
+                "UPDATE requests set $field=NULL "
+            );
+            $sth_clean->execute;
+        }
         $dbh->do("alter table $table change $field $field $definition");
 
         $self->_create_constraints($table, [$field, $constraint]) if $constraint;
@@ -3006,6 +3127,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','show_clones' , 'int not null default 1');
     $self->_upgrade_table('domains','config_no_hd' , 'text');
     $self->_upgrade_table('domains','networking' , 'varchar(32)');
+    $self->_upgrade_table('domains','ports_exposed','int not null default 0');
 
     $self->_upgrade_table('domains_network','allowed','int not null default 1');
 
@@ -4289,6 +4411,8 @@ sub _domain_working {
     my ($id_domain, $req) = @_;
 
     confess "Missing request" if !defined $req;
+
+    return if $req->command =~ /list_cpu_models/;
 
     if (!$id_domain) {
         $id_domain = $req->defined_arg('id_base');
@@ -5965,6 +6089,7 @@ sub _cmd_refresh_machine($self, $request) {
             return;
         }
         $domain->_fetch_networking_mode() if $domain->is_known();
+        $domain->_data('ports_exposed' => 0) if $domain->_data('ports_exposed');
     }
     $domain->info($user);
     $domain->client_status(1) if $is_active;
@@ -6101,7 +6226,7 @@ sub _cmd_connect_node($self, $request) {
     die "I can't ping $hostname\n"
         if !$node || ! $node->ping();
 
-    $request->error("Ping ok. Trying to connect to $hostname");
+    $request->_data(output => "Ping ok. Trying to connect to $hostname");
     my ($out, $err);
     eval {
         ($out, $err) = $node->run_command('/bin/true');
@@ -6116,7 +6241,8 @@ sub _cmd_connect_node($self, $request) {
         die $err if $err;
     }
     $node->connect() && do {
-        $request->error("Connection OK");
+        $request->_data(output => "Connection OK");
+        $request->error("");
         $node->_data('cached_down' => 0);
     };
 }
@@ -7296,6 +7422,7 @@ sub _cmd_remove_expose($self, $request) {
 sub _cmd_open_exposed_ports($self, $request) {
     my $domain = Ravada::Domain->open($request->id_domain) or return;
     return if !$domain->list_ports();
+    $domain->_data('ports_exposed' => 1);
 
     my $uid = $request->args('uid');
     my $user = Ravada::Auth::SQL->search_by_id( $uid )
@@ -7314,6 +7441,7 @@ sub _cmd_open_exposed_ports($self, $request) {
         ,id_domain => $domain->id
         ,retry => 20
         ,timeout => 180
+        ,_force => 1
     );
 
 }

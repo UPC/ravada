@@ -12,7 +12,7 @@ Ravada::Front - Web Frontend library for Ravada
 use Carp qw(carp);
 use DateTime;
 use DateTime::Format::DateParse;
-use Hash::Util qw(unlock_keys lock_hash lock_keys);
+use Hash::Util qw(unlock_keys unlock_hash lock_hash lock_keys);
 use IPC::Run3 qw(run3);
 use JSON::XS;
 use Moose;
@@ -216,6 +216,7 @@ sub _get_clone_info($user, $base, $clone = Ravada::Front::Domain->open($base->{i
                         ,is_active => $clone->is_active
                         ,screenshot => $clone->_data('screenshot')
                         ,date_changed => $clone->_data('date_changed')
+                        ,autostart=> $clone->_data('autostart')
         };
 
     $c->{can_hibernate} = ($clone->is_active && !$clone->is_volatile);
@@ -344,6 +345,7 @@ sub list_domains($self, %args) {
         ." FROM domains d LEFT JOIN vms "
         ."  ON d.id_vm = vms.id ";
 
+    my $i18n = delete $args{i18n};
     my ($where, $values) = $self->_create_where(\%args);
 
     my $sth = $CONNECTOR->dbh->prepare("$query $where ORDER BY d.id");
@@ -387,6 +389,17 @@ sub list_domains($self, %args) {
                 }
             }
             $row->{date_status_change} = Ravada::Domain::_date_status_change($row->{date_status_change});
+            if (defined $i18n
+                && exists $row->{date_status_change}->{duration}
+                && ref($row->{date_status_change}->{duration})) {
+                if ($row->{date_status_change}->{duration}->[0]
+                    && $row->{date_status_change}->{duration}->[0] =~ /^[a-z]+$/i) {
+                    $row->{date_status_change}->{duration}->[0] = $i18n->localize($row->{date_status_change}->{duration}->[0]);
+                }
+                if ($row->{date_status_change}->{duration}->[1]) {
+                    $row->{date_status_change}->{duration}->[1] = $i18n->localize($row->{date_status_change}->{duration}->[1]);
+                }
+            }
         }
         delete $row->{spice_password};
         push @domains, ($row);
@@ -659,6 +672,42 @@ sub list_vms($self, $type=undef) {
         push @list,($row);
     }
     $sth->finish;
+    return @list;
+}
+
+=head2 list_nodes_active
+
+Returns a list of Active Nodes
+
+=cut
+
+sub list_nodes_active($self, $current=undef) {
+
+    my $sql = "SELECT id,name,hostname,is_active, enabled FROM vms "
+        ." WHERE is_active=1 AND enabled=1";
+
+    my $sth = $CONNECTOR->dbh->prepare($sql." ORDER BY vm_type,name");
+    $sth->execute();
+
+    my $found_selected=0;
+    my @list;
+    while (my $row = $sth->fetchrow_hashref) {
+        delete $row->{vm_type};
+        $row->{_selected} = 0;
+        if ( defined $current && $row->{id} == $current ) {
+            $row->{_selected} = 1;
+            $found_selected++;
+        }
+        lock_hash(%$row);
+        push @list,($row);
+    }
+    $sth->finish;
+    if ( defined $current && !$found_selected && @list ) {
+        warn "Warning: Node id '$current' not active\n";
+        unlock_hash(%{$list[0]});
+        $list[0]->{_selected} = 1;
+        lock_hash(%{$list[0]});
+    }
     return @list;
 }
 

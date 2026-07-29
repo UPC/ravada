@@ -844,6 +844,7 @@ sub _wait_for_domain($name) {
         sleep 1;
         wait_request();
     }
+    die "Error: domain $name not created" if !$domain;
     return $domain;
 }
 

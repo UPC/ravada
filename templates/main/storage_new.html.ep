@@ -4,9 +4,9 @@
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="docu
 ment">
 <div id="wrapper">
-%=  include 'bootstrap/navigation'
+%=  include 'bootstrap/navigation', choose_node => 1
 <div id="page-wrapper" ng-controller="new_storage"
-                       ng-init="init(<%= $id_vm %>,'<%= url_for('ws_subscribe')->to_abs %>')"
+                       ng-init="init(<%= $id_node %>,'<%= url_for('ws_subscribe')->to_abs %>')"
 >
 
     <div class="card">
