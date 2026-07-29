@@ -40,8 +40,7 @@ sub _import_base($vm) {
 }
 
 sub _wait_ip($domain) {
-    my $remote_ip = '1.2.3.4.5';
-    $domain->start(user => user_admin, remote_ip => $remote_ip) unless $domain->is_active();
+    my $remote_ip = '1.2.3.5';
     for ( 1 .. 30 ) {
         my $ip = $domain->ip();
         return $ip if $ip;
