@@ -6793,12 +6793,15 @@ sub _around_ip($orig, $self, @args) {
     if (!$self->readonly() && $self->list_ports()) {
         if ($ip && !$self->_data('ports_exposed')) {
             $self->_data('ports_exposed' => 1);
+            my @ip;
+            my $remote_ip = $self->remote_ip();
+            @ip = ( remote_ip => $remote_ip ) if $remote_ip;
             my $req = Ravada::Request->open_exposed_ports(
                 uid => Ravada::Utils::user_daemon->id
                 ,id_domain => $self->id
                 ,retry => 20
-                ,remote_ip => $self->remote_ip()
                 ,_force => 1
+                ,@ip
             );
         }
         if (!$ip && $self->_data('ports_exposed')) {
