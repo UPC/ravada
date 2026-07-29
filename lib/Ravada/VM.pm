@@ -917,11 +917,13 @@ will be returned if you connect from a different network than default.
 =cut
 
 sub interface_ip($self, $remote_ip=undef) {
-    my $key = '_interface_ip_'.($remote_ip or '');
+    my $key = '_interface_ip_'.($remote_ip // '');
     return $self->{$key} if exists $self->{$key};
 
     my $ip = $self->_interface_ip($remote_ip);
-    $self->{$key}=$ip;
+    $ip = $self->ip() if !defined($ip) || $ip eq '';
+
+    $self->{$key} = $ip;
     return $ip;
 }
 

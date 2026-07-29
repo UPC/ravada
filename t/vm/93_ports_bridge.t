@@ -7,7 +7,7 @@ use IPC::Run3;
 use JSON::XS;
 use Test::More;
 use YAML qw(LoadFile);
-
+use XML::LibXML;
 use lib 't/lib';
 use Test::Ravada;
 
@@ -40,8 +40,7 @@ sub _import_base($vm) {
 }
 
 sub _wait_ip($domain) {
-    my $remote_ip = '1.2.3.4.5';
-    $domain->start(user => user_admin, remote_ip => $remote_ip) unless $domain->is_active();
+    my $remote_ip = '1.2.3.5';
     for ( 1 .. 30 ) {
         my $ip = $domain->ip();
         return $ip if $ip;
@@ -180,8 +179,8 @@ sub test_bridge($vm) {
 
 sub _get_alternate_ip {
     my ($in, $out, $err);
-    run3(["ip","route"],\$in, \$out,\ $err);
-
+    run3(["ip","route"], \$in, \$out, \$err);
+    die $err if $err;
     my ($ip) = $out =~ /^\d+\.\d+.* dev virbr.*link src (\d+\.\d+\.\d+\.\d+)/m;
 
     return $ip if $ip;
@@ -255,6 +254,7 @@ sub test_bridge_nat($vm) {
     is(grep(/^SNAT.* 0.0.0.0\/0\s+$internal_ip\s+tcp dpt\:$internal_port to\:$interface_ip$/,@out),1);
 
     run3(['iptables-save','-t','nat'],\($in, $out, $err));
+    die $err if $err;
     @out = grep /SNAT/, split/\n/,$out;
     my @snat = grep /SNAT/, @out;
     is(scalar(@snat),1);
