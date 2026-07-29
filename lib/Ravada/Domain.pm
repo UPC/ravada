@@ -3970,7 +3970,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
     $public_port = $self->_set_public_port($id_port, $internal_port, $name, $restricted)
     if !$public_port;
 
-    my $local_ip = $self->_vm->ip;
+    my $local_ip = $self->_vm->interface_ip($remote_ip);
     $sth = $$CONNECTOR->dbh->prepare("UPDATE domain_ports set internal_ip=?"
             ." WHERE id_domain=? AND internal_port=?"
     );
@@ -6797,6 +6797,7 @@ sub _around_ip($orig, $self, @args) {
                 uid => Ravada::Utils::user_daemon->id
                 ,id_domain => $self->id
                 ,retry => 20
+                ,remote_ip => $self->remote_ip()
                 ,_force => 1
             );
         }
@@ -7668,7 +7669,6 @@ sub _check_port($self, $port, $ip=$self->ip, $request=undef) {
 
     return 1 if $err =~ /succeeded!/;
     return 0 if $err =~ /failed/;
-    warn "nc -z -v -w 1 $ip $port";
     warn $err;
     return 0;
 }

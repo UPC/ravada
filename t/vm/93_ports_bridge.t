@@ -40,9 +40,11 @@ sub _import_base($vm) {
 }
 
 sub _wait_ip($domain) {
-    $domain->start(user => user_admin, remote_ip => '1.2.3.5') unless $domain->is_active();
+    my $remote_ip = '1.2.3.4.5';
+    $domain->start(user => user_admin, remote_ip => $remote_ip) unless $domain->is_active();
     for ( 1 .. 30 ) {
-        return $domain->ip if $domain->ip;
+        my $ip = $domain->ip();
+        return $ip if $ip;
         diag("Waiting for ".$domain->name. " ip") if !(time % 10);
         sleep 1;
     }
@@ -199,8 +201,6 @@ sub test_bridge_nat($vm) {
     $vm->nat_ip($nat_ip);
     $vm->display_ip($display_ip);
 
-    diag("NAT IP: ".$vm->nat_ip." , display_ip: ".$vm->display_ip);
-
     my $domain= $BASE->clone(name => new_domain_name, user => user_admin);
     is($domain->has_nat_interfaces,1,"Expecting ".$domain->name." has nat "
         .$vm->name);
@@ -220,8 +220,7 @@ sub test_bridge_nat($vm) {
         ,id_domain => $domain->id
         ,remote_ip => $remote_ip
     );
-    wait_request(debug => 0);
-    exit;
+    wait_request(debug => 0 , skip => 'refresh_machine_ports');
 
     my $internal_ip = _wait_ip($domain);
     $domain->ip;
@@ -234,6 +233,7 @@ sub test_bridge_nat($vm) {
     $internal_net =~ s{(.*)\.\d+$}{$1.0/24};
 
     my $local_ip = $vm->ip;
+    my $interface_ip = $vm->interface_ip($remote_ip);
     my $exposed_port = $domain->exposed_port($internal_port);
     my $public_port = $exposed_port->{public_port};
 
@@ -245,17 +245,19 @@ sub test_bridge_nat($vm) {
     run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
     die $err if $err;
     my @out = split /\n/,$out;
-    is(grep(/^DNAT.*$local_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out),1)
+    is(grep(/^DNAT.*$interface_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out),1)
         or die Dumper(\@out);
 
     run3(['iptables','-t','nat','-L','POSTROUTING','-n'],\($in, $out, $err));
     die $err if $err;
     @out = split /\n/,$out;
-    is(grep(/^SNAT.* 0.0.0.0\/0\s+$internal_ip\s+tcp dpt\:$internal_port to\:$local_ip$/,@out),1);
+
+    is(grep(/^SNAT.* 0.0.0.0\/0\s+$internal_ip\s+tcp dpt\:$internal_port to\:$interface_ip$/,@out),1);
 
     run3(['iptables-save','-t','nat'],\($in, $out, $err));
     @out = grep /SNAT/, split/\n/,$out;
-    warn "SNAT: ".Dumper([grep /SNAT/, @out]);
+    my @snat = grep /SNAT/, @out;
+    is(scalar(@snat),1);
 
     run3(['iptables','-L','FORWARD','-n'],\($in, $out, $err));
     die $err if $err;
@@ -268,20 +270,20 @@ sub test_bridge_nat($vm) {
     is(grep(m{^ACCEPT.*$remote_ip\s+$internal_ip.*dpt:$internal_port},@out),1) or die $out;
     is(grep(m{^DROP.*0.0.0.0.+$internal_ip.*dpt:$internal_port},@out),1) or die $out;
 
-    diag("Shutdown ".$domain->name);
     Ravada::Request->shutdown_domain(
         uid => user_admin->id
         ,id_domain => $domain->id
         ,timeout => 2
     );
-    wait_request();
+    wait_request(debug => 0, skip => 'refresh_machine_ports');
     for ( 1.. 10 ) {
         run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
         die $err if $err;
         @out = split /\n/,$out;
-        warn "DNAT 0 ".Dumper([grep /^DNAT/,@out]);
 
-        last if(!grep(/^DNAT.*$local_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out));
+        my ($dnat) = grep(/^DNAT.*$local_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out);
+        my ($snat) = grep(/^SNAT.* 0.0.0.0\/0\s+$internal_ip\s+tcp dpt\:$internal_port to\:$interface_ip$/,@out);
+        last if !$dnat && !$snat;
 
         wait_request();
     }
@@ -302,7 +304,6 @@ sub test_bridge_nat($vm) {
     $vm->nat_ip('');
     $vm->display_ip('');
     remove_domain($domain);
-    diag("done");
 }
 
 

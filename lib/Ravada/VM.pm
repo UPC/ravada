@@ -907,6 +907,15 @@ sub _set_display_ip($self, $value) {
     $self->_data( display_ip => $value );
 }
 
+sub interface_ip($self, $remote_ip=undef) {
+    my $key = '_interface_ip_'.($remote_ip or '');
+    return $self->{$key} if exists $self->{$key};
+
+    my $ip = $self->_interface_ip($remote_ip);
+    $self->{$key}=$ip;
+    return $ip;
+}
+
 sub _list_ip_address($self) {
     my @cmd = ("ip","address","show");
     my ($out, $err) = $self->run_command(@cmd);
