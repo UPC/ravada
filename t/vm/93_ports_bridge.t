@@ -254,6 +254,7 @@ sub test_bridge_nat($vm) {
     is(grep(/^SNAT.* 0.0.0.0\/0\s+$internal_ip\s+tcp dpt\:$internal_port to\:$interface_ip$/,@out),1);
 
     run3(['iptables-save','-t','nat'],\($in, $out, $err));
+    die $err if $err;
     @out = grep /SNAT/, split/\n/,$out;
     my @snat = grep /SNAT/, @out;
     is(scalar(@snat),1);
