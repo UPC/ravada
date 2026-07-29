@@ -7,7 +7,7 @@ use IPC::Run3;
 use JSON::XS;
 use Test::More;
 use YAML qw(LoadFile);
-
+use XML::LibXML;
 use lib 't/lib';
 use Test::Ravada;
 
