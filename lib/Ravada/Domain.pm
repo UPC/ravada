@@ -4004,7 +4004,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
                         ,$internal_ip, 'nat', 'POSTROUTING', 'SNAT',
                         ,{'protocol' => 'tcp'
                             ,'d_port' => $internal_port
-                            ,'to_source' => $local_ip
+                            ,'to_source' => $bridge_ip
                         });
 
             $self->_log_iptable(iptables => \@iptables_arg
@@ -4018,7 +4018,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
                 ,d => $internal_ip
                 ,dport => $internal_port
                 ,j => 'SNAT'
-                ,'to-source' => $local_ip
+                ,'to-source' => $bridge_ip
             );
         }
 
