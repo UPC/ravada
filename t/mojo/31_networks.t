@@ -93,7 +93,6 @@ sub test_networks_access($vm_name) {
         , "/v2/vm/list_networks/$id_vm");
     for my $url (@urls) {
         $t->get_ok($url)->status_is(403);
-        diag($t->tx->res->code()." ".$url);
     }
 
     user_admin->grant($user,'create_networks');
