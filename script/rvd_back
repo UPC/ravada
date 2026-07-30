@@ -811,7 +811,6 @@ sub remove_clones_rec($id_parent, $ravada) {
         } 
         else {
             print "Deleting clone '$clone_name'.\n";
-            #hacerlo con el request en vez de hacer un delete de base de datos
             Ravada::Request->remove_domain(
                 uid => Ravada::Utils::user_daemon()->id
                 ,name => $clone_name
