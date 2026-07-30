@@ -1032,7 +1032,7 @@ get '/node/connect/(#id)' => sub {
 
 get '/v3/choose_node/(#id)' => sub($c) {
 
-    return access_denied_json($c) if !$USER || !$USER->is_admin;
+    return access_denied_json($c) if !$USER || !$USER->is_operator;
     return json_error($c,"Missing node in ".$c->req->url->to_abs->path, 400)
     if !defined $c->stash('id');
 
