@@ -3998,6 +3998,8 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
         );
         if ($internal_ip_info->{type} eq 'bridge') {
 
+            my $bridge_ip = ( $self->_vm->bridge_ip($internal_ip) or $local_ip);
+
             my @iptables_arg = ("0.0.0.0/0"
                         ,$internal_ip, 'nat', 'POSTROUTING', 'SNAT',
                         ,{'protocol' => 'tcp'

@@ -47,7 +47,7 @@ sub _wait_ip($domain) {
         diag("Waiting for ".$domain->name. " ip") if !(time % 10);
         sleep 1;
     }
-    confess "Error : no ip for ".$domain->name;
+    confess "Error : no ip for ".$domain->name." Maybe set MAC in YAML file $FILE_CONFIG_BRIDGE";
 }
 
 sub _set_mac_address($domain) {
@@ -58,7 +58,12 @@ sub _set_mac_address($domain) {
         $dev->setAttribute('address' => $CONFIG_BRIDGE->{mac});
         $domain->reload_config($doc);
     } elsif( $domain->type eq 'Void') {
-        return;
+        my $ip = $CONFIG_BRIDGE->{ip}
+            or die "Error: missing ip in $FILE_CONFIG_BRIDGE ".Dumper($CONFIG_BRIDGE);
+
+        my $hardware = $domain->_value('hardware');
+        $hardware->{network}->[0]->{address} = $ip;
+        $domain->_store('hardware' => $hardware);
     } else {
         die "I don't know how to set mac for ".$domain->type;
     }

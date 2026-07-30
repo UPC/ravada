@@ -927,6 +927,27 @@ sub interface_ip($self, $remote_ip=undef) {
     return $ip;
 }
 
+=head2 bridge_ip
+
+Returns the Host IP from its bridged network interface that matches the machine IP
+
+Argument: The virtual machine IP
+
+=cut
+
+sub bridge_ip($self, $domain_ip) {
+    my $key = '_interface_ip_'.($domain_ip // '');
+    return $self->{$key} if exists $self->{$key};
+
+    my ($out,$err)=$self->run_command("ip","r","get",$domain_ip);
+    my ($ip) = $out =~ /src (\d+\.\d+\.\d+\.\d+)/;
+
+    $self->{$key} = $ip;
+    return $ip;
+}
+
+
+
 sub _list_ip_address($self) {
     my @cmd = ("ip","address","show");
     my ($out, $err) = $self->run_command(@cmd);
