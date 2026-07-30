@@ -123,6 +123,7 @@ sub test_networks_access_grant($vm_name) {
     $t->get_ok("/v3/choose_node/".$id_vm)->status_is(200);
 
     $t->post_ok("/v2/network/new" => json => { name => base_domain_name() })->status_is(200);
+    my $data = decode_json($t->tx->res->body);
     ok(keys %$data) or die Dumper($data);
 
     $t->post_ok("/v2/network/set/" => json => $data );
