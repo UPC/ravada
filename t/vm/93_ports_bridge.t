@@ -246,7 +246,7 @@ sub test_bridge_nat($vm) {
     isnt($exposed_port->{public_port}, $internal_port) or exit;
 
     my ($in, $out, $err);
-    run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
+    run3(['iptables','-t','nat','-L','PREROUTING','-n'], undef, \$out, \$err);
     die $err if $err;
     my @out = split /\n/,$out;
     is(grep(/^DNAT.*$interface_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out),1)
