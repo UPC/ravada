@@ -1032,7 +1032,7 @@ get '/node/connect/(#id)' => sub {
 
 get '/v3/choose_node/(#id)' => sub($c) {
 
-    return access_denied_json($c) if !$USER || !$USER->is_admin;
+    return access_denied_json($c) if !$USER || !$USER->is_operator;
     return json_error($c,"Missing node in ".$c->req->url->to_abs->path, 400)
     if !defined $c->stash('id');
 
@@ -4673,7 +4673,7 @@ sub shutdown_machine {
     if ($domain) {
         my $req;
         $req = Ravada::Request->force_shutdown_domain(id_domain => $domain->id, uid => $USER->id)
-            if ($c->param('force') eq 'true');
+            if ($c->param('force') && $c->param('force') eq 'true');
         $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id)
             unless ($c->param('force') eq 'true');
         $id_req = $req->id if $req;

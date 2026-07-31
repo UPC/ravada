@@ -90,7 +90,7 @@ sub test_networks_access($vm_name) {
 
     my @urls =(
         "/admin/networks", "/network/new"
-        , "/v2/vm/list_networks/$id_vm","/v2/network/new/".$id_vm);
+        , "/v2/vm/list_networks/$id_vm");
     for my $url (@urls) {
         $t->get_ok($url)->status_is(403);
     }
@@ -120,7 +120,9 @@ sub test_networks_access_grant($vm_name) {
 
     my $id_vm = _id_vm($vm_name);
 
-    $t->post_ok("/v2/network/new/".$id_vm => json => { name => base_domain_name() });
+    $t->get_ok("/v3/choose_node/".$id_vm)->status_is(200);
+
+    $t->post_ok("/v2/network/new" => json => { name => base_domain_name() })->status_is(200);
     my $data = decode_json($t->tx->res->body);
     ok(keys %$data) or die Dumper($data);
 
@@ -193,7 +195,9 @@ sub test_networks_admin($vm_name) {
     my $networks = decode_json($t->tx->res->body);
     ok(scalar(@$networks));
 
-    $t->post_ok("/v2/network/new/".$id_vm => json => { name => base_domain_name() });
+    $t->get_ok("/v3/choose_node/".$id_vm)->status_is(200);
+    $t->post_ok("/v2/network/new" => json => { name => base_domain_name() })
+    ->status_is(200);
     my $data = decode_json($t->tx->res->body);
 
     $t->post_ok("/v2/network/set/" => json => $data );

@@ -153,6 +153,7 @@ sub test_bridge($vm) {
     is(grep(/^SNAT.* 0.0.0.0\/0\s+$internal_ip\s+tcp dpt\:$internal_port to\:$local_ip$/,@out),0)
         or die Dumper([ grep /^SNAT/, @out]);
 
+    remove_domain($domain);
 }
 
 ######################################################################
