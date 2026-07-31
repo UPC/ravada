@@ -182,7 +182,7 @@ sub test_choose_node_wrong($t) {
     $t->get_ok("/v3/choose_node/".$id_wrong)->status_is(400);
 }
 
-sub test_choose_node($t, $create_storage=0) {
+sub test_choose_node($t, $create_storage=1) {
 
     my $body_json = _list_nodes_active($t);
     die "Error: I need more than one node ".Dumper($body_json)
