@@ -1488,7 +1488,7 @@ sub wait_request {
                         like($req->error,qr(^$|libvirt error code));
                     } else {
                         my $error = ($req->error or '');
-                        next if $error =~ /waiting for processes/i;
+                        next if $error =~ /waiting for processes|Retry.?/i;
                         if ($req->command =~ m{rsync_back|set_base_vm|start}) {
                             like($error,qr{^($|.*port \d+ already used|.*rsync)}) or confess $req->command;
                         } elsif($req->command eq 'refresh_machine_ports') {

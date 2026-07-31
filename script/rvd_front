@@ -4673,7 +4673,7 @@ sub shutdown_machine {
     if ($domain) {
         my $req;
         $req = Ravada::Request->force_shutdown_domain(id_domain => $domain->id, uid => $USER->id)
-            if ($c->param('force') eq 'true');
+            if ($c->param('force') && $c->param('force') eq 'true');
         $req = Ravada::Request->shutdown_domain(id_domain => $domain->id, uid => $USER->id)
             unless ($c->param('force') eq 'true');
         $id_req = $req->id if $req;

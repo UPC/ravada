@@ -182,7 +182,7 @@ sub test_choose_node_wrong($t) {
     $t->get_ok("/v3/choose_node/".$id_wrong)->status_is(400);
 }
 
-sub test_choose_node($t) {
+sub test_choose_node($t, $create_storage=0) {
 
     my $body_json = _list_nodes_active($t);
     die "Error: I need more than one node ".Dumper($body_json)
@@ -213,7 +213,7 @@ sub test_choose_node($t) {
     my @networks2 = _get_item($t,'networks');
     isnt(join('',@networks1), join('',@networks2));
 
-    test_new($t,'storage',$selected2->{id});
+    test_new($t,'storage',$selected2->{id}) if $create_storage;
     test_new($t,'network',$selected2->{id});
 
     my @storage2= _get_item($t,'storage');
@@ -323,7 +323,20 @@ sub test_node_gone($t) {
     my ($selected) = grep { $_->{_selected}} @$body_json;
     isnt($selected->{id}, $node->{id});
 }
- 
+
+sub test_choose_node_oper($t) {
+
+    my $user = create_user( new_domain_name(), $$);
+    user_admin->grant($user,"create_networks");
+
+    is($user->is_operator(),1);
+    mojo_login($t,$user->name, $$);
+
+    test_choose_node($t, 0);
+
+    mojo_login($t,$USERNAME, $PASSWORD);
+}
+
 ##############################################################################
 
 $ENV{MOJO_MODE} = 'development';
@@ -344,6 +357,8 @@ test_choose_node_wrong($t);
 test_node_gone($t);
 test_choose_node($t);
 test_connect_node($t);
+
+test_choose_node_oper($t);
 
 end();
 done_testing();

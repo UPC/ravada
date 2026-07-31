@@ -196,7 +196,8 @@ sub test_networks_admin($vm_name) {
     ok(scalar(@$networks));
 
     $t->get_ok("/v3/choose_node/".$id_vm)->status_is(200);
-    $t->post_ok("/v2/network/new" => json => { name => base_domain_name() });
+    $t->post_ok("/v2/network/new" => json => { name => base_domain_name() })
+    ->status_is(200);
     my $data = decode_json($t->tx->res->body);
 
     $t->post_ok("/v2/network/set/" => json => $data );
