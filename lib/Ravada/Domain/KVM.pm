@@ -2903,6 +2903,7 @@ sub _check_machine($self,$doc, $node) {
     my $machine = $os_type->getAttribute('machine');
 
     my ($machine_bare) = $machine =~ /(.*)-\d+\.\d+$/;
+    $machine_bare //= $machine;
     my %machine_types = $node->list_machine_types;
     my $new_machine = $machine;
 
