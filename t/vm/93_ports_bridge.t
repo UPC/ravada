@@ -6,7 +6,7 @@ use Data::Dumper;
 use IPC::Run3;
 use JSON::XS;
 use Test::More;
-use YAML qw(LoadFile);
+use YAML qw(Dump LoadFile);
 use XML::LibXML;
 use lib 't/lib';
 use Test::Ravada;
@@ -20,9 +20,17 @@ my $BASE_NAME = "zz-test-base-alpine-q35-uefi";
 my $BASE;
 my $FILE_CONFIG_BRIDGE = "t/etc/bridge.conf";
 
-my $CONFIG_BRIDGE;
-$CONFIG_BRIDGE =  LoadFile($FILE_CONFIG_BRIDGE)
-if -e $FILE_CONFIG_BRIDGE;
+my ($MAC,$IP);
+if ( -e $FILE_CONFIG_BRIDGE ) {
+    my $config =  LoadFile($FILE_CONFIG_BRIDGE);
+    $MAC = delete $config->{mac};
+    $IP = delete $config->{ip};
+
+    die "Error: config file $FILE_CONFIG_BRIDGE expecting only mac and ip. Got ".join(",",keys %$config)."."
+        ."\nExample:\n".Dump({mac => '52:11:00:cf:11:11',ip => '10.4.122.66'})
+    if keys %$config;
+
+}
 
 #######################################################################
 
@@ -40,7 +48,6 @@ sub _import_base($vm) {
 }
 
 sub _wait_ip($domain) {
-    my $remote_ip = '1.2.3.5';
     for ( 1 .. 30 ) {
         my $ip = $domain->ip();
         return $ip if $ip;
@@ -51,18 +58,18 @@ sub _wait_ip($domain) {
 }
 
 sub _set_mac_address($domain) {
-    return if ! $CONFIG_BRIDGE || !exists $CONFIG_BRIDGE->{mac};
     if ($domain->type eq 'KVM') {
+        return if !$MAC;
+
         my $doc = XML::LibXML->load_xml( string => $domain->xml_description());
         my ($dev) = $doc->findnodes('/domain/devices/interface[@type="bridge"]/mac');
-        $dev->setAttribute('address' => $CONFIG_BRIDGE->{mac});
+        $dev->setAttribute('address' => $MAC);
         $domain->reload_config($doc);
     } elsif( $domain->type eq 'Void') {
-        my $ip = $CONFIG_BRIDGE->{ip}
-            or die "Error: missing ip in $FILE_CONFIG_BRIDGE ".Dumper($CONFIG_BRIDGE);
+        return if !$IP;
 
         my $hardware = $domain->_value('hardware');
-        $hardware->{network}->[0]->{address} = $ip;
+        $hardware->{network}->[0]->{address} = $IP;
         $domain->_store('hardware' => $hardware);
     } else {
         die "I don't know how to set mac for ".$domain->type;
@@ -252,24 +259,24 @@ sub test_bridge_nat($vm) {
     is(grep(/^DNAT.*$interface_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out),1)
         or die Dumper(\@out);
 
-    run3(['iptables','-t','nat','-L','POSTROUTING','-n'],\($in, $out, $err));
+    run3(['iptables','-t','nat','-L','POSTROUTING','-n'],undef, \$out, \$err);
     die $err if $err;
     @out = split /\n/,$out;
 
     is(grep(/^SNAT.* 0.0.0.0\/0\s+$internal_ip\s+tcp dpt\:$internal_port to\:$interface_ip$/,@out),1);
 
-    run3(['iptables-save','-t','nat'],\($in, $out, $err));
+    run3(['iptables-save','-t','nat'],undef, \$out, \$err);
     die $err if $err;
     @out = grep /SNAT/, split/\n/,$out;
     my @snat = grep /SNAT/, @out;
     is(scalar(@snat),1);
 
-    run3(['iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    run3(['iptables','-L','FORWARD','-n'],undef, \$out, \$err);
     die $err if $err;
     @out = split /\n/,$out;
     is(grep(m{^ACCEPT.*$internal_net\s+state NEW},@out),1) or die $out;
 
-    run3(['iptables','-L','FORWARD','-n'],\($in, $out, $err));
+    run3(['iptables','-L','FORWARD','-n'],undef, \$out, \$err);
     die $err if $err;
     @out = split /\n/,$out;
     is(grep(m{^ACCEPT.*$remote_ip\s+$internal_ip.*dpt:$internal_port},@out),1) or die $out;
@@ -282,7 +289,7 @@ sub test_bridge_nat($vm) {
     );
     wait_request(debug => 0, skip => 'refresh_machine_ports');
     for ( 1.. 10 ) {
-        run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
+        run3(['iptables','-t','nat','-L','PREROUTING','-n'],undef, \$out, \$err);
         die $err if $err;
         @out = split /\n/,$out;
 
@@ -293,14 +300,14 @@ sub test_bridge_nat($vm) {
         wait_request();
     }
 
-    run3(['iptables','-t','nat','-L','PREROUTING','-n'],\($in, $out, $err));
+    run3(['iptables','-t','nat','-L','PREROUTING','-n'],undef, \$out, \$err);
     die $err if $err;
     @out = split /\n/,$out;
 
     is(grep(/^DNAT.*$local_ip.*dpt:$public_port to:$internal_ip:$internal_port/,@out),0)
         or die Dumper(\@out);
 
-    run3(['iptables','-t','nat','-L','POSTROUTING','-n'],\($in, $out, $err));
+    run3(['iptables','-t','nat','-L','POSTROUTING','-n'],undef, \$out, \$err);
     die $err if $err;
     @out = split /\n/,$out;
     is(grep(/^SNAT.* 0.0.0.0\/0\s+$internal_ip\s+tcp dpt\:$internal_port to\:$local_ip$/,@out),0)

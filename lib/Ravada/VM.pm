@@ -936,7 +936,7 @@ Argument: The virtual machine IP
 =cut
 
 sub bridge_ip($self, $domain_ip) {
-    my $key = '_interface_ip_'.($domain_ip // '');
+    my $key = '_bridge_ip_'.($domain_ip // '');
     return $self->{$key} if exists $self->{$key};
 
     my ($out,$err)=$self->run_command("ip","r","get",$domain_ip);
