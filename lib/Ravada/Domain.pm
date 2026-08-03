@@ -3970,7 +3970,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
     $public_port = $self->_set_public_port($id_port, $internal_port, $name, $restricted)
     if !$public_port;
 
-    my $local_ip = $self->_vm->ip;
+    my $local_ip = $self->_vm->interface_ip($remote_ip);
     $sth = $$CONNECTOR->dbh->prepare("UPDATE domain_ports set internal_ip=?"
             ." WHERE id_domain=? AND internal_port=?"
     );
@@ -3998,11 +3998,13 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
         );
         if ($internal_ip_info->{type} eq 'bridge') {
 
+            my $bridge_ip = ( $self->_vm->bridge_ip($internal_ip) or $local_ip);
+
             my @iptables_arg = ("0.0.0.0/0"
                         ,$internal_ip, 'nat', 'POSTROUTING', 'SNAT',
                         ,{'protocol' => 'tcp'
                             ,'d_port' => $internal_port
-                            ,'to_source' => $local_ip
+                            ,'to_source' => $bridge_ip
                         });
 
             $self->_log_iptable(iptables => \@iptables_arg
@@ -4016,7 +4018,7 @@ sub _open_exposed_port($self, $internal_port, $name, $restricted, $remote_ip=und
                 ,d => $internal_ip
                 ,dport => $internal_port
                 ,j => 'SNAT'
-                ,'to-source' => $local_ip
+                ,'to-source' => $bridge_ip
             );
         }
 
@@ -6793,11 +6795,15 @@ sub _around_ip($orig, $self, @args) {
     if (!$self->readonly() && $self->list_ports()) {
         if ($ip && !$self->_data('ports_exposed')) {
             $self->_data('ports_exposed' => 1);
+            my @ip;
+            my $remote_ip = $self->remote_ip();
+            @ip = ( remote_ip => $remote_ip ) if $remote_ip;
             my $req = Ravada::Request->open_exposed_ports(
                 uid => Ravada::Utils::user_daemon->id
                 ,id_domain => $self->id
                 ,retry => 20
                 ,_force => 1
+                ,@ip
             );
         }
         if (!$ip && $self->_data('ports_exposed')) {

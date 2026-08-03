@@ -907,6 +907,47 @@ sub _set_display_ip($self, $value) {
     $self->_data( display_ip => $value );
 }
 
+=head2 interface_ip
+
+Returns the Host IP from its network interface
+
+Optionally you can pass a remote IP. Then the proper interface
+will be returned if you connect from a different network than default.
+
+=cut
+
+sub interface_ip($self, $remote_ip=undef) {
+    my $key = '_interface_ip_'.($remote_ip // '');
+    return $self->{$key} if exists $self->{$key};
+
+    my $ip = $self->_interface_ip($remote_ip);
+    $ip = $self->ip() if !defined($ip) || $ip eq '';
+
+    $self->{$key} = $ip;
+    return $ip;
+}
+
+=head2 bridge_ip
+
+Returns the Host IP from its bridged network interface that matches the machine IP
+
+Argument: The virtual machine IP
+
+=cut
+
+sub bridge_ip($self, $domain_ip) {
+    my $key = '_bridge_ip_'.($domain_ip // '');
+    return $self->{$key} if exists $self->{$key};
+
+    my ($out,$err)=$self->run_command("ip","r","get",$domain_ip);
+    my ($ip) = $out =~ /src (\d+\.\d+\.\d+\.\d+)/;
+
+    $self->{$key} = $ip;
+    return $ip;
+}
+
+
+
 sub _list_ip_address($self) {
     my @cmd = ("ip","address","show");
     my ($out, $err) = $self->run_command(@cmd);
