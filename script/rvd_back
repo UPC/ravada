@@ -69,6 +69,8 @@ my $HIBERNATE_DOMAIN;
 my $START_DOMAIN;
 my $SHUTDOWN_DOMAIN;
 my $REMOVE_DOMAIN;
+my $REMOVE_CLONES;
+my $RECURSIVE;
 my $REBASE;
 my $RUN_REQUEST;
 my $MIGRATE;
@@ -167,6 +169,8 @@ GetOptions (       help => \$help
            ,'shutdown'=> \$SHUTDOWN_DOMAIN
           ,'hibernate'=> \$HIBERNATE_DOMAIN
              ,'remove:s'=> \$REMOVE_DOMAIN
+             ,'remove-clones=s' => \$REMOVE_CLONES
+             ,'recursive' => \$RECURSIVE
          ,'disconnected'=> \$DISCONNECTED
         ,'remove-user=s'=> \$REMOVE_USER
         ,'make-admin=s' => \$MAKE_ADMIN_USER
@@ -750,6 +754,70 @@ sub hibernate(@domains) {
     }
     print "$found machines hibernated\n" if $VERBOSE;
     exit;
+}
+
+sub remove_clones($REMOVE_CLONES) {
+    $RECURSIVE //= 0;
+    my $ravada = Ravada->new(%CONFIG);
+    my $sth_getinfo = $ravada->_dbh->prepare(
+        "SELECT id, is_base ".
+        "FROM domains ".
+        "WHERE name = ?"
+    );
+
+    $sth_getinfo->execute($REMOVE_CLONES);
+    my ($domainid, $isbase) = $sth_getinfo->fetchrow();
+
+    if(!$domainid) {
+        print "Domain not found.\n";
+        return;
+    }
+
+    if ($isbase == 1) {
+        remove_clones_rec($domainid, $ravada);
+    }
+
+    else {
+        print "The domain '$REMOVE_CLONES' is not a base, there are no clones to delete.\n";
+    }
+
+}
+
+sub remove_clones_rec($id_parent, $ravada) {
+
+    my $sth_getclones = $ravada->_dbh->prepare(
+        "SELECT id, name, is_base ".
+        "FROM domains ".
+        "WHERE id_base = ?"
+    );
+    $sth_getclones->execute($id_parent);
+
+    my @clones;
+    while (my $row = $sth_getclones->fetchrow_hashref()) {
+        push @clones, $row;
+    }
+    $sth_getclones->finish();
+
+    
+    for my $clone (@clones) {
+        my $clone_id   = $clone->{id};
+        my $clone_name = $clone->{name};
+        my $isbase = $clone->{is_base};
+
+        if ($isbase) {
+            if($RECURSIVE) {
+            remove_clones_rec($clone_id, $ravada);
+            }
+        } 
+        else {
+            print "Deleting clone '$clone_name'.\n";
+            Ravada::Request->remove_domain(
+                uid => Ravada::Utils::user_daemon()->id
+                ,name => $clone_name
+            );
+        }
+    }
+
 }
 
 sub remove_domain {
@@ -1453,6 +1521,7 @@ rebase()                            if $REBASE;
 
 list($ALL)                          if $LIST;
 remove_domain($REMOVE_DOMAIN)              if defined $REMOVE_DOMAIN;
+remove_clones($REMOVE_CLONES, $RECURSIVE)              if defined $REMOVE_CLONES;
 start_domain($START_DOMAIN)         if $START_DOMAIN;
 
 shutdown_domain(@domains)           if defined $SHUTDOWN_DOMAIN;
