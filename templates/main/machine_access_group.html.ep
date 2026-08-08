@@ -4,7 +4,7 @@
 
         <div ng-show="<%= $FEATURE->{ldap} %> && access_groups['ldap']">
 
-        <h4>LDAP groups</h4>
+        <h4><%=l 'LDAP groups' %></h4>
 
         <div class="card-body ml-8 pl-8">
         <ldap-groups name="groups"
