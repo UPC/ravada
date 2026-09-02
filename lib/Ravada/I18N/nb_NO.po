@@ -880,5 +880,5 @@ msgstr "Slå av alle kloner"
 msgid "Keep in mind that there may be users using a clone"
 msgstr "Husk at det kan være brukere som bruker en klone"
 
-msgid "Yes, shutwdown all the clones"
+msgid "Yes, shutdown all the clones"
 msgstr "Ja, slå av alle klonene"

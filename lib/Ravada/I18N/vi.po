@@ -888,7 +888,7 @@ msgstr "Tắt tất cả các bản sao"
 msgid "Keep in mind that there may be users using a clone"
 msgstr "Hãy nhớ rằng có thể có người dùng sử dụng bản sao"
 
-msgid "Yes, shutwdown all the clones"
+msgid "Yes, shutdown all the clones"
 msgstr "Có, tắt tất cả các bản sao"
 
 msgid "Waiting for machine to start"

@@ -1,5 +1,11 @@
 <!-- Navigation -->
-        <nav class="navbar \
+        <nav
+        ng-controller="navigation"
+        ng-init="init(
+            '<%= url_for('ws_subscribe')->to_abs %>'
+            ,<%= ($choose_node && $_user && $_user->is_admin && $id_node) || 0 %>
+        )"
+        class="navbar \
 % if ($navbar_custom) {
 navbar-custom \
 % }
@@ -9,6 +15,27 @@ navbar-dark bg-dark fixed-top navbar-expand-lg navbar-inverse">
                 <a class="navbar-brand" href="/anonymous">Ravada VDI</a>
 %           } else {
                 <a class="navbar-brand" href="/index.html">Ravada VDI</a>
+%               if ($choose_node && $_user && $_user->is_admin) {
+                    <div ng-show="list_nodes && list_nodes.length>1"
+                        ng-cloak
+                    >
+                    <select ng-model="current_node" aria-label="<%= l 'Select node' %>"
+                        ng-hide="choose_node_msg"
+                        ng-change="select_node()"
+                        ng-options="node.name for node in list_nodes | orderBy: 'name'">
+                    </select>
+                    <span ng-show="choose_node_msg"
+                            class="alert alert-warning">
+                        {{choose_node_msg}}
+                        <i class="fas fa-sync-alt fa-spin"></i>
+                    </span>
+                    <span ng-show="choose_node_error"
+                        class="alert alert-danger">
+                    {{choose_node_error}}
+                    </span>
+                    </div>
+                    <i ng-show="!list_nodes || !list_nodes.length" class="light fas fa-sync-alt fa-spin"></i>
+%               }
 %           }
             <button class="navbar-toggler navbar-toggler-right" type="button" data-toggle="collapse" data-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>

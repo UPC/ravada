@@ -10,20 +10,19 @@
         <div class="card"
              ng-cloak="1"
              ng-controller="settings_<%= $item %>"
-             ng-init="init('<%= $id %>', '<%= url_for('ws_subscribe')->to_abs %>'
-                      ,'<%= $id_vm %>')"
+             ng-init="init('<%= $id %>', '<%= url_for('ws_subscribe')->to_abs %>')"
         >
             <div class="card-header">
                 <div class="row">
                     <div class="col-10">
                         <span class="title">
-                            <%= $item  %>
+                            <%=l "\u$item"  %>
                             {{<%= $item %>._old_name}}
                         </span>
                     </div>
-                    <div class="col-2" align="right">
+                    <div class="col-2" align="right" ng-hide="'<%= $item %>' == 'storage'">
                         <a type="button" class="btn btn-outline-secondary" align="right"
-                            href="/admin/<%= $item %>s">back</a>
+                            href="/admin/<%= $item %>s"><%=l 'back' %></a>
                     </div>
                 </div>
             </div>

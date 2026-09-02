@@ -31,6 +31,106 @@
             .controller("notifCrtl", notifCrtl)
             .controller("run_domain_req",run_domain_req_ctrl)
             .controller("login",login_ctrl)
+            .controller("navigation",navigation_ctrl)
+
+    function navigation_ctrl($scope, $http, $interval, $timeout) {
+        $scope.init = function(url, id_node) {
+            if (!id_node) return;
+            $scope.url_ws= url;
+            $scope.id_node_orig = id_node;
+            list_nodes_active(id_node);
+        }
+
+        var list_nodes_active = function(id_node) {
+            $http.get('/list_nodes_active.json').then(function(response) {
+                $scope.list_nodes= response.data;
+                select_current_node(id_node);
+            });
+        }
+
+        var select_current_node = function(id_node) {
+            if (!$scope.list_nodes || !$scope.list_nodes.length) return;
+            var selected = null;
+            for (var i = 0; i < $scope.list_nodes.length; i++) {
+                if ($scope.list_nodes[i]._selected) selected = $scope.list_nodes[i];
+                if ($scope.list_nodes[i].id == id_node) {
+                    $scope.current_node = $scope.list_nodes[i];
+                    return;
+                }
+            }
+            $scope.current_node = selected || $scope.list_nodes[0];
+        }
+
+        $scope.select_node = function () {
+            $scope.choose_node_error='';
+            $http.post('/request/connect_node'
+                , JSON.stringify({ 'id_node': $scope.current_node.id
+                    ,'_force': 1
+                })
+            ).then(
+                    function(response) {
+                        if (response.data.error) {
+                            $scope.choose_node_error = "Failed to connect to node "
+                                +response.data.error;
+                            list_nodes_active($scope.id_node_orig);
+                        } else {
+                            $scope.choose_node_msg = "Connecting to node "
+                                +$scope.current_node.name;
+                            subscribe_request(response.data.request);
+                        }
+                    }
+                );
+        };
+
+        var choose_node = function() {
+
+            $http.get('/v3/choose_node/'+$scope.current_node.id).then(
+                function(response) {
+                    $scope.choose_node_msg = '';
+                    window.location.reload();
+                }
+
+            )
+                .catch(function(error) {
+                    $scope.choose_node_error = "Failed to load node "
+                        +"'"+$scope.current_node.name+"'"
+                        +" "+error.statusText;
+
+                    if (error.status== 403) {
+                        window.location.reload();
+                    }
+                });
+
+        }
+
+        var subscribe_request = function(id_request) {
+            var ws = new WebSocket($scope.url_ws);
+            ws.onopen = function(event) { ws.send('request/'+id_request) };
+            ws.onmessage = function(event) {
+                var data = JSON.parse(event.data);
+                $scope.$apply(function() {
+                    if (data.output && data.output != '') {
+                        $scope.choose_node_msg = data.output;
+                    }
+                    $scope.choose_node_error = data.error;
+                });
+                if (data.status == 'done') {
+                    ws.close();
+                    if (data.error && data.error.length) {
+                        $scope.$apply(function () {
+                            list_nodes_active($scope.id_node_orig);
+                            select_current_node($scope.id_node_orig);
+                            $scope.choose_node_msg = '';
+                            $scope.choose_node_error = data.error;
+                        });
+                    } else {
+                        choose_node();
+                    }
+                }
+            }
+
+        }
+    };
 
     function newMachineCtrl($scope, $http) {
 
@@ -47,7 +147,7 @@
 
     };
 
-    function suppFormCtrl($scope){
+        function suppFormCtrl($scope){
 	this.user = {};
         $scope.showErr = false;
         $scope.isOkey = function() {
@@ -194,12 +294,23 @@
                         } else {
                         window.location.assign('/machine/clone/' + machine.id + '.html');
                         }
-                    }                    
+                    }
                 } else if ( action == 'restore' ) {
                     $scope.host_restore = machine.clone.id;
                     $scope.host_shutdown = 0;
                     $scope.host_force_shutdown = 0;
                 } else if (action == 'shutdown' || action == 'hibernate' || action == 'force_shutdown' || action == 'reboot') {
+                    if (machine.clone && machine.clone.autostart == 1 && (action == 'shutdown' || action == 'force_shutdown') && !confirmed) {
+                        machine.pending_shutdown_action = action;
+                        $('#afc_' + machine.id).modal('show');
+                        return;
+                    }
+                    else if (machine.autostart == 1 && (action == 'shutdown' || action == 'force_shutdown') && !confirmed) {
+                        machine.pending_shutdown_action = action;
+                        $('#afc_' + machine.id).modal('show');
+                        return;
+                    }
+
                     $scope.host_restore = 0;
                     var id=machine.id;
                     if (machine.clone) {
@@ -332,6 +443,7 @@
                     subscribe_list_bookings(url);
                 }
             };
+            $scope.tmp_action = null;
             $scope.only_public = false;
             $scope.toggle_only_public=function() {
                     $scope.only_public = !$scope.only_public;
@@ -341,8 +453,9 @@
 
         function singleMachinePageC($scope, $http, $interval, request, $location) {
             $scope.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-            $scope.exec_time_start = new Date();
-            $scope.exec_time = new Date();
+            var now = new Date();
+            now.setSeconds(0, 0);
+            $scope.exec_time = now;
             $scope.edit = "";
             $scope.lock_info = false;
             $scope.topology = false;
@@ -351,6 +464,7 @@
             $scope.storage_pools=['default'];
             $scope.shared_user_count = -1
             $scope.access_groups=[];
+            $scope.show_lock_details=false;
 
             var fields_option=[ 'volatile_clones','autostart'
                                ,'shutdown_disconnected','balance_policy'
@@ -364,6 +478,13 @@
             $scope.getUnixTimeFromDate = function(date) {
                 date = (date instanceof Date) ? date : date ? new Date(date) : new Date();
                 return date.getTime() / 1000;
+            };
+
+            $scope.setFutureTime = function() {
+                var futureDate = new Date();
+                futureDate.setMinutes(futureDate.getMinutes() + 5);
+                futureDate.setSeconds(0, 0);
+                $scope.exec_time = futureDate;
             };
 
             $scope.isPastTime = function(date, now_date) {
@@ -480,6 +601,7 @@
                         if (!subscribed_extra) {
                             subscribed_extra = true;
                             subscribe_nodes(url,data.type);
+                            subscribe_domain_requests(url, data.id);
                             //subscribe_bases(url);
                         }
                         if ($scope.edit) { $scope.lock_info = true }
@@ -504,15 +626,21 @@
               return string;
             };
 
-            $scope.action = function(target,action,machineId,params){
+            $scope.action = function(target,action,machine,params){
+              params = params || {};
+
               if (action === 'view-new-tab') {
-                  window.open('/machine/view/' + machineId + '.html');
+                  window.open('/machine/view/' + machine.id + '.html');
               }
               else if (action === 'view') {
-                  window.location.assign('/machine/view/' + machineId + '.html');
+                  window.location.assign('/machine/view/' + machine.id + '.html');
               }
+                else if (action === 'shutdown' && machine.autostart == 1 && !params.confirmed) {
+                    $scope.pending_shutdown_params = params;
+                    $('#shutdownModal').modal('show');
+                }
               else {
-                  $http.get('/'+target+'/'+action+'/'+machineId+'.json'+'?'+this.getQueryStringFromObject(params))
+                  $http.get('/'+target+'/'+action+'/'+machine.id+'.json'+'?'+this.getQueryStringFromObject(params))
                     .then(function() {
                     }, function(data,status) {
                           console.error('Repos error', status, data);
@@ -520,7 +648,42 @@
                     });
               }
             };
+            $scope.tmp_action = null;
+            $scope.force = null;
 
+            var domainRequestsSocket = null;
+
+            var subscribe_domain_requests=function(url, id) {
+                // Close any previous socket before opening a new one
+                if (domainRequestsSocket && domainRequestsSocket.readyState === WebSocket.OPEN) {
+                    try {
+                        domainRequestsSocket.close();
+                    } catch (e) {
+                        // ignore errors on close
+                    }
+                }
+
+                domainRequestsSocket = new WebSocket(url);
+                var ws = domainRequestsSocket;
+                ws.onopen = function(event) { ws.send('list_domain_requests/'+id) };
+                ws.onmessage = function(event) {
+                    var data = JSON.parse(event.data);
+                    $scope.$apply(function () {
+                        $scope.domain_requests = data;
+                    });
+                };
+            };
+
+            $scope.$on('$destroy', function () {
+                if (domainRequestsSocket) {
+                    try {
+                        domainRequestsSocket.close();
+                    } catch (e) {
+                        // ignore errors on close
+                    }
+                    domainRequestsSocket = null;
+                }
+            });
             var subscribe_requests = function(url) {
                 var ws = new WebSocket(url);
                 ws.onopen = function(event) { ws.send('list_requests') };

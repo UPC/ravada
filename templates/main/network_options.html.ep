@@ -128,8 +128,10 @@
 <div class="form-group row">
     <div class="col-md-3" align="right"></div>
     <div class="col-md-4" align="left">
-        <button ng-show="network.id" class="btn btn-outline-secondary"
+        <button type="button" ng-show="network.id" class="btn btn-outline-secondary"
             ng-click="load_network(network.id)"><%=l 'Cancel' %></button>
+        <button type="button" ng-show="!network.id" class="btn btn-outline-secondary"
+            onclick="location='/admin/networks'"><%=l 'Cancel' %></button>
         <button class="btn btn-primary"
             ng-disabled="form_network.$pristine"
             ng-click="update_network()"

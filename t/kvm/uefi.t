@@ -283,7 +283,7 @@ sub test_isos($vm) {
                     ) {
                     $found_q35++;
                     my ($loader) = $doc->findnodes('/domain/os/loader/text()');
-                    like($loader,qr/OVMF_CODE_4M.fd$/) or die $domain->name;
+                    like($loader,qr/OVMF_CODE.4M.fd$/i) or die $domain->name;
                     $found_4m++;
                 }
 

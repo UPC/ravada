@@ -59,8 +59,10 @@ jobs:
       - name: Test mock VM
         run: prove -lr t/vm/60_new_args.t t/30_request.t
       - name: Test create from ISO
-        run: prove -lr t/request/25_create_from_iso.t t/vm/d10_not_download.t
+        run: prove -lr t/request/25_create_from_iso.t t/vm/d10_not_download.t t/repository/10_iso.t
       - name: Test hardware
         run: prove -lr t/request/30_hardware.t
       - name: Test Volumes
         run: prove -lr t/20_volumes.t
+      - name: Test downgrade
+        run: prove -lr t/downgrade_reqs.t

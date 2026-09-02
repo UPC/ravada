@@ -3,16 +3,16 @@
 %= include 'bootstrap/header'
 <body id="page-top" data-spy="scroll" data-target=".navbar-fixed-top" role="document">
 <div id="wrapper">
-    %= include 'bootstrap/navigation'
+    %= include 'bootstrap/navigation', choose_node => 1
     <div id="page-wrapper" ng-controller="manage_storage_pools"
-                           ng-init="init(<%= $id_vm %>)"
+                           ng-init="init(<%= $id_node %>)"
     >
     <div id="admin-content">
         <div class="row">
             <div class="col-md-8"><h2><%=l 'Storage' %></h2></div>
             <div class="col-md-4" align="right">
                   <h2><a type="button"
-                         class="btn btn-success" href="/storage/new/<%= $id_vm %>">
+                         class="btn btn-success" href="/storage/new">
                             <b><%=l 'New Storage' %></b></a>
                   </h2>
             </div>

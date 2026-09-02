@@ -2,7 +2,7 @@
   <span ng-show="!showmachine"><i class="fas fa-sync-alt fa-spin"></i></span>
   <div ng-show="!showmachine || showmachine.can_start">
     <button type="button" class="btn btn-success btn-sm"
-     ng-click="action('machine','start',showmachine.id)"
+     ng-click="action('machine','start',showmachine)"
      ng-disabled="!showmachine || showmachine.is_active"
      title="<%=l 'Start' %>">
      <i class="fa fa-play"></i>
@@ -13,7 +13,7 @@
 
   <div ng-show="!showmachine || showmachine.can_view">
     <button type="button" class="btn btn-primary btn-sm"
-     ng-click="action('machine','view',showmachine.id)"
+     ng-click="action('machine','view',showmachine)"
      ng-disabled="!showmachine"
      title="<%=l 'View' %>">
      <i class="fa fa-desktop"></i>
@@ -24,7 +24,7 @@
 
   <div ng-show="!showmachine || showmachine.can_hibernate">
     <button type="button" class="btn btn-warning btn-sm"
-     ng-click="action('machine','hibernate',showmachine.id)"
+     ng-click="action('machine','hibernate',showmachine)"
      ng-disabled="showmachine && !showmachine.is_active"
      title="<%=l 'Hibernate' %>">
       <i class="fa fa-pause"></i>
@@ -35,7 +35,7 @@
 
   <div ng-show="showmachine.can_shutdown">
     <button type="button" class="btn btn-danger btn-sm"
-     ng-click="action('machine','shutdown',showmachine.id)"
+     ng-click="action('machine','shutdown',showmachine, {force: false, confirmed: false})"
      ng-disabled="!showmachine || !showmachine.is_active"
      title="<%=l 'ShutDown' %>">
       <i class="fa fa-power-off"></i>
@@ -46,7 +46,7 @@
 
   <div ng-show="showmachine.can_shutdown">
     <button type="button" class="btn btn-danger btn-sm"
-     ng-click="action('machine','shutdown',showmachine.id, { force: true })"
+     ng-click="action('machine','shutdown',showmachine, { force: true, confirmed: false})"
      ng-disabled="!showmachine.is_active"
      title="<%=l 'Force ShutDown' %>">
       <i class="fa fa-power-off"></i>
@@ -57,7 +57,7 @@
 
   <div ng-show="!showmachine || showmachine.can_reboot">
     <button type="button" class="btn btn-danger btn-sm"
-     ng-click="action('machine','reboot',showmachine.id)"
+     ng-click="action('machine','reboot',showmachine, {force: false})"
      ng-disabled="!showmachine || !showmachine.is_active"
      title="<%=l 'Reboot' %>">
       <i class="fa fa-redo"></i>
@@ -68,7 +68,7 @@
 
   <div ng-show="showmachine.can_reboot">
     <button type="button" class="btn btn-danger btn-sm"
-     ng-click="action('machine','reboot',showmachine.id, { force: true })"
+     ng-click="action('machine','reboot',showmachine, { force: true })"
      ng-disabled="!showmachine.is_active"
      title="<%=l 'Force Reboot' %>">
       <i class="fa fa-redo"></i>
@@ -76,6 +76,7 @@
     <span><%=l 'Force Reboot' %></span>
     <br><br>
   </div>
+%= include 'main/vm_actions_shutdown_modal'
 
 </div>
 

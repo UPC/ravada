@@ -817,7 +817,7 @@ msgstr "Dernier"
 msgid "Type a typical LDAP user name to fetch the attribute list"
 msgstr "Saisissez un nom d'utilisateur LDAP typique pour récupérer la liste d'attributs"
 
-msgid "Yes, shutwdown all the clones"
+msgid "Yes, shutdown all the clones"
 msgstr "Oui, éteindre tous les clones"
 
 msgid "Keep in mind that there may be users using a clone"
