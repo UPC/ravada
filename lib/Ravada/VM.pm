@@ -978,6 +978,12 @@ sub _ip_a($self, $dev) {
     warn "Warning $dev not found in active interfaces";
 }
 
+=head2 list_networks
+
+    List networks configured in this node
+
+=cut
+
 sub list_networks($self) {
     my @networks;
     my ($out, $err) = $self->run_command_cache("/sbin/ip","route");
