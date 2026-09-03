@@ -3109,7 +3109,7 @@ sub new_network($self, $name='net') {
             }
         }
         if ($field eq 'ip_address') {
-            map { s/\.\d+$// ;$old{$_}++ } @networks_phisical;
+            map { my $a = $_; $a =~ s/\.\d+$// ;$old{$a}++ } @networks_phisical;
         }
         if ( $field eq 'name' && $name ne 'net' ) {
             my $value = $base{$field};
