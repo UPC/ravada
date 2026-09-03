@@ -982,7 +982,7 @@ sub list_networks($self) {
     my @networks;
     my ($out, $err) = $self->run_command_cache("/sbin/ip","route");
     for my $line ( split( /\n/, $out ) ) {
-        my ($net) = $line =~ m{^\s*(\d+\.\d+\.\d+\.\d+)/\d+ dev};
+        my ($net) = $line =~ m{^\s*(\d+\.\d+\.\d+\.\d+)/\d+.*\bdev\s+\S+};
         push @networks, ($net) if $net;
     }
     return @networks;
