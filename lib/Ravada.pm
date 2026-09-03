@@ -236,8 +236,8 @@ sub _add_internal_network($self) {
     my %done_address;
     my %done_name;
     my $n=0;
-    while (my ($name,$adress)= $sth->fetchrow) {
-        $done_address{$adress}++;
+    while (my ($name,$address)= $sth->fetchrow) {
+        $done_address{$address}++;
         $done_name{$name}++;
         if ($name =~ /^internal(\d+)/) {
             $n=$1+1 if $1>$n;
