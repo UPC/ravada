@@ -7292,19 +7292,43 @@ sub _cmd_close_exposed_ports($self, $request) {
     $domain->_close_exposed_port($port);
 
     if ($request->defined_arg('clean')) {
-        my $query = "UPDATE domain_ports SET public_port=?"
-                    ." WHERE id_domain=? ";
-        $query .=" AND internal_port=?" if $port;
-
-        my $sth_update = $CONNECTOR->dbh->prepare($query);
-
         if ($port) {
+            my $query = "UPDATE domain_ports SET public_port=?"
+                    ." WHERE id_domain=? "
+                    ." AND internal_port=?";
+
+            my $sth_update = $CONNECTOR->dbh->prepare($query);
             $sth_update->execute($domain->_vm->_new_free_port()
                 ,$domain->id, $port);
+
         } else {
-            $sth_update->execute($domain->_vm->_new_free_port()
-                ,$domain->id);
+            my $sth = $CONNECTOR->dbh->prepare(
+                "SELECT id FROM domain_ports WHERE id_domain=?"
+            );
+            $sth->execute($domain->id);
+
+            my $sth_update = $CONNECTOR->dbh->prepare(
+                "UPDATE domain_ports set public_port = ? "
+                ." WHERE id=?"
+            );
+            while (my ($id) = $sth->fetchrow) {
+                my $updated;
+                for ( 1 .. 10 ) {
+                    my $port = $domain->_vm->_new_free_port();
+                    my $ok = eval { $sth_update->execute($port, $id); 1 };
+                    if ($ok) {
+                        $updated = 1;
+                        last;
+                    }
+                    next if ( $@ =~ /Duplicate entry .*for key.*public/   # mysql
+                        || $@ =~ /UNIQUE constraint failed.*public/      # sqlite
+                    );
+                    die $@;
+                }
+                die "Error: unable to allocate a free public_port for id=$id" if !$updated;
+            }
         }
+
     }
 }
 

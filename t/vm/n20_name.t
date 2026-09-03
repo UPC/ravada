@@ -86,7 +86,7 @@ sub test_nat($vm_name) {
     $domain = rvd_back->search_domain($domain->name);
     ok($domain,"[$vm_name] Expecting the domain $domain_name") or exit;
 
-    my $file_config = "/tmp/config_display.yml";
+    my $file_config = "/tmp/config_display".new_domain_name().".yml";
     DumpFile($file_config,{ display_ip => $display_ip, vm => \@VMS });
     my $rvd_back = Ravada->new(
             connector => connector()

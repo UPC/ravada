@@ -25,6 +25,7 @@ use Moose::Role;
 use NetAddr::IP;
 use IPC::Run3 qw(run3);
 use RRDs;
+use Socket;
 use Storable qw(dclone);
 use Time::Piece;
 
@@ -51,6 +52,8 @@ our $TTL_REMOVE_VOLATILE = 60;
 
 our $DEBUG_RSYNC = 0;
 our $DIR_RRD = "/var/lib/ravada_rrd";
+
+our %CACHE_HOSTNAME;
 
 _init_connector();
 
@@ -1436,12 +1439,52 @@ sub _store_display($self, $display, $display_old=undef) {
     confess "Error: tls displays should be secondary"
     if $driver =~ /-tls/ && exists $display_new{is_secondary} && !$display_new{is_secondary};
    #warn "updating ".Dumper($display_old,\%display_new);
+    if (!exists $display_new{hostname}) {
+        unlock_hash(%display_new);
+        $display_new{hostname} = $self->_cache_dns($display_new{ip});
+        lock_hash(%display_new);
+    }
     if ($display_old) {
         $self->_update_display(\%display_new, $display_old);
     } else {
         $self->_insert_display(\%display_new);
     }
 }
+
+sub _cache_dns($self, $ip) {
+    my $name = $self->{_dns}->{$ip};
+    return $name if defined $name;
+
+    $name = _get_hostname($ip);
+
+    warn "Error: name for $ip not found" if !$name;
+
+    $self->{_dns}->{$ip} = $name;
+    return $name;
+}
+
+sub _get_hostname($ip) {
+
+    return $ip if $ip !~ /^\d+\.\d+\.\d+\.\d+$/;
+
+    return $CACHE_HOSTNAME{$ip} if exists $CACHE_HOSTNAME{$ip};
+
+    my $packed_ip = inet_aton($ip);
+    my $name = $packed_ip ? gethostbyaddr($packed_ip, AF_INET) : undef;
+    if ( ! $name || $name =~ /\d+\.\d+\.\d+/ ) {
+        my ($in, $out, $err);
+        run3(['host',$ip], \$in, \$out, \$err);
+        ($name) = $out =~ /pointer (.*)\./;
+    }
+    if (!$name || $name !~ /^[A-Za-z0-9._-]+$/) {
+        $name = $ip;
+    }
+
+    $CACHE_HOSTNAME{$ip} = $name;
+    return $name;
+
+}
+
 
 sub _get_display($self, $driver) {
     my $sth = $$CONNECTOR->dbh->prepare("SELECT * FROM domain_displays "
@@ -2226,6 +2269,9 @@ sub _display_file_rdp($self,$display) {
     $error .= "Error: No Port detected for display.\n" if !$display->{port};
     return $error if $error;
 
+    my $ip = $display->{ip};
+    $ip = $display->{hostname} if exists $display->{hostname} && $display->{hostname};
+
     my $ret = "screen mode id:i:2
 use multimon:i:0
 desktopwidth:i:1280
@@ -2249,7 +2295,7 @@ disable menu anims:i:1
 disable themes:i:0
 disable cursor setting:i:0
 bitmapcachepersistenable:i:1
-full address:s:".$display->{ip}.":".$display->{port}."\n"
+full address:s:$ip:".$display->{port}."\n"
 ."audiomode:i:0
 redirectprinters:i:0
 redirectcomports:i:0
@@ -2291,10 +2337,13 @@ sub _display_file_spice($self,$display, $tls = 0) {
     confess "I can't find ip port in ".Dumper($display)
         if !$display->{ip} || !$display->{port};
 
+    my $ip = $display->{ip};
+    $ip = $display->{hostname} if exists $display->{hostname} && $display->{hostname};
+
     my $ret =
         "[virt-viewer]\n"
         ."type=spice\n"
-        ."host=".$display->{ip}."\n";
+        ."host=$ip\n";
     if ($tls) {
         confess "Error: display $display->{driver} no TLS "
         unless $display->{driver} =~ /tls/;
@@ -2392,6 +2441,8 @@ sub info($self, $user) {
         eval {
             my @display = $self->display_info($user);
             $info->{display} = $display[0];
+            $info->{display}->{hostname} = _get_hostname($info->{display}->{ip})
+                if $info->{display}->{ip};
         };
         die $@ if $@ && $@ !~ /not allowed/i;
     }

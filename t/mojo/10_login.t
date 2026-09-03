@@ -1,7 +1,7 @@
 use warnings;
 use strict;
 
-use Carp qw(confess);
+use Carp qw( croak confess );
 use Data::Dumper;
 use HTML::Lint;
 use Test::More;
@@ -844,7 +844,7 @@ sub _wait_for_domain($name) {
         sleep 1;
         wait_request();
     }
-    die "Error: domain $name not created" if !$domain;
+    croak "Error: domain $name not found" if !$domain;
     return $domain;
 }
 

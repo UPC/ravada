@@ -6,6 +6,7 @@ use Data::Dumper;
 use Hash::Util qw(lock_hash unlock_hash);
 use IPC::Run3 qw(run3);
 use Mojo::JSON qw(decode_json);
+use Socket;
 use XML::LibXML;
 use Test::More;
 
@@ -31,14 +32,18 @@ sub test_display_conflict($vm) {
     my ($display_builtin) = @{$domain->info(user_admin)->{hardware}->{display}};
     $domain->shutdown_now(user_admin);
 
-    my $req = Ravada::Request->add_hardware(
-          uid => user_admin->id
-        ,name => 'display'
-        ,data => { driver => 'x2go' }
-        ,id_domain =>$domain->id
-    );
-    wait_request(check_error => 0);
-    is($req->status,'done');
+    for my $driver ('x2go','rdp') {
+
+        my $req = Ravada::Request->add_hardware(
+            uid => user_admin->id
+            ,name => 'display'
+            ,data => { driver => $driver }
+            ,id_domain =>$domain->id
+        );
+        wait_request(check_error => 0);
+        is($req->status,'done');
+        is($req->error,'');
+    }
 
     my $port = $domain->exposed_port(22);
     my $sth = connector->dbh->prepare("UPDATE domain_ports SET public_port=NULL "
@@ -61,24 +66,40 @@ sub test_display_conflict($vm) {
 
     $domain->start( remote_ip => '1.1.1.1' , user => user_admin);
     wait_request(debug => 0);
+    wait_ip($domain);
 
     for my $n ( 1 .. 3 ) {
-        diag($n);
         my $display = $domain->info(user_admin)->{hardware}->{display};
         last if defined $display->[0]->{port}
             && defined $display->[1]->{port}
+            && defined $display->[2]->{port}
             && $display->[0]->{port} ne $display->[1]->{port};
         Ravada::Request->refresh_machine(uid => user_admin->id
             ,id_domain=> $domain->id
             ,_force => 1
         );
-        wait_request(debug => 1);
+        wait_request(debug => 0);
     }
 
     my $display = $domain->info(user_admin)->{hardware}->{display};
+
     isnt($display->[0]->{port}, $display->[1]->{port}) or die Dumper($display);
     is($display->[0]->{is_active},1);
     is($display->[1]->{is_active},1);
+
+    $domain->start(user_admin);
+    my @drivers;
+    for my $entry (@$display) {
+        push @drivers,($entry->{driver});
+    }
+    my $hostname = _get_hostname($vm->ip);
+    for my $driver ( @drivers ) {
+        my $display2 = $domain->_get_display($driver);
+        next if !keys %$display2;
+        is($display2->{hostname},$hostname) or die Dumper($display2);
+
+        _check_display_file($domain, $display2);
+    }
 
     my $port3;
     for ( 1 .. 10 ) {
@@ -93,6 +114,71 @@ sub test_display_conflict($vm) {
 
     $domain->remove(user_admin);
 
+}
+
+sub _check_display_file_rdp($domain, $display) {
+    my $driver = $display->{driver};
+    my $address;
+    for ( 1 .. 10 ) {
+        my $display2 = $domain->_get_display($driver);
+        my $file = $domain->_display_file_rdp($display2);
+        ($address) = $file =~ m{^full address:.:(.*?)\:\d+$}ms;
+        last if $address;
+        my $req = Ravada::Request->open_exposed_ports(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+        );
+        $req->status('requested') if $req->status() eq 'done';
+        my $req2 = Ravada::Request->refresh_machine(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+        );
+        $req2->status('requested') if $req2->status() eq 'done';
+
+        wait_request(debug => 1, request => $req);
+        sleep 1;
+    }
+
+
+    is($address, _get_hostname($domain->_vm->ip)) or exit;
+}
+
+sub _check_display_file_spice($domain, $display) {
+    my $file = $domain->_display_file_spice($display);
+    my ($address) = $file =~ m{^host=(.*?)$}ms;
+
+    is($address, _get_hostname($domain->_vm->ip));
+
+}
+
+
+sub _check_display_file($domain, $display) {
+    my $driver = $display->{driver};
+    if ($driver =~ /^spice/) {
+        _check_display_file_spice($domain, $display);
+    } elsif ($driver eq 'rdp') {
+        Ravada::Request->start_domain(
+            uid => user_admin->id
+            ,id_domain => $domain->id
+        );
+        wait_request(debug => 0);
+        wait_ip($domain);
+        _check_display_file_rdp($domain, $display);
+    } else {
+        diag("No test for display $driver");
+    }
+}
+
+sub _get_hostname($ip) {
+
+    return $ip if $ip !~ /^\d+\.\d+\.\d+\.\d+$/;
+
+    my ($in, $out, $err);
+    run3(['host',$ip], \$in, \$out, \$err);
+    my ($hostname) = $out =~ /pointer (.*)\./;
+    die "I can't fetch hostname from $out" if !$hostname;
+
+    return $hostname;
 }
 
 ######################################################################
@@ -149,6 +235,5 @@ for my $db ( 'mysql', 'sqlite' ) {
         }
     }
 }
-
 end();
 done_testing();
