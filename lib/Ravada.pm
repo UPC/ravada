@@ -923,13 +923,13 @@ sub _update_isos {
             ,options => { machine => 'pc-q35'}
         }
 	,parrot_xfce_amd64 => {
-            name => 'Parrot Home Edition XFCE 7.1'
-            ,description => 'Parrot Home Edition XFCE 7.1 64 Bits'
+            name => 'Parrot Home Edition XFCE 7.3'
+            ,description => 'Parrot Home Edition XFCE 7.3 64 Bits'
             ,arch => 'x86_64'
             ,xml => 'jessie-amd64.xml'
             ,xml_volume => 'jessie-volume.xml'
-            ,url => 'https://download.parrot.sh/parrot/iso/7.1/'
-            ,file_re => 'Parrot-home-7\.1.*_amd64\.iso'
+            ,url => 'https://download.parrot.sh/parrot/iso/7.3/'
+            ,file_re => 'Parrot-home-7\.3.*_amd64\.iso'
             ,sha256_url => '$url/signed-hashes.txt'
             ,min_disk_size => '15'
         }
@@ -1595,7 +1595,9 @@ sub _update_table($self, $table, $field, $data, $verbose=0) {
 sub _remove_old_isos {
     my $self = shift;
     for my $sql (
-        "DELETE FROM iso_images "
+        "Delete FROM iso_images "
+            ."WHERE url like 'https://download.parrot.sh/parrot/iso/7.1/'"
+        ,"DELETE FROM iso_images "
             ."  WHERE url like '%debian-9.0%iso'"
         ,"DELETE FROM iso_images"
             ."  WHERE name like 'Debian%' "
@@ -2015,12 +2017,12 @@ sub _add_grants($self) {
     $self->_add_grant('screenshot_clones', 0,"can get a screenshot from clones of own virtual machines.");
     $self->_add_grant('start_many',0,"can have an unlimited amount of machines started.");
     $self->_add_grant('expose_ports',0,"can expose virtual machine ports.");
-    $self->_add_grant('expose_ports_clones',0,"Can expose ports from clones of own virtual machines.");
-    $self->_add_grant('expose_ports_all',0,"Can expose ports from any virtual machine.");
+    $self->_add_grant('expose_ports_clones',0,"can expose ports from clones of own virtual machines.");
+    $self->_add_grant('expose_ports_all',0,"can expose ports from any virtual machine.");
     $self->_add_grant('view_groups',0,'can view groups.');
     $self->_add_grant('manage_groups',0,'can manage groups.');
     $self->_add_grant('start_limit',0,"can have their own limit on started machines.", 1, 0);
-    $self->_add_grant('view_all',0,"The user can start and access the screen of any virtual machine");
+    $self->_add_grant('view_all',0,"the user can start and access the screen of any virtual machine");
     $self->_add_grant('create_disk',0,'can create disk volumes');
     $self->_add_grant('quota_disk',0,'disk space limit',1);
     $self->_add_grant('create_networks',0,'can create virtual networks.');
@@ -6121,7 +6123,7 @@ sub _cmd_connect_node($self, $request) {
     die "I can't ping $hostname\n"
         if !$node || ! $node->ping();
 
-    $request->error("Ping ok. Trying to connect to $hostname");
+    $request->_data(output => "Ping ok. Trying to connect to $hostname");
     my ($out, $err);
     eval {
         ($out, $err) = $node->run_command('/bin/true');
@@ -6136,7 +6138,8 @@ sub _cmd_connect_node($self, $request) {
         die $err if $err;
     }
     $node->connect() && do {
-        $request->error("Connection OK");
+        $request->_data(output => "Connection OK");
+        $request->error("");
         $node->_data('cached_down' => 0);
     };
 }

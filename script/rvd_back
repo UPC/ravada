@@ -365,6 +365,23 @@ sub add_user {
 
     my $ravada = Ravada->new( %CONFIG);
 
+    my $sth_check = $ravada->_dbh->prepare(
+        "SELECT name ".
+        "FROM users ".
+        "WHERE name = ?"
+    );
+    $sth_check->execute($login);
+    my $usern = $sth_check->fetchrow();
+    while ($usern){
+        $usern = undef;
+        print "There is already a user with that username \n";
+        print "Try using another username \n";
+        $login = <STDIN>;
+        chomp $login;
+        $sth_check->execute($login);
+        $usern = $sth_check->fetchrow();
+    }
+
     print "$login password: ";
     ReadMode('noecho');
     my $password = <STDIN>;

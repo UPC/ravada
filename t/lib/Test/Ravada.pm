@@ -901,7 +901,9 @@ sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
         }
     }
     my $req_rm;
-    $req_rm = Ravada::Request->remove_base(uid => user_admin->id, id_domain => $domain->id)
+    $req_rm = Ravada::Request->remove_base(
+        uid => Ravada::Utils::user_daemon->id
+        ,id_domain => $domain->id)
     if $domain->is_base;
 
     my @after_req;
@@ -909,7 +911,7 @@ sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
     @after_req = ( after_request => $req_rm->id ) if $req_rm;
     my $req= Ravada::Request->remove_domain(
         name => $domain->name
-        ,uid => user_admin->id
+        ,uid => Ravada::Utils::user_daemon->id
         ,@after_req
     );
     wait_request(debug => 0) if $wait;
@@ -1486,7 +1488,7 @@ sub wait_request {
                         like($req->error,qr(^$|libvirt error code));
                     } else {
                         my $error = ($req->error or '');
-                        next if $error =~ /waiting for processes/i;
+                        next if $error =~ /waiting for processes|Retry.?/i;
                         if ($req->command =~ m{rsync_back|set_base_vm|start}) {
                             like($error,qr{^($|.*port \d+ already used|.*rsync)}) or confess $req->command;
                         } elsif($req->command eq 'refresh_machine_ports') {
@@ -3186,6 +3188,8 @@ sub check_libvirt_tls {
 }
 
 sub ping_backend() {
+    delete_request('update_iso_urls','enforce_limits','refresh_vms'
+        ,'manage_pools');
     for ( 1 .. 3 ) {
         my @now = localtime(time);
         $now[4]++;

@@ -1116,7 +1116,7 @@ msgstr "Matikan semua klon"
 msgid "Keep in mind that there may be users using a clone"
 msgstr "Perlu diingat bahwa mungkin ada pengguna yang menggunakan klon"
 
-msgid "Yes, shutwdown all the clones"
+msgid "Yes, shutdown all the clones"
 msgstr "Ya, Matikan semua klon"
 
 msgid "No members found"

@@ -151,6 +151,7 @@ sub _request($rvd, $args) {
 
 sub _list_machines($rvd, $args) {
     my $login = $args->{login} or die "Error: no login arg ".Dumper($args);
+    my $i18n = $args->{i18n};
     my $user = Ravada::Auth::SQL->new(name => $login)
         or die "Error: uknown user $login";
 
@@ -174,6 +175,7 @@ sub _list_machines($rvd, $args) {
     push @filter,("status" => "active") if $args->{show_active};
 
     push @filter,("name" => $args->{show_name}) if $args->{show_name};
+    push @filter,("i18n" => $i18n) if defined $i18n;
 
     if ($args->{_list_machines_time} == 1 ) {
         return (0, $rvd->list_machines($user, @filter));

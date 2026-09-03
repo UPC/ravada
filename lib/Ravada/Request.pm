@@ -223,6 +223,7 @@ qw(
     manage_pools
     screenshot
     prepare_base
+    remove_base
     list_cpu_models
 );
 
@@ -1221,7 +1222,7 @@ sub status {
         if $CMD_SEND_MESSAGE{$self->command}
             || ( $self->error && !$CMD_DO_NOT_SEND_ERROR{$self->command});
 
-    if ($status eq 'done' && $date_changed && $date_changed eq $self->date_changed) {
+    if ($status && $status eq 'done' && $date_changed && $date_changed eq $self->date_changed) {
         sleep 1;
         for ( 1 .. 10 ) {
             eval {

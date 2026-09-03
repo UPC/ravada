@@ -901,7 +901,7 @@ msgstr "تمام کلون ها را خاموش کنید"
 msgid "Keep in mind that there may be users using a clone"
 msgstr "به خاطر داشته باشید که ممکن است کاربرانی از کلون استفاده کنند"
 
-msgid "Yes, shutwdown all the clones"
+msgid "Yes, shutdown all the clones"
 msgstr "بله، تمام کلون ها را خاموش کنید"
 
 msgid "Waiting for machine to start"

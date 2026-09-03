@@ -4,7 +4,7 @@
         <input type="text" ng-model="cn" ng-change="dn_found='';cn_changed=true"
         ng-init="cn='<%= $ldap_attributes_cn %>'">
         <button ng-enabled="cn"
-            ng-click="list_ldap_attributes()">fetch</button>
+            ng-click="list_ldap_attributes()"><%=l 'fetch' %></button>
         <a ng-click="fetch_info=!fetch_info"><i class="fa fa-info"></i></a>
             <div ng-show="fetch_info" class="border border-muted">
             <div class="alert alert-warning m-4 p-4">

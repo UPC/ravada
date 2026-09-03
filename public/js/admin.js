@@ -563,15 +563,21 @@ ravadaApp.directive("solShowMachine", swMach)
         });
     };
 
-    $scope.action = function(target,action,machineId){
+    $scope.action = function(target,action,machine, confirmed){
         if (action === 'view-new-tab') {
-            window.open('/machine/view/' + machineId + '.html');
+            window.open('/machine/view/' + machine.id + '.html');
         }
         else if (action === 'view') {
-            window.location.assign('/machine/view/' + machineId + '.html');
+            window.location.assign('/machine/view/' + machine.id + '.html');
+        }
+        else if ((action === 'shutdown' || action === 'force_shutdown') && machine.autostart == 1 && !confirmed) {
+            $scope.machine_to_confirm = machine; 
+            $scope.action_to_confirm = action;
+            $('#global_autostart_modal').modal('show'); 
+            return;
         }
         else {
-            $http.get('/'+target+'/'+action+'/'+machineId+'.json')
+            $http.get('/'+target+'/'+action+'/'+machine.id+'.json')
                .then(function(response) {
                    if(response.status == 300 || response.status == 403) {
                    console.error('Reponse error', response.status);
@@ -583,6 +589,15 @@ ravadaApp.directive("solShowMachine", swMach)
                     }
                 })
             ;
+        }
+    };
+    $scope.prepare_shutdown = function(machine, action_name) {
+        if (machine.autostart == 1) {
+            $scope.machine_to_confirm = machine;
+            $scope.action_to_confirm = action_name;
+            $('#global_autostart_modal').modal('show');
+        } else {
+            $scope.action('machine', action_name, machine, true);
         }
     };
     $scope.set_autostart= function(machineId, value) {
@@ -1006,16 +1021,16 @@ ravadaApp.directive("solShowMachine", swMach)
     }
 
     function settings_network($scope, $http, $interval, $timeout) {
-        $scope.init = function(id,url, id_vm) {
+        $scope.init = function(id,url) {
             if ( id ) {
                 $scope.load_network(id);
             } else {
-                $scope.new_network(id_vm);
+                $scope.new_network();
             }
         };
-        $scope.new_network = function(id_vm) {
+        $scope.new_network = function() {
             $scope.network = { };
-            $http.get('/v2/network/new/'+id_vm)
+            $http.get('/v2/network/new')
                 .then(function(response) {
                     $scope.network=response.data;
                     $scope.form_network.$setDirty();
@@ -1091,18 +1106,18 @@ ravadaApp.directive("solShowMachine", swMach)
         var start=0;
         var limit=10;
         $scope.n_selected = 0;
-        $scope.init=function(id_vm) {
-            $scope.id_vm = id_vm;
-            list_storage_pools(id_vm);
+        $scope.init=function(id_node) {
+            $scope.id_node = id_node;
+            list_storage_pools(id_node);
             $scope.storage = {
-                'id': id_vm
+                'id': id_node
             };
-            $scope.load_node(id_vm);
+            $scope.load_node(id_node);
             $scope.list_unused_volumes();
         };
 
         $scope.load_node= function() {
-            $http.get('/node/info/'+$scope.id_vm+'.json')
+            $http.get('/node/info/'+$scope.id_node+'.json')
                 .then(function(response) {
                 $scope.node = response.data;
             });
@@ -1127,7 +1142,7 @@ ravadaApp.directive("solShowMachine", swMach)
                 pool.is_active=1;
             }
             $http.post('/request/active_storage_pool'
-                ,JSON.stringify({'id_vm': $scope.id_vm
+                ,JSON.stringify({'id_vm': $scope.id_node
                     , 'value': pool.is_active
                     , 'name': pool.name})
             ).then(function(response) {
@@ -1138,7 +1153,7 @@ ravadaApp.directive("solShowMachine", swMach)
 
         list_storage_pools= function(id_vm) {
             $scope.pools=[];
-            $http.get('/storage/list_pools/'+id_vm).then(function(response) {
+            $http.get('/v2/storage/list/'+id_vm).then(function(response) {
                 $scope.storage_pools = response.data;
                 for (var i=0;i<response.data.length;i++) {
                     $scope.pools[i]=response.data[i].name;
@@ -1148,7 +1163,7 @@ ravadaApp.directive("solShowMachine", swMach)
 
         $scope.list_unused_volumes=function() {
             $scope.loading_unused=true;
-            $http.get('/storage/list_unused_volumes?id_vm='+$scope.id_vm
+            $http.get('/storage/list_unused_volumes?id_vm='+$scope.id_node
                 +'&start='+start+'&limit='+limit)
                     .then(function(response) {
                 $scope.loading_unused=false;
@@ -1182,7 +1197,7 @@ ravadaApp.directive("solShowMachine", swMach)
             };
             $scope.unused_volumes = keep;
             $http.post('/request/remove_files'
-                ,JSON.stringify({'id_vm': $scope.id_vm , 'files': remove })
+                ,JSON.stringify({'id_vm': $scope.id_node , 'files': remove })
             ).then(function(response) {
                 start=0;
                 $scope.unused_volumes=undefined;
@@ -1263,7 +1278,6 @@ ravadaApp.directive("solShowMachine", swMach)
         $scope.directory_valid=true;
 
         $scope.init=function(id_vm, url) {
-            $scope.id_vm = id_vm;
             url_ws = url;
         };
         $scope.check_name = function(name) {
@@ -1283,8 +1297,7 @@ ravadaApp.directive("solShowMachine", swMach)
             }
             $http.post('/request/create_storage_pool/'
                 ,JSON.stringify({
-                    'id_vm': $scope.id_vm
-                    ,'name': $scope.name
+                    'name': $scope.name
                     ,'directory': $scope.directory})
             ).then(function(response) {
                 if (response.data.ok == 1 ) {
