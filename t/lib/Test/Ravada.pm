@@ -79,6 +79,7 @@ create_domain
     remove_volatile_clones
     mojo_init
     mojo_clean
+    mojo_clean_nodes
     mojo_create_domain
     mojo_login
     mojo_check_login
@@ -900,6 +901,9 @@ sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
             }
         }
     }
+    for my $req ( $domain->list_requests ) {
+        $req->stop() unless $req->command =~ /remove/;
+    }
     my $req_rm;
     $req_rm = Ravada::Request->remove_base(
         uid => Ravada::Utils::user_daemon->id
@@ -1126,6 +1130,19 @@ sub mojo_create_domain($t, $vm_name) {
     ok($domain,"Expecting domain $name created") or exit;
     return $domain;
 
+}
+
+sub mojo_clean_nodes($t) {
+    $t->get_ok("/list_nodes.json")->status_is(200);
+    my $body = $t->tx->res->body;
+    my $body_json;
+    eval { $body_json = decode_json($body)};
+
+    my $base = base_domain_name();
+    for my $node (@$body_json) {
+        next if $node->{name} !~ /$base/;
+        $t->get_ok("/v1/node/remove/".$node->{id});
+    }
 }
 
 sub mojo_request($t, $req_name, $args, $wait=1) {
