@@ -1456,7 +1456,9 @@ sub add_node($self,%arg) {
     $sth->execute(map { $arg{$_} } sort keys %arg );
     $sth->finish;
 
-    my $req = Ravada::Request->refresh_vms( _force => 1 );
+    my $req = Ravada::Request::_search_request(undef, 'refresh_vms');
+    $req = Ravada::Request->refresh_vms( _force => 1, uid => Ravada::Utils->user_daemon->id )
+        if !$req;
     return $req->id;
 }
 

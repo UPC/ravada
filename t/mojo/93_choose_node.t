@@ -95,7 +95,9 @@ sub _test_request($t, $id_node=undef) {
     if (defined $id_node) {
         is($req->args('id_vm'), $id_node) or die Dumper($req->args());
     }
-    wait_request(debug => 1, request => $req);
+    my @skip=('refresh_storage','refresh_vms','list_host_devices');
+    delete_request(@skip);
+    wait_request(debug => 1, request => $req, skip => \@skip);
     is($req->status(),'done');
     is($req->error,'');
     return $req;
@@ -307,16 +309,20 @@ sub test_node_gone($t) {
     my $node = _choose_remote_node($t);
 
     my $new_name = new_domain_name();
-
     rvd_front->add_node(
         name => $new_name
-        ,'hostname' => $node->{hostname}
         ,'vm_type' => 'Void'
+        ,hostname => '192.0.2.3'
     );
     wait_request();
 
     my ($new_node) = grep { $_->{name} eq $new_name } rvd_front->list_vms();
+
+    my $sth = connector->dbh->prepare("UPDATE vms set is_active=1 WHERE id=?");
+    $sth->execute($new_node->{id});
+
     $t->get_ok("/v3/choose_node/".$new_node->{id})->status_is(200);
+    die $t->tx->res->body if !$t->success;
     $t->get_ok('/v1/node/remove/'.$new_node->{id})->status_is(200);
 
     my $body_json = _list_nodes_active($t);
@@ -353,6 +359,7 @@ $PASSWORD = "$$ $$";
 
 mojo_login($t,$USERNAME, $PASSWORD);
 
+mojo_clean_nodes($t);
 test_choose_node_wrong($t);
 test_node_gone($t);
 test_choose_node($t);
