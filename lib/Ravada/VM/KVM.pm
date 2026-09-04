@@ -3089,8 +3089,8 @@ sub list_virtual_networks($self) {
 }
 
 sub new_network($self, $name='net') {
-    my @networks = $self->list_virtual_networks();
-    my @networks_phisical = $self->list_networks();
+    my @networks_virtual = $self->list_virtual_networks();
+    my @networks_real = $self->list_networks();
 
     my %base = (
         name => $name
@@ -3100,7 +3100,7 @@ sub new_network($self, $name='net') {
     my $new = {ip_netmask => '255.255.255.0'};
     for my $field ( keys %base) {
         my %old;
-        for my $current (@networks ) {
+        for my $current ( @networks_virtual ) {
             my $value = $current->{$field};
             $old{$value}=1;
             if ($field eq 'ip_address') {
@@ -3109,7 +3109,7 @@ sub new_network($self, $name='net') {
             }
         }
         if ($field eq 'ip_address') {
-            map { my $a = $_; $a =~ s/\.\d+$// ;$old{$a}++ } @networks_phisical;
+            map { my $a = $_; $a =~ s/\.\d+$// ;$old{$a}++ } @networks_real;
         }
         if ( $field eq 'name' && $name ne 'net' ) {
             my $value = $base{$field};
