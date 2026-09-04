@@ -17,6 +17,7 @@
 - Fix typo: "shutwdown" → "shutdown" in UI template and all I18N files - [\#2350]
 - Verification that new username does not exist - [\#2348]
 - Check there is no other prepare base requested - [\#2344]
+- Fix expose with bridge and NAT - [\#2361]
 
 **Refactors**
 
