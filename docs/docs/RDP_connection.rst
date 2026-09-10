@@ -75,6 +75,10 @@ graphics. Edit the file /etc/xrdp/xrdp.ini
     crypt_level=low
     max_bpp=16
 
+Also, you should configure TLS to prevent some clients complain about security.
+`Configure TLS for xRDP <https://c-nergy.be/blog/?p=19845>`__.
+
+
 Open the Virtual Machine with a RDP client
 ------------------------------------------
 
