@@ -59,7 +59,7 @@ sub test_languages($t) {
     $t->get_ok('/translations')->status_is(200);
 
     my $result = decode_json($t->tx->res->body);
-    $result->{'ca-valencia'} = delete $result->{'cat@valencia'};
+    $result->{'ca-valencia'} = delete $result->{'ca-valencia'};
 
     my @pos = _list_pos();
     my %pos = map { $_ => 1 } @pos;
