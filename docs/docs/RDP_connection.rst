@@ -118,6 +118,12 @@ starting the machine, check the host iptables.
     -A INPUT -s 192.168.122.0/24 -i virbr0 -j ACCEPT
     -A OUTPUT -s 192.168.122.0/24 -o virbr0 -j ACCEPT
 
+Linux: Session stops right away
+-------------------------------
+
+If you manage to login but in one second, the session is over, check there is not
+any SPICE sessions active. First of all verify your login manager is not configured
+to auto login. This would be enabled in /etc/gdm o /etc/lightdm.
 
 Linux: Authentication Required to Create Managed Color Device
 -------------------------------------------------------------
