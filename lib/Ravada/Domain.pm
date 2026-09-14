@@ -6657,9 +6657,9 @@ sub _add_hardware_display($orig, $self, $index, $data) {
         $sth->execute($self->id, $data->{port});
         my ($exposed) = $sth->fetchrow;
 
-        confess "Error: ".$self->name."[".$self->id."] display $data->{driver} can not be used because port $data->{port} "
-        ." is already exported. Remove it from hardware / ports\n"
-        if $exposed;
+        if ( $exposed ) {
+            $self->remove_expose($data->{port});
+        }
 
         my $public_port = $self->expose( port => $data->{port}
             , name => $data->{driver}
