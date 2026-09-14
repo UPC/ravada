@@ -24,6 +24,31 @@ my $DISPLAY_IP = '99.1.99.1';
 my $BASE;
 
 ########################################################################
+sub test_display_overwrite($vm) {
+    diag("Test display overwrite");
+    my $domain = $BASE->clone(name => new_domain_name, user => user_admin);
+    Ravada::Request->expose( uid => user_admin->id
+        , id_domain => $domain->id
+        , port => 3389
+        , restricted => 0
+        , name => 'old'
+    );
+    wait_request();
+
+    Ravada::Request->add_hardware(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,name => 'display'
+        ,data => { driver => 'rdp'}
+    );
+    wait_request();
+
+    my $port = $domain->exposed_port(3389);
+    is($port->{restricted},1);
+    is($port->{name}, 'rdp');
+
+    remove_domain($domain);
+}
 
 sub test_display_conflict($vm) {
     diag("Test display conflict");
@@ -231,6 +256,7 @@ for my $db ( 'mysql', 'sqlite' ) {
             }
             flush_rules() if !$<;
 
+            test_display_overwrite($vm);
             test_display_conflict($vm);
         }
     }
