@@ -76,7 +76,30 @@ graphics. Edit the file /etc/xrdp/xrdp.ini
     max_bpp=16
 
 Also, you should configure TLS to prevent some clients complain about security.
-`Configure TLS for xRDP <https://c-nergy.be/blog/?p=19845>`__.
+The easiest way is to use the self-created certificates that come with xRDP.
+Check those files exists:
+
+::
+
+    ls /etc/xrdp/key.pem
+    ls /etc/xrdp/cert.pem
+
+If the result of those two commands was correct you can configure the security
+parameters.
+Search for those settings in xrdp.ini file and change them like this:
+
+::
+
+  security_layer=tls
+  certificate=/etc/xrdp/cert.pem
+  key_file=/etc/xrdp/key.pem
+  tls_ciphers=HIGH
+
+Now reset the xrdp service and try to log in:
+
+::
+
+    sudo systemctl restart xrdp
 
 
 Open the Virtual Machine with a RDP client
@@ -121,9 +144,38 @@ starting the machine, check the host iptables.
 Linux: Session stops right away
 -------------------------------
 
+Solution 1: check for auto login
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 If you manage to login but in one second, the session is over, check there is not
 any SPICE sessions active. First of all verify your login manager is not configured
 to auto login. This would be enabled in /etc/gdm o /etc/lightdm.
+
+
+Solution 2: force the xsession
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Sometimes the problem may come from unable to start the proper X session.
+It may show something like this in one of the files from /var/log/xrdp/
+
+::
+
+  Window manager (pid 3732, display 10) exited quickly (1 secs). This could indicate a window manager config problem
+
+Try forcing the default session manager in one of these files:
+
+- /usr/libexec/xrdp/startwm.sh ( Rocky / Redhat ... )
+- /etc/xrdp/startwm.sh
+
+::
+
+     #!/bin/sh
+    
+    if test -r /etc/profile; then
+    	. /etc/profile
+    fi
+    
+    startxfce4
 
 Linux: Authentication Required to Create Managed Color Device
 -------------------------------------------------------------
@@ -148,5 +200,16 @@ To disable this message create the file /etc/polkit-1/localauthority.conf.d/02-a
  });
 
 And reboot.
+
+RPM Linux: RDP does not connect: Rocky Linux and others
+-------------------------------------------------------
+
+for some RedHat and derivates you must enable the RDP protocol in the
+firewall:
+
+::
+
+    sudo firewall-cmd --zone=public --add-port=3389/tcp --permanent
+    sudo firewall-cmd --reload
 
 `More information about polkit and xRDP <https://c-nergy.be/blog/?p=12073>`__
