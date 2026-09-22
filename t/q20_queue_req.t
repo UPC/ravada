@@ -60,6 +60,35 @@ sub test_queue_fail($vm) {
     $Ravada::VM::QUEUE_AT_TIME=0;
 }
 
+sub test_queue_removed($vm) {
+    my $domain = create_domain($vm);
+
+    $domain->add_volume( format => 'qcow2', size => 1*1024*1024);
+    my $req = Ravada::Request->prepare_base(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    rvd_back->_process_requests_dont_fork();
+
+    my $req_post;
+    my @req = $domain->list_requests();
+    for my $req (@req) {
+        warn $req->command();
+        if ($req->command eq 'post_prepare_base') {
+            $req_post = $req;
+        }
+        next unless ($req->command eq 'wait_job');
+        $req->_delete();
+    }
+
+    rvd_back->_process_requests_dont_fork(1);
+    is ($req_post->status(),'done');
+
+    remove_domain($domain);
+
+    wait_request(debug=>1);
+}
+
 sub test_queue($vm) {
     my $domain = create_domain($vm);
     $domain->add_volume( format => 'qcow2', size => 1*1024*1024);
@@ -158,6 +187,7 @@ for my $vm_name ( vm_names() ) {
 
         # TODO
         # test_queue_remote($vm) if !$<;
+        test_queue_removed($vm);
         test_queue_fail($vm);
         test_queue($vm);
     }

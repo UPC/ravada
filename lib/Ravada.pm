@@ -4136,7 +4136,7 @@ Before processing requests, old requests must be cleaned.
 sub clean_old_requests {
     my $self = shift;
     my $sth = $CONNECTOR->dbh->prepare("SELECT id FROM requests "
-        ." WHERE status <> 'done' AND STATUS <> 'requested'"
+        ." WHERE status <> 'done' AND STATUS <> 'requested' AND status <> 'retry'"
     );
     $sth->execute;
     while (my ($id) = $sth->fetchrow) {
@@ -4203,7 +4203,7 @@ sub process_requests {
             $req->status("done");
             next;
         }
-        next if !$req->requirements_done;
+        next if !$req->requirements_done();
 
         next if $request_type ne 'all' && $req->type ne $request_type;
 
@@ -4211,9 +4211,10 @@ sub process_requests {
 
         $id_domain = $req->defined_arg('id_domain') if !defined $id_domain && $req->defined_arg('id_domain');
 
-        next if defined $id_domain && $duplicated{$id_domain.".$command"}++;
+        next if defined $id_domain && $duplicated{$id_domain.".$command"}++
+        && $req->command ne 'wait_job';
 
-        next if $req->command !~ /shutdown/i
+        next if $req->command !~ /shutdown|wait_job/i
             && $self->_domain_working($id_domain, $req);
 
         my $domain = '';

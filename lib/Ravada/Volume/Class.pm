@@ -149,10 +149,18 @@ sub backup($self) {
 sub _move_batch($self, $dst, $req, $mode=undef) {
     my $file = $self->file;
     confess "Error: no Virtual Manager" if !$self->vm;
+
+    my @command_copy = ("mv");
+
+    my ($dir_file) = $file =~ m{(.*)/};
+    my ($dir_dst) = $dst =~ m{(.*)/};
+
+    if ($dir_file ne $dir_dst) {
+        @command_copy = ("rsync","-a");
+    }
     my @cmd = (
-        ["mv",$file,$dst]
+        [@command_copy,$file,$dst]
     );
-    push @cmd,["chmod",$mode,$dst] if $mode;
 
     my $id_domain;
     $id_domain = $self->domain->id if $self->domain;

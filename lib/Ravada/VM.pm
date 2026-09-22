@@ -2035,19 +2035,21 @@ sub _new_file_queue($self) {
 sub queue_command($self, $command , $id_domain=undef, $id_req=undef ) {
     my $file_queue = $self->_new_file_queue();
 
-    my $cmd = '';
+    my @result=('>>',"$file_queue.out",'2>>',"$file_queue.err");
+    my $cmd = "set -e\n";
     if (ref($command->[0])) {
         for my $line (@$command) {
             $cmd .= "\n" if $cmd;
             $cmd .= _shell_quote(@$line);
+            $cmd .= join(" ",@result);
         }
     }else {
         $cmd .= _shell_quote(@$command);
+        $cmd .= join(" ",@result);
     }
     $self->write_file("$file_queue.sh",
     "#!/bin/sh\n"
     .$cmd
-    ." > $file_queue.out 2> $file_queue.err"
     );
     if ($self->is_local()) {
         chmod(oct(700),"$file_queue.sh") or die "$! chmod $file_queue";
@@ -2106,7 +2108,7 @@ sub _wait_job($self, $job,$file_queue) {
         warn "Warning: missing $file_queue.err";
     }
 
-    $self->remove_file("$file_queue.out","$file_queue.err","$file_queue.sh");
+    #$self->remove_file("$file_queue.out","$file_queue.err","$file_queue.sh");
     return ($out,$err);
 }
 
@@ -2916,7 +2918,7 @@ sub _check_free_disk($self, $size, $storage_pool=undef) {
     my $free = $self->free_disk($storage_pool);
     my $free_out = int($free / 1024 / 1024 / 1024 ) * 1024 *1024 *1024;
 
-    confess "Error creating volume, out of space."
+    die "Error creating volume, out of space."
     ." Requested: ".Ravada::Utils::number_to_size($size_out)
     ." , Disk free: ".Ravada::Utils::number_to_size($free_out)
     ."\n"

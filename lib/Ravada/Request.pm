@@ -193,7 +193,8 @@ our %VALID_ARG = (
 $VALID_ARG{shutdown} = $VALID_ARG{shutdown_domain};
 
 our %CMD_SEND_MESSAGE = map { $_ => 1 }
-    qw( create start shutdown force_shutdown reboot prepare_base remove remove_base rename_domain download
+    qw( create start shutdown force_shutdown reboot prepare_base post_prepare_base
+            remove remove_base rename_domain download
             clone
             set_base_vm remove_base_vm
             domain_autostart hibernate hybernate
@@ -2351,24 +2352,20 @@ sub priority($self) {
 sub requirements_done($self) {
     my $after_request = $self->after_request();
     my $after_request_ok = $self->after_request_ok();
-    return 1 if !defined $after_request && !defined $after_request_ok;
 
-    my $ok = 0;
     if ($after_request) {
-        $ok = $self->_requirements_done_ids($after_request);
-        return 0 if !$ok;
+        return 0 if !$self->_requirements_done_ids($after_request);
     }
     if ($after_request_ok) {
-        $ok = $self->_requirements_done_ids($after_request_ok, 1);
+        return $self->_requirements_done_ids($after_request_ok, 1);
     }
-    return $ok;
+    return 1;
 }
 
 sub _requirements_done_ids($self, $ids, $propagate=undef) {
 
     $ids = [ $ids ] unless ref($ids) eq 'ARRAY';
 
-    my $fail = 0;
     for my $id (@$ids) {
         next if !_req_exists($id);
         my $req = Ravada::Request->open($id);

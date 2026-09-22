@@ -1068,7 +1068,7 @@ sub _do_prepare_base($self, $with_cd, $overwrite, $req=undef) {
                 $self->_vm->remove_file($base_file);
                 next;
             }
-            confess "Error: file '$base_file' already exists in "
+            die "Error: file '$base_file' already exists in "
                 .$self->_vm->name;
         }
     }
