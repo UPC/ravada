@@ -2726,3 +2726,27 @@ msgstr ""
 
 msgid "Later"
 msgstr ""
+
+msgid "Today"
+msgstr ""
+
+msgid "Clear"
+msgstr ""
+
+msgid "LDAP groups allowed"
+msgstr ""
+
+msgid "No devices found"
+msgstr ""
+
+msgid "found"
+msgstr ""
+
+msgid "Storage Pool"
+msgstr ""
+
+msgid "There are no machines that match the selection"
+msgstr ""
+
+msgid "more"
+msgstr ""

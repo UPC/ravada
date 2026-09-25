@@ -120,7 +120,7 @@ msgstr "Japonés"
 msgid "German"
 msgstr "Aleman"
 
-msgid "Valencia"
+msgid "Valencian"
 msgstr "Valencià"
 
 msgid "New Password:"
