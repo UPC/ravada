@@ -135,6 +135,7 @@ sub _test_clone_qcow2($vol_base, $clone) {
 
 
 sub test_base($volume, $domain=undef) {
+    confess if !-e $volume->file;
     my ($ext) = $volume->file =~ m{.*\.(.*)};
     $ext = 'qcow2' if $ext =~ m{^(img|raw)};
 

@@ -7902,11 +7902,11 @@ sub _cmd_wait_job($self, $request) {
 
 }
 
-sub _cmd_post_prepare_base($self, $request) {
+sub _allow_prepare_base($self, $request) {
     my $id_domain = $request->id_domain   or confess "Missing request id_domain";
     my $uid = $request->args('uid')     or confess "Missing argument uid";
 
-    my $domain = $self->search_domain_by_id($id_domain);
+    my $domain = Ravada::Front::Domain->open($id_domain);
     die "Unknown domain id '$id_domain'\n" if !$domain;
 
     my $user = Ravada::Auth::SQL->search_by_id( $uid)
@@ -7917,7 +7917,17 @@ sub _cmd_post_prepare_base($self, $request) {
             unless $user->is_admin || (
                 $domain->id_owner == $user->id && $user->can_create_base());
 
-    $domain->post_prepare_base();
+}
+
+sub _cmd_post_prepare_base($self, $request) {
+
+    $self->_allow_prepare_base($request);
+
+    my $volumes = $request->arg('volumes');
+
+    my $id_domain = $request->id_domain   or confess "Missing request id_domain";
+    my $domain = $self->search_domain_by_id($id_domain);
+    $domain->post_prepare_base(@$volumes);
 
 }
 

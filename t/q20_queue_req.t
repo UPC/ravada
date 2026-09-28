@@ -28,12 +28,12 @@ sub test_queue_fail($vm) {
         uid => user_admin->id
         ,id_domain => $domain->id
     );
-    rvd_back->_process_requests_dont_fork(1);
+    rvd_back->_process_requests_dont_fork(0);
     is($req->error,'');
     is($req->status(),'done');
 
-    # is not base yet
-    is($domain->is_base,0) or exit;
+    # is base already
+    is($domain->is_base,1) or exit;
 
     for my $vol ( $domain->list_volumes ) {
         if( $vol =~ /\.(img|raw|qcow2)$/ ) {
@@ -70,10 +70,11 @@ sub test_queue_removed($vm) {
     );
     rvd_back->_process_requests_dont_fork();
 
+    is($req->error,'');
+    is($req->status(),'done');
     my $req_post;
     my @req = $domain->list_requests();
     for my $req (@req) {
-        warn $req->command();
         if ($req->command eq 'post_prepare_base') {
             $req_post = $req;
         }
@@ -81,12 +82,12 @@ sub test_queue_removed($vm) {
         $req->_delete();
     }
 
-    rvd_back->_process_requests_dont_fork(1);
+    rvd_back->_process_requests_dont_fork(0);
     is ($req_post->status(),'done');
 
     remove_domain($domain);
 
-    wait_request(debug=>1);
+    wait_request(debug=>0);
 }
 
 sub test_queue($vm) {
@@ -107,7 +108,7 @@ sub test_queue($vm) {
     is($req->status(),'done');
 
     # is not base yet
-    is($domain->is_base,0);
+    is($domain->is_base,1);
 
     my @req = $domain->list_requests();
     is(scalar(@req),$n_vols_raw+1) or do {
@@ -182,7 +183,6 @@ for my $vm_name ( vm_names() ) {
         diag($msg)      if !$vm;
         skip $msg,10    if !$vm;
 
-        diag('###########################################################');
         diag("test $vm_name");
 
         # TODO

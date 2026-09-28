@@ -2108,7 +2108,7 @@ sub _wait_job($self, $job,$file_queue) {
         warn "Warning: missing $file_queue.err";
     }
 
-    #$self->remove_file("$file_queue.out","$file_queue.err","$file_queue.sh");
+    $self->remove_file("$file_queue.out","$file_queue.err","$file_queue.sh");
     return ($out,$err);
 }
 

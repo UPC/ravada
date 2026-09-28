@@ -1006,6 +1006,7 @@ sub prepare_base($self, @args) {
             uid => $user->id
             ,id_domain => $self->id
             ,after_request_ok => \@jobs
+            ,volumes => \@base_img
         );
         my $sth = $self->_dbh->prepare(
             "UPDATE requests set after_request=? "
@@ -1016,15 +1017,11 @@ sub prepare_base($self, @args) {
         $sth->execute($req_post->id, $request->id, $req_post->id);
         $pending_post++;
     }
-    $self->_prepare_base_db(@base_img);
+    $self->_prepare_base_db(@base_img) if !$pending_post;
     $self->_set_base_vm_db($self->_vm->id, 1);
 
     $self->_after_prepare_base($user, $request);
-    if ( $pending_post ) {
-        $self->is_base(0) 
-    } else {
-        $self->is_base(1) 
-    }
+    $self->is_base(1);
 }
 
 =head2 pre_prepare_base
@@ -1068,8 +1065,8 @@ sub _do_prepare_base($self, $with_cd, $overwrite, $req=undef) {
                 $self->_vm->remove_file($base_file);
                 next;
             }
-            die "Error: file '$base_file' already exists in "
-                .$self->_vm->name;
+            die "Error: base file '$base_file' already exists in "
+                .$self->_vm->name."\n.";
         }
     }
     my %dupe;
@@ -1100,16 +1097,17 @@ run after preparing the base files.
 
 sub after_prepare_base($self) {}
 
-sub _before_post_prepare_base($self) {
+sub _before_post_prepare_base($self, @volumes) {
     $self->_data('is_base' => 0 );
-    $self->_clone_volumes_base();
     $self->_data('is_base' => 1 );
 }
 
-sub post_prepare_base($self) { }
+sub post_prepare_base($self,@volumes) { }
 
-sub _after_post_prepare_base($self) {
+sub _after_post_prepare_base($self, @volumes) {
     $self->after_prepare_base();
+    $self->_prepare_base_db(@volumes);
+    $self->_clone_volumes_base();
     $self->is_base(1) 
 }
 
@@ -2793,7 +2791,7 @@ sub _remove_domain_cascade($self,$user, $cascade = 1) {
     my @instances = $self->list_instances();
     my $bases_vm = $self->_bases_vm();
     for my $id_vm ( keys %$bases_vm) {
-        push @instances,( { id_vm => $id_vm });
+        push @instances,( { id_vm => $id_vm }) if $bases_vm->{$id_vm};
     }
     return if !scalar(@instances);
 
@@ -2977,7 +2975,8 @@ sub is_locked {
 
     $self->_init_connector() if !defined $$CONNECTOR;
 
-    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,at_time,command FROM requests "
+    my $sth = $$CONNECTOR->dbh->prepare("SELECT id,at_time,command,status "
+        ." FROM requests "
         ." WHERE id_domain=? AND status <> 'done'"
         ."   AND command <> 'open_exposed_ports'"
         ."   AND command <> 'open_iptables' "
@@ -2991,8 +2990,8 @@ sub is_locked {
     );
     $sth->execute($self->id);
     my $found=0;
-    while (my ($id, $at_time,$command) = $sth->fetchrow) {
-        next if $at_time && $at_time - time > 1;
+    while (my ($id, $at_time,$command,$status) = $sth->fetchrow) {
+        next if $status ne 'retry' && $at_time && $at_time - time > 1;
         $found = $id;
         last;
     };

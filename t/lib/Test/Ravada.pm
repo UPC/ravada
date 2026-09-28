@@ -2177,7 +2177,8 @@ sub search_id_iso($name, $vm=undef) {
 
     if ($vm) {
         my $iso = $vm->_search_iso($iso->{id});
-        my $device_cdrom = $vm->search_volume_path_re(qr($iso->{file_re}));
+        my $file_re = ($iso->{file_re} or $iso->{device_re});
+        my $device_cdrom = $vm->search_volume_path_re(qr($file_re));
         if (!$device_cdrom) {
             my $req= Ravada::Request->download(
                 id_vm => $vm->id

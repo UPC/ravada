@@ -32,6 +32,32 @@ sub test_has_clones($vm) {
     remove_domain($base);
 
 }
+sub test_is_locked_retry($vm) {
+    my $base = create_base($vm);
+    my $req = Ravada::Request->wait_job(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,at => time+10
+        ,file => 'a'
+        ,id_job => 1
+        ,id_vm => $vm->id
+    );
+    $req->_data('status','retry');
+
+    delete $base->{_data};
+    is($base->_data('is_locked'),$req->id);
+    delete $base->{_data};
+    $base->is_locked();
+    is($base->_data('is_locked'),$req->id);
+
+    wait_request();
+
+    delete $base->{_data};
+    is($base->_data('is_locked'),0);
+
+    remove_domain($base);
+}
+
 
 sub test_is_locked($vm) {
     my $base = create_base($vm);
@@ -74,6 +100,7 @@ for my $vm_name ( vm_names() ) {
         }
 
         test_has_clones($vm);
+        test_is_locked_retry($vm);
         test_is_locked($vm);
     }
 }

@@ -161,6 +161,7 @@ sub _move_batch($self, $dst, $req, $mode=undef) {
     my @cmd = (
         [@command_copy,$file,$dst]
     );
+    push @cmd,(["chmod",$mode,$dst]) if $mode;
 
     my $id_domain;
     $id_domain = $self->domain->id if $self->domain;

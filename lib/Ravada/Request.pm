@@ -63,7 +63,7 @@ our %VALID_ARG = (
     ,open_iptables => $args_manage_iptables
       ,remove_base => $args_remove_base
      ,prepare_base => $args_prepare
-     ,post_prepare_base => { id_domain => 1, uid => 1 }
+     ,post_prepare_base => { id_domain => 1, uid => 1, volumes => 1 }
      ,spinoff => { id_domain => 1, uid => 1 }
      ,pause_domain => $args_manage
     ,resume_domain => {%$args_manage, remote_ip => 1 }
@@ -286,6 +286,7 @@ our %COMMAND = (
         ,priority => 1
         ,commands => ['clone','start','start_clones','shutdown_clones','create','open_iptables','list_network_interfaces','list_isos','ping_backend','refresh_machine'
             ,'list_cpu_models','refresh_storage'
+            ,'wait_job'
         ]
     }
 
@@ -2362,10 +2363,20 @@ sub requirements_done($self) {
     return 1;
 }
 
+sub _execute_failed($self) {
+    if ($self->command =~ /prepare_base/) {
+        Ravada::Request->remove_base(
+            uid => $self->arg('uid')
+            ,id_domain => $self->arg('id_domain')
+        );
+    }
+}
+
 sub _requirements_done_ids($self, $ids, $propagate=undef) {
 
     $ids = [ $ids ] unless ref($ids) eq 'ARRAY';
 
+    my $execute_failed=0;
     for my $id (@$ids) {
         next if !_req_exists($id);
         my $req = Ravada::Request->open($id);
@@ -2373,6 +2384,7 @@ sub _requirements_done_ids($self, $ids, $propagate=undef) {
             if ($propagate) {
                 $self->status('done');
                 $self->error($req->error);
+                $self->_execute_failed() unless $execute_failed++;
             }
         }
         return 0 if $req->status() ne 'done';
