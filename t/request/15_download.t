@@ -93,7 +93,7 @@ sub test_fail_download($vm) {
 
     $sth->execute($url,$file_re, $id_iso);
 
-    like($req->error,qr/No.* found on http.*/);
+    like($req->error,qr/Error getting .*http/);
 }
 
 ##################################################################
