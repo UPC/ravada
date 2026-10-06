@@ -176,6 +176,80 @@ sub test_remove($vm, $node1, $node2) {
     }
 }
 
+sub _req_create($vm, $start=0) {
+    my $name = new_domain_name();
+    my $req = Ravada::Request->create_domain(
+        name => $name
+        ,id_vm => $vm->id
+        ,id_owner => user_admin->id
+        ,id_iso => search_id_iso('Alpine%64')
+        ,disk => 10240
+        ,swap => 10240
+        ,data => 10240
+        ,start => $start
+    );
+    wait_request();
+    is($req->error,'');
+    my $base = rvd_back->search_domain($name);
+    ok($base) or return;
+    is($base->_vm->id, $vm->id);
+
+    return $base;
+}
+
+
+sub test_remove_base_node($vm, $node1, $node2) {
+
+    my $base = _req_create($node1);
+    is($base->_data('id_vm'), $node1->id);
+    Ravada::Request->prepare_base(
+        uid => user_admin->id
+        ,id_domain => $base->id
+    );
+    wait_request(debug=>1);
+
+    is($base->base_in_vm($vm->id),0);
+    is($base->base_in_vm($node1->id),1);
+
+    Ravada::Request->set_base_vm(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,id_vm => $node2->id
+    );
+    wait_request(debug=>1);
+
+    Ravada::Request->remove_base_vm(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,id_vm => $vm->id
+    );
+    wait_request(debug=>1);
+
+    $base = Ravada::Domain->open($base->id);
+    is($base->base_in_vm($vm->id),0);
+    is($base->base_in_vm($node1->id),1);
+    is($base->base_in_vm($node2->id),1);
+    isnt($base->_data('id_vm'), $vm->id);
+
+    my $req_rm = Ravada::Request->remove_base(
+        uid => user_admin->id
+        ,id_domain => $base->id
+    );
+    wait_request(debug=>1);
+    is($req_rm->status,'done');
+    is($req_rm->error,'');
+
+    my $req = Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $base->id
+    );
+    wait_request(debug=>1);
+    is($req->status,'done');
+    is($req->error,'');
+
+    remove_domain($base);
+}
+
 ##################################################################################
 if ($>)  {
     my $msg = "SKIPPED: Test must run as root";
@@ -215,7 +289,13 @@ for my $vm_name ( 'Void', 'KVM') {
             goto NEXT;
         }
 
+        test_remove_base_node($vm, $node1, $node2);
+        test_remove_base_node($vm, $node2, $node1);
+
         my $node_shared = remote_node_shared($vm_name)  or next;
+
+        test_remove_base_node($vm, $node1, $node_shared);
+        test_remove_base_node($vm, $node2, $node_shared);
 
         test_remote_standalone($node1, $node2, $node_shared);
 

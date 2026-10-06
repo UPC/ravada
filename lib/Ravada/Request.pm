@@ -90,7 +90,7 @@ our %VALID_ARG = (
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
     ,hybernate=> {uid => 1, id_domain => 1}
     ,hibernate=> {uid => 1, id_domain => 1}
-    ,download => {uid => 2, id_iso => 1, id_vm => 2, vm => 2, verbose => 2, delay => 2, test => 2}
+    ,download => {uid => 1, id_iso => 1, id_vm => 2, vm => 2, verbose => 2, delay => 2, test => 2}
     ,refresh_storage => { id_vm => 2, uid => 1 }
     ,list_storage_pools => { id_vm => 1 , uid => 1, data => 2 }
     ,active_storage_pool => { uid => 1, id_vm => 1, name => 1, value => 1}
@@ -766,7 +766,7 @@ sub _duplicated_request($self=undef, $command=undef, $args=undef) {
         next if $self && $self->id && $self->id == $id;
 
         my $args_found_d = decode_json($args_found);
-        delete $args_found_d->{uid};
+        delete $args_found_d->{uid} if $command =~ /(cleanup|refresh_vms|set_base_vm|remove_base_vm)/;
         delete $args_found_d->{at};
         delete $args_found_d->{status};
         delete $args_found_d->{timeout};
@@ -995,7 +995,7 @@ sub _chain_remove_bases_nodes($self, $domain) {
             ,_force => 1
         );
         $req->after_request_ok($req_prev->id) if $req_prev;
-        $self->after_request_ok($req->id);
+        $req->after_request($self->id);
         $req_prev = $req;
     }
     return $req;
@@ -2475,7 +2475,11 @@ sub _push($value, $id) {
     if (ref($id)) {
         @id = @$id;
     }
-    push @$list,@id;
+    my %dupe = map { $_ => 1 } @$list;
+    for my $new (@id) {
+        push @$list,($new) if !$dupe{$new}++;
+        #confess "Duplicated $new " if $dupe{$new}++;
+    }
     return $list;
 }
 

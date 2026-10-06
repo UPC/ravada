@@ -5628,6 +5628,7 @@ sub _download_local_and_rsync($self, $request, $vm, $iso) {
             id_vm => $vm_local->id
             ,id_iso => $iso->{id}
             ,test => $request->defined_arg('test')
+            ,uid => Ravada::Utils::user_daemon->id
         );
         $request->after_request_ok($req_local->id);
         $request->retry(2);

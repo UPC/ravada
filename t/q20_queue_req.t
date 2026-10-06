@@ -90,6 +90,38 @@ sub test_queue_removed($vm) {
     wait_request(debug=>0);
 }
 
+sub test_queue_duplicate($vm) {
+    my $req = Ravada::Request->download(
+        uid => user_admin->id
+        ,id_vm => $vm->id
+        ,test => 1
+        ,id_iso => 1
+    );
+    my $n = $req->id+1;
+    $req->_data('after_request' => $n);
+    $req->_data('after_request' => $n+1);
+    $req->_data('after_request' => $n);
+
+    is_deeply($req->_data('after_request'),[$n,$n+1]);
+
+    my $req2 = Ravada::Request->download(
+        uid => user_admin->id
+        ,id_vm => $vm->id
+        ,test => 1
+        ,id_iso => 1
+    );
+    is($req2->id,$req->id);
+
+    $req->status('waiting');
+    my $req3 = Ravada::Request->download(
+        uid => user_admin->id
+        ,id_vm => $vm->id
+        ,test => 1
+        ,id_iso => 1
+    );
+    is($req3->id,$req->id);
+    $req->_delete();
+}
 sub test_queue($vm) {
     my $domain = create_domain($vm);
     $domain->add_volume( format => 'qcow2', size => 1*1024*1024);
@@ -187,6 +219,7 @@ for my $vm_name ( vm_names() ) {
 
         # TODO
         # test_queue_remote($vm) if !$<;
+        test_queue_duplicate($vm);
         test_queue_removed($vm);
         test_queue_fail($vm);
         test_queue($vm);

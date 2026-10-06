@@ -5895,7 +5895,7 @@ sub _do_remove_file_not_shared($self, $file, $vm, @nodes) {
         $shared++ if $vm->shared_storage($node, $dir);
         last if $shared;
     }
-    next if $shared;
+    return if $shared;
     $vm->remove_file($file);
 }
 
