@@ -118,6 +118,7 @@ my $USAGE = "$0 "
         ." --url-isos=(URL|default)\n"
         ." --import-vbox : import a VirtualBox image\n"
         .' --add-locale-repository LOCALE : adds ISO repositories for this locale'
+        ." --remove-clones: removes the clones of a given base, it can be done recursively if wanted by using the option [--recursive]"
         ."\n"
         ."Operations on Virtual Machines:\n"
         ." --list\n"
@@ -379,9 +380,11 @@ sub add_user {
     while ($usern){
         $usern = undef;
         print "There is already a user with that username \n";
-        print "Try using another username \n";
-        $login = <STDIN>;
-        chomp $login;
+        print "New username: \n";
+        my $new_login = <STDIN>;
+        die "Error: no username provided on STDIN\n" if !defined $new_login
+        chomp $new_login;
+        $login = $new_login;
         $sth_check->execute($login);
         $usern = $sth_check->fetchrow();
     }
@@ -1522,7 +1525,7 @@ rebase()                            if $REBASE;
 
 list($ALL)                          if $LIST;
 remove_domain($REMOVE_DOMAIN)              if defined $REMOVE_DOMAIN;
-remove_clones($REMOVE_CLONES, $RECURSIVE)              if defined $REMOVE_CLONES;
+remove_clones($REMOVE_CLONES)              if defined $REMOVE_CLONES;
 start_domain($START_DOMAIN)         if $START_DOMAIN;
 
 shutdown_domain(@domains)           if defined $SHUTDOWN_DOMAIN;
