@@ -675,7 +675,7 @@ msgid "The machine will turn off after this time"
 msgstr "La màquina s'apagarà després d'aquest temps"
 
 msgid "Cancel"
-msgstr "cancel·lar"
+msgstr "Cancel·lar"
 
 msgid "Please enter the following information to create the account"
 msgstr "Introduïu la informació següent per crear el compte"
@@ -857,7 +857,7 @@ msgstr "Italià"
 msgid "Vietnamese"
 msgstr "Vietnamita"
 
-msgid "Yes, shutwdown all the clones"
+msgid "Yes, shutdown all the clones"
 msgstr "Sí, apagueu tots els clons"
 
 msgid "Keep in mind that there may be users using a clone"
@@ -1152,41 +1152,41 @@ msgstr "configuracions"
 msgid "can manage users."
 msgstr "pot gestionar usuaris."
 
-msgid "Can expose virtual machine ports."
-msgstr "Pot exposar ports de màquines virtuals."
+msgid "can expose virtual machine ports."
+msgstr "pot exposar ports de màquines virtuals."
 
-msgid "Can rename any virtual machine owned by the user."
-msgstr "Pot canviar el nom de qualsevol màquina virtual propietat de l'usuari."
+msgid "can rename any virtual machine owned by the user."
+msgstr "pot canviar el nom de qualsevol màquina virtual propietat de l'usuari."
 
-msgid "Can rename any virtual machine."
-msgstr "Pot canviar el nom de qualsevol màquina virtual."
+msgid "can rename any virtual machine."
+msgstr "pot canviar el nom de qualsevol màquina virtual."
 
-msgid "Can rename clones from virtual machines owned by the user."
-msgstr "Pot canviar el nom dels clons de màquines virtuals propietat de l'usuari."
+msgid "can rename clones from virtual machines owned by the user."
+msgstr "pot canviar el nom dels clons de màquines virtuals propietat de l'usuari."
 
-msgid "Can shutdown own virtual machines."
-msgstr "Pot apagar les pròpies màquines virtuals."
+msgid "can shutdown own virtual machines."
+msgstr "pot apagar les pròpies màquines virtuals."
 
-msgid "Can reboot own virtual machines."
-msgstr "Pot reiniciar les pròpies màquines virtuals."
+msgid "can reboot own virtual machines."
+msgstr "pot reiniciar les pròpies màquines virtuals."
 
-msgid "Can reboot all virtual machines."
-msgstr "Pot reiniciar totes les màquines virtuals."
+msgid "can reboot all virtual machines."
+msgstr "pot reiniciar totes les màquines virtuals."
 
-msgid "Can reboot clones own virtual machines."
-msgstr "Pot reiniciar les màquines virtuals pròpies dels clons."
+msgid "can reboot clones own virtual machines."
+msgstr "pot reiniciar les màquines virtuals pròpies dels clons."
 
-msgid "Can get a screenshot of own virtual machines."
-msgstr "Poden obtenir una captura de pantalla de màquines virtuals pròpies."
+msgid "can get a screenshot of own virtual machines."
+msgstr "poden obtenir una captura de pantalla de màquines virtuals pròpies."
 
-msgid "Can have an unlimited amount of machines started."
-msgstr "Pot tenir un nombre il·limitat de màquines enceses."
+msgid "can have an unlimited amount of machines started."
+msgstr "pot tenir un nombre il·limitat de màquines enceses."
 
-msgid "Can view groups."
-msgstr "Pot veure grups."
+msgid "can view groups."
+msgstr "pot veure grups."
 
-msgid "Can manage groups."
-msgstr "Pot gestionar grups."
+msgid "can manage groups."
+msgstr "pot gestionar grups."
 
 msgid "can have their own limit on started machines."
 msgstr "pot tenir el seu propi límit a les màquines iniciades."
@@ -2686,3 +2686,96 @@ msgstr "4 anys"
 
 msgid "5 years"
 msgstr "5 anys"
+
+msgid "minutes"
+msgstr "minuts"
+
+msgid "year"
+msgstr "any"
+
+msgid "month"
+msgstr "mes"
+
+msgid "week"
+msgstr "setmana"
+
+msgid "day"
+msgstr "dia"
+
+msgid "hour"
+msgstr "hora"
+
+msgid "minute"
+msgstr "minut"
+
+msgid "now"
+msgstr "ara"
+
+msgid "Virtual Machine locked"
+msgstr "Màquina Virtual bloquejada"
+
+msgid "Show lock details"
+msgstr "Mostra detalls del bloqueig"
+
+msgid "This virtual machine has no LDAP group restrictions."
+msgstr "Aquesta màquina virtual no té restriccions de grup LDAP."
+
+msgid "LDAP search field"
+msgstr "Camp de cerca LDAP"
+
+msgid "read more"
+msgstr "llegir més"
+
+msgid "dismiss"
+msgstr "descartar"
+
+msgid "fetch"
+msgstr "cercar"
+
+msgid "can create disk volumes"
+msgstr "pot crear volums de disc"
+
+msgid "disk space limit"
+msgstr "espai límit del disc"
+
+msgid "can create virtual networks."
+msgstr "pot crear xarxes virtuals."
+
+msgid "can expose ports from any virtual machine."
+msgstr "pot exposar ports de qualsevol màquina virtual."
+
+msgid "can expose ports from clones of own virtual machines."
+msgstr "pot exposar ports de clons de les seves màquines virtuals."
+
+msgid "can hibernate own virtual machines."
+msgstr "pot hibernar les seves màquines virtuals."
+
+msgid "can manage all the virtual networks."
+msgstr "pot gestionar totes les xarxes virtuals."
+
+msgid "can get a screenshot from clones of own virtual machines."
+msgstr "pot realitzar una captura de pantalla de clons de les seves màquines virtuals."
+
+msgid "the user can start and access the screen of any virtual machine"
+msgstr "l'usuari pot iniciar i accedir a la pantalla de qualsevol màquina virtual"
+
+msgid "Are you sure you want to remove this user?"
+msgstr "Estàs segur de voler eliminar aquest usuari?"
+
+msgid "Yes, start all clones"
+msgstr "Sí, iniciar tots els clons"
+
+msgid "Shutdown confirmation"
+msgstr "Confirmació de tancament"
+
+msgid "Warning this machine has the autostart option activated!"
+msgstr "Atenció aquesta màquina té l'opció d'inici automàtic activada!"
+
+msgid "Are you sure you want to shutdown the machine?"
+msgstr "Estàs segur de voler apagar la màquina?"
+
+msgid "Now"
+msgstr "Ara"
+
+msgid "Later"
+msgstr "Després"

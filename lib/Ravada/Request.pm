@@ -234,6 +234,7 @@ qw(
     prepare_base
     wait_job
     download
+    remove_base
     list_cpu_models
 );
 
@@ -319,6 +320,7 @@ our %CMD_VALIDATE = (
     ,migrate => \&_validate_migrate
     ,set_base_vm=> \&_validate_set_base_vm
     ,remove_base_vm=> \&_validate_remove_base_vm
+    ,prepare_base => \&_validate_compact
     ,open_exposed_ports => \&_validate_open_exposed_ports
     ,close_exposed_ports => \&_validate_close_exposed_ports
     ,download => \&_validate_download
@@ -1389,7 +1391,7 @@ sub status {
         if $CMD_SEND_MESSAGE{$self->command}
             || ( $self->error && !$CMD_DO_NOT_SEND_ERROR{$self->command});
 
-    if ($status eq 'done' && $date_changed && $date_changed eq $self->date_changed) {
+    if ($status && $status eq 'done' && $date_changed && $date_changed eq $self->date_changed) {
         sleep 1;
         for ( 1 .. 10 ) {
             eval {
@@ -2589,6 +2591,9 @@ sub AUTOLOAD {
 
     confess "ERROR: Unknown field $name "
         if ref($self) && !exists $self->{$name} && !exists $FIELD{$name} && !exists $FIELD_RO{$name};
+
+    confess "ERROR: Unknown field $name "
+        if !exists $self->{$name} && !exists $FIELD{$name} && !exists $FIELD_RO{$name};
 
     confess "Can't locate object method $name via package $self"
         if !ref($self);

@@ -841,7 +841,7 @@ msgstr "Contrasenya buida"
 msgid "Session timeout"
 msgstr "El temps d'espera de la sessió va finalitzar."
 
-msgid "Yes, shutwdown all the clones"
+msgid "Yes, shutdown all the clones"
 msgstr "Sí, apagueu tots els clons"
 
 msgid "Shutdown all clones"

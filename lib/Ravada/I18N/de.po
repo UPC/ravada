@@ -910,7 +910,7 @@ msgstr "Alle Klone herunterfahren"
 msgid "Keep in mind that there may be users using a clone"
 msgstr "Denken Sie dran, dass Nutzer den Klone verwenden könnten"
 
-msgid "Yes, shutwdown all the clones"
+msgid "Yes, shutdown all the clones"
 msgstr "Ja, alle Klone herunterfahren"
 
 msgid "-- choose hardware --"

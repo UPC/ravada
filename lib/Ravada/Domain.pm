@@ -2536,7 +2536,7 @@ sub _date_status_change($self) {
         return {
             date => ''
             ,date_txt => ''
-            ,duration => ''
+            ,duration => ['','']
         }
     }
     my $date_txt = $date;

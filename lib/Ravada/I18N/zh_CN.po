@@ -779,7 +779,7 @@ msgstr "已授权。"
 msgid "It is required a viewer to run the virtual machines."
 msgstr "需要一个视图去运行虚拟机。"
 
-msgid "Yes, shutwdown all the clones"
+msgid "Yes, shutdown all the clones"
 msgstr "是的，关闭所有克隆"
 
 msgid "Keep in mind that there may be users using a clone"
