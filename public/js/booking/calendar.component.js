@@ -12,6 +12,11 @@ calendarCtrl.$inject = ['$element', '$window', 'apiBookings','$uibModal','moment
 
 function calendarCtrl($element, $window, apiBookings,$uibModal,moment,apiEntry) {
     const self = this;
+    const rawLang = document.documentElement.lang || 'en';
+    const normalized = rawLang.toLowerCase().replace(/_/g, '-').replace(/@/g, '-');
+    const locales = (moment && typeof moment.locales === 'function') ? moment.locales() : [];
+    const base = normalized.split('-')[0];
+    const lang = locales.includes(normalized) ? normalized : (locales.includes(base) ? base : 'en');
     const parseDate = (data, time) => data + "T" + time;
     const TimeFormat = {
             hour: '2-digit',
@@ -20,7 +25,7 @@ function calendarCtrl($element, $window, apiBookings,$uibModal,moment,apiEntry) 
             omitZeroMinute: false
     };
     let calendar;
-    moment.updateLocale('en', {
+    moment.updateLocale(lang, {
         week: {
             dow: 1,
         }
@@ -28,7 +33,9 @@ function calendarCtrl($element, $window, apiBookings,$uibModal,moment,apiEntry) 
     self.$postLink = () => {
         const calendarEl = $element.find("#rvdCalendar")[0];
         calendar = new FullCalendar.Calendar(calendarEl, {
+            locale: lang,
             initialView: 'timeGridWeek',
+            height: 'auto',
             firstDay: 1,
             allDaySlot: false,
             selectOverlap: false,

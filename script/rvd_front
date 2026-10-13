@@ -3242,14 +3242,14 @@ sub _languages() {
         ,it => 'Italian'
         ,ja => 'Japanese'
         ,ko => 'Korean'
-        ,my => 'Melayu'
-        ,nb_NO => 'Norwegian'
+        ,ms => 'Melayu'
+        ,'nb-NO' => 'Norwegian'
         ,pt => 'Portuguese'
         ,tr => 'Turkish'
-        ,'cat@valencia' => 'Valencian'
+        ,'ca-valencia' => 'Valencian'
         ,'ru' => 'Russian'
         ,vi => 'Vietnamese'
-        ,zh_CN => 'Chinese'
+        ,'zh-CN' => 'Chinese'
     );
     return \%lang_name;
 }

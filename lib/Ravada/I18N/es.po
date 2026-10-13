@@ -2703,3 +2703,36 @@ msgstr "Ahora"
 
 msgid "Later"
 msgstr "Después"
+
+msgid "Today"
+msgstr "Hoy"
+
+msgid "Clear"
+msgstr "Limpiar"
+
+msgid "LDAP groups allowed"
+msgstr "Grupos LDAP permitidos"
+
+msgid "Local groups"
+msgstr "Grupos locales"
+
+msgid "LDAP groups"
+msgstr "Grupos LDAP"
+
+msgid "No devices found"
+msgstr "No se encontraron dispositivos"
+
+msgid "found"
+msgstr "encontrados"
+
+msgid "Storage Pool"
+msgstr "Almacenamiento"
+
+msgid "available"
+msgstr "disponible"
+
+msgid "There are no machines that match the selection"
+msgstr "No hay máquinas que coincidan con la selección"
+
+msgid "more"
+msgstr "más"
