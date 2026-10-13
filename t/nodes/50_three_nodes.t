@@ -13,6 +13,26 @@ no warnings "experimental::signatures";
 use feature qw(signatures);
 
 ##################################################################################
+sub test_remote_standalone( @nodes ) {
+    for my $node0 (@nodes) {
+        my $domain = create_domain($node0);
+        for my $node1 (@nodes) {
+            diag("Migrate from ".$domain->_vm->name." to ".$node1->name);
+            my $req = Ravada::Request->migrate(
+                uid => user_admin->id
+                ,id_domain => $domain->id
+                ,id_node => $node1->id
+                ,shutdown => 1
+                ,start => 1
+            );
+            wait_request( debug => 1);
+            my $domain_f = Ravada::Front::Domain->open($domain->id);
+            is($domain_f->_data('id_vm'),$node1->id);
+        }
+        remove_domain($domain);
+    }
+}
+
 
 sub test_remove_n($vm, @nodes ) {
     my $domain = create_domain($vm);
@@ -20,15 +40,30 @@ sub test_remove_n($vm, @nodes ) {
     $domain->prepare_base(user_admin);
 
     my $n=1;
+    $n++ if !$domain->_vm->is_local;
     for my $node ( @nodes ) {
-        $domain->set_base_vm(vm => $node, user => user_admin);
-        is($domain->list_instances, ++$n);
+        Ravada::Request->set_base_vm(
+            id_vm=> $node->id
+            ,uid => user_admin->id
+            ,id_domain => $domain->id
+        );
+        wait_request();
+        is($domain->list_instances, ++$n)
+            or die Dumper([$domain->list_instances]);
     }
 
     for my $node1 ( @nodes ) {
         my $clone = $domain->clone(user => user_admin, name => new_domain_name);
-        $clone->migrate($node1);
-        $clone->start(user_admin);
+        diag("Migrate clone ".$clone->name." from ".$clone->_vm->name
+                ." to ".$node1->name);
+        my $req = Ravada::Request->migrate(
+            uid => user_admin->id
+            ,id_domain => $clone->id
+            ,id_node => $node1->id
+            ,shutdown => 1
+            ,start => 1
+        );
+        wait_request();
         for my $node2 ( @nodes ) {
             next if $node2->id == $node1->id;
             diag("Migrating ".$clone->name." from ".$node1->name." to ".$node2->name);
@@ -69,14 +104,40 @@ sub test_remove($vm, $node1, $node2) {
         , name => new_domain_name
     );
     is($clone1->list_instances,1);
-    $clone1->migrate($node1);
-    is($clone1->list_instances,2);
+
+    my $n_exp_instances=2;
+    if ($clone1->_vm->id == $node1->id ) {
+        # does nothing
+        $n_exp_instances=1;
+    } elsif ( !$clone1->_vm->is_local && !$node1->is_local ) {
+        # does a pass via local
+        $n_exp_instances=3;
+    }
+    Ravada::Request->migrate(
+        uid => user_admin->id
+        ,id_domain => $clone1->id
+        ,id_node => $node1->id
+    );
+    wait_request();
+
+    is($clone1->list_instances,$n_exp_instances);
 
     my $clone2 = $domain->clone( user => user_admin
         , name => new_domain_name
     );
-    $clone2->migrate($node1);
-    $clone2->migrate($node2);
+    Ravada::Request->migrate(
+        uid => user_admin->id
+        ,id_domain => $clone2->id
+        ,id_node => $node1->id
+    );
+    wait_request();
+    Ravada::Request->migrate(
+        uid => user_admin->id
+        ,id_domain => $clone2->id
+        ,id_node => $node2->id
+    );
+    wait_request();
+
     is($clone2->list_instances,3);
 
     my @name = ( $clone1->name, $clone2->name, $domain->name);
@@ -113,6 +174,80 @@ sub test_remove($vm, $node1, $node2) {
             is($row[0],undef, "Expecting no id_domain: $id in $table ".Dumper(\@row));
         }
     }
+}
+
+sub _req_create($vm, $start=0) {
+    my $name = new_domain_name();
+    my $req = Ravada::Request->create_domain(
+        name => $name
+        ,id_vm => $vm->id
+        ,id_owner => user_admin->id
+        ,id_iso => search_id_iso('Alpine%64')
+        ,disk => 10240
+        ,swap => 10240
+        ,data => 10240
+        ,start => $start
+    );
+    wait_request();
+    is($req->error,'');
+    my $base = rvd_back->search_domain($name);
+    ok($base) or return;
+    is($base->_vm->id, $vm->id);
+
+    return $base;
+}
+
+
+sub test_remove_base_node($vm, $node1, $node2) {
+
+    my $base = _req_create($node1);
+    is($base->_data('id_vm'), $node1->id);
+    Ravada::Request->prepare_base(
+        uid => user_admin->id
+        ,id_domain => $base->id
+    );
+    wait_request(debug=>1);
+
+    is($base->base_in_vm($vm->id),0);
+    is($base->base_in_vm($node1->id),1);
+
+    Ravada::Request->set_base_vm(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,id_vm => $node2->id
+    );
+    wait_request(debug=>1);
+
+    Ravada::Request->remove_base_vm(
+        uid => user_admin->id
+        ,id_domain => $base->id
+        ,id_vm => $vm->id
+    );
+    wait_request(debug=>1);
+
+    $base = Ravada::Domain->open($base->id);
+    is($base->base_in_vm($vm->id),0);
+    is($base->base_in_vm($node1->id),1);
+    is($base->base_in_vm($node2->id),1);
+    isnt($base->_data('id_vm'), $vm->id);
+
+    my $req_rm = Ravada::Request->remove_base(
+        uid => user_admin->id
+        ,id_domain => $base->id
+    );
+    wait_request(debug=>1);
+    is($req_rm->status,'done');
+    is($req_rm->error,'');
+
+    my $req = Ravada::Request->start_domain(
+        uid => user_admin->id
+        ,id_domain => $base->id
+    );
+    wait_request(debug=>1);
+    is($req->status,'done');
+    is($req->error,'');
+
+    remove_domain($base);
 }
 
 ##################################################################################
@@ -154,8 +289,18 @@ for my $vm_name ( 'Void', 'KVM') {
             goto NEXT;
         }
 
+        test_remove_base_node($vm, $node1, $node2);
+        test_remove_base_node($vm, $node2, $node1);
+
         my $node_shared = remote_node_shared($vm_name)  or next;
 
+        test_remove_base_node($vm, $node1, $node_shared);
+        test_remove_base_node($vm, $node2, $node_shared);
+
+        test_remote_standalone($node1, $node2, $node_shared);
+
+        test_remove_n($node1, $node2, $node_shared);
+        # create on local first
         test_remove_n($vm, $node1, $node2, $node_shared);
 
         test_remove($vm, $node1, $node2);

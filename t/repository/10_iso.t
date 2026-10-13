@@ -67,6 +67,7 @@ sub test_download($iso_name) {
             , id_vm => $vm->id
             #            , delay => 4
             , test => 1
+            , _force => 1
     );
     is($req1->status, 'requested');
 
@@ -117,7 +118,7 @@ sub test_download_iso($vm, $id_iso, $name) {
     rvd_back->_process_all_requests_dont_fork();
     is($req1->status, 'done');
     is($req1->error,'',$iso->{name});
-    like($req1->output,qr/^http.*/);
+    like($req1->output,qr/^http.*/) or exit;
 
 }
 sub test_post_login() {

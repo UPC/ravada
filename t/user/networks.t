@@ -10,7 +10,6 @@ use Test::Ravada;
 use Ravada;
 
 use Data::Dumper;
-use Mojo::JSON qw(decode_json);
 
 no warnings "experimental::signatures";
 use feature qw(signatures);
@@ -27,7 +26,7 @@ sub test_create_network($vm) {
     is($req_new->status, 'done');
     is($req_new->error, '');
     ok($req_new->output,"Expecting output") or die;
-    my $data = decode_json($req_new->output);
+    my $data = $req_new->output;
 
     my $req = Ravada::Request->create_network(
         uid => user_admin->id
@@ -60,7 +59,7 @@ sub test_grant_access($vm) {
     );
     wait_request();
     is($req_new->error,'');
-    my $data = decode_json($req_new->output);
+    my $data = $req_new->output;
 
     my $req_create = Ravada::Request->create_network(
         uid => $user->id
@@ -152,7 +151,7 @@ sub test_deny_access($vm) {
     like($req_delete->error,qr/not authorized/);
 
     $req_create->status('requested');
-    my $new_data = decode_json($req_new->output);
+    my $new_data = $req_new->output;
     $req_create->arg('data' => $new_data);
     $req_create->status('requested');
     wait_request();
@@ -164,7 +163,7 @@ sub test_deny_access($vm) {
 
     is($req_list->status,'done');
     is($req_list->error,'');
-    my $new_list = decode_json($req_list->output);
+    my $new_list = $req_list->output;
     my ($found) = grep { $_->{name} eq $new_data->{name} } @$new_list;
 
     ok($found,"Expecting new network $new_data->{name}");

@@ -173,7 +173,7 @@ sub _test_change_disk($base, $clone) {
     my $data_base2 = dclone($disks_base2->[0]);
     my $data_clone2 = dclone($disks_clone2->[0]);
 
-    is_deeply($data_base2, $data_base);
+    is_deeply($data_base2, $data_base) or exit;
     is($data_clone2->{file}, $data_clone->{file}) or exit;
 }
 
@@ -346,9 +346,9 @@ for my $vm_name (vm_names()) {
         ,id_domain => $base->id
         ,name => new_domain_name()
     );
-    wait_request();
+    wait_request(debug => 1);
 
-    test_add_rm_change_hw($base);
+    test_add_rm_change_hw($base) if $base;
 }
 
 end();

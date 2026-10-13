@@ -23,11 +23,9 @@ my $RVD_FRONT = Ravada::Front->new( @rvd_args
 
 my $USER = create_user('foo','bar', 1);
 
-add_ubuntu_minimal_iso();
-
 my %CREATE_ARGS = (
     Void => { id_iso => search_id_iso('Alpine'),       id_owner => $USER->id }
-    ,KVM => { id_iso => search_id_iso('Ubuntu % Minimal'),       id_owner => $USER->id }
+    ,KVM => { id_iso => search_id_iso('Alpine'),       id_owner => $USER->id }
     ,LXC => { id_template => 1, id_owner => $USER->id }
 );
 

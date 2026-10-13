@@ -105,6 +105,51 @@ sub test_shared_conflict($vm, $node) {
     is($node->shared_storage($vm,"/var/tmp"),1);
 }
 
+sub test_file_exist($vm) {
+
+    my $path = $vm->_storage_path('default');
+    die if !$path;
+
+    my $filename = new_domain_name().".qcow2";
+    my $file1 = "$path/$filename";
+
+    $vm->write_file($file1,"test ".localtime(time));
+
+    ok($vm->file_exists($file1));
+
+    my $path2= $vm->_storage_path('pool_shared');
+    die if !$path2;
+
+    my $file2 = "$path2/$filename";
+
+    ok(!$vm->file_exists($file2),$file2) or exit;
+
+    $vm->remove_file($file1);
+}
+
+sub test_move_volume($vm) {
+
+    my $domain = create_domain($vm);
+
+    my ($volume) = $domain->list_volumes();
+
+    my $path2= $vm->_storage_path('pool_shared');
+
+    my $req = Ravada::Request->move_volume(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+        ,volume => $volume
+        ,storage => 'pool_shared'
+    );
+    wait_request(debug => 0);
+
+    my ($volume2) = $domain->list_volumes();
+    isnt($volume2, $volume);
+
+    remove_domain($domain);
+
+}
+
 ##################################################################################
 if ($>)  {
     my $msg = "SKIPPED: Test must run as root";
@@ -145,6 +190,12 @@ for my $vm_name ( 'KVM' ) {
         diag("Testing remote node in $vm_name");
         my $node = remote_node($vm_name)  or next;
         clean_remote_node($node);
+
+        test_file_exist($node);
+        test_file_exist($vm);
+
+        test_move_volume($vm);
+        test_move_volume($node);
 
         test_fail_storage_pools_different_path($vm, $node);
         test_fail_different_storage_pools($node);

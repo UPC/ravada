@@ -112,6 +112,7 @@ sub test_copy_request {
     is($@,'') or return;
     is($req->status(),'requested');
     rvd_back->_process_all_requests_dont_fork();
+    wait_request();
 
     is($req->status(),'done');
     is($req->error,'');
@@ -172,7 +173,7 @@ sub test_copy_req_nonbase {
     };
     is($@,'') or return;
     is($req->status(),'requested');
-    rvd_back->_process_all_requests_dont_fork();
+    wait_request();
     is($req->status(),'done');
     is($req->error,'');
 

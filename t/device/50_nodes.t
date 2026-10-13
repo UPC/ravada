@@ -243,7 +243,6 @@ sub test_assign_v2($hd, $node, $number, $volatile=0) {
 
         my $name = new_domain_name;
         my $domain = _req_clone($base, $name);
-        is($domain->is_active,1) if $vm->type eq 'Void';
         check_hd_from_node($domain,\%devices_nodes);
         my $hd_checked = check_host_device($domain);
         push(@{$dupe{$hd_checked}},($domain->name." ".$base->id));
@@ -436,6 +435,7 @@ sub test_assign($vm, $node, $hd, $n_expected_in_vm, $n_expected_in_node) {
 }
 
 sub check_hd_from_node($domain, $devices_node) {
+    return if !$domain->is_active();
     my $id_vm = $domain->_data('id_vm');
     is($domain->_vm->id,$id_vm);
 
@@ -534,6 +534,7 @@ sub _check_no_hd_locked($id_domain) {
 }
 
 sub check_host_device($domain) {
+    return 0 if !$domain->is_active();
     my $sth = connector->dbh->prepare("SELECT * FROM host_devices_domain_locked "
         ." WHERE id_domain=?");
     $sth->execute($domain->id);

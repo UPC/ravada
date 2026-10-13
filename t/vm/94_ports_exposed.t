@@ -58,7 +58,7 @@ sub test_expose_port($vm) {
     my $remote_ip2 = '10.0.0.2';
     my $local_ip = $vm->ip;
 
-    is($domain->_data('ports_exposed'),undef);
+    is($domain->_data('ports_exposed'),0);
     my $req = Ravada::Request->start_domain(
         uid => user_admin->id
         ,id_domain => $domain->id

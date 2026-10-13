@@ -87,7 +87,8 @@ sub test_nat($vm_name) {
     ok($domain,"[$vm_name] Expecting the domain $domain_name") or exit;
 
     my $file_config = "/tmp/config_display.yml";
-    DumpFile($file_config,{ display_ip => $display_ip, vm => \@VMS });
+    DumpFile($file_config,{ display_ip => $display_ip, vm => \@VMS
+        ,dir_rrd => '/var/tmp/ravada/rrd/$$'});
     my $rvd_back = Ravada->new(
             connector => connector()
                 , config => $file_config
@@ -123,7 +124,8 @@ sub test_nat($vm_name) {
     #--------------------------------------------------------------------------------
     # Now with Nat
     #
-    DumpFile($file_config,{ display_ip => $display_ip, nat_ip => $NAT_IP, vm => \@VMS });
+    DumpFile($file_config,{ display_ip => $display_ip, nat_ip => $NAT_IP, vm => \@VMS
+        , dir_rrd => '/var/tmp/ravada/rrd/$$'});
     $rvd_back = Ravada->new(
             connector => connector()
                 , config => $file_config
@@ -154,7 +156,7 @@ sub test_nat($vm_name) {
 
     $domain->remove(user_admin);
 
-    DumpFile($file_config,{ vm => \@VMS });
+    DumpFile($file_config,{ vm => \@VMS, dir_rrd => '/var/tmp/ravada/rrd/$$'});
     $rvd_back = Ravada->new(
             connector => connector()
                 , config => $file_config

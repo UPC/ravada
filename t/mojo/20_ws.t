@@ -566,15 +566,21 @@ for my $vm_name ( @{rvd_front->list_vm_types} ) {
     _login_non_admin($t);
     test_bases_access($t,\@bases);
 
+    warn 1;
     test_bases_non_admin($t, \@bases);
+    warn 2;
     test_list_machines_non_admin($t,\@bases);
+    warn 3;
     test_bases_access($t,\@bases);
+    warn 4;
 
     test_domain_requests($t, $bases[0]);
 
     remove_old_domains_req();
     while( list_machines_user($t) ) {
+        warn 11;
         remove_old_domains_req();
+        warn 12;
     }
 }
 mojo_clean($t);

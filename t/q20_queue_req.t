@@ -28,16 +28,16 @@ sub test_queue_fail($vm) {
         uid => user_admin->id
         ,id_domain => $domain->id
     );
-    rvd_back->_process_requests_dont_fork();
+    rvd_back->_process_requests_dont_fork(0);
     is($req->error,'');
     is($req->status(),'done');
 
-    # is not base yet
-    is($domain->is_base,0) or exit;
+    # is base already
+    is($domain->is_base,1) or exit;
 
     for my $vol ( $domain->list_volumes ) {
         if( $vol =~ /\.(img|raw|qcow2)$/ ) {
-            unlink $vol or die "$! $vol";
+            unlink $vol or die "$! $vol";# if -e $vol;
         }
     }
     my @req = $domain->list_requests();
@@ -45,17 +45,83 @@ sub test_queue_fail($vm) {
 
     # failed so no is not base now neither
     is($domain->is_base,0);
+    my $found_error_in_wait=0;
     for my $req2 (@req) {
         is($req2->status,'done');
+        next if $req2->command eq 'wait_job' && !$req2->error;
+        $found_error_in_wait++;
         like($req2->error,qr'.',$req2->id." ".$req2->command." id_domain=".$req2->defined_arg('id_domain'))
             or exit;
     }
+    ok($found_error_in_wait);
 
     remove_domain($domain);
 
     $Ravada::VM::QUEUE_AT_TIME=0;
 }
 
+sub test_queue_removed($vm) {
+    my $domain = create_domain($vm);
+
+    $domain->add_volume( format => 'qcow2', size => 1*1024*1024);
+    my $req = Ravada::Request->prepare_base(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    rvd_back->_process_requests_dont_fork();
+
+    is($req->error,'');
+    is($req->status(),'done');
+    my $req_post;
+    my @req = $domain->list_requests();
+    for my $req (@req) {
+        if ($req->command eq 'post_prepare_base') {
+            $req_post = $req;
+        }
+        next unless ($req->command eq 'wait_job');
+        $req->_delete();
+    }
+
+    rvd_back->_process_requests_dont_fork(0);
+    is ($req_post->status(),'done');
+
+    remove_domain($domain);
+
+    wait_request(debug=>0);
+}
+
+sub test_queue_duplicate($vm) {
+    my $req = Ravada::Request->download(
+        uid => user_admin->id
+        ,id_vm => $vm->id
+        ,test => 1
+        ,id_iso => 1
+    );
+    my $n = $req->id+1;
+    $req->_data('after_request' => $n);
+    $req->_data('after_request' => $n+1);
+    $req->_data('after_request' => $n);
+
+    is_deeply($req->_data('after_request'),[$n,$n+1]);
+
+    my $req2 = Ravada::Request->download(
+        uid => user_admin->id
+        ,id_vm => $vm->id
+        ,test => 1
+        ,id_iso => 1
+    );
+    is($req2->id,$req->id);
+
+    $req->status('waiting');
+    my $req3 = Ravada::Request->download(
+        uid => user_admin->id
+        ,id_vm => $vm->id
+        ,test => 1
+        ,id_iso => 1
+    );
+    is($req3->id,$req->id);
+    $req->_delete();
+}
 sub test_queue($vm) {
     my $domain = create_domain($vm);
     $domain->add_volume( format => 'qcow2', size => 1*1024*1024);
@@ -64,7 +130,7 @@ sub test_queue($vm) {
         $domain->add_volume( format => 'qcow2', size => 1*1024*1024);
     }
 
-    my $n_vols_raw = scalar( grep {$_ =~ /img|raw/ } $domain->list_volumes);
+    my $n_vols_raw = scalar( grep {$_ =~ /img|raw|qcow/ } $domain->list_volumes);
     my $req = Ravada::Request->prepare_base(
         uid => user_admin->id
         ,id_domain => $domain->id
@@ -74,7 +140,7 @@ sub test_queue($vm) {
     is($req->status(),'done');
 
     # is not base yet
-    is($domain->is_base,0);
+    is($domain->is_base,1);
 
     my @req = $domain->list_requests();
     is(scalar(@req),$n_vols_raw+1) or do {
@@ -92,8 +158,10 @@ sub test_queue($vm) {
     wait_request(debug => 0);
 
     for my $req (@req) {
-        if ($req->command eq 'wait_job' || $req->command eq 'post_prepare_base') {
-            ok($req->after_request,$req->id." ".$req->command);
+        if ($req->command eq 'wait_job') {
+            ok($req->after_request,$req->id." ".$req->command) or die $domain->name;
+        } else {
+            ok($req->after_request_ok,$req->id." ".$req->command) or die $domain->name;
         }
         my $args = $req->args;
         if ($req->command eq 'wait_job') {
@@ -151,6 +219,8 @@ for my $vm_name ( vm_names() ) {
 
         # TODO
         # test_queue_remote($vm) if !$<;
+        test_queue_duplicate($vm);
+        test_queue_removed($vm);
         test_queue_fail($vm);
         test_queue($vm);
     }

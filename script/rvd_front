@@ -775,10 +775,8 @@ any '/v2/network/new' => sub($c) {
     );
     $RAVADA->wait_request($req);
     my $data = {};
-    if ($req->status eq 'done' && $req->output && $req->output =~ /^\{/) {
-        eval {
-            $data = decode_json($req->output);
-        };
+    if ($req->status eq 'done' && $req->output) {
+        $data = $req->output;
         warn $@ if $@;
         $data->{_owner} = {
             id => $USER->id
@@ -837,7 +835,7 @@ post '/v2/network/set' => sub($c) {
         );
         $RAVADA->wait_request($req, 120);
         my $out = {};
-        eval { $out = decode_json($req->output) if $req->output };
+        $out = $req->output if $req->output;
         warn $@ if $@;
         %data = %$out if $out && keys %$out;
     }
@@ -3515,9 +3513,7 @@ get '/storage/list_unused_volumes' => sub($c) {
     );
     $RAVADA->wait_request($req,180);
     my $output = [];
-    if ($req->output) {
-        $output = decode_json($req->output);
-    }
+    $output = $req->output if $req->output;
     return $c->render( json => $output );
 };
 
@@ -4821,7 +4817,6 @@ sub set_base_vm( $c, $new_value) {
         return $c->render(json => {message => 'access denied'});
     }
 
-    $domain->_set_base_vm_db($id_vm, $new_value);
     if ($new_value) {
         my $req = Ravada::Request->set_base_vm(
         id_vm => $id_vm

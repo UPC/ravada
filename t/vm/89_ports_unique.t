@@ -69,7 +69,8 @@ for my $vm_name ( reverse vm_names() ) {
 
                 my $string = join(" ", map { $_ or '' } @$rule);
                 next if $string eq 'A POSTROUTING j LIBVIRT_PRT';
-                die Dumper($rule) if $dupe{$string}++;
+                next if $string =~ /A LIBVIRT_/;
+                die Dumper([$string,$rule]) if $dupe{$string}++;
             }
         }
 

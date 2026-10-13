@@ -237,6 +237,7 @@ if (!ping_backend()) {
 $Test::Ravada::BACKGROUND=1;
 
 remove_old_domains_req(1); # 0=do not wait for them
+clean();
 
 $t = Test::Mojo->new($SCRIPT);
 $t->ua->inactivity_timeout(900);

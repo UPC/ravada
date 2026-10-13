@@ -31,7 +31,12 @@ sub test_list_nats($vm) {
     wait_request();
     is($req->status,'done');
     is($req->error,'');
-    like($req->output,qr{\"$exp_nat[0]\"});
+    my $found;
+    for ( @{ $req->output }) {
+        $found = $_ if $_ eq $exp_nat[0];
+        last if $found;
+    }
+    ok($found, "Expecting $exp_nat[0] in ".Dumper($req->output));
 
     my $nats = rvd_front->list_network_interfaces(
            user => user_admin
@@ -72,7 +77,7 @@ sub test_list_bridges($vm) {
     is($req->error,'');
 
     my @exp_bridges = sort(_expected_bridges($vm));
-    is($req->output,encode_json(\@exp_bridges));
+    is_deeply($req->output,\@exp_bridges) or confess;
 
     my $bridges = rvd_front->list_network_interfaces(
            user => user_admin
@@ -84,7 +89,7 @@ sub test_list_bridges($vm) {
 
     SKIP: {
         skip("No system bridges found",1) if !scalar @exp_bridges;
-        like($req->output, qr/\["[\w\d]+".*\]/);
+        isa_ok($req->output,'ARRAY');
     }
 }
 sub _expected_bridges($vm) {

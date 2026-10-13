@@ -4,6 +4,7 @@
 use warnings;
 use strict;
 
+use Carp qw(confess);
 use Data::Dumper;
 use Mojo::JSON qw(decode_json);
 use Storable qw(dclone);
@@ -472,7 +473,7 @@ sub _req_create($vm, $iso, $options) {
     my $req = Ravada::Request->create_domain(@args);
     wait_request( debug => 0);
     my $domain = $vm->search_domain($name);
-    ok($domain) or die "No machine $name ".Dumper($iso);
+    ok($domain) or confess "No machine $name ".Dumper($iso);
     $domain->shutdown_now(user_admin);
     return $domain;
 }
@@ -533,6 +534,9 @@ sub _req_add_cd($domain) {
 sub _search_iso_alpine($vm) {
     my $id_alpine = search_id_iso('Alpine%32');
     my $iso = $vm->_search_iso($id_alpine);
+    my $file_re = $iso->{file_re};
+    $iso->{device} = $vm->search_volume_path_re(qr($file_re));
+    die "Missing iso file from ".Dumper($iso) if !$iso->{device};
     return $iso->{device};
 }
 sub _machine_types($vm) {
@@ -545,7 +549,7 @@ sub _machine_types($vm) {
     like($req->output,qr/./);
 
     my $machine_types = {};
-    $machine_types = decode_json($req->output());
+    $machine_types = $req->output();
 
     return $machine_types;
 }

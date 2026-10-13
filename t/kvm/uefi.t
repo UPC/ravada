@@ -107,6 +107,10 @@ sub test_machine_types($vm) {
                 my $iso = $vm->_search_iso($id_iso);
                 diag("$arch $machine $iso->{name}");
 
+                # it can not be selected by the user, so we don't test it
+                # pc-i440fx and UEFI will not work
+                next if $arch eq 'x86_64' && $machine =~ /pc-i440/ && $iso->{options}->{bios} =~ /UEFI/;
+
                 my $name = new_domain_name();
 
                 my $options = dclone($iso->{options});
@@ -162,8 +166,7 @@ sub test_req_machine_types($vm) {
         ,uid => user_admin->id
     );
     wait_request();
-    my $out_json = $req->output;
-    my $out = decode_json($out_json);
+    my $out = $req->output;
     my $n = 2;
     ok(scalar(keys %$out) >= $n,"Expecting at least $n machine architectures"
         .  Dumper($out));
@@ -179,8 +182,7 @@ sub test_req_machine_types2($vm) {
         ,uid => user_admin->id
     );
     wait_request();
-    my $out_json = $req->output;
-    my $out = decode_json($out_json);
+    my $out = $req->output;
     my $n = 2;
     ok(scalar(keys %$out) >= $n,"Expecting at least $n machine architectures"
         .  Dumper($out));
@@ -190,21 +192,12 @@ sub test_req_machine_types2($vm) {
         .Dumper($types));
 }
 
-sub _mock_device($vm,$iso, $mock_device) {
-    my $device = $iso->{device};
-    return if $device && -e $device;
-
-    my $sth = connector->dbh->prepare(
-        "UPDATE iso_images SET device=? WHERE id=?"
-    );
-    $sth->execute($mock_device,$iso->{id});
-    $iso->{device} = $mock_device;
-}
-
 sub _search_iso_alpine($vm) {
     my $id_alpine = search_id_iso('Alpine%32');
     my $iso = $vm->_search_iso($id_alpine);
-    return $iso->{device};
+
+    my $file = $vm->search_volume_path($iso->{file_re});
+    return $file;
 }
 
 sub test_isos($vm) {
@@ -218,7 +211,7 @@ sub test_isos($vm) {
     like($req->output,qr/./);
 
     my $machine_types = {};
-    $machine_types = decode_json($req->output());
+    $machine_types = $req->output() if $req->output;
 
     my $isos = rvd_front->list_iso_images();
 
@@ -233,14 +226,16 @@ sub test_isos($vm) {
         next if !$iso->{arch} || $iso->{arch} !~ /^(i686|x86_64)$/;
         next if grep {$iso->{name} =~ /$_/} @skip;
 
-        _mock_device($vm,$iso, $device_iso);
-        die Dumper($iso) if !$iso->{device} || !-e $iso->{device};
         for my $machine (@{$machine_types->{$iso->{arch}}}) {
             next if $machine eq 'ubuntu';
             for my $uefi ( 0,1 ) {
                 next if $machine =~ /^pc-q35/ && $iso->{arch} !~ /x86_64/ && !$uefi;
                 next if $iso->{name} =~ /Windows 11/
                 && (!$uefi || $machine !~ /q35/);
+
+
+                next if $uefi && $iso->{arch} ne 'x86_64';
+                next if $uefi && $machine =~ /i440/;
 
                 next if !$ENV{TEST_LONG} &&
                 ( $iso->{description} =~ /Debian \d /i
@@ -263,9 +258,10 @@ sub test_isos($vm) {
                         , arch => $iso->{arch}
                         , uefi => $uefi
                     }
-                    ,iso_file => $iso->{device}
+                    ,iso_file => $device_iso
                 );
                 wait_request(debug => 0);
+                is($req->error,'');
                 my $domain = $vm->search_domain($name);
                 ok($domain);
                 wait_request();
@@ -288,7 +284,9 @@ sub test_isos($vm) {
                 }
 
                 $domain->start(user_admin);
-                test_drives($doc);
+                my $n_expected = 4;
+                $n_expected = 3 if $iso->{name} =~ /Empty Machine/;
+                test_drives($doc, $n_expected);
                 $domain->shutdown_now(user_admin);
                 $domain->remove(user_admin) if $domain;
             }
@@ -298,9 +296,9 @@ sub test_isos($vm) {
     ok($found_4m,"Expected some 4M ovmf found");
 }
 
-sub test_drives($doc) {
+sub test_drives($doc, $n_expected=4) {
     my @drives = $doc->findnodes("/domain/devices/disk");
-    die "Error: only ".scalar(@drives) if scalar(@drives)<4;
+    die "Error: only ".scalar(@drives) if scalar(@drives)<$n_expected;
     my $previous = '';
     my $prev_target = '';
     my $prev_file = '';

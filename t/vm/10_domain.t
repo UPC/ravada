@@ -648,12 +648,6 @@ sub test_create_domain_nocd {
 
     my $id_iso = search_id_iso('Alpine');
 
-    my $sth = connector->dbh->prepare(
-        "UPDATE iso_images set device=NULL WHERE id=?"
-    );
-    $sth->execute($id_iso);
-    $sth->finish;
-
     my $iso;
     eval { $iso = $vm->_search_iso($id_iso,'<NONE>')};
     return if $@ && $@ =~ /Can't locate object method/;

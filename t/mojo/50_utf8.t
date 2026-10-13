@@ -9,7 +9,6 @@ use HTML::Lint;
 use Test::More;
 use Test::Mojo;
 use Mojo::File 'path';
-use Mojo::JSON qw(decode_json);
 
 use lib 't/lib';
 use Test::Ravada;
@@ -54,7 +53,7 @@ sub _test_discover($vm_name) {
     wait_request();
     return if !$req->output;
 
-    my $json = decode_json($req->output);
+    my $json = $req->output;
     my $base_name = base_domain_name();
     my @domains = grep { /^$base_name/ } @$json;
     ok(!scalar(@domains)) or confess Dumper(\@domains);
@@ -141,7 +140,7 @@ sub _new_machine($vm_name, $user, $base_name) {
 
 sub test_clone_utf8_user($t, $vm_name, $name, $utf8_base=0) {
     confess if $name =~ /^\d+/;
-    my $user_name = new_domain_name()."-$$-".$name."-".$N++;
+    my $user_name = new_domain_name().$name."-".$N++;
 
     my $user_db = Ravada::Auth::SQL->new( name => $user_name);
     $user_db->remove();
@@ -154,7 +153,7 @@ sub test_clone_utf8_user($t, $vm_name, $name, $utf8_base=0) {
     if ($utf8_base) {
         $base_name = $user_name;
     } else {
-        $base_name = new_domain_name()."-".$$;
+        $base_name = new_domain_name();
     }
 
     my $domain = _new_machine($vm_name, $user, $base_name);
@@ -219,7 +218,7 @@ sub _test_clone($domain, $base_name, $user) {
 
 sub _test_copy($domain, $base_name) {
     my ($copy, $copy_name);
-    for (1 .. 5 ) {
+    for (1 .. 10 ) {
         $copy_name = $base_name."-copy-".$base_name;
         $t->post_ok("/machine/copy/" => json => {
             id_base=> $domain->id
@@ -229,7 +228,7 @@ sub _test_copy($domain, $base_name) {
 
         ($copy) = rvd_front->search_domain($copy_name);
     }
-    ok($copy);
+    ok($copy,"Expecting $copy_name created") or exit;
     like($copy->_data('name'),qr/^[a-z0-9_\-]+$/);
     unlike($copy->_data('name'),qr/--+/) or exit;
 
@@ -266,7 +265,7 @@ $t->ua->inactivity_timeout(900);
 $t->ua->connect_timeout(60);
 remove_old_domains_req(0); # 0=do not wait for them
 
-for my $vm_name (sort @{rvd_front->list_vm_types} ) {
+for my $vm_name (reverse sort @{rvd_front->list_vm_types} ) {
     test_utf8($t, $vm_name);
 }
 

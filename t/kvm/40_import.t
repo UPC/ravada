@@ -101,6 +101,27 @@ sub test_import {
     ok($domain2, "Search domain in Ravada");
 }
 
+sub _clone($domain) {
+    return $domain->clone(name => new_domain_name(), user => user_admin);
+
+    my $name = new_domain_name();
+
+    my $req = Ravada::Request->clone(
+        uid => user_admin->id
+        ,id_domain => $domain->id
+    );
+    wait_request(debug => 0);
+    die $req->error if $req->error;
+    my $clone;
+    for ( 1 .. 3 ) {
+        diag($_);
+        $clone = rvd_back->search_domain($name);
+        last if $clone;
+        wait_request(debug => 0);
+    }
+    return $clone;
+}
+
 sub test_import_spinoff {
     my $vm_name = shift;
     return if $vm_name eq 'Void';
@@ -108,8 +129,9 @@ sub test_import_spinoff {
     my $vm = rvd_back->search_vm($vm_name);
     my $domain = test_create_domain($vm_name,$vm);
     $domain->is_public(1);
-    my $clone = $domain->clone(name => new_domain_name(), user => user_admin );
-    ok($clone);
+    my $name = new_domain_name();
+    my $clone = _clone($domain);
+    ok($clone) or exit;
     ok($domain->is_base,"Expecting base") or return;
 
     $clone->remove( user_admin );
