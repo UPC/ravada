@@ -723,6 +723,13 @@ sub file_exists( $self, $file ) {
     my ($out, $err) = $self->run_command("/bin/ls -1 $file");
 
     return 1 if !$err;
+
+    my ($dir) = $file =~ m{(.*)/};
+    ($out, $err) = $self->run_command("/bin/ls -1 $dir");
+    for my $file_ls ( split /\n/,$out ) {
+        return 1 if $file_ls eq $file;
+    }
+
     return 0;
 }
 

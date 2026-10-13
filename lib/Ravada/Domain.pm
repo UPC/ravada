@@ -3163,7 +3163,7 @@ sub remove_base($self, $user) {
 sub _cascade_remove_base_in_nodes($self) {
     my $req_nodes;
     my $vm_local;
-    for my $vm ( $self->list_vms ) {
+    for my $vm ( $self->list_vms_base ) {
         next if $vm->id == $self->_vm->id;
         my @after;
         push @after,(after_request => $req_nodes->id) if $req_nodes;
@@ -5828,9 +5828,11 @@ sub set_base_vm($self, %args) {
             $vm->refresh_storage_pools();
         } else {
             my $instance = $vm->search_domain($self->name);
+
             $instance->_remove_instance($user,1) if $instance;
-            $self->_remove_files_not_shared($vm,@nodes, $self->_vm);
-            $self->_remove_base_files_not_shared($vm,@nodes, $self->_vm);
+
+            $self->_remove_files_not_shared();
+            $self->_remove_base_files_not_shared($vm);
             $self->_vm($node2);
             $self->_data('id_vm' => $node2->id);
             $vm->refresh_storage_pools();
@@ -5868,36 +5870,47 @@ sub _check_set_base_reqs($self) {
     }
 }
 
-sub _remove_files_not_shared($self, $vm=$self->_vm, @nodes){
+sub _remove_files_not_shared($self){
+    for my $file ($self->_files_not_shared($self->list_volumes)) {
+        next if $file =~ /\.iso$/;
 
-    for my $file ($self->list_volumes,$self->list_files_base) {
-        $self->_do_remove_file_not_shared($file, $vm, @nodes);
+        $self->_vm->remove_file($file);
     }
 }
 
-sub _remove_base_files_not_shared($self, $vm, @nodes){
+sub _files_not_shared($self, @files) {
 
-    for my $file ($self->list_files_base) {
-        $self->_do_remove_file_not_shared($file, $vm, @nodes);
+    my $got_nodes=0;
+    my @nodes;
+    my %dir_shared;
+
+    my @not_shared;
+    for my $file ( @files ) {
+        my ($dir) = $file =~ m{(.*)/};
+        my $is_shared = $dir_shared{$dir};
+        if (!defined $is_shared) {
+            @nodes = $self->list_vms() if !$got_nodes++;
+            $is_shared=0;
+            for my $node (@nodes) {
+                next if $node->id == $self->_vm->id;
+                if ( $self->_vm->shared_storage($node, $dir) ) {
+                    $is_shared =1;
+                    last;
+                }
+            }
+            $dir_shared{$dir}=$is_shared;
+        }
+        push @not_shared,($file) if !$is_shared;
+    }
+    return @not_shared;
+}
+
+sub _remove_base_files_not_shared($self, $vm){
+    for my $file ($self->_files_not_shared($self->list_files_base())) {
+        $vm->remove_file($file);
     }
 }
 
-
-sub _do_remove_file_not_shared($self, $file, $vm, @nodes) {
-
-    return if $file =~ /\.iso$/;
-    return if !$self->_vm->file_exists($file);
-
-    my ($dir) = $file =~ m{(.*)/};
-    my $shared=0;
-    for my $node(@nodes) {
-        next if $vm->id == $node->id;
-        $shared++ if $vm->shared_storage($node, $dir);
-        last if $shared;
-    }
-    return if $shared;
-    $vm->remove_file($file);
-}
 
 sub _check_all_base_parents_in_node($self, $vm) {
     return 1 if !$self->id_base;
@@ -6011,13 +6024,13 @@ sub _pre_clone($self,%args) {
     confess "ERROR: Unknown arguments ".join(",",sort keys %args)   if keys %args;
 }
 
-=head2 list_vms
+=head2 list_vms_base
 
 Returns a list for virtual machine managers where this domain is base
 
 =cut
 
-sub list_vms($self, $check_host_devices=0, $only_available=0) {
+sub list_vms_base($self, $check_host_devices=0, $only_available=0) {
 
     $check_host_devices = 1 if !defined $check_host_devices;
 
@@ -6053,6 +6066,27 @@ sub list_vms($self, $check_host_devices=0, $only_available=0) {
     return $self->_vm if !@vms && !@host_devices && $self->is_base();
     return @vms;
 
+}
+
+sub list_vms($self) {
+    my @vms = $self->list_vms_base(0,1);
+    my %vms = map { $_->id => 1} @vms;
+    my $sth = $$CONNECTOR->dbh->prepare(
+        "SELECT i.id_vm, v.cached_down, v.name "
+        ." FROM domain_instances i, vms v "
+        ." WHERE id_domain=?"
+        ."   AND i.id_vm = v.id "
+        ."   AND v.is_active=1 AND v.enabled=1"
+    );
+    $sth->execute($self->id);
+    while (my ($id_vm, $cached_down, $name) = $sth->fetchrow) {
+        next if $vms{$id_vm}++;
+        next if $cached_down && time-$cached_down < $self->_vm->timeout_down_cache();
+        my $vm;
+        eval { $vm = Ravada::VM->open($id_vm) };
+        push @vms,($vm) if $vm;
+    }
+    return @vms;
 }
 
 =head2 base_in_vm
@@ -7680,7 +7714,7 @@ sub _create_base_as_old($self, $user, $new_base) {
     $old_base = Ravada::Domain->open($self->id_base) if $self->id_base;
 
     my @reqs;
-    for my $vm ($old_base->list_vms) {
+    for my $vm ($old_base->list_vms_base) {
         next if $vm->is_local;
         my @after;
         @after = (after_request => $reqs[0]->id ) if @reqs;

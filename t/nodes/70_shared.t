@@ -71,7 +71,7 @@ sub test_shared($vm, $node) {
 
     for my $vol (@files_base) {
         my $ok = $vm->file_exists($vol);
-        ok($ok,"Volume $vol should exist") or exit;
+        ok($ok,"Volume $vol should exist") or confess;
         ok($node->file_exists($vol), "Volume $vol should exist in ".$node->name);
     }
     $domain->remove(user_admin);
@@ -148,12 +148,13 @@ sub test_change_ram($vm, $node, $start=0, $prepare_base=0, $migrate=0) {
         wait_request();
         $domain = rvd_back->search_domain($name);
     }
-    req_migrate($node, $domain, $start) if $migrate;
 
     if ( $migrate ) {
+        req_migrate($node, $domain, $start);
         my $domain2 = Ravada::Domain->open($domain->id);
         is($domain2->_vm->id, $node->id);
         $domain=$domain2;
+        _test_volumes_exist($domain);
     }
     my $new_mem = _change_ram($domain);
     _test_volumes_exist($domain);
@@ -252,9 +253,11 @@ sub test_add_disk($vm, $node, $start=0, $prepare_base=0, $migrate=0) {
     _test_volumes_exist($domain);
 
     my @volumes1 = $domain->list_volumes();
-    my $domain_local = $vm->search_domain($domain->name);
-    is($domain_local->_vm->id,$vm->id);
-    is(scalar($domain_local->list_volumes),$n+1,Dumper(\@volumes0,\@volumes1)) or exit;
+    if (!$migrate) {
+        my $domain_local = $vm->search_domain($domain->name);
+        is($domain_local->_vm->id,$vm->id);
+        is(scalar($domain_local->list_volumes),$n+1,Dumper(\@volumes0,\@volumes1)) or exit;
+    }
 
     req_start($domain);
     req_migrate($node, $domain, 1);
@@ -332,6 +335,21 @@ sub test_remove_base($vm, $node) {
     remove_domain_and_clones_req($base);
 }
 
+sub _add_sp(@vm) {
+    for my $vm ( @vm ) {
+        next if grep /^$SHARED_SP$/,$vm->list_storage_pools();
+
+        my $req = Ravada::Request->create_storage_pool(
+            uid => user_admin->id
+            ,id_vm => $vm->id
+            ,name => $SHARED_SP
+            ,directory => $DIR_SHARED
+        );
+        wait_request(debug => 0);
+        die $req->error if $req->error();
+    }
+}
+
 #################################################################################
 if ($>)  {
     my $msg = "SKIPPED: Test must run as root";
@@ -368,6 +386,7 @@ the file "
             $vm = undef;
         }
 
+        _add_sp($vm);
         if ($vm && !grep /^$SHARED_SP$/,$vm->list_storage_pools) {
             my $sp = start_storage_pool($vm,$SHARED_SP);
             if (!$sp) {
@@ -381,6 +400,8 @@ the file "
 
         diag("Testing remote node in $vm_name");
         my $node = remote_node_shared($vm_name)  or next;
+
+        $vm->_shared_storage_cache($node, "/var/lib/libvirt/images/",0);
         clean_remote_node($node);
 
         ok($node->vm,"[$vm_name] expecting a VM inside the node") or do {
@@ -389,12 +410,14 @@ the file "
         };
         is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote") or BAIL_OUT();
 
+        _add_sp($node);
         if (!grep /^$SHARED_SP$/,$node->list_storage_pools) {
             $msg = "SKIPPED: Missing storage pool '$SHARED_SP' in node ".$node->name;
             diag($msg);
             skip($msg,10);
         }
 
+        is($vm->shared_storage($node, $DIR_SHARED),1,"Expecting shared storage in $DIR_SHARED") or exit;
         # set storage in shared dir
         $vm->default_storage_pool_name($SHARED_SP);
         my $storage_path = $vm->_storage_path($SHARED_SP);
@@ -402,6 +425,9 @@ the file "
 
         import_base($vm);
         $node->default_storage_pool_name($SHARED_SP);
+
+        test_shared($vm, $node);
+
         test_change_ram($vm,$node, 0, 1, 1);
 
         for my $default_sp ( 0,1 ) {
@@ -422,7 +448,6 @@ the file "
         test_remove_base($node, $vm);
 
         test_is_shared($vm, $node);
-        test_shared($vm, $node);
 
         NEXT:
         remove_old_domains_req();

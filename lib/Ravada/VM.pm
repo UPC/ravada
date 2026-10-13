@@ -2413,7 +2413,7 @@ sub balance_vm($self, $uid, $base=undef, $id_domain=undef, $host_devices=1) {
         if !ref($base);
 
         if ($id_domain) {
-            my @vms_all = $base->list_vms(0,1);
+            my @vms_all = $base->list_vms_base(0,1);
             push @vms_all,($self) if !@vms_all;
             if ( $host_devices ) {
                 @vms = $self->_filter_host_devices($id_domain, @vms_all);
@@ -2421,7 +2421,7 @@ sub balance_vm($self, $uid, $base=undef, $id_domain=undef, $host_devices=1) {
                 @vms = @vms_all;
             }
         } else {
-            @vms= $base->list_vms($host_devices,1);
+            @vms= $base->list_vms_base($host_devices,1);
         }
 
     } else {
@@ -2661,7 +2661,7 @@ sub shared_storage($self, $node, $dir) {
 
     my $file;
     for ( ;; ) {
-        $file = $dir.Ravada::Utils::random_name(4).".tmp";
+        $file = $dir.Ravada::Utils::random_name(4).".".time().".tmp";
         my $exists;
         eval {
             $exists = $self->file_exists($file) || $node->file_exists($file);
@@ -2672,10 +2672,12 @@ sub shared_storage($self, $node, $dir) {
     }
     $self->write_file($file,''.localtime(time));
     my $shared;
-    for (1 .. 10 ) {
+    for my $count (0 .. 10 ) {
         $shared = $node->file_exists($file);
         last if $shared;
-        sleep 1;
+        sleep $count;
+        $self->write_file($file,''.localtime(time).( 'a' x ($count*10)));
+        $node->refresh_storage() if $count == 1 || $count>5;
     }
     $self->remove_file($file);
     $shared = 0 if !defined $shared;

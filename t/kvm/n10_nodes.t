@@ -1376,6 +1376,8 @@ SKIP: {
 
     is($node->is_local,0,"Expecting ".$node->name." ".$node->ip." is remote" ) or BAIL_OUT();
 
+    test_remove_base($node);
+
     test_node_inactive($vm_name, $node);
 
     is($vm->is_active,1);
