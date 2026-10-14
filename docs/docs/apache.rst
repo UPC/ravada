@@ -152,4 +152,9 @@ Restrict access
 
 Follow `this guide <apache_restrict.html>`__ to restrict access to your Ravada Server by IP:  `Apache restriction <apache_restrict.html>`__ 
 
+Certificate SSL
+---------------
+
+If you want to use Let's encrypt certbot configure the apache server `this way <apache_letsencrypt.html>`__.
+
 .. Tip:: Remember restart Apache2 service, with ``systemctl restart apache2`` or ``services apache2 restart``.
