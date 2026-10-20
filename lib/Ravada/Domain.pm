@@ -1476,7 +1476,7 @@ sub _get_hostname($ip) {
         run3(['host',$ip], \$in, \$out, \$err);
         ($name) = $out =~ /pointer (.*)\./;
     }
-    if (!$name || $name !~ /^[A-Za-z0-9._-]+$/) {
+    if (!$name || $name !~ /^[A-Za-z0-9\._-]+$/ || $name !~ /\./) {
         $name = $ip;
     }
 

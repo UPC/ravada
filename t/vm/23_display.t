@@ -178,7 +178,9 @@ sub _get_hostname($ip) {
     my ($hostname) = $out =~ /pointer (.*)\./;
     die "I can't fetch hostname from $out" if !$hostname;
 
-    return $hostname;
+    return $hostname if $hostname =~ /\./;
+
+    return $ip;
 }
 
 ######################################################################
