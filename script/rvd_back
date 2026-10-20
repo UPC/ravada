@@ -380,7 +380,7 @@ sub add_user {
     while ($usern){
         $usern = undef;
         print "There is already a user with that username \n";
-        print "New username: \n";
+        print "New username: ";
         my $new_login = <STDIN>;
         die "Error: no username provided on STDIN\n" if !defined $new_login;
         chomp $new_login;
