@@ -1116,7 +1116,7 @@ msgstr "Matikan semua klon"
 msgid "Keep in mind that there may be users using a clone"
 msgstr "Perlu diingat bahwa mungkin ada pengguna yang menggunakan klon"
 
-msgid "Yes, shutwdown all the clones"
+msgid "Yes, shutdown all the clones"
 msgstr "Ya, Matikan semua klon"
 
 msgid "No members found"
@@ -2343,7 +2343,7 @@ msgstr "Bagikan"
 msgid "Follow these steps for Spice client setup"
 msgstr "Ikuti langkah-langkah berikut untuk pengaturan klien Spice"
 
-msgid "Mange Host Devices"
+msgid "Manage Host Devices"
 msgstr "Kelola Perangkat Host"
 
 msgid "Auto Compact"

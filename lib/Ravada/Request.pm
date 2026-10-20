@@ -223,6 +223,8 @@ qw(
     manage_pools
     screenshot
     prepare_base
+    remove_base
+    list_cpu_models
 );
 
 our $TIMEOUT_SHUTDOWN = 120;
@@ -271,7 +273,8 @@ our %COMMAND = (
     ,important=> {
         limit => 20
         ,priority => 1
-        ,commands => ['clone','start','start_clones','shutdown_clones','create','open_iptables','list_network_interfaces','list_isos','ping_backend','refresh_machine']
+        ,commands => ['clone','start','start_clones','shutdown_clones','create','open_iptables','list_network_interfaces','list_isos','ping_backend','refresh_machine'
+        ,'list_cpu_models' ]
     }
 
     ,iptables => {
@@ -1219,7 +1222,7 @@ sub status {
         if $CMD_SEND_MESSAGE{$self->command}
             || ( $self->error && !$CMD_DO_NOT_SEND_ERROR{$self->command});
 
-    if ($status eq 'done' && $date_changed && $date_changed eq $self->date_changed) {
+    if ($status && $status eq 'done' && $date_changed && $date_changed eq $self->date_changed) {
         sleep 1;
         for ( 1 .. 10 ) {
             eval {
@@ -2066,11 +2069,11 @@ sub AUTOLOAD {
         );
     }
 
-    confess "ERROR: Unknown field $name "
-        if !exists $self->{$name} && !exists $FIELD{$name} && !exists $FIELD_RO{$name};
-
     confess "Can't locate object method $name via package $self"
         if !ref($self);
+
+    confess "ERROR: Unknown field $name "
+        if !exists $self->{$name} && !exists $FIELD{$name} && !exists $FIELD_RO{$name};
 
     my $value = shift;
     $name =~ tr/[a-z][A-Z]_/_/c;

@@ -11,6 +11,8 @@
             <div class="page-header">
               <div class="card" id="admin-content">
                 <div class="card-header">
+                    <div class="row">
+                    <div class="col-10">
                     <h2 class="display-5"><%=l 'Group' %> <%= $group_name %></h2>
 %                  if ($type eq 'ldap') {
 LDAP
@@ -19,6 +21,11 @@ LDAP
                     <br/>
                     <%=l 'dn:' %> <b><%= $group->dn %></b>
 % }
+                    </div>
+                    <div class="col-2" align="right">
+                        <button type="reset" class="btn btn-outline-secondary" onclick = "location='/admin/groups'"><%=l 'back' %></button>
+                    </div>
+                    </div>
                 </div>
               </div>
             </div>

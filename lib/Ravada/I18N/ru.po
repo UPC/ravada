@@ -902,7 +902,7 @@ msgstr "Выключить все клоны"
 msgid "Keep in mind that there may be users using a clone"
 msgstr "Имейте в виду, клон может использоваться пользователями"
 
-msgid "Yes, shutwdown all the clones"
+msgid "Yes, shutdown all the clones"
 msgstr "Да, выключить все клоны"
 
 msgid "temporary"

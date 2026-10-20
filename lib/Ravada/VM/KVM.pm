@@ -2048,12 +2048,15 @@ sub _xml_add_uefi($self, $doc, $name) {
 
     my ($type) = $doc->findnodes('/domain/os/type');
     my $arch = $type->getAttribute('arch');
-    if ( $arch =~ /x86_64/ ) {
-
-        $type->setAttribute('machine' => $self->_find_machine_type($arch, qr/^pc-q35/))
-        if $type->getAttribute('machine') !~ /pc-q35/;
-
+    if ( $arch eq 'x86_64' ) {
         $ovmf = '/usr/share/OVMF/OVMF_CODE_4M.fd';
+    } elsif ($arch eq 'i686') {
+        if (!$self->file_exists($ovmf)) {
+            $ovmf = '/usr/share/OVMF/OVMF32_CODE_4M.fd';
+        }
+        die "Unsupported UEFI in this architecture ".$type->toString()
+            ." missing file $ovmf"
+        unless $self->file_exists($ovmf);
     } else {
         die "Unsupported UEFI in this architecture ".$type->toString();
     }
@@ -3086,7 +3089,8 @@ sub list_virtual_networks($self) {
 }
 
 sub new_network($self, $name='net') {
-    my @networks = $self->list_virtual_networks();
+    my @networks_virtual = $self->list_virtual_networks();
+    my @networks_real = $self->list_networks();
 
     my %base = (
         name => $name
@@ -3096,14 +3100,16 @@ sub new_network($self, $name='net') {
     my $new = {ip_netmask => '255.255.255.0'};
     for my $field ( keys %base) {
         my %old;
-        for my $current (@networks ) {
+        for my $current ( @networks_virtual ) {
             my $value = $current->{$field};
             $old{$value}=1;
             if ($field eq 'ip_address') {
                 $value =~ s/(.*)\.\d+$/$1/;
                 $old{$value}=1;
             }
-
+        }
+        if ($field eq 'ip_address') {
+            map { my $a = $_; $a =~ s/\.\d+$// ;$old{$a}++ } @networks_real;
         }
         if ( $field eq 'name' && $name ne 'net' ) {
             my $value = $base{$field};

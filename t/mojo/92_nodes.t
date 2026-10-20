@@ -117,6 +117,7 @@ $PASSWORD = "$$ $$";
 
 mojo_login($t,$USERNAME, $PASSWORD);
 
+mojo_clean_nodes($t);
 my $new_node = test_new_node($t);
 test_update_node($t, $new_node);
 

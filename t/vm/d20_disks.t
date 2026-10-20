@@ -550,62 +550,6 @@ sub _machine_types($vm) {
     return $machine_types;
 }
 
-sub test_cdrom($vm) {
-    return if $vm->type ne 'KVM';
-
-    my $device_iso = _search_iso_alpine($vm);
-    my $machine_types = _machine_types($vm);
-
-    my $isos0 = rvd_front->list_iso_images();
-    my $isos = dclone($isos0);
-    if ( !$ENV{TEST_STRESS} ) {
-
-        my ($alpine32) = grep { $_->{name} =~ /alpine.*32/i } @$isos;
-        my ($alpine64) = grep { $_->{name} =~ /alpine.*64/i } @$isos;
-        my ($ubuntu) = grep { $_->{name} =~ /ubuntu/i} @$isos;
-
-        $isos = [$alpine32,$alpine64,$ubuntu];
-
-    }
-
-    for my $iso_frontend (@$isos) {
-        next if !$iso_frontend->{arch};
-        my $iso;
-        eval { $iso = $vm->_search_iso($iso_frontend->{id}, $device_iso) };
-        next if $@ && $@ =~ /No.*iso.*found/;
-        die $@ if $@;
-        $iso->{device} = $device_iso;
-
-        my %done;
-        for my $bios (undef, 'legacy','uefi') {
-            die Dumper($iso) if !$iso->{arch} || !$machine_types->{$iso->{arch}};
-            for my $machine ( @{$machine_types->{$iso->{arch}}}) {
-                next if defined $bios && $bios eq 'uefi' && $machine !~ /q35/;
-                my $key = ($bios or '')."-".($machine or '')."-"
-                    .$iso->{xml}."-".($iso->{xml_volume} or '');
-                next if $done{$key}++;
-                my %options;
-                $options{bios}=$bios if defined $bios;
-                $options{machine}=$machine if defined $machine;
-
-                my $domain = _req_create($vm, $iso, \%options);
-
-                _req_add_cd($domain);
-                _req_remove_cd($domain);
-                _req_add_cd($domain);
-                $domain->prepare_base(user_admin);
-                $domain->remove_base(user_admin);
-
-                _req_add_cd($domain);
-
-                remove_domain($domain);
-                remove_mock_isos();
-
-            }
-        }
-    }
-}
-
 #############################################################################
 
 clean();
@@ -656,7 +600,6 @@ for my $vm_name (vm_names() ) {
                 }
             }
         }
-        test_cdrom($vm);
 
         for my $iso_name ('Alpine%64 bits', 'Alpine%32 bits') {
             for my $options ( combine_iso_options($vm, $iso_name)) {

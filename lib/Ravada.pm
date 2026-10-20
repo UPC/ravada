@@ -231,10 +231,18 @@ sub _add_internal_network($self) {
     my ($found) = $sth->fetchrow;
     return if $found;
 
-    $sth = $CONNECTOR->dbh->prepare("SELECT * FROM networks WHERE name like 'internal%'");
+    $sth = $CONNECTOR->dbh->prepare("SELECT name,address FROM networks ORDER by name");
     $sth->execute();
-    ($found) = $sth->fetchrow;
-    return if $found;
+    my %done_address;
+    my %done_name;
+    my $n=0;
+    while (my ($name,$address)= $sth->fetchrow) {
+        $done_address{$address}++;
+        $done_name{$name}++;
+        if ($name =~ /^internal(\d+)/) {
+            $n=$1+1 if $1>$n;
+        }
+    }
 
     my @cmd = ("ip","route");
     my ($in, $out, $err);
@@ -246,14 +254,17 @@ sub _add_internal_network($self) {
         ."(name, address, n_order, all_domains, requires_password)"
         ." VALUES(?,?,?,1,0)"
     );
-    my $n=0;
-    my %done;
     for my $net (split /\n/,$out) {
         next if $net =~ /dev virbr/;
         my ($address) = $net =~ m{(^[\d\.]+/\d+)};
-        next if !$address || $done{address}++;
-        $sth->execute("internal$n",$address, ++$n+1);
-
+        next if !$address || $done_address{$address}++;
+        my $name;
+        for (;;) {
+            $name = "internal$n";
+            last if !exists $done_name{$name};
+            $n++;
+        }
+        $sth->execute($name,$address, ++$n+1);
     }
 }
 
@@ -694,7 +705,7 @@ sub _update_isos {
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
             ,url => 'https://ftp.lysator.liu.se/ubuntu-dvd/xubuntu/releases/26.04.*/release/'
-            ,file_re => 'xubuntu.*desktop.*.iso'
+            ,file_re => 'xubuntu.26.04.*desktop.*.iso'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
 	    ,min_ram => 2
 	    ,min_disk_size => '20'
@@ -706,7 +717,7 @@ sub _update_isos {
             ,xml => 'bionic-amd64.xml'
             ,xml_volume => 'bionic64-volume.xml'
             ,url => 'https://ftp.lysator.liu.se/ubuntu-dvd/xubuntu/releases/24.04.*/release/'
-            ,file_re => 'xubuntu.*desktop.*.iso'
+            ,file_re => 'xubuntu.24.04.*desktop.*.iso'
             ,options => { machine => 'pc-q35', bios => 'UEFI' }
 	    ,min_ram => 2
 	    ,min_disk_size => '20'
@@ -2006,12 +2017,12 @@ sub _add_grants($self) {
     $self->_add_grant('screenshot_clones', 0,"can get a screenshot from clones of own virtual machines.");
     $self->_add_grant('start_many',0,"can have an unlimited amount of machines started.");
     $self->_add_grant('expose_ports',0,"can expose virtual machine ports.");
-    $self->_add_grant('expose_ports_clones',0,"Can expose ports from clones of own virtual machines.");
-    $self->_add_grant('expose_ports_all',0,"Can expose ports from any virtual machine.");
+    $self->_add_grant('expose_ports_clones',0,"can expose ports from clones of own virtual machines.");
+    $self->_add_grant('expose_ports_all',0,"can expose ports from any virtual machine.");
     $self->_add_grant('view_groups',0,'can view groups.');
     $self->_add_grant('manage_groups',0,'can manage groups.');
     $self->_add_grant('start_limit',0,"can have their own limit on started machines.", 1, 0);
-    $self->_add_grant('view_all',0,"The user can start and access the screen of any virtual machine");
+    $self->_add_grant('view_all',0,"the user can start and access the screen of any virtual machine");
     $self->_add_grant('create_disk',0,'can create disk volumes');
     $self->_add_grant('quota_disk',0,'disk space limit',1);
     $self->_add_grant('create_networks',0,'can create virtual networks.');
@@ -2166,6 +2177,14 @@ sub _upgrade_table($self, $table, $field, $definition) {
             ." $row->{TYPE_NAME} -> $new_type \n"
             ." in $table\n$definition\n"  if !$FIRST_TIME_RUN && $0 !~ /\.t$/;
         print "-" if $FIRST_TIME_RUN && $ENV{TERM};
+
+        if ($table eq 'requests' && $field =~ /^after_request/
+            && $row->{TYPE_NAME} =~ /TEXT|CHAR/i && $new_type =~ /int|INTEGER/i) {
+            my $sth_clean = $CONNECTOR->dbh->prepare(
+                "UPDATE requests set $field=NULL "
+            );
+            $sth_clean->execute;
+        }
         $dbh->do("alter table $table change $field $field $definition");
 
         $self->_create_constraints($table, [$field, $constraint]) if $constraint;
@@ -4388,6 +4407,8 @@ sub _domain_working {
 
     confess "Missing request" if !defined $req;
 
+    return if $req->command =~ /list_cpu_models/;
+
     if (!$id_domain) {
         $id_domain = $req->defined_arg('id_base');
         if (!$id_domain) {
@@ -6102,7 +6123,7 @@ sub _cmd_connect_node($self, $request) {
     die "I can't ping $hostname\n"
         if !$node || ! $node->ping();
 
-    $request->error("Ping ok. Trying to connect to $hostname");
+    $request->_data(output => "Ping ok. Trying to connect to $hostname");
     my ($out, $err);
     eval {
         ($out, $err) = $node->run_command('/bin/true');
@@ -6117,7 +6138,8 @@ sub _cmd_connect_node($self, $request) {
         die $err if $err;
     }
     $node->connect() && do {
-        $request->error("Connection OK");
+        $request->_data(output => "Connection OK");
+        $request->error("");
         $node->_data('cached_down' => 0);
     };
 }
@@ -7279,19 +7301,43 @@ sub _cmd_close_exposed_ports($self, $request) {
     $domain->_close_exposed_port($port);
 
     if ($request->defined_arg('clean')) {
-        my $query = "UPDATE domain_ports SET public_port=?"
-                    ." WHERE id_domain=? ";
-        $query .=" AND internal_port=?" if $port;
-
-        my $sth_update = $CONNECTOR->dbh->prepare($query);
-
         if ($port) {
+            my $query = "UPDATE domain_ports SET public_port=?"
+                    ." WHERE id_domain=? "
+                    ." AND internal_port=?";
+
+            my $sth_update = $CONNECTOR->dbh->prepare($query);
             $sth_update->execute($domain->_vm->_new_free_port()
                 ,$domain->id, $port);
+
         } else {
-            $sth_update->execute($domain->_vm->_new_free_port()
-                ,$domain->id);
+            my $sth = $CONNECTOR->dbh->prepare(
+                "SELECT id FROM domain_ports WHERE id_domain=?"
+            );
+            $sth->execute($domain->id);
+
+            my $sth_update = $CONNECTOR->dbh->prepare(
+                "UPDATE domain_ports set public_port = ? "
+                ." WHERE id=?"
+            );
+            while (my ($id) = $sth->fetchrow) {
+                my $updated;
+                for ( 1 .. 10 ) {
+                    my $port = $domain->_vm->_new_free_port();
+                    my $ok = eval { $sth_update->execute($port, $id); 1 };
+                    if ($ok) {
+                        $updated = 1;
+                        last;
+                    }
+                    next if ( $@ =~ /Duplicate entry .*for key.*public/   # mysql
+                        || $@ =~ /UNIQUE constraint failed.*public/      # sqlite
+                    );
+                    die $@;
+                }
+                die "Error: unable to allocate a free public_port for id=$id" if !$updated;
+            }
         }
+
     }
 }
 

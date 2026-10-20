@@ -139,10 +139,33 @@ sub test_post_login() {
     }
 }
 
+sub test_unique_entries() {
+    my $sth = connector->dbh->prepare("SELECT * FROM iso_images");
+    $sth->execute();
+    my %uniq;
+    while ( my $row = $sth->fetchrow_hashref) {
+        if (defined $row->{url}) {
+            if ( defined $row->{file_re} ) {
+                $row->{url_file_re}=$row->{url}." : ".$row->{file_re};
+            } else {
+                $row->{url_file_re}=$row->{url};
+            }
+        }
+        for my $field ( qw(name description url_file_re file_re)) {
+            my $value = $row->{$field};
+            next if !defined $value;
+            $uniq{$field}->{$value} //= 0;
+            ok(!$uniq{$field}->{$value}++,"Expecting unique $field '$value'");
+        }
+    }
+}
+
 ####################################################################
 
+test_unique_entries();
 test_insert_locale();
 test_insert_request();
+test_unique_entries();
 
 SKIP: {
     skip("SKIPPED: Test must run as root",8) if $<;

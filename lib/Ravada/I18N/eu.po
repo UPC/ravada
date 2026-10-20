@@ -874,5 +874,5 @@ msgstr ""
 msgid "Keep in mind that there may be users using a clone"
 msgstr ""
 
-msgid "Yes, shutwdown all the clones"
+msgid "Yes, shutdown all the clones"
 msgstr ""

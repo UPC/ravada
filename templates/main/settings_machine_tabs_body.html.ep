@@ -23,8 +23,8 @@
         %= include 'main/vm_options'
     </div>
 % }
-% if ($USER->can_change_settings($domain->id) && !$domain->is_base ) {
-    <div class="tab-pane fade" id="v-pills-screenshot" role="tabpanel" aria-labelledby="v-pills-screenshot-tab">
+% if ($USER->can_change_settings($domain->id)) {
+    <div class="tab-pane fade" id="v-pills-screenshot" role="tabpanel" aria-labelledby="v-pills-screenshot-tab" ng-hide="showmachine.is_base">
         %= include 'main/vm_screenshot'
     </div>
 % }
@@ -33,8 +33,8 @@
         %= include 'main/vm_hardware'
     </div>
 % }
-% if ($USER->can_change_settings($domain->id) && !$domain->is_base) {
-    <div class="tab-pane fade <%= $show_actions %>" id="v-pills-actions" role="tabpanel" aria-labelledby="v-pills-actions-tab" >
+% if ($USER->can_change_settings($domain->id)) {
+    <div class="tab-pane fade <%= $show_actions %>" id="v-pills-actions" role="tabpanel" aria-labelledby="v-pills-actions-tab" ng-hide="showmachine.is_base">
         %= include 'main/vm_actions'
     </div>
 % }
@@ -42,7 +42,7 @@
         %= include 'main/vm_copy'
     </div>
 % if ( $USER->is_admin) {
-    <div class="tab-pane fade" id="v-pills-clones" >
+    <div class="tab-pane fade" id="v-pills-clones" ng-show="showmachine.has_clones && showmachine.is_base">
         %= include 'main/vm_clones'
     </div>
 % }
@@ -61,8 +61,8 @@
         %= include 'main/vm_remove'
     </div>
 % }
-% if ( $monitoring && $USER->is_admin && $domain->is_active && $domain->internal_id) {
-    <div class="tab-pane fade" id="v-pills-monitoring" role="tabpanel" aria-labelledby="v-pills-monitoring-tab">
+% if ( $monitoring && $USER->is_admin && $domain->internal_id) {
+    <div class="tab-pane fade" id="v-pills-monitoring" role="tabpanel" aria-labelledby="v-pills-monitoring-tab" ng-show="showmachine.is_active">
         %= include 'main/vm_monitoring'
     </div>
 % }

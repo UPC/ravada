@@ -696,7 +696,27 @@ sub test_add_network_nat($domain) {
     is($req->error,'');
 }
 
+sub test_add_network_isolated($domain, $isolated) {
+    my $req = Ravada::Request->add_hardware(
+        uid => user_admin->id
+        ,name => 'network'
+        ,id_domain => $domain->id
+        ,data => {
+            driver => 'virtio'
+            ,type => 'NAT'
+            ,network => 'default'
+            ,port => { isolated => $isolated }
+        }
+    );
+    wait_request();
+    is($req->error,'');
+}
+
+
 sub test_add_network($domain) {
+
+    test_add_network_isolated($domain,'yes');
+    test_add_network_isolated($domain,'no');
     test_add_network_bridge($domain);
     test_add_network_nat($domain);
 }

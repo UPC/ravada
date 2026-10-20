@@ -79,6 +79,7 @@ create_domain
     remove_volatile_clones
     mojo_init
     mojo_clean
+    mojo_clean_nodes
     mojo_create_domain
     mojo_login
     mojo_check_login
@@ -805,6 +806,7 @@ sub _discover() {
 
 sub remove_old_domains_req($wait=1, $run_request=0) {
     my $base_name = base_domain_name();
+    delete_request( 'enforce_limits', 'set_time', 'refresh_vm' );
     _discover();
     my $machines = rvd_front->list_machines(user_admin);
     my @machines2 = _leftovers();
@@ -900,8 +902,13 @@ sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
             }
         }
     }
+    for my $req ( $domain->list_requests ) {
+        $req->stop() unless $req->command =~ /remove/;
+    }
     my $req_rm;
-    $req_rm = Ravada::Request->remove_base(uid => user_admin->id, id_domain => $domain->id)
+    $req_rm = Ravada::Request->remove_base(
+        uid => Ravada::Utils::user_daemon->id
+        ,id_domain => $domain->id)
     if $domain->is_base;
 
     my @after_req;
@@ -909,7 +916,7 @@ sub remove_domain_and_clones_req($domain_data, $wait=1, $run_request=0) {
     @after_req = ( after_request => $req_rm->id ) if $req_rm;
     my $req= Ravada::Request->remove_domain(
         name => $domain->name
-        ,uid => user_admin->id
+        ,uid => Ravada::Utils::user_daemon->id
         ,@after_req
     );
     wait_request(debug => 0) if $wait;
@@ -1124,6 +1131,19 @@ sub mojo_create_domain($t, $vm_name) {
     ok($domain,"Expecting domain $name created") or exit;
     return $domain;
 
+}
+
+sub mojo_clean_nodes($t) {
+    $t->get_ok("/list_nodes.json")->status_is(200);
+    my $body = $t->tx->res->body;
+    my $body_json;
+    eval { $body_json = decode_json($body)};
+
+    my $base = base_domain_name();
+    for my $node (@$body_json) {
+        next if $node->{name} !~ /$base/;
+        $t->get_ok("/v1/node/remove/".$node->{id});
+    }
 }
 
 sub mojo_request($t, $req_name, $args, $wait=1) {
@@ -1486,7 +1506,7 @@ sub wait_request {
                         like($req->error,qr(^$|libvirt error code));
                     } else {
                         my $error = ($req->error or '');
-                        next if $error =~ /waiting for processes/i;
+                        next if $error =~ /waiting for processes|Retry.?/i;
                         if ($req->command =~ m{rsync_back|set_base_vm|start}) {
                             like($error,qr{^($|.*port \d+ already used|.*rsync)}) or confess $req->command;
                         } elsif($req->command eq 'refresh_machine_ports') {
@@ -3186,6 +3206,8 @@ sub check_libvirt_tls {
 }
 
 sub ping_backend() {
+    delete_request('update_iso_urls','enforce_limits','refresh_vms'
+        ,'manage_pools');
     for ( 1 .. 3 ) {
         my @now = localtime(time);
         $now[4]++;

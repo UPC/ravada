@@ -13,6 +13,7 @@
 <li>Dayyan O'Brien</li>
 <li>Dito Baskoro</li>
 <li>Ditta Fania B</li>
+<li>Đỗ Đạt Hoa</li>
 <li>Elena Mishina</li>
 <li>Eloi Cambra</li>
 <li>Eneko Romo</li>
@@ -24,9 +25,11 @@
 <li>Gabriel Silva</li>
 <li>Guillermo Miranda</li>
 <li>J. Lavoie</li>
+<li>Jens Köhler</li>
 <li>Jirayu Laungwilawan</li>
 <li>Joel Alarcón</li>
 <li>Joan Sanchez</li>
+<li>Kenneth Salazar</li>
 <li>Kimia Mirehbar</li>
 <li>Laura Figuerola</li>
 <li>Luca Bezerra</li>
@@ -41,6 +44,7 @@
 <li>Pascal Scholz</li>
 <li>Paula Paez</li>
 <li>Raghav Mittal</li>
+<li>Ritish Srivastava</li>
 <li>Robert-André Mauchin</li>
 <li>Roberto P. Rubio</li>
 <li>Roger Ferre</li>
@@ -52,6 +56,7 @@
 <li>Tim Fechner</li>
 <li>Vivek Shah</li>
 <li>Weblate (bot)</li>
+<li>Wenqiang He</li>
 <li>Wermeille Bastien</li>
 </ul>
 <%=l 'Thanks to:' %>

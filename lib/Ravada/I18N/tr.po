@@ -896,7 +896,7 @@ msgstr "Açıklama ekle"
 msgid "These actions affect all the clones on the machine"
 msgstr "Bu eylemler makinedeki tüm klonları etkiler"
 
-msgid "Yes, shutwdown all the clones"
+msgid "Yes, shutdown all the clones"
 msgstr "Evet, tüm klonları kapat"
 
 msgid "Keep in mind that there may be users using a clone"
@@ -2197,7 +2197,7 @@ msgstr "Paylaş"
 msgid "Host Devices"
 msgstr "Ana Makineler"
 
-msgid "Mange Host Devices"
+msgid "Manage Host Devices"
 msgstr "Ana Makineleri Yönet"
 
 msgid "Auto Compact"
