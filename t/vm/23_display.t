@@ -180,7 +180,7 @@ sub _get_hostname($ip) {
 
     return $hostname if $hostname =~ /\./;
 
-    return $ip;
+    die "Error: I cant get a fqdn of $ip";
 }
 
 ######################################################################
