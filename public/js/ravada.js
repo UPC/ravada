@@ -1518,6 +1518,7 @@
                     $scope.shared_user_found = response.data.found;
                     $scope.shared_user_count = response.data.count;
                     $scope.searching_shared_user=false;
+                    $scope.form_share_machine.$setPristine();
                     if ($scope.shared_user_count == 1) {
                         $scope.user_share = response.data.found;
                     }
