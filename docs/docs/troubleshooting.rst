@@ -317,3 +317,29 @@ You can increase the number of hypnotoad workers in /etc/rvd_front.conf
 Also make sure your Apache configuration has the latest performance
 suggestions from `the apache guide <apache.html#apache-proxy-configuration>`__
 including the *proxypass* of the static content.
+
+NFS shared storage fails
+------------------------
+
+If you are sharing a directory with NFS and the storage pool gets shut down
+in one of the nodes with that error:
+
+::
+
+  libvirtd: cannot open volume 'something.qcow2': Resource temporarily unavailable
+
+This issue is caused by NFSv4 File Delegations in the Linux kernel on one of the
+nodes interacting with libvirtd's non-blocking file operations.
+
+One way to fix it is disable NFS Server delegations on the NFS server. Create
+a file /etc/sysctl.d/99-nfs-delegation.conf and add:
+
+::
+
+  fs.leases-enable = 0
+
+Reboot the server and the problem should be fixed.
+
+If you prefer not to change kernel sysctl settings on the NFS server, configure
+client nodes to mount the export using NFSv3 instead of NFSv4. NFSv3 is stateless
+and does not use file delegations.
