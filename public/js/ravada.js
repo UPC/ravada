@@ -469,6 +469,7 @@
             var fields_option=[ 'volatile_clones','autostart'
                                ,'shutdown_disconnected','balance_policy'
                                ,'auto_compact','shutdown_grace_time'
+                                , 'shutdown_disconnected_action'
                                ,'id_owner'
             ];
 

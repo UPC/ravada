@@ -210,6 +210,23 @@
                     <small class="text-secondary">
                     <%=l 'Minutes of grace time before shutdown.' %></small>
                 </div>
+                <div class="row" ng-show="new_option.shutdown_disconnected">
+                    <div class="col-lg-3 mt-0 mb-2" align="right">
+                        <label class="small" for="shutdown_disconnected_action"><%=l 'Action when disconnected' %></label>
+                    </div>
+                    <div class="col-lg-2 mt-0">
+                        <select name="shutdown_disconnected_action"
+                        ng-disabled="<%= (!$USER->is_admin or 0) %> || !new_option.shutdown_disconnected"
+                        ng-model="new_option.shutdown_disconnected_action"
+                        ng-options="a for a in ['shutdown','hibernate']"
+                        >
+                        </select>
+                    </div>
+                    <div class="col-md-7">
+                        <small class="text-secondary">
+                        <%=l 'Shutdown or hibernate the virtual machine after the grace time.' %></small>
+                    </div>
+                </div>
             </div>
             </div>
             <div class="row">
