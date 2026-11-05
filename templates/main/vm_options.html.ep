@@ -216,10 +216,10 @@
                     </div>
                     <div class="col-lg-2 mt-0">
                         <select name="shutdown_disconnected_action"
-                        ng-disabled="<%= (!$USER->is_admin or 0) %> || !new_option.shutdown_disconnected"
-                        ng-model="new_option.shutdown_disconnected_action"
-                        ng-options="a for a in ['shutdown','hibernate']"
-                        >
+                                ng-disabled="<%= (!$USER->is_admin or 0) %> || !new_option.shutdown_disconnected"
+                                ng-model="new_option.shutdown_disconnected_action">
+                            <option value="shutdown"><%=l 'Shutdown' %></option>
+                            <option value="hibernate"><%=l 'Hibernate' %></option>
                         </select>
                     </div>
                     <div class="col-md-7">
