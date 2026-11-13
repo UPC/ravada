@@ -2642,4 +2642,4 @@ msgid "Action when disconnected"
 msgstr "Action when disconnected"
 
 msgid "Shutdown or hibernate the virtual machine after the grace time."
-msgid "Shutdown or hibernate the virtual machine after the grace time."
+msgstr "Shutdown or hibernate the virtual machine after the grace time."
