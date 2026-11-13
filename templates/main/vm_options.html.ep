@@ -229,7 +229,6 @@
                 </div>
             </div>
             </div>
-            </div>
             <div class="row">
                 <div class="col-lg-3 mt-0" align="right">
                     <label class="small_row" for="auto_compact"><%=l 'Auto Compact' %></label>
