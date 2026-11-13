@@ -6823,14 +6823,14 @@ sub _shutdown_disconnected($self) {
             next if !$domain->check_grace('connected');
             my $action = $dom->{shutdown_disconnected_action} || 'shutdown';
             $action = 'shutdown' if $action eq 'hibernate'
-                && ( !$domain->can_hibernate || $dom->{host_devices} );
+                && ( !$domain->can_hibernate || $domain->is_volatile || $dom->{host_devices} );
             my %args = (
                 uid => Ravada::Utils::user_daemon->id
                 ,id_domain => $domain->id
                 ,at => time + 60
                 ,check => 'disconnected'
             );
-            my ($method, $verb) = @{ $ACTION{$action} };
+            my ($method, $verb) = @{ $ACTION{$action} || $ACTION{shutdown}};
             Ravada::Request->$method(%args);
             my $user = Ravada::Auth::SQL->search_by_id($domain->id_owner);
             $user->send_message("The virtual machine has been disconnected for too long. $verb ".$dom->{name});

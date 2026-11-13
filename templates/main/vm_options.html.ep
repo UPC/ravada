@@ -216,7 +216,7 @@
                     <label class="small" for="shutdown_disconnected_action"><%=l 'Action when disconnected' %></label>
                 </div>
                 <div class="col-lg-2 mt-0">
-                    <select name="shutdown_disconnected_action"
+                    <select name="shutdown_disconnected_action" id="shutdown_disconnected_action"
                             ng-disabled="<%= (!$USER->is_admin or 0) %> || !new_option.shutdown_disconnected"
                             ng-model="new_option.shutdown_disconnected_action">
                         <option value="shutdown"><%=l 'Shutdown' %></option>
