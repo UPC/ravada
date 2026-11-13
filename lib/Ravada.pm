@@ -6803,7 +6803,7 @@ sub _domain_just_started($self, $domain) {
 }
 
 sub _shutdown_disconnected($self) {
-    my %ACTION = (
+    my %action = (
         shutdown  => ['shutdown_domain','Shutting down'],
         hibernate => ['hybernate','Hibernating'],
     );
@@ -6830,7 +6830,7 @@ sub _shutdown_disconnected($self) {
                 ,at => time + 60
                 ,check => 'disconnected'
             );
-            my ($method, $verb) = @{ $ACTION{$action} || $ACTION{shutdown}};
+            my ($method, $verb) = @{ $action{$action} || $action{shutdown}};
             Ravada::Request->$method(%args);
             my $user = Ravada::Auth::SQL->search_by_id($domain->id_owner);
             $user->send_message("The virtual machine has been disconnected for too long. $verb ".$dom->{name});
