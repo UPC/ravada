@@ -5104,7 +5104,7 @@ sub machine_set_options($c, $id, $options) {
 
 sub _privileged_machine_field($field) {
 
-    my %privileged = map { $_ => 1 } qw(timeout id_owner shutdown_disconnected shutdown_timeout autostart balance_policy);
+    my %privileged = map { $_ => 1 } qw(timeout id_owner shutdown_disconnected shutdown_disconnected_action shutdown_timeout autostart balance_policy);
     return $privileged{$field};
 }
 

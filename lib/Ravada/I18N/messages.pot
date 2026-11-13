@@ -2750,3 +2750,9 @@ msgstr ""
 
 msgid "more"
 msgstr ""
+
+msgid "Action when disconnected"
+msgstr ""
+
+msgid "Shutdown or hibernate the virtual machine after the grace time."
+msgstr ""

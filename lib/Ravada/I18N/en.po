@@ -2637,3 +2637,9 @@ msgstr "There are no machines that match the selection"
 
 msgid "more"
 msgstr "more"
+
+msgid "Action when disconnected"
+msgstr "Action when disconnected"
+
+msgid "Shutdown or hibernate the virtual machine after the grace time."
+msgstr "Shutdown or hibernate the virtual machine after the grace time."
