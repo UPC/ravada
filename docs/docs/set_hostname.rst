@@ -4,6 +4,12 @@ Set Hostname
 The hostname of a virtual machine can be changed on startup. The name of
 the virtual domain is passed in a smbios string and can be used to rename.
 
+It is advisable to change the hostname specially if the Virtual Machine
+mounts an NFS directory. The NFS server may see all clones as the same and
+constanltly dettaches and attaches the mount points. That impacts the
+performance of the virtual machine. Running this script on startup fixes
+that issue.
+
 Requirements
 ------------
 
@@ -24,35 +30,25 @@ Supported distributions:
 
 - Ubuntu 18.10
 
-Linux
------
+Linux dmidecode
+---------------
+
+This is how the hostname dynamic setting works with Ravada. A special DMI
+entry is added to all the virtual machines internally.
 
 The virtual machine name can be read with dmidecode
 
 .. prompt:: bash $
 
-    dmidecode | grep hostname | awk -F: '{ print $3}'
-
-
-To set the hostname you must create a script that runs on startup, this one line should
-be enough for most cases:
-
-.. prompt:: bash $
-
-    hostname `dmidecode | grep hostname | awk -F: '{ print $3}'`
-
-Some tools may read the hostname from the config file, set it like this:
-
-.. prompt:: bash $
-
-    dmidecode | grep hostname | awk -F: '{ print $3}' | sed -e 's/^ //' > /etc/hostname
+    dmidecode | grep hostname
 
 
 systemd
 ~~~~~~~~
 
 If your system supports systemd this script will set the virtual machine name
-as the hostname on startup. Put the service file in */lib/systemd/system/sethostname.service*:
+as the hostname on startup. It also updates the machine-id.
+Put the service file in */lib/systemd/system/sethostname.service*:
 
 
 .. literalinclude:: sethostname.service
@@ -75,15 +71,13 @@ at */var/log/set_hostname.log*.
 rc.local
 ~~~~~~~~
 
-If you Linux system supports rc.local just add this lines to it and the hostname
+If you Linux system supports rc.local just call the script and the hostname
 will be updated on boot:
 
 
 ::
 
-
-    hostname `dmidecode | grep hostname | awk -F: '{ print $3}'`
-    hostname > /etc/hostname
+    /usr/local/bin/set_hostname.sh
 
 Windows
 -------
