@@ -863,10 +863,15 @@ post '/v2/route/set' => sub($c) {
 };
 
 get '/v2/route/set/#id/#field/#id_domain/#value' => sub ($c) {
+    return access_denied($c) if !$USER->is_admin;
+
     my $id_network = $c->stash('id');
     my $field = $c->stash('field');
     my $id_domain = $c->stash('id_domain');
     my $value = $c->stash('value');
+
+    return json_error($c, 'access denied', 403)
+    unless $field =~ /^[a-z]+$/;
 
     my $sth = $RAVADA->_dbh->prepare(
         "SELECT * "
@@ -5278,6 +5283,9 @@ sub _new_anonymous_user {
 sub _insert_fields($c, $table, $arg) {
     my $sql = "INSERT INTO $table " ;
     my @names = sort grep { !/^_/ } keys %$arg;
+    for my $field ( keys %$arg) {
+        return json_error($c,'access_denied',403) unless $field =~ /^[a-z]+$/;
+    }
     my $fields = join("," , @names);
     my $values = join("," , map { '?' } @names );
 
@@ -5304,6 +5312,8 @@ sub _update_fields($c, $table, $arg) {
     my $error = '';
     for my $field ( keys %$arg ) {
         next if $field =~ /^_/;
+        return json_error($c,'access_denied',403) unless $field =~ /^[a-z]+$/;
+
         next if
         !defined $old->{$field} && !defined $arg->{$field}
         || ( defined $old->{$field} && defined $arg->{$field}
