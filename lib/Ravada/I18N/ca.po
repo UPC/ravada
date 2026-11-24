@@ -1131,26 +1131,8 @@ msgstr "Amaga clons"
 msgid "Add another user"
 msgstr "Afegir un altre usuari"
 
-msgid "Create a new group"
-msgstr "Crear un nou grup"
-
 msgid "Schedule"
 msgstr "Programació"
-
-msgid "groups"
-msgstr "grups"
-
-msgid "nodes"
-msgstr "nodes"
-
-msgid "networks"
-msgstr "xarxes"
-
-msgid "settings"
-msgstr "configuracions"
-
-msgid "can manage users."
-msgstr "pot gestionar usuaris."
 
 msgid "can expose virtual machine ports."
 msgstr "pot exposar ports de màquines virtuals."
@@ -1998,9 +1980,6 @@ msgstr "filtrar"
 msgid "Please select an ISO file"
 msgstr "Escull un fitxer ISO"
 
-msgid "Schedule"
-msgstr "Horari"
-
 msgid "Start after create the virtual machine"
 msgstr "Començar després de crear la màquina virtual"
 
@@ -2066,9 +2045,6 @@ msgstr "Felicitats"
 
 msgid "has been added successfully!"
 msgstr "s'ha afegit amb èxit!"
-
-msgid "Add another user"
-msgstr "Afegeix un altre usuari"
 
 msgid "Create a new group"
 msgstr "Crear un nou grup"
@@ -2500,9 +2476,6 @@ msgstr "Nova Ruta"
 
 msgid "storage"
 msgstr "emmagatzematge"
-
-msgid "filter"
-msgstr "filtre"
 
 msgid "apply"
 msgstr "aplicar"
