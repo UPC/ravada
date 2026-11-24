@@ -113,9 +113,6 @@ msgstr "Subyek"
 msgid "Date"
 msgstr "Tanggal"
 
-msgid "Actions"
-msgstr "Aksi"
-
 msgid "Mark as Read"
 msgstr "Tandai telah Dibaca"
 
@@ -176,9 +173,6 @@ msgstr "Beberapa bidang kata laluan kosong"
 msgid "Public"
 msgstr "Publik"
 
-msgid "Status"
-msgstr "Status"
-
 msgid "Machines"
 msgstr "Mesin"
 
@@ -209,20 +203,11 @@ msgstr "Alat Admin"
 msgid "Remove base"
 msgstr "Hapus pengguna"
 
-msgid "public"
-msgstr "publik"
-
 msgid "Hybernate"
 msgstr "Hibernasi"
 
 msgid "Shutdown"
 msgstr "Matikan"
-
-msgid "action"
-msgstr "aksi"
-
-msgid "New Base"
-msgstr "Basis Baru"
 
 msgid "will remove all the contents of the machine"
 msgstr "akan menghapus semua isi mesin"
@@ -420,12 +405,6 @@ msgstr "Sembunyikan klon"
 msgid "For Spice redirection you will need to install"
 msgstr "Untuk pengalihan Spice anda butuh untuk memasang"
 
-msgid "in your computer."
-msgstr "dikomputer anda"
-
-msgid "Search in your distro, e.g. in Debian/Ubuntu with"
-msgstr "Cari di distro anda, contoh di Debian/Ubuntu dengan"
-
 msgid "You will need to install"
 msgstr "Anda akan butuh untuk memasang"
 
@@ -438,16 +417,6 @@ msgid ""
 msgstr ""
 "Perlu diketahui dalam Windows, pengalihan Spice adalah tidak otomatis"
 "diperlukan untuk mengasosiasikan protokol dengan program."
-
-msgid "To make this possible, download"
-msgstr "Untuk memungkinkan, unduh "
-
-msgid ""
-"or copy the following lines in an ASCII file and save with extension .reg, "
-"then execute the file."
-msgstr ""
-"atau salin baris ini dalam ASCII dan simpan dengan ekstensien .reg, "
-"lalu eksekusi file ini."
 
 msgid "A viewer is required to run the virtual machines."
 msgstr "Penonton dibutuhkan untuk menjalankan mesin virtual."
@@ -684,9 +653,6 @@ msgstr "Kodenya adalah"
 msgid "License"
 msgstr "Lisensi"
 
-msgid "Machine locked by"
-msgstr "Mesin terkunci oleh"
-
 msgid "This Machine is a base"
 msgstr "Mesin ini adalah basis"
 
@@ -860,5 +826,3 @@ msgstr "Terima kasih kepada:"
 
 msgid "licensed."
 msgstr "berlisensi."
-
-
