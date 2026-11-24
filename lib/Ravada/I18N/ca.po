@@ -2803,3 +2803,9 @@ msgstr "No hi ha cap màquina que coincideixi amb la selecció"
 
 msgid "more"
 msgstr "més"
+
+msgid "Action when disconnected"
+msgstr "Acció quan estigui desconectat"
+
+msgid "Shutdown or hibernate the virtual machine after the grace time."
+msgstr "Apagar o hibernar la màquina virtual després del temps de gràcia."

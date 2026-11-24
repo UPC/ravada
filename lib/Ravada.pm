@@ -3117,6 +3117,7 @@ sub _upgrade_tables {
     $self->_upgrade_table('domains','needs_restart','int not null default 0');
     $self->_upgrade_table('domains','shutdown_disconnected','int not null default 0');
     $self->_upgrade_table('domains','shutdown_grace_time','int not null default 10');
+    $self->_upgrade_table('domains','shutdown_disconnected_action',"varchar(16) NOT NULL DEFAULT 'shutdown'");
     $self->_upgrade_table('domains','shutdown_timeout','int default null');
     $self->_upgrade_table('domains','date_changed','timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP');
     $self->_upgrade_table('domains','balance_policy','int default 0');
@@ -5470,8 +5471,29 @@ sub _cmd_hybernate {
 
     die "Unknown domain id '$id_domain'\n" if !$domain;
 
-    $domain->hybernate($user);
+    my $check = $request->defined_arg('check');
+    if ($check) {
+        if ($check eq 'disconnected') {
+            die "Virtual machine reconnected.\n"
+            if $domain->client_status ne 'disconnected';
+        } else {
+            confess "Error: unknown hibernate check '$check'";
+        }
+    }
 
+    eval { $domain->hybernate($user) };
+    my $error = $@;
+    if ($error && $check) {
+        warn "Warning: hibernate failed for ".$domain->name.
+            ", shutting down instead.\n$error";
+        Ravada::Request->shutdown_domain(
+            uid => $uid
+            ,id_domain => $domain->id
+            ,check => $check
+        );
+        return;
+    }
+    die $error if $error;
 }
 
 sub _cmd_download {
@@ -6652,7 +6674,9 @@ sub _remove_unnecessary_downs($self, $domain) {
         my @requests = $domain->list_requests(1);
         for my $req (@requests) {
             $req->status('done')
-                if $req->command =~ /shutdown/ && (!$req->at_time || $req->at_time <= time+180);
+                if ( $req->command =~ /shutdown/
+                    || ( $req->command =~ /^h[iy]bernate$/ && $req->defined_arg('check') )
+                   ) && (!$req->at_time || $req->at_time <= time+180);
             $req->_remove_messages();
         }
 }
@@ -6779,12 +6803,16 @@ sub _domain_just_started($self, $domain) {
 }
 
 sub _shutdown_disconnected($self) {
+    my %action = (
+        shutdown  => ['shutdown_domain','Shutting down'],
+        hibernate => ['hybernate','Hibernating'],
+    );
     for my $dom ( $self->list_domains_data(status => 'active') ) {
         next if !$dom->{shutdown_disconnected};
         next if $dom->{is_pool} && $dom->{comment} eq 'daemon';
         my $domain = Ravada::Domain->open($dom->{id}) or next;
         my $is_active = $domain->is_active;
-        my ($req_shutdown) = grep { $_->command eq 'shutdown'
+        my ($req_shutdown) = grep { $_->command =~ /^(shutdown|h[iy]bernate)$/
             && $_->defined_arg('check')
             && $_->defined_arg('check') eq 'disconnected'
         } $domain->list_requests(1);
@@ -6793,14 +6821,19 @@ sub _shutdown_disconnected($self) {
             next if $self->_domain_just_started($domain) || $self->_verify_connection($domain);
             next if $req_shutdown;
             next if !$domain->check_grace('connected');
-            Ravada::Request->shutdown_domain(
+            my $action = $dom->{shutdown_disconnected_action} || 'shutdown';
+            $action = 'shutdown' if $action eq 'hibernate'
+                && ( !$domain->can_hibernate || $domain->is_volatile || $dom->{host_devices} );
+            my %args = (
                 uid => Ravada::Utils::user_daemon->id
                 ,id_domain => $domain->id
                 ,at => time + 60
                 ,check => 'disconnected'
             );
+            my ($method, $verb) = @{ $action{$action} || $action{shutdown}};
+            Ravada::Request->$method(%args);
             my $user = Ravada::Auth::SQL->search_by_id($domain->id_owner);
-            $user->send_message("The virtual machine has been disconnected for too long. Shutting down ".$dom->{name});
+            $user->send_message("The virtual machine has been disconnected for too long. $verb ".$dom->{name});
         } elsif ($req_shutdown) {
             $req_shutdown->status('done','Canceled') if $req_shutdown;
         }

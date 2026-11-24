@@ -41,4 +41,5 @@ test_downgrade('after_request_ok');
 
 end();
 
+clean();
 done_testing();
