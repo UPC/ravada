@@ -86,8 +86,8 @@ our %VALID_ARG = (
     ,rename_domain => { uid => 1, name => 1, id_domain => 1}
     ,dettach => { uid => 1, id_domain => 1 }
     ,set_driver => {uid => 1, id_domain => 1, id_option => 1}
-    ,hybernate=> {uid => 1, id_domain => 1}
-    ,hibernate=> {uid => 1, id_domain => 1}
+    ,hybernate=> {uid => 1, id_domain => 1, check => 2}
+    ,hibernate=> {uid => 1, id_domain => 1, check => 2}
     ,download => {uid => 2, id_iso => 1, id_vm => 2, vm => 2, verbose => 2, delay => 2, test => 2}
     ,refresh_storage => { id_vm => 2, uid => 2 }
     ,list_storage_pools => { id_vm => 1 , uid => 1, data => 2 }
