@@ -6183,7 +6183,6 @@ sub _cmd_list_isos($self, $request){
     @args = ( $vm_type) if $vm_type =~ /^\d+$/;
 
     my $vm = Ravada::VM->open( @args );
-    $vm->refresh_storage();
     my @isos = sort { "\L$a" cmp "\L$b" } $vm->search_volume_path_re(qr(.*\.iso$));
 
     $request->output(encode_json(\@isos));
