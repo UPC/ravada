@@ -161,9 +161,6 @@ msgstr "रोके गए"
 msgid "Machine locked by request"
 msgstr "अनुरोध द्वारा मशीन को लॉक किया गया"
 
-msgid "process"
-msgstr "प्रक्रिया"
-
 msgid "Copy"
 msgstr "प्रतिलिपि"
 
@@ -206,12 +203,6 @@ msgstr "व्यवस्थापक उपकरण"
 msgid "Remove base"
 msgstr "आधार निकालें"
 
-msgid "public"
-msgstr "सार्वजनिक"
-
-msgid "New Base"
-msgstr "नया आधार"
-
 msgid "Restore"
 msgstr "बहाल"
 
@@ -220,9 +211,6 @@ msgstr "हाइबरनेट करें"
 
 msgid "Shutdown"
 msgstr "बंद करें"
-
-msgid "action"
-msgstr "क्रिया"
 
 msgid "will remove all the contents of the machine"
 msgstr "मशीन की सभी सामग्रियों को हटा देगा"
@@ -505,9 +493,6 @@ msgstr "और"
 
 msgid "Memory"
 msgstr "स्मृति"
-
-msgid "Cancel"
-msgstr "रद्द"
 
 msgid "Username can not exceed 20 characters"
 msgstr "उपयोगकर्ता नाम बीस अक्षर के ऊपर नहीं हो सकत"
@@ -853,12 +838,3 @@ msgstr "रम"
 
 msgid "device"
 msgstr "उपकरण"
-
-
-
-
-
-
-
-
-
