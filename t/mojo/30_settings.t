@@ -541,6 +541,26 @@ sub  _search_public_base() {
     return $id;
 }
 
+sub test_auth_routes($t) {
+
+    mojo_logout($t);
+    $t->get_ok('/v2/route/set/1/a/1/2')->status_is(401);
+
+    my ($user,$pass) = ( user->name,"$$ $$");
+    mojo_login($t, $user, $pass);
+
+    $t->get_ok('/v2/route/set/1/a/1/2')->status_is(403);
+
+    mojo_login($t, $USERNAME, $PASSWORD);
+    for my $a ( ';','*','\\') {
+        $t->get_ok('/v2/route/set/1/'.$a.'/1/2')->status_is(403);
+        $t->post_ok('/v2/route/set',json =>  {id => 1 , $a => 2 })->status_is(403);
+        $t->post_ok('/v2/route/set',json =>  { $a => 3 })->status_is(403);
+    }
+
+
+}
+
 ########################################################################################
 
 $ENV{MOJO_MODE} = 'devel';
@@ -560,6 +580,8 @@ $Test::Ravada::BACKGROUND=1;
 $t = Test::Mojo->new($SCRIPT);
 $t->ua->inactivity_timeout(900);
 $t->ua->connect_timeout(60);
+
+test_auth_routes($t);
 
 mojo_login($t, $USERNAME, $PASSWORD);
 
