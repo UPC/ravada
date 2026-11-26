@@ -1,19 +1,24 @@
 <div class="card-body">
 
+    <form name="form_share_machine">
         <div class="row">
             <div class="col-md-2 mt-2">
               <%=l 'User name' %>
             </div>
             <div class="col-md-8 mt-2" align="left">
                 <input type="text" ng-model="user_share"
+                ng-pattern="/[a-zA-Z]/"
                 ng-disabled="searching_shared_user">
+
                 <i class="fa fa-search" aria-hidden="true"
                 ng-click="search_shared_user()"
+                ng-show="user_share"
                 ></i>
-                <span ng-show="!searching_shared_user && shared_user_count>=0 && !shared_user_found ">
+                <span ng-show="!searching_shared_user && shared_user_count>=0 && !shared_user_found
+                            && !form_share_machine.$dirty">
                 {{shared_user_count}} <%=l 'found' %>
                 </span>
-                <span ng-show="shared_user_found"><%=l 'Exact match' %></span>
+                <span ng-show="shared_user_found && !form_share_machine.$dirty"><%=l 'Exact match' %></span>
                 <i class="fas fa-sync-alt fa-spin"
                     ng-show="searching_shared_user"></i>
             </div>
@@ -21,11 +26,13 @@
         <div class="row">
             <div class="col-md-2 mt-2"></div>
             <div class="col-mg-2 mt-2" >
-                <button ng-disabled="!shared_user_found"
+                <button ng-disabled="!shared_user_found || form_share_machine.$dirty"
                 ng-click="share_machine()">
                 <%=l 'share' %></button>
             </div>
         </div>
+        <br/>
+    </form>
 
 </div>
 <div class="card-body" ng-show="shares && shares.length">

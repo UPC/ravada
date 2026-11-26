@@ -132,6 +132,30 @@ sub test_machine_info_shared($user, $clone) {
     is($info->{can_view},1);
 }
 
+sub test_list_users() {
+
+    my $users_before = rvd_front->list_users_share(base_domain_name());
+
+    my $name = base_domain_name();
+
+    my $user0 = create_user($name,$$);
+    my $user1 = create_user(new_domain_name(),$$);
+    my $user2 = create_user(new_domain_name(),$$);
+
+    my $users = rvd_front->list_users_share(base_domain_name());
+
+    is(scalar(@$users),1);
+    is($users->[0]->{name},$name);
+
+    $users = rvd_front->list_users_share(base_domain_name()."_");
+
+    is(scalar(@$users),2 + scalar(@$users_before));
+
+    $user0->remove();
+    $user1->remove();
+    $user2->remove();
+}
+
 ##############################################################
 
 init();
@@ -153,6 +177,7 @@ for my $vm_name ( vm_names() ) {
 
         diag("Testing share on $vm_name");
 
+        test_list_users();
         test_share($vm);
     }
 }

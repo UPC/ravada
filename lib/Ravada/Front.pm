@@ -898,13 +898,26 @@ Returns a reference to a list of the users
 
 =cut
 
-sub list_users($self,$name=undef) {
-    my $sth = $CONNECTOR->dbh->prepare("SELECT id, name FROM users ");
-    $sth->execute();
+sub list_users($self,$name=undef, $exact=0) {
+    my $query = "SELECT id, name FROM users ";
+    $query .= " WHERE name like ? " if defined $name && length($name);
+
+    #warn Dumper([$query,$name,$exact]);
+
+    my $sth = $CONNECTOR->dbh->prepare($query);
+
+    if (defined $name && length($name)) {
+        if ($exact) {
+            $sth->execute($name);
+        } else {
+            $sth->execute('%'.$name.'%');
+        }
+    } else {
+        $sth->execute();
+    }
 
     my @users = ();
     while ( my $row = $sth->fetchrow_hashref) {
-        next if defined $name && $row->{name} !~ /$name/;
         push @users, ($row);
     }
     $sth->finish;
@@ -1951,11 +1964,9 @@ Returns a list of users to share
 =cut
 
 sub list_users_share($self, $name=undef,@skip) {
-    my $users = $self->list_users();
+    my $users = $self->list_users($name,1);
+    $users = $self->list_users($name) if !@$users;
     my @found = @$users;
-    if ($name) {
-        @found = grep { $_->{name} =~ /$name/ } @$users;
-    }
     if (@skip) {
         my %skip = map { $_->id => 1} @skip;
         my @pre=@found;
