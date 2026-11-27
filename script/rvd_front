@@ -140,6 +140,7 @@ my %LDAP_ATTRIBUTES;
 my %LDAP_USERS;
 
 my $JWKS;
+my $OIDC_PROVIDER_CONFIG;
 
 # TOODO: config this variable
 my $LIMIT_SHOW_USERS = 25;
@@ -321,6 +322,7 @@ sub _get_jwks() {
 
     my $jwks = Mojo::UserAgent->new->get($jwks_uri)->result->json;
 
+    $OIDC_PROVIDER_CONFIG = $provider_config;
     $JWKS = $jwks;
     return $jwks;
 }
@@ -349,6 +351,22 @@ sub _verify_oidc($c, $header) {
         warn $@;
         return 0;
     }
+    return 0 if ref($claims) ne 'HASH';
+
+    my $issuer = $OIDC_PROVIDER_CONFIG && $OIDC_PROVIDER_CONFIG->{issuer};
+    return 0 if !$issuer || !defined($claims->{iss}) || $claims->{iss} ne $issuer;
+
+    my $audience = $claims->{aud};
+    my @audiences = ref($audience) eq 'ARRAY' ? @$audience : defined($audience) ? ($audience) : ();
+    my $audience_matches = grep { defined($_) && $_ eq $client_id } @audiences;
+    my $client_claim_matches = defined($claims->{client_id})
+        && $claims->{client_id} eq $client_id;
+    my $authorized_party_matches = defined($claims->{azp})
+        && $claims->{azp} eq $client_id;
+    return 0 if defined($claims->{client_id}) && !$client_claim_matches;
+    return 0 if defined($claims->{azp}) && !$authorized_party_matches;
+    return 0 if !$audience_matches && !$client_claim_matches && !$authorized_party_matches;
+
     return $claims->{preferred_username};
 }
 
