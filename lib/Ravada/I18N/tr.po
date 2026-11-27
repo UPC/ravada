@@ -896,9 +896,6 @@ msgstr "Açıklama ekle"
 msgid "These actions affect all the clones on the machine"
 msgstr "Bu eylemler makinedeki tüm klonları etkiler"
 
-msgid "Yes, shutdown all the clones"
-msgstr "Evet, tüm klonları kapat"
-
 msgid "Keep in mind that there may be users using a clone"
 msgstr "Bir klonu kullanan kullanıcıların olabileceğini unutmayın"
 
