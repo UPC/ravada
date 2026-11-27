@@ -11,6 +11,7 @@ use Digest::SHA qw(sha256_hex);
 use Hash::Util qw(lock_hash);
 use Mojolicious::Lite 'Ravada::I18N';
 use Mojo::JSON qw(decode_json encode_json);
+use MIME::Base64 qw(decode_base64);
 use Time::Piece;
 #use Mojolicious::Plugin::I18N;
 use Mojo::Home;
@@ -139,8 +140,9 @@ my %ALLOWED_ANONYMOUS_WS = map { $_ => 1 } qw(list_bases_anonymous list_alerts);
 my %LDAP_ATTRIBUTES;
 my %LDAP_USERS;
 
-my $JWKS;
+my %OIDC_JWKS_CACHE;
 my $OIDC_PROVIDER_CONFIG;
+my $OIDC_JWKS_CACHE_TTL = 300;
 
 # TOODO: config this variable
 my $LIMIT_SHOW_USERS = 25;
@@ -308,10 +310,15 @@ any '/login' => sub {
     return login($c);
 };
 
-sub _get_jwks() {
-    return $JWKS if $JWKS;
-
+sub _get_jwks($force_refresh = 0) {
     my $provider = $RAVADA->setting('/frontend/openid/provider');
+    return 0 if !$provider;
+
+    my $cached = $OIDC_JWKS_CACHE{$provider};
+    if (!$force_refresh && $cached && $cached->{expires_at} > time) {
+        $OIDC_PROVIDER_CONFIG = $cached->{provider_config};
+        return $cached->{jwks};
+    }
 
     my $provider_config = Mojo::UserAgent->new->get($provider)->result->json;
     return 0 if !$provider_config;
@@ -321,10 +328,33 @@ sub _get_jwks() {
 
 
     my $jwks = Mojo::UserAgent->new->get($jwks_uri)->result->json;
+    return 0 if !$jwks;
 
     $OIDC_PROVIDER_CONFIG = $provider_config;
-    $JWKS = $jwks;
+    $OIDC_JWKS_CACHE{$provider} = {
+        provider_config => $provider_config,
+        jwks => $jwks,
+        expires_at => time + $OIDC_JWKS_CACHE_TTL,
+    };
     return $jwks;
+}
+
+sub _jwt_kid($token) {
+    my ($encoded_header) = split /\./, $token;
+    return if !$encoded_header;
+
+    $encoded_header =~ tr{-_}{+/};
+    $encoded_header .= '=' x ((4 - length($encoded_header) % 4) % 4);
+    my $header = eval { decode_json(decode_base64($encoded_header)) };
+    return if ref($header) ne 'HASH';
+    return $header->{kid};
+}
+
+sub _jwks_has_kid($jwks, $kid) {
+    return 0 if ref($jwks) ne 'HASH' || ref($jwks->{keys}) ne 'ARRAY';
+    return scalar grep {
+        ref($_) eq 'HASH' && defined($_->{kid}) && $_->{kid} eq $kid
+    } @{$jwks->{keys}};
 }
 
 sub _verify_oidc($c, $header) {
@@ -339,15 +369,31 @@ sub _verify_oidc($c, $header) {
     return 0 if !$jwks;
 
     my $claims;
-    eval {
+    my $decoded = eval {
         $claims = decode_jwt(
             token    => $raw_jwt,
             kid_keys => $jwks,
             verify_exp => 1, # Comprova que no hagi caducat
         );
         # Si arriba aquí, $claims->{preferred_username} és 100% autèntic i signat
+        1;
     };
-    if ($@) {
+    if (!$decoded) {
+        my $kid = _jwt_kid($raw_jwt);
+        if (defined($kid) && !_jwks_has_kid($jwks, $kid)) {
+            $jwks = _get_jwks(1);
+            return 0 if !$jwks;
+            $decoded = eval {
+                $claims = decode_jwt(
+                    token    => $raw_jwt,
+                    kid_keys => $jwks,
+                    verify_exp => 1,
+                );
+                1;
+            };
+        }
+    }
+    if (!$decoded) {
         warn $@;
         return 0;
     }
