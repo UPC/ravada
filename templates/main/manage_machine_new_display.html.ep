@@ -9,5 +9,10 @@
             ng-options="driver for driver in showmachine.drivers['display']">
             </select>
         </div>
+        <div class="col-lg-6" ng-show="showmachine.ports.length">
+            <b><%=l 'Warning' %></b>
+            <%=l 'There are already ports exported.' %>
+            <%=l 'They may be overwritten on creating some displays.' %>
+        </div>
     </div>
 </div>

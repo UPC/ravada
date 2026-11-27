@@ -1537,21 +1537,6 @@ sub test_display_drivers($vm, $remove) {
     $domain->remove(user_admin);
 }
 
-sub test_display_port_already_used($vm) {
-    my $domain = create_domain($vm);
-    $domain->expose( port => 22 );
-    my $req = Ravada::Request->add_hardware(
-          uid => user_admin->id
-        ,name => 'display'
-        ,data => { driver => 'x2go' }
-        ,id_domain =>$domain->id
-    );
-    wait_request(check_error => 0);
-    is($req->status,'done');
-    like($req->error,qr'already');
-    $domain->remove(user_admin);
-}
-
 sub test_display_conflict_non_builtin($vm) {
     my $base= $BASE->clone(name => new_domain_name, user => user_admin);
     my $req = Ravada::Request->add_hardware(
@@ -1916,8 +1901,6 @@ for my $vm_name ( vm_names() ) {
         test_display_conflict_non_builtin($vm);
 
         test_display_info($vm);
-
-        test_display_port_already_used($vm);
 
         test_remove_display($vm);
 
