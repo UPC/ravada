@@ -61,12 +61,17 @@ sub is_external { }
 
 sub login_external($name, $header) {
 
+    my $found = 0;
     for my $field (qw(OIDC_CLAIM_exp OIDC_access_token_expires)) {
-        if ( exists $header->{$field} && defined $header->{$field} && $header->{$field} < time() ) {
-            warn localtime($header->{$field})." $field expired \n";
-            return 0;
+        if ( exists $header->{$field} && $header->{$field} && $header->{$field} =~ /^\d+$/) {
+            $found++;
+            if ( $header->{$field} < time() ) {
+                warn localtime($header->{$field})." $field expired \n";
+                return 0;
+            }
         }
     }
+    return 0 if !$found;
 
     my $self = Ravada::Auth::OpenID->new(name => $name);
     return if !$self->_check_user_profile();

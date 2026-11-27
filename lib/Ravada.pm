@@ -2887,6 +2887,16 @@ sub _sql_insert_defaults($self){
                 ,value => ''
             }
             ,{
+                id_parent => "/frontend/openid"
+                ,name => "provider"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/openid"
+                ,name => "client_id"
+                ,value => ''
+            }
+            ,{
                 id_parent => $id_backend
                 ,name => 'start_limit'
                 ,value => 1
