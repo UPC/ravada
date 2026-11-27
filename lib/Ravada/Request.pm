@@ -218,6 +218,7 @@ qw(
     refresh_machine
     refresh_machine_ports
     refresh_vms
+    refresh_storage
     set_time
     open_exposed_ports
     manage_pools
@@ -225,6 +226,7 @@ qw(
     prepare_base
     remove_base
     list_cpu_models
+    list_isos
 );
 
 our $TIMEOUT_SHUTDOWN = 120;

@@ -358,25 +358,20 @@ sub search_volume_re($self,$pattern,$refresh=0) {
     my @volume;
     for my $pool (_list_storage_pools($self->vm)) {
         next if !$pool->is_active;
-       my @vols;
-       for ( 1 .. 10) {
-           eval { @vols = $pool->list_all_volumes() };
-           last if $@ && ref($@) && $@->code == 55;
-           last if $@ && $@ =~ /code: (55|38),/;
-           last if !$@ || $@ =~ / no storage pool with matching uuid/;
-           warn "WARNING: on search volume_re: $@";
-           sleep 1;
-       }
-       for my $vol ( @vols ) {
-           my $file;
-           eval { ($file) = $vol->get_path =~ m{.*/(.*)} };
-           confess $@ if $@ && $@ !~ /libvirt error code: 50,/;
-           next if !$file || $file !~ $pattern;
+        my $vols = $self->{_cache_vols}->{$pool->get_name()};
+        if (!$vols ) {
+            $vols = _list_pool($pool);
+            $self->{_cache_vols}->{$pool->get_name()}= $vols;
+        }
+        for my $vol ( @$vols ) {
+            my $file;
+            eval { ($file) = $vol->get_path =~ m{.*/(.*)} };
+            confess $@ if $@ && $@ !~ /libvirt error code: 50,/;
+            next if !$file || $file !~ $pattern;
 
-
-           return $vol if !wantarray;
-           push @volume,($vol);
-       }
+            return $vol if !wantarray;
+            push @volume,($vol);
+        }
     }
     if (!scalar @volume && !$refresh && !$self->readonly
             && time - ($self->{_time_refreshed} or 0) > 60) {
@@ -386,6 +381,19 @@ sub search_volume_re($self,$pattern,$refresh=0) {
     }
     return if !wantarray && !scalar@volume;
     return @volume;
+}
+
+sub _list_pool($pool) {
+    my @vols;
+    for ( 1 .. 10) {
+        eval { @vols = $pool->list_all_volumes() };
+        last if $@ && ref($@) && $@->code == 55;
+        last if $@ && $@ =~ /code: (55|38),/;
+        last if !$@ || $@ =~ / no storage pool with matching uuid/;
+        warn "WARNING: on search volume_re: $@";
+        sleep 1;
+    }
+    return \@vols;
 }
 
 sub remove_file($self,@files) {
@@ -547,6 +555,7 @@ sub _refresh_isos($self) {
     my $sth_update = $$CONNECTOR->dbh->prepare("UPDATE iso_images set device=? WHERE id=?");
 
     $sth->execute;
+    my @isos = $self->search_volume_path_re(qr/\.iso$/);
     while (my $row = $sth->fetchrow_hashref) {
 
         if ( $row->{device} && !-e $row->{device} ) {
@@ -569,9 +578,9 @@ sub _refresh_isos($self) {
             next;
         }
         $file_re = "$file_re\$" unless $file_re =~ /\$$/;
-        $file_re = "^$file_re"  unless $file_re =~ /^\$/;
+        $file_re =~ s/^\^//;
 
-        my $iso_file = $self->search_volume_path_re(qr($file_re));
+        my ($iso_file) = grep m{/$file_re},@isos;
         if ($iso_file) {
             $row->{device} = $iso_file;
         }

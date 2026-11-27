@@ -358,6 +358,30 @@ sub test_dupe_open_exposed($vm) {
 
 }
 
+sub test_non_dupe($vm, $command, %args) {
+    %args = ( id_vm => $vm->id ) if !keys %args;
+    $args{uid} = user_admin->id if !exists $args{uid};
+
+    my $req1 = Ravada::Request->new_request(
+        $command
+        ,%args
+    );
+    my $req2 = Ravada::Request->new_request(
+        $command
+        ,%args
+    );
+    is($req2->id, $req1->id, $command);
+    wait_request();
+
+    my $req3 = Ravada::Request->new_request(
+        $command
+        ,%args
+    );
+
+    is($req3->id, $req1->id, $command);
+    wait_request();
+
+}
 ################################################
 eval { $ravada = rvd_back () };
 
@@ -387,6 +411,8 @@ for my $vm_name ( vm_names() ) {
     
         diag("Testing $vm_name requests with ".(ref $vm or '<UNDEF>'));
     
+        test_non_dupe($vm,'list_isos', vm_type => $vm->type);
+        test_non_dupe($vm,'refresh_storage');
         test_dupe_open_exposed($vm);
         test_requests_by_domain($vm_name);
         my $domain_iso0 = test_req_create_domain_iso($vm_name);
