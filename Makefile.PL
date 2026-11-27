@@ -32,7 +32,7 @@ WriteMakefile(
     ,'PBKDF2::Tiny' => 0
     ,'HTML::Lint' => 0
     ,'Term::ReadKey' => 0
-    'Crypt::JWT' => 0
+    ,'Crypt::JWT' => 0
   },
   BUILD_REQUIRES => {
     'Test::Perl::Critic' => 0

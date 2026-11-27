@@ -429,6 +429,10 @@ sub test_languages() {
         next if $file !~ /(.*)\.po$/;
         next if $MISSING_LANG{$1};
         ok($lang->{$1},"Expecting $1 in language select");
+
+        $t->post_ok('/user_settings', form => { language => $1})->status_is(200);
+        die $t->tx->res->body if $t->tx->res->code() != 200;
+
     }
 }
 
@@ -541,6 +545,10 @@ sub  _search_public_base() {
     return $id;
 }
 
+sub test_lang_proper() {
+    $t->post_ok('/user_settings', form => { language => '*'})->status_is(400);
+}
+
 ########################################################################################
 
 $ENV{MOJO_MODE} = 'devel';
@@ -570,6 +578,7 @@ remove_networks_req();
 
 $ID_DOMAIN = _search_public_base();
 
+test_lang_proper();
 test_languages();
 test_missing_routes();
 

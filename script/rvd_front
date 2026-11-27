@@ -3301,6 +3301,13 @@ sub _languages() {
     return \%lang_name;
 }
 
+sub _valid_language($lang) {
+    my $valid = _languages();
+    return 0 if $lang !~ /^[a-zA-Z_@]+$/;
+    return 0 if !exists $valid->{$lang} || !$valid->{$lang};
+    return 1;
+}
+
 get '/translations' => sub($c) {
     my $lang_name = _languages();
     return $c->render(json => $lang_name);
@@ -3387,13 +3394,14 @@ sub _translations($c) {
 
 }
 
-sub user_settings {
-    my $c = shift;
+sub user_settings($c) {
     my $changed_lang;
     my $changed_pass;
     if ($c->param('language')) {
-        $USER->language($c->param('language'));
-        $changed_lang = $c->param('language');
+        my $new_language = $c->param('language');
+        return json_error($c,"Access denied",400) if !_valid_language($new_language);
+        $USER->language($new_language);
+        $changed_lang = $new_language;
         Ravada::Request->post_login(
                 user => $USER->name
             , locale => $changed_lang);
@@ -3725,7 +3733,6 @@ sub _detect_languages($c) {
     my @languages2 = map {my $lang = $_ ; $lang =~ s/^(.*?)[;-].*/$1/; $lang } split /,/,$header;
     my @languages_browser = map {my $lang = $_ ;$lang =~ s/;.*//; $lang } split /,/,$header;
 
-    warn Dumper([\@languages_browser,\@languages, \@languages2]);
     return (@languages_browser, @languages, @languages2);
 }
 
