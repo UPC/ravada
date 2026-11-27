@@ -156,6 +156,27 @@
         </div>
         <div class="row">
             <div class="col-md-3" align="right">
+            <label for="openid_logout_url"><%=l 'Client ID' %></label>
+            </div>
+            <div class="col-md-6">
+            <input name="openid_logout_url" ng-model="settings.frontend.openid.client_id.value"
+                size="60"
+                type="text"/>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-3" align="right">
+            <label for="openid_logout_url"><%=l 'Provider URL' %></label>
+            </div>
+            <div class="col-md-6">
+            <input name="openid_logout_url" ng-model="settings.frontend.openid.provider.value"
+                size="60"
+                type="text"/>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-3" align="right">
             <label for="openid_logout_url"><%=l 'Logout URL' %></label>
             </div>
             <div class="col-md-6">

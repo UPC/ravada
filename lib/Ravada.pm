@@ -3,7 +3,7 @@ package Ravada;
 use warnings;
 use strict;
 
-our $VERSION = '2.4.2';
+our $VERSION = '2.4.7';
 
 use utf8;
 
@@ -2884,6 +2884,16 @@ sub _sql_insert_defaults($self){
             ,{
                 id_parent => "/frontend/openid"
                 ,name => "logout_url"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/openid"
+                ,name => "provider"
+                ,value => ''
+            }
+            ,{
+                id_parent => "/frontend/openid"
+                ,name => "client_id"
                 ,value => ''
             }
             ,{

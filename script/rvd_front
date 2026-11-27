@@ -11,9 +11,12 @@ use Digest::SHA qw(sha256_hex);
 use Hash::Util qw(lock_hash);
 use Mojolicious::Lite 'Ravada::I18N';
 use Mojo::JSON qw(decode_json encode_json);
+use MIME::Base64 qw(decode_base64);
 use Time::Piece;
 #use Mojolicious::Plugin::I18N;
 use Mojo::Home;
+use Crypt::JWT qw(decode_jwt);
+use Mojo::UserAgent;
 
 use utf8;
 
@@ -137,6 +140,9 @@ my %ALLOWED_ANONYMOUS_WS = map { $_ => 1 } qw(list_bases_anonymous list_alerts);
 my %LDAP_ATTRIBUTES;
 my %LDAP_USERS;
 
+my %OIDC_JWKS_CACHE;
+my $OIDC_PROVIDER_CONFIG;
+my $OIDC_JWKS_CACHE_TTL = 300;
 
 # TOODO: config this variable
 my $LIMIT_SHOW_USERS = 25;
@@ -304,6 +310,112 @@ any '/login' => sub {
     return login($c);
 };
 
+sub _get_jwks($force_refresh = 0) {
+    my $provider = $RAVADA->setting('/frontend/openid/provider');
+    return 0 if !$provider;
+
+    my $cached = $OIDC_JWKS_CACHE{$provider};
+    if (!$force_refresh && $cached && $cached->{expires_at} > time) {
+        $OIDC_PROVIDER_CONFIG = $cached->{provider_config};
+        return $cached->{jwks};
+    }
+
+    my $provider_config = Mojo::UserAgent->new->get($provider)->result->json;
+    return 0 if !$provider_config;
+
+    my $jwks_uri = $provider_config->{jwks_uri};
+    return 0 if !$jwks_uri;
+
+
+    my $jwks = Mojo::UserAgent->new->get($jwks_uri)->result->json;
+    return 0 if !$jwks;
+
+    $OIDC_PROVIDER_CONFIG = $provider_config;
+    $OIDC_JWKS_CACHE{$provider} = {
+        provider_config => $provider_config,
+        jwks => $jwks,
+        expires_at => time + $OIDC_JWKS_CACHE_TTL,
+    };
+    return $jwks;
+}
+
+sub _jwt_kid($token) {
+    my ($encoded_header) = split /\./, $token;
+    return if !$encoded_header;
+
+    $encoded_header =~ tr{-_}{+/};
+    $encoded_header .= '=' x ((4 - length($encoded_header) % 4) % 4);
+    my $header = eval { decode_json(decode_base64($encoded_header)) };
+    return if ref($header) ne 'HASH';
+    return $header->{kid};
+}
+
+sub _jwks_has_kid($jwks, $kid) {
+    return 0 if ref($jwks) ne 'HASH' || ref($jwks->{keys}) ne 'ARRAY';
+    return scalar grep {
+        ref($_) eq 'HASH' && defined($_->{kid}) && $_->{kid} eq $kid
+    } @{$jwks->{keys}};
+}
+
+sub _verify_oidc($c, $header) {
+
+    my $raw_jwt = $c->req->headers->header('OIDC_access_token');
+    return 0 if !$raw_jwt;
+
+    my $client_id = $RAVADA->setting('/frontend/openid/client_id');
+    return 0 if !$client_id;
+
+    my $jwks = _get_jwks();
+    return 0 if !$jwks;
+
+    my $claims;
+    my $decoded = eval {
+        $claims = decode_jwt(
+            token    => $raw_jwt,
+            kid_keys => $jwks,
+            verify_exp => 1, # Comprova que no hagi caducat
+        );
+        # Si arriba aquí, $claims->{preferred_username} és 100% autèntic i signat
+        1;
+    };
+    if (!$decoded) {
+        my $kid = _jwt_kid($raw_jwt);
+        if (defined($kid) && !_jwks_has_kid($jwks, $kid)) {
+            $jwks = _get_jwks(1);
+            return 0 if !$jwks;
+            $decoded = eval {
+                $claims = decode_jwt(
+                    token    => $raw_jwt,
+                    kid_keys => $jwks,
+                    verify_exp => 1,
+                );
+                1;
+            };
+        }
+    }
+    if (!$decoded) {
+        warn $@;
+        return 0;
+    }
+    return 0 if ref($claims) ne 'HASH';
+
+    my $issuer = $OIDC_PROVIDER_CONFIG && $OIDC_PROVIDER_CONFIG->{issuer};
+    return 0 if !$issuer || !defined($claims->{iss}) || $claims->{iss} ne $issuer;
+
+    my $audience = $claims->{aud};
+    my @audiences = ref($audience) eq 'ARRAY' ? @$audience : defined($audience) ? ($audience) : ();
+    my $audience_matches = grep { defined($_) && $_ eq $client_id } @audiences;
+    my $client_claim_matches = defined($claims->{client_id})
+        && $claims->{client_id} eq $client_id;
+    my $authorized_party_matches = defined($claims->{azp})
+        && $claims->{azp} eq $client_id;
+    return 0 if defined($claims->{client_id}) && !$client_claim_matches;
+    return 0 if defined($claims->{azp}) && !$authorized_party_matches;
+    return 0 if !$audience_matches && !$client_claim_matches && !$authorized_party_matches;
+
+    return $claims->{preferred_username};
+}
+
 any '/login_openid' => sub($c) {
     my %header;
     for my $name (@{$c->req->headers->names}) {
@@ -311,16 +423,15 @@ any '/login_openid' => sub($c) {
         if $name =~ /OIDC/;
     }
 
-    my $auth_ok;
     my $username_oidc = $header{OIDC_CLAIM_preferred_username};
+    my $preferred_username = _verify_oidc($c,\%header);
+
+    return $c->render(status => 401, text => "Token invalid")
+    if !$preferred_username || $username_oidc ne $preferred_username;
+
+    my $auth_ok;
     if ($username_oidc) {
         $c->session('logoutURL' => $RAVADA->setting('/frontend/openid/logout_url'));
-        my $oidc_at_hash = $header{OIDC_CLAIM_at_hash};
-        if (!$oidc_at_hash) {
-            warn "Error: no OIDC_CLAIM_at_hash in header ".join(" ",%header);
-            return access_denied($c);
-        }
-        $c->session('oidc_at_hash' => $oidc_at_hash);
         eval {
         $auth_ok = Ravada::Auth::OpenID::login_external($username_oidc, \%header);
         };
@@ -3254,6 +3365,13 @@ sub _languages() {
     return \%lang_name;
 }
 
+sub _valid_language($lang) {
+    my $valid = _languages();
+    return 0 if $lang !~ /^[a-zA-Z_@]+$/;
+    return 0 if !exists $valid->{$lang} || !$valid->{$lang};
+    return 1;
+}
+
 get '/translations' => sub($c) {
     my $lang_name = _languages();
     return $c->render(json => $lang_name);
@@ -3340,13 +3458,14 @@ sub _translations($c) {
 
 }
 
-sub user_settings {
-    my $c = shift;
+sub user_settings($c) {
     my $changed_lang;
     my $changed_pass;
     if ($c->param('language')) {
-        $USER->language($c->param('language'));
-        $changed_lang = $c->param('language');
+        my $new_language = $c->param('language');
+        return json_error($c,"Access denied",400) if !_valid_language($new_language);
+        $USER->language($new_language);
+        $changed_lang = $new_language;
         Ravada::Request->post_login(
                 user => $USER->name
             , locale => $changed_lang);
@@ -3679,8 +3798,6 @@ sub _detect_languages($c) {
     my @languages_browser = map {my $lang = $_ ;$lang =~ s/;.*//; $lang } split /,/,$header;
 
     return (@languages_browser, @languages, @languages2);
-
-
 }
 
 sub login($c, $status=200) {
